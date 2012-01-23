@@ -1,3 +1,7 @@
+2012-01-23  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* configure: Regenerate.
+
 2011-11-16  Joern Rennecke  <joern.rennecke@embecosm.com>
 
 	* epiphany-fp.c, Makefile.in, sim-if.c, traps.c, mloop.in:
