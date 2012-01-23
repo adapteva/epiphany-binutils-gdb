@@ -716,10 +716,16 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
 	{
 	  /* Stack grows downward.  Align STRUCT_ADDR and SP after
              making space for the return value.  */
-	  sp -= len;
+	  /* 10 Nov 11: Jeremy Bennett. Quick patch for Epiphany, for whom we
+	     have a stack with 8 bytes pre-allocated, so we must allow for
+	     that. */
+	  sp -= len + 8;
 	  if (gdbarch_frame_align_p (gdbarch))
 	    sp = gdbarch_frame_align (gdbarch, sp);
-	  struct_addr = sp;
+	  /* 10 Nov 11: Jeremy Bennett. Quick patch for Epiphany, for whom we
+	     have a stack with 8 bytes pre-allocated, so we must allow for
+	     that. */
+	  struct_addr = sp + 8;
 	}
       else
 	{

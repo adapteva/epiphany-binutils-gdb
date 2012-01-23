@@ -38,6 +38,9 @@ case "${target}" in
    d10v-*-*)
        SIM_ARCH(d10v)
        ;;
+   epiphany-*-*)
+       SIM_ARCH(epiphany)
+       ;;
    frv-*-*)
        SIM_ARCH(frv)
        sim_testsuite=yes
