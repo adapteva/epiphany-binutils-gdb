@@ -3679,6 +3679,7 @@ subdirs="$subdirs arm"
   subdirs="$subdirs epiphany"
 
 
+       sim_testsuite=yes
        ;;
    frv-*-*)
 

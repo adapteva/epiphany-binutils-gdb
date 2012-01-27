@@ -1845,6 +1845,10 @@ case "${target}" in
    d10v-*-*)
        sim_arch=d10v
        ;;
+   epiphany-*-*)
+       sim_arch=epiphany
+       sim_testsuite=yes
+       ;;
    frv-*-*)
        sim_arch=frv
        sim_testsuite=yes
@@ -1892,6 +1896,9 @@ case "${target}" in
    moxie-*-*)
        sim_arch=moxie
        sim_testsuite=yes
+       ;;
+   rl78-*-*)
+       sim_arch=rl78
        ;;
    rx-*-*)
        sim_arch=rx

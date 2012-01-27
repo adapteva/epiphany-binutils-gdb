@@ -40,6 +40,7 @@ case "${target}" in
        ;;
    epiphany-*-*)
        SIM_ARCH(epiphany)
+       sim_testsuite=yes
        ;;
    frv-*-*)
        SIM_ARCH(frv)
