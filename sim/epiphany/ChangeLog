@@ -94,13 +94,6 @@
 	* epiphany.c (epiphany_trap): finish implementing i/o for
 		  simulator.
 
-2009-10-19  Jeremy Bennett  <jeremy.bennett@embecosm.com>
-
-	Noted for the record, not by the author, date estimated.
-
-	* epiphany.c: Renamed from atdsp.c
-	* epiphany-sim.h: Renamed from atdsp-sim.h
-
 2009-10-03  Joern Rennecke  <joern.rennecke@embecosm.com>
 
 	* model.c, decode.c, sem-switch.c, sem.c, decode.h, cpu.h: Regenerate.
