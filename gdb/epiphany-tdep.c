@@ -233,7 +233,6 @@
 /* External debug flags */
 extern int frame_debug;			/*!< frame debugging flag */
 extern int debug_infrun;		/*!< infrun debugging flag */
-extern int gdbarch_debug;		/*!< arch debugging flag */
 
 
 /*============================================================================*/
@@ -286,30 +285,6 @@ epiphany_debug_infrun (const char *fmt,
       va_end (args);
     }
 }	/* epiphany_debug_infrun () */
-
-
-/*----------------------------------------------------------------------------*/
-/*!Conditionally print out an Epiphany arch debug message.
-
-   A convenience function to avoid bucket loads of conditionals.
-
-   @param[in] fmt  The formatting string.
-   @param[in] ...  The args (if any).                                         */
-/*----------------------------------------------------------------------------*/
-/* static void */
-/* epiphany_debug_arch (const char *fmt, */
-/* 		     ...) */
-/* { */
-/*   if (gdbarch_debug >= 1) */
-/*     { */
-/*       va_list  args; */
-
-/*       fprintf_unfiltered (gdb_stdlog, "arch-epiphany: "); */
-/*       va_start (args, fmt); */
-/*       vfprintf_unfiltered (gdb_stdlog, fmt, args); */
-/*       va_end (args); */
-/*     } */
-/* }	/\* epiphany_debug_arch () *\/ */
 
 
 /*----------------------------------------------------------------------------*/
@@ -396,7 +371,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 
   int        regnum;
   CORE_ADDR  current_pc; 
-  CORE_ADDR  this_sp = 0;
+  CORE_ADDR  this_sp;
   int        framesize;
 
   pv_t            regs[EPIPHANY_NUM_GPRS];
@@ -622,21 +597,21 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 						prologue_start));
       epiphany_frame_debug ("frame_id (%p, %p)\n",
 			    (void *) (this_sp + framesize), prologue_start);
-    }
 
-  /* Populate the cache register data. */
-  for (regnum = 0; regnum < EPIPHANY_NUM_GPRS; regnum++)
-    {
-      CORE_ADDR  offset;
-	  
-      if (pv_area_find_reg (stack, gdbarch, regnum, &offset))
+      /* Populate the cache register data. Only meaningful if we have a
+	 frame. */
+      for (regnum = 0; regnum < EPIPHANY_NUM_GPRS; regnum++)
 	{
-	  trad_frame_set_reg_addr (cache, regnum, offset);
-	  epiphany_frame_debug ("r%d offset %d\n", regnum,
-				offset + this_sp);
+	  CORE_ADDR  offset;
+	  
+	  if (pv_area_find_reg (stack, gdbarch, regnum, &offset))
+	    {
+	      trad_frame_set_reg_addr (cache, regnum, offset);
+	      epiphany_frame_debug ("r%d offset %d\n", regnum,
+				    offset + this_sp);
+	    }
 	}
     }
-
   do_cleanups (stack_cleanup);
 
 }	/* epiphany_analyse_prologue () */
@@ -1105,7 +1080,42 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	}
 
       /* Stick the value in a register if possible. */
-      if (len == 2 * bpw)
+      if (len == 4 * bpw)
+	{
+	  /* quad-word values can go in 4 argument registers if possible. Must
+	     be 4-register aligned. */
+	  argreg = (argreg + 1) / 4 * 4;	/* Next aligned reg. */
+
+	  if (argreg <= (EPIPHANY_LAST_ARG_REGNUM - 1))
+	    {
+	      /* We need to break out the two register values. The endianness
+		 does not matter. Although Epiphany is little endian, a future
+		 big-endian version would swap the order of reigister usage as
+		 well as the order in memory. */
+	      ULONGEST r0, r1, r2, r3;
+
+	      r0 = extract_unsigned_integer (val,           bpw, byte_order);
+	      r1 = extract_unsigned_integer (val + bpw,     bpw, byte_order);
+	      r2 = extract_unsigned_integer (val + bpw * 2, bpw, byte_order);
+	      r3 = extract_unsigned_integer (val + bpw * 3, bpw, byte_order);
+
+	      epiphany_debug_infrun ("  stored in r%d, r%d, r%d and r%d\n",
+				     argreg, argreg + 1, argreg + 2,
+				     argreg + 3);
+
+	      regcache_cooked_write_unsigned (regcache, argreg++, r0);
+	      regcache_cooked_write_unsigned (regcache, argreg++, r1);
+	      regcache_cooked_write_unsigned (regcache, argreg++, r2);
+	      regcache_cooked_write_unsigned (regcache, argreg++, r3);
+	    }
+	  else
+	    {
+	      /* Run out of regs */
+	      epiphany_debug_infrun ("  run out of registers\n");
+	      break;
+	    }
+	}
+      else if (len == 2 * bpw)
 	{
 	  /* double-word values can go in 2 argument registers if possible. Must
 	     be 2-register aligned. */
@@ -1216,22 +1226,23 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	}
       else
 	{
-	  /* Allow space of scalars, keeping the stack aligned. */
-	      if (len == 2 * bpw)
-		{
-		  epiphany_debug_infrun ("  aligning scalar stack arg %d\n",
-					 argnum);
-		  epiphany_debug_infrun ("    sp was 0x%p\n", (void *) sp);
-		  sp -= sp % len;
-		  epiphany_debug_infrun ("    sp now 0x%p\n", (void *) sp);
-		}
-	      else if (len > bpw)
-		{
-		  /* This should be an impossible length to get here. But for
-		     safety throw an error. */
-		  internal_error (__FILE__, __LINE__, 
-				  _("epiphany_push_dummy_call bad scalar length"));
-		}
+	  /* Allow space of scalars, keeping the stack aligned, but no more
+	     than double word aligned */
+	  if ((len == 4 * bpw) || (len == 2 * bpw))
+	    {
+	      epiphany_debug_infrun ("  aligning scalar stack arg %d\n",
+				     argnum);
+	      epiphany_debug_infrun ("    sp was 0x%p\n", (void *) sp);
+	      sp -= sp % (2 * bpw);
+	      epiphany_debug_infrun ("    sp now 0x%p\n", (void *) sp);
+	    }
+	  else if (len > bpw)
+	    {
+	      /* This should be an impossible length to get here. But for
+		 safety throw an error. */
+	      internal_error (__FILE__, __LINE__, 
+			      _("epiphany_push_dummy_call bad scalar length"));
+	    }
 
 	  sp -= epiphany_parm_size (len);
 	}
@@ -1289,11 +1300,11 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	  epiphany_debug_infrun ("  scalar passed by value\n");
 	}   
 
-      /* If we have a length longer than bpw (2 x bpw should be the only one
-	 possible here), then align the stack offset. */
-      if (len == 2 * bpw)
+      /* If we have a length longer than bpw (2 or 4 * bpw should be the only
+	 one possible here), then align the stack offset to double word. */
+      if ((len == 4 * bpw) || (len == 2 * bpw))
 	{
-	  stack_offset += stack_offset % len;
+	  stack_offset += stack_offset % (2 * bpw);
 	}
 
       /* Write to stack and update the offset. */
@@ -1569,11 +1580,15 @@ epiphany_return_value (struct gdbarch  *gdbarch,
   unsigned int    rv_size    = TYPE_LENGTH (valtype);
   int             byte_order = gdbarch_byte_order (gdbarch);
 
+  epiphany_debug_infrun ("Return value rv_size %d\n", rv_size);
+  epiphany_debug_infrun ("  readbuf 0x%p, writebuf 0x%p\n", readbuf, writebuf);
+
   /* Deal with aggregates passed by reference */
   if (((TYPE_CODE_STRUCT == rv_type) || (TYPE_CODE_UNION  == rv_type))
       && (rv_size != 1) && (rv_size != 4) && (rv_size != 8))
     {
       /* Ignore buffers when returning by reference. */
+      epiphany_debug_infrun ("  returning value by struct\n");
       return  RETURN_VALUE_STRUCT_CONVENTION;
     }
 
@@ -1590,6 +1605,8 @@ epiphany_return_value (struct gdbarch  *gdbarch,
 
 	  regcache_cooked_read_unsigned (regcache, EPIPHANY_RV_REGNUM, &r);
 	  store_unsigned_integer (readbuf, rv_size, byte_order, r);
+
+	  epiphany_debug_infrun ("  word from register 0x%08llx\n", r);
 	}
       if (writebuf)
 	{
@@ -1597,6 +1614,8 @@ epiphany_return_value (struct gdbarch  *gdbarch,
 
 	  r = extract_unsigned_integer (writebuf, rv_size, byte_order);
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM, r);
+
+	  epiphany_debug_infrun ("  word from memory 0x%08llx\n", r);
 	}
     }
   else if ((bpw * 2) == rv_size)
@@ -1612,6 +1631,9 @@ epiphany_return_value (struct gdbarch  *gdbarch,
 
 	  store_unsigned_integer (readbuf,       bpw, byte_order, r0);
 	  store_unsigned_integer (readbuf + bpw, bpw, byte_order, r1);
+
+	  epiphany_debug_infrun ("  word from register 0x%08llx%08llx\n", r0,
+				 r1);
 	}
       if (writebuf)
 	{
@@ -1622,6 +1644,9 @@ epiphany_return_value (struct gdbarch  *gdbarch,
  
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM,     r0);
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM + 1, r1);
+
+	  epiphany_debug_infrun ("  word from memory 0x%08llx%08llx\n", r0,
+				 r1);
 	}
     }
   else if ((bpw * 4) == rv_size)
@@ -1641,6 +1666,9 @@ epiphany_return_value (struct gdbarch  *gdbarch,
 	  store_unsigned_integer (readbuf + bpw,     bpw, byte_order, r1);
 	  store_unsigned_integer (readbuf + bpw * 2, bpw, byte_order, r2);
 	  store_unsigned_integer (readbuf + bpw * 3, bpw, byte_order, r3);
+
+	  epiphany_debug_infrun ("  word from register 0x%08llx%08llx%08llx%08llx\n",
+				 r0, r1, r2, r3);
 	}
       if (writebuf)
 	{
@@ -1655,7 +1683,9 @@ epiphany_return_value (struct gdbarch  *gdbarch,
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM + 1, r1);
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM + 2, r2);
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM + 3, r3);
-	}
+
+	  epiphany_debug_infrun ("  word from memory 0x%08llx%08llx%08llx%08llx\n",
+				 r0, r1, r2, r3);	}
     }
   else
     {
@@ -1875,7 +1905,7 @@ epiphany_in_function_epilogue_p (struct gdbarch *gdbarch,
   CORE_ADDR func_end   = 0;
 
   CORE_ADDR epc;
-  CORE_ADDR ep_start = 0;			/* Start of epilogue. */
+  CORE_ADDR ep_start;			/* Start of epilogue. */
   int  in_epilogue;			/* True when we are in an epilogue. */
 
   epiphany_frame_debug ("epilog_p PC 0x%p\n", (void *) pc);
@@ -1891,6 +1921,8 @@ epiphany_in_function_epilogue_p (struct gdbarch *gdbarch,
 
   /* Loop looking for epilogue sequences. */
   in_epilogue = 0;
+  ep_start    = func_start;
+
   for (epc = func_start; epc < func_end;)
     {
       unsigned long int insn = read_memory_unsigned_integer (epc, 2,
@@ -2051,8 +2083,11 @@ epiphany_in_function_epilogue_p (struct gdbarch *gdbarch,
 	  if ((imm % bpw) == 0)
 	    {
 	      epiphany_frame_debug ("    start epilogue\n");
-	      ep_start = in_epilogue ? ep_start : epc;
-	      in_epilogue = 1;
+	      if (!in_epilogue)
+		{
+		  ep_start    = epc;
+		  in_epilogue = 1;
+		}
 	    }
 	}
       else if (   ((insn & 0x0000000f) == 0x00000008)
