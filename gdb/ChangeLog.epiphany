@@ -1,3 +1,14 @@
+2012-01-19  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c: Remove extern gdbarch_debug (unused).
+	(epiphany_debug_arch): Remove (unused).
+	(epiphany_analyse_prologue): Only populate register data if we
+	have a frame.
+	(epiphany_in_function_epilogue_p): Initialize ep_start to
+	func_start if function is found.
+	(epiphany_push_dummy_call): Allow for 16-byte scalars, which are
+	still only double word aligned if on the stack.
+
 2011-11-25  Jeremy Bennett  <jeremy.bennett@embecosm.com>
 
 	* epiphany-tdep.c (epiphany_analyse_prologue): Corrected
