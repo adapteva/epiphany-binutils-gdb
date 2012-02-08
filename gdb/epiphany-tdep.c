@@ -51,6 +51,7 @@
 #include "gdbtypes.h"
 #include "target.h"
 #include "regcache.h"
+#include "remote.h"
 
 #include "safe-ctype.h"
 #include "block.h"
@@ -63,6 +64,9 @@
 #include "trad-frame.h"
 #include "valprint.h"
 #include "prologue-value.h"
+
+#include "command.h"
+#include "cli/cli-cmds.h"
 
 #include "dis-asm.h"
 
@@ -222,6 +226,9 @@
 
 /*! Maximum instruction size */
 #define EPIPHANY_MAX_INST_SIZE  EPIPHANY_SIZE_WORD
+
+/*! Maximum number of cores */
+#define MAX_CORES  4096
 
 /* Macros for instruction analysis. Sign extension is from the Aggregate
    Magic algorithms (aggregate.org/MAGIC) by Joe Zbiciak. */
@@ -2665,15 +2672,79 @@ epiphany_dump_tdep (struct gdbarch *gdbarch,
 }	/* epiphany_dump_tdep() */
 
 
+/*! Value of the core ID requested by "set coreid" */
+static unsigned  epiphany_tmp_coreid;
+
+/* Value of the core ID that will actually be used. Values out of range are
+   ignored. */
+static unsigned  epiphany_coreid;
+
+
+/*----------------------------------------------------------------------------*/
+/*! Set the Epiphany coreID.
+
+    The value passed should be an unsigned integer less than MAX_CORES.
+
+    @param[in] args      The arguments to the command
+    @param[in] from_tty  Non-zero if we are connected to a TTY.
+    @param[in] c         The command structure
+
+    Register commands to set and show the coreid.                             */
+/*----------------------------------------------------------------------------*/
+static void
+epiphany_set_coreid (char                    *args,
+		     int                      from_tty,
+		     struct cmd_list_element *c)
+{
+  /* Ensure the value is valid. */
+  if (epiphany_tmp_coreid >= MAX_CORES)
+    {
+      /* Invalid values are ignored. We set the value to the previous value,
+	 so the default "show" function will work cleanly. */
+      epiphany_tmp_coreid = epiphany_coreid;
+      error (_("Core ID too large - ignored"));
+    }
+  else if (epiphany_tmp_coreid != epiphany_coreid)
+    {
+      /* Only set a valid core ID if it has changed. Copy it to the actual
+	 value. */
+      char *coreid_str = xmalloc (strlen ("coreid:") + 9);
+
+      epiphany_coreid = epiphany_tmp_coreid;
+      sprintf (coreid_str, "coreid:%d", epiphany_coreid);
+      register_remote_client_data (coreid_str);
+
+      xfree (coreid_str);
+    }
+}	/* epiphany_set_coreid () */
+
+
 /*----------------------------------------------------------------------------*/
 /*! Main entry point for target architecture initialization
 
-    Initializes the architecture via registers_gdbarch_init().               */
+    Initializes the architecture via registers_gdbarch_init().
+
+    Register commands to set and show the core ID to be used in the remote
+    target.                                                                   */
 /*----------------------------------------------------------------------------*/
 void
 _initialize_epiphany_tdep () 
 {
-  /* Uses the BFD defined for this architecture. */
-  gdbarch_register (bfd_arch_epiphany, epiphany_gdbarch_init, epiphany_dump_tdep);
+  /* Register this architecture. Uses the BFD defined for this architecture. */
+  gdbarch_register (bfd_arch_epiphany, epiphany_gdbarch_init,
+		    epiphany_dump_tdep);
+
+  /* Allow "set coreid" and "show coreid". Zero means zero (rather than
+     unlimited), and the value must be positive. Default "show" function will
+     suffice, but we must control the setting.*/
+  add_setshow_zuinteger_cmd ("coreid", class_obscure, &epiphany_tmp_coreid,
+			     _("Set target coreid."),
+			     _("Show target coreid."),
+			     _("Specify the core to use in the target."),
+			     epiphany_set_coreid, NULL,
+			     &setlist, &showlist);
+  /* Set the coreID defaults. */
+  epiphany_coreid = 0;
+  register_remote_client_data ("coreid:0");
 
 }	/* _initialize_epiphany_tdep() */

@@ -1,3 +1,16 @@
+2012-02-08  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c: Include remote.h, command.h and cli/cli-cmds.h
+	to support set/show coreid command.
+	<MAX_CORES>: Definition created.
+	(epiphany_set_coreid): Created.
+	(_initialize_epiphany_tdep): Register commands to set and show the
+	coreid.
+	* remote.c <remote_client_data>: New static data.
+	(register_remote_client_data): Created.
+	(remote_query_supported): Conditionally pass client data.
+	* remote.h (register_remote_client_data): Added.
+
 2012-01-19  Jeremy Bennett  <jeremy.bennett@embecosm.com>
 
 	* epiphany-tdep.c: Remove extern gdbarch_debug (unused).
