@@ -381,7 +381,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
   CORE_ADDR  this_sp;
   int        framesize;
 
-  pv_t            regs[EPIPHANY_NUM_GPRS];
+  pv_t            regs[EPIPHANY_NUM_REGS];
   struct pv_area *stack;
   struct cleanup *stack_cleanup;
 

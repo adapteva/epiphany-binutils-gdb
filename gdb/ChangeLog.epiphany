@@ -1,3 +1,8 @@
+2012-03-20  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_analyse_prologue): Change declaration
+	of regs to have EPIPHANY_NUM_REGS elements.
+
 2012-02-08  Jeremy Bennett  <jeremy.bennett@embecosm.com>
 
 	* epiphany-tdep.c: Include remote.h, command.h and cli/cli-cmds.h
