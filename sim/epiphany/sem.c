@@ -10949,7 +10949,7 @@ SEM_FN_NAME (epiphanybf,idle) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
     CPU (h_caibit) = opval;
     TRACE_RESULT (current_cpu, abuf, "caibit", 'x', opval);
   }
-sim_engine_halt (CPU_STATE (current_cpu), current_cpu, NULL, pc,                           sim_exited, 			   0);}
+sim_engine_halt (CPU_STATE (current_cpu), current_cpu, NULL, 		pc, sim_exited, 0);}
 
   return vpc;
 #undef FLD
@@ -13650,7 +13650,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -13827,7 +13827,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd6) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -14004,7 +14004,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -14181,7 +14181,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd6) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -14358,7 +14358,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -14535,7 +14535,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd6) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -14712,7 +14712,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -14889,7 +14889,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd6) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -15066,7 +15066,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -15243,7 +15243,7 @@ if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
     * FLD (i_rd6) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_bvsbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_busbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
 {
   {
     BI opval = 1;
@@ -15710,7 +15710,7 @@ SEM_FN_NAME (epiphanybf,f_ixf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
     * FLD (i_rd6) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_busbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_bvsbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_busbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_bvsbit))))) {
 {
   {
     BI opval = 1;
@@ -15859,7 +15859,7 @@ SEM_FN_NAME (epiphanybf,f_ixf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
     * FLD (i_rd6) = opval;
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (EQBI (CPU (h_invExcEnbit), 1), EQBI (CPU (h_bisbit), 1)), ORBI (ANDBI (EQBI (CPU (h_ovfExcEnbit), 1), EQBI (CPU (h_busbit), 1)), ANDBI (EQBI (CPU (h_unExcEnbit), 1), EQBI (CPU (h_bvsbit), 1))))) {
+if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_busbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_bvsbit))))) {
 {
   {
     BI opval = 1;
