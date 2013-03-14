@@ -1,3 +1,9 @@
+2013-03-14  Andreas Schwab  <schwab@suse.de>
+
+	* doc/c-arc.texi (ARC Directives): Revert last change and use
+	@itemize instead of @table.
+	* doc/c-arm.texi (ARM-Instruction-Set): Likewise.
+
 2013-03-14  Nick Clifton  <nickc@redhat.com>
 
 	PR gas/15212
