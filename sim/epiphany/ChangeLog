@@ -1,3 +1,7 @@
+2013-04-04  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* aclocal.m4: Generate.
+
 2012-01-23  Joern Rennecke  <joern.rennecke@embecosm.com>
 
 	* configure: Regenerate.
