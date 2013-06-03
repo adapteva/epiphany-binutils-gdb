@@ -1563,7 +1563,7 @@ epiphany_get_longjmp_target (struct frame_info *frame,
   target_read_memory() with error reporting).
 
   @param[in]  gdbarch   The GDB architecture being used
-  @param[in]  functype  The type of the function
+  @param[in]  function  The function
   @param[in]  valtype   The type of the entity to be returned
   @param[in]  regcache  The register cache
   @param[in]  readbuf   Buffer into which the return value should be written
@@ -1573,7 +1573,7 @@ epiphany_get_longjmp_target (struct frame_info *frame,
 /*----------------------------------------------------------------------------*/
 static enum return_value_convention
 epiphany_return_value (struct gdbarch  *gdbarch,
-		       struct type     *functype,
+		       struct value    *function,
 		       struct type     *valtype,
 		       struct regcache *regcache,
 		       gdb_byte        *readbuf,
@@ -2718,6 +2718,7 @@ epiphany_set_coreid (char                    *args,
     }
 }	/* epiphany_set_coreid () */
 
+extern initialize_file_ftype _initialize_epiphany_tdep; /*-Wmissing-prototypes*/
 
 /*----------------------------------------------------------------------------*/
 /*! Main entry point for target architecture initialization
@@ -2728,7 +2729,7 @@ epiphany_set_coreid (char                    *args,
     target.                                                                   */
 /*----------------------------------------------------------------------------*/
 void
-_initialize_epiphany_tdep () 
+_initialize_epiphany_tdep (void) 
 {
   /* Register this architecture. Uses the BFD defined for this architecture. */
   gdbarch_register (bfd_arch_epiphany, epiphany_gdbarch_init,
