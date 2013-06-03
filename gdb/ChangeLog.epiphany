@@ -1,3 +1,8 @@
+2013-06-03  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany-tdep.c (_initialize_epiphany_tdep): Add prototype.
+	(epiphany_return_value): Update interface.
+
 2012-03-20  Jeremy Bennett  <jeremy.bennett@embecosm.com>
 
 	* epiphany-tdep.c (epiphany_analyse_prologue): Change declaration
