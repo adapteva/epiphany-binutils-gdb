@@ -54,6 +54,11 @@ START_RELOC_NUMBERS (elf_epiphany_reloc_type)
   /* 8 bit immediate for MOV.S R,IMM8.  */
   RELOC_NUMBER (R_EPIPHANY_IMM8, 13)
 
+  /* HIGH and LOW relocations taking part of a 32 bit address
+     referring to a location in a PLT */
+  RELOC_NUMBER (R_EPIPHANY_OVERHIGH, 14)
+  RELOC_NUMBER (R_EPIPHANY_OVERLOW, 15)
+
 END_RELOC_NUMBERS(R_EPIPHANY_max)
 
 #endif /* _ELF_EPIPHANY_H */
