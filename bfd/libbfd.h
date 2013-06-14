@@ -2656,6 +2656,8 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
   "BFD_RELOC_EPIPHANY_SIMM11",
   "BFD_RELOC_EPIPHANY_IMM11",
   "BFD_RELOC_EPIPHANY_IMM8",
+  "BFD_RELOC_EPIPHANY_OVERHIGH",
+  "BFD_RELOC_EPIPHANY_OVERLOW",
  "@@overflow: BFD_RELOC_UNUSED@@",
 };
 #endif

@@ -6535,7 +6535,14 @@ ENUM
   BFD_RELOC_EPIPHANY_IMM8
 ENUMDOC
   Adapteva EPIPHANY - 8 bit immediate for 16 bit mov instruction.
-
+ENUM
+  BFD_RELOC_EPIPHANY_OVERHIGH
+ENUMDOC
+  Adapteva EPIPHANY - 16 most-significant bits of PLT reference
+ENUM
+  BFD_RELOC_EPIPHANY_OVERLOW
+ENUMDOC
+  Adapteva EPIPHANY - 16 least-significant bits of PLT reference
 
 ENDSENUM
   BFD_RELOC_UNUSED

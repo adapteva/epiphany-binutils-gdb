@@ -1,0 +1,20 @@
+2013-06-14  Simon Cook  <simon.cook@embecosm.com>
+
+	* reloc.c: Defined PLT relocations.
+	* libbfd.h: Regenerated.
+	* libbfd-in2.h: Regenerated.
+	* elf32-epiphany.c (epiphany_elf_howto_table): Add PLT relocs.
+	(epiphany_reloc_type_lookup): Likewise.
+	(epiphany_final_link_relocate): Add handling of PLT relocs.
+	(epiphany_elf_relocate_section): Pass output_bfd and h to
+	epiphany_final_link_relocate to handle PLT.
+	(epiphany_get_plt_address): Define for building PLT table.
+	(epiphany_elf_create_plt_section): Define for creating PLT
+	section.
+	(epiphany_elf_check_relocs): Define to handle PLT relocs.
+	(epiphany_elf_size_dynamic_sections): Define to handle PLT.
+	(epiphany_elf_finish_dynamic_sections): Likewise.
+	(elf_backend_check_relocs): Define.
+	(elf_backend_plt_alignment): Likewise.
+	(elf_backend_size_dynamic_sections): Likewise.
+	(elf_backend_finish_dynamic_sections): Likewise.

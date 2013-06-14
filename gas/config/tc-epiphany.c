@@ -999,9 +999,9 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
 
     case EPIPHANY_OPERAND_IMM16:
       if (0 == strcmp ("movt", CGEN_INSN_MNEMONIC (insn)))
-	return BFD_RELOC_EPIPHANY_HIGH;
+	return fixP->fx_cgen.opinfo; /* reloc specified in instruction parsing */
       else if (0 == strcmp ("mov", CGEN_INSN_MNEMONIC (insn)))
-	return BFD_RELOC_EPIPHANY_LOW;
+	return fixP->fx_cgen.opinfo;
       else
 	as_bad ("unknown imm16 operand");
       /* fall-thru */
@@ -1061,7 +1061,9 @@ epiphany_fix_adjustable (fixS *fixP)
       && (reloc_type == BFD_RELOC_EPIPHANY_SIMM24
 	  || reloc_type == BFD_RELOC_EPIPHANY_SIMM8
 	  || reloc_type == BFD_RELOC_EPIPHANY_HIGH
-	  || reloc_type == BFD_RELOC_EPIPHANY_LOW))
+	  || reloc_type == BFD_RELOC_EPIPHANY_LOW
+	  || reloc_type == BFD_RELOC_EPIPHANY_OVERHIGH
+	  || reloc_type == BFD_RELOC_EPIPHANY_OVERLOW))
     return FALSE;
 
   /* Since we don't use partial_inplace, we must not reduce symbols in
@@ -1087,6 +1089,8 @@ epiphany_cgen_parse_fix_exp (int opinfo, expressionS *exp ATTRIBUTE_UNUSED)
     {
     case BFD_RELOC_EPIPHANY_LOW:
     case BFD_RELOC_EPIPHANY_HIGH:
+    case BFD_RELOC_EPIPHANY_OVERLOW:
+    case BFD_RELOC_EPIPHANY_OVERHIGH:
       break;
     default:
       return opinfo;

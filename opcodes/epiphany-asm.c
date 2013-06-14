@@ -226,6 +226,25 @@ parse_imm16 (CGEN_CPU_DESC cd,
 	return MISSING_CLOSE_PARENTHESIS;
       ++*strp;
     }
+  else if (strncasecmp (*strp, "%overhigh(", 10) == 0) 
+    {
+      *strp += 10;
+      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_EPIPHANY_OVERHIGH,
+				   result_type, valuep);
+      if (**strp != ')')
+	return MISSING_CLOSE_PARENTHESIS;
+      ++*strp;
+      *valuep >>= 16;
+    }
+  else if (strncasecmp (*strp, "%overlow(", 9) == 0)
+    {
+      *strp += 9;
+      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_EPIPHANY_OVERLOW,
+				   result_type, valuep);
+      if (**strp != ')')
+	return MISSING_CLOSE_PARENTHESIS;
+      ++*strp;
+    }
   else if (!cgen_parse_keyword (cd, strp, &epiphany_cgen_opval_gr_names,
 				&dummyval)
 	   || !cgen_parse_keyword (cd, strp, &epiphany_cgen_opval_cr_names,
