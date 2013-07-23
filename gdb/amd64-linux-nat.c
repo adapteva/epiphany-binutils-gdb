@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux x86-64.
 
-   Copyright (C) 2001-2012 Free Software Foundation, Inc.
+   Copyright (C) 2001-2013 Free Software Foundation, Inc.
    Contributed by Jiri Smid, SuSE Labs.
 
    This file is part of GDB.
@@ -25,6 +25,8 @@
 #include "regset.h"
 #include "linux-nat.h"
 #include "amd64-linux-tdep.h"
+#include "linux-btrace.h"
+#include "btrace.h"
 
 #include "gdb_assert.h"
 #include "gdb_string.h"
@@ -34,6 +36,7 @@
 #include <sys/debugreg.h>
 #include <sys/syscall.h>
 #include <sys/procfs.h>
+#include <sys/user.h>
 #include <asm/prctl.h>
 /* FIXME ezannoni-2003-07-09: we need <sys/reg.h> to be included after
    <asm/ptrace.h> because the latter redefines FS and GS for no apparent
@@ -397,8 +400,16 @@ amd64_linux_prepare_to_resume (struct lwp_info *lwp)
 
   if (lwp->arch_private->debug_registers_changed)
     {
-      struct i386_debug_reg_state *state = i386_debug_reg_state ();
+      struct i386_debug_reg_state *state
+	= i386_debug_reg_state (ptid_get_pid (lwp->ptid));
       int i;
+
+      /* On Linux kernel before 2.6.33 commit
+	 72f674d203cd230426437cdcf7dd6f681dad8b0d
+	 if you enable a breakpoint by the DR_CONTROL bits you need to have
+	 already written the corresponding DR_FIRSTADDR...DR_LASTADDR registers.
+
+	 Ensure DR_CONTROL gets written as the very last register here.  */
 
       for (i = DR_FIRSTADDR; i <= DR_LASTADDR; i++)
 	if (state->dr_ref_count[i] > 0)
@@ -430,6 +441,41 @@ amd64_linux_new_thread (struct lwp_info *lp)
 
   lp->arch_private = info;
 }
+
+/* linux_nat_new_fork hook.   */
+
+static void
+amd64_linux_new_fork (struct lwp_info *parent, pid_t child_pid)
+{
+  pid_t parent_pid;
+  struct i386_debug_reg_state *parent_state;
+  struct i386_debug_reg_state *child_state;
+
+  /* NULL means no watchpoint has ever been set in the parent.  In
+     that case, there's nothing to do.  */
+  if (parent->arch_private == NULL)
+    return;
+
+  /* Linux kernel before 2.6.33 commit
+     72f674d203cd230426437cdcf7dd6f681dad8b0d
+     will inherit hardware debug registers from parent
+     on fork/vfork/clone.  Newer Linux kernels create such tasks with
+     zeroed debug registers.
+
+     GDB core assumes the child inherits the watchpoints/hw
+     breakpoints of the parent, and will remove them all from the
+     forked off process.  Copy the debug registers mirrors into the
+     new process so that all breakpoints and watchpoints can be
+     removed together.  The debug registers mirror will become zeroed
+     in the end before detaching the forked off process, thus making
+     this compatible with older Linux kernels too.  */
+
+  parent_pid = ptid_get_pid (parent->ptid);
+  parent_state = i386_debug_reg_state (parent_pid);
+  child_state = i386_debug_reg_state (child_pid);
+  *child_state = *parent_state;
+}
+
 
 
 /* This function is called by libthread_db as part of its handling of
@@ -439,7 +485,7 @@ ps_err_e
 ps_get_thread_area (const struct ps_prochandle *ph,
                     lwpid_t lwpid, int idx, void **base)
 {
-  if (gdbarch_ptr_bit (target_gdbarch) == 32)
+  if (gdbarch_bfd_arch_info (target_gdbarch ())->bits_per_word == 32)
     {
       /* The full structure is found in <asm-i386/ldt.h>.  The second
 	 integer is the LDT's base_address and that is used to locate
@@ -476,10 +522,39 @@ ps_get_thread_area (const struct ps_prochandle *ph,
       switch (idx)
 	{
 	case FS:
+#ifdef HAVE_STRUCT_USER_REGS_STRUCT_FS_BASE
+	    {
+	      /* PTRACE_ARCH_PRCTL is obsolete since 2.6.25, where the
+		 fs_base and gs_base fields of user_regs_struct can be
+		 used directly.  */
+	      unsigned long fs;
+	      errno = 0;
+	      fs = ptrace (PTRACE_PEEKUSER, lwpid,
+			   offsetof (struct user_regs_struct, fs_base), 0);
+	      if (errno == 0)
+		{
+		  *base = (void *) fs;
+		  return PS_OK;
+		}
+	    }
+#endif
 	  if (ptrace (PTRACE_ARCH_PRCTL, lwpid, base, ARCH_GET_FS) == 0)
 	    return PS_OK;
 	  break;
 	case GS:
+#ifdef HAVE_STRUCT_USER_REGS_STRUCT_GS_BASE
+	    {
+	      unsigned long gs;
+	      errno = 0;
+	      gs = ptrace (PTRACE_PEEKUSER, lwpid,
+			   offsetof (struct user_regs_struct, gs_base), 0);
+	      if (errno == 0)
+		{
+		  *base = (void *) gs;
+		  return PS_OK;
+		}
+	    }
+#endif
 	  if (ptrace (PTRACE_ARCH_PRCTL, lwpid, base, ARCH_GET_GS) == 0)
 	    return PS_OK;
 	  break;
@@ -587,6 +662,71 @@ typedef struct compat_siginfo
     } _sigpoll;
   } _sifields;
 } compat_siginfo_t;
+
+/* For x32, clock_t in _sigchld is 64bit aligned at 4 bytes.  */
+typedef struct compat_x32_clock
+{
+  int lower;
+  int upper;
+} compat_x32_clock_t;
+
+typedef struct compat_x32_siginfo
+{
+  int si_signo;
+  int si_errno;
+  int si_code;
+
+  union
+  {
+    int _pad[((128 / sizeof (int)) - 3)];
+
+    /* kill() */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+    } _kill;
+
+    /* POSIX.1b timers */
+    struct
+    {
+      compat_timer_t _tid;
+      int _overrun;
+      compat_sigval_t _sigval;
+    } _timer;
+
+    /* POSIX.1b signals */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+      compat_sigval_t _sigval;
+    } _rt;
+
+    /* SIGCHLD */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+      int _status;
+      compat_x32_clock_t _utime;
+      compat_x32_clock_t _stime;
+    } _sigchld;
+
+    /* SIGILL, SIGFPE, SIGSEGV, SIGBUS */
+    struct
+    {
+      unsigned int _addr;
+    } _sigfault;
+
+    /* SIGPOLL */
+    struct
+    {
+      int _band;
+      int _fd;
+    } _sigpoll;
+  } _sifields;
+} compat_x32_siginfo_t;
 
 #define cpt_si_pid _sifields._kill._pid
 #define cpt_si_uid _sifields._kill._uid
@@ -721,6 +861,124 @@ siginfo_from_compat_siginfo (siginfo_t *to, compat_siginfo_t *from)
     }
 }
 
+static void
+compat_x32_siginfo_from_siginfo (compat_x32_siginfo_t *to,
+				 siginfo_t *from)
+{
+  memset (to, 0, sizeof (*to));
+
+  to->si_signo = from->si_signo;
+  to->si_errno = from->si_errno;
+  to->si_code = from->si_code;
+
+  if (to->si_code == SI_TIMER)
+    {
+      to->cpt_si_timerid = from->si_timerid;
+      to->cpt_si_overrun = from->si_overrun;
+      to->cpt_si_ptr = (intptr_t) from->si_ptr;
+    }
+  else if (to->si_code == SI_USER)
+    {
+      to->cpt_si_pid = from->si_pid;
+      to->cpt_si_uid = from->si_uid;
+    }
+  else if (to->si_code < 0)
+    {
+      to->cpt_si_pid = from->si_pid;
+      to->cpt_si_uid = from->si_uid;
+      to->cpt_si_ptr = (intptr_t) from->si_ptr;
+    }
+  else
+    {
+      switch (to->si_signo)
+	{
+	case SIGCHLD:
+	  to->cpt_si_pid = from->si_pid;
+	  to->cpt_si_uid = from->si_uid;
+	  to->cpt_si_status = from->si_status;
+	  memcpy (&to->cpt_si_utime, &from->si_utime,
+		  sizeof (to->cpt_si_utime));
+	  memcpy (&to->cpt_si_stime, &from->si_stime,
+		  sizeof (to->cpt_si_stime));
+	  break;
+	case SIGILL:
+	case SIGFPE:
+	case SIGSEGV:
+	case SIGBUS:
+	  to->cpt_si_addr = (intptr_t) from->si_addr;
+	  break;
+	case SIGPOLL:
+	  to->cpt_si_band = from->si_band;
+	  to->cpt_si_fd = from->si_fd;
+	  break;
+	default:
+	  to->cpt_si_pid = from->si_pid;
+	  to->cpt_si_uid = from->si_uid;
+	  to->cpt_si_ptr = (intptr_t) from->si_ptr;
+	  break;
+	}
+    }
+}
+
+static void
+siginfo_from_compat_x32_siginfo (siginfo_t *to,
+				 compat_x32_siginfo_t *from)
+{
+  memset (to, 0, sizeof (*to));
+
+  to->si_signo = from->si_signo;
+  to->si_errno = from->si_errno;
+  to->si_code = from->si_code;
+
+  if (to->si_code == SI_TIMER)
+    {
+      to->si_timerid = from->cpt_si_timerid;
+      to->si_overrun = from->cpt_si_overrun;
+      to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr;
+    }
+  else if (to->si_code == SI_USER)
+    {
+      to->si_pid = from->cpt_si_pid;
+      to->si_uid = from->cpt_si_uid;
+    }
+  if (to->si_code < 0)
+    {
+      to->si_pid = from->cpt_si_pid;
+      to->si_uid = from->cpt_si_uid;
+      to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr;
+    }
+  else
+    {
+      switch (to->si_signo)
+	{
+	case SIGCHLD:
+	  to->si_pid = from->cpt_si_pid;
+	  to->si_uid = from->cpt_si_uid;
+	  to->si_status = from->cpt_si_status;
+	  memcpy (&to->si_utime, &from->cpt_si_utime,
+		  sizeof (to->si_utime));
+	  memcpy (&to->si_stime, &from->cpt_si_stime,
+		  sizeof (to->si_stime));
+	  break;
+	case SIGILL:
+	case SIGFPE:
+	case SIGSEGV:
+	case SIGBUS:
+	  to->si_addr = (void *) (intptr_t) from->cpt_si_addr;
+	  break;
+	case SIGPOLL:
+	  to->si_band = from->cpt_si_band;
+	  to->si_fd = from->cpt_si_fd;
+	  break;
+	default:
+	  to->si_pid = from->cpt_si_pid;
+	  to->si_uid = from->cpt_si_uid;
+	  to->si_ptr = (void* ) (intptr_t) from->cpt_si_ptr;
+	  break;
+	}
+    }
+}
+
 /* Convert a native/host siginfo object, into/from the siginfo in the
    layout of the inferiors' architecture.  Returns true if any
    conversion was done; false otherwise.  If DIRECTION is 1, then copy
@@ -728,18 +986,34 @@ siginfo_from_compat_siginfo (siginfo_t *to, compat_siginfo_t *from)
    INF.  */
 
 static int
-amd64_linux_siginfo_fixup (struct siginfo *native, gdb_byte *inf, int direction)
+amd64_linux_siginfo_fixup (siginfo_t *native, gdb_byte *inf, int direction)
 {
+  struct gdbarch *gdbarch = get_frame_arch (get_current_frame ());
+
   /* Is the inferior 32-bit?  If so, then do fixup the siginfo
      object.  */
-  if (gdbarch_addr_bit (get_frame_arch (get_current_frame ())) == 32)
+  if (gdbarch_bfd_arch_info (gdbarch)->bits_per_word == 32)
     {
-      gdb_assert (sizeof (struct siginfo) == sizeof (compat_siginfo_t));
+      gdb_assert (sizeof (siginfo_t) == sizeof (compat_siginfo_t));
 
       if (direction == 0)
 	compat_siginfo_from_siginfo ((struct compat_siginfo *) inf, native);
       else
 	siginfo_from_compat_siginfo (native, (struct compat_siginfo *) inf);
+
+      return 1;
+    }
+  /* No fixup for native x32 GDB.  */
+  else if (gdbarch_addr_bit (gdbarch) == 32 && sizeof (void *) == 8)
+    {
+      gdb_assert (sizeof (siginfo_t) == sizeof (compat_x32_siginfo_t));
+
+      if (direction == 0)
+	compat_x32_siginfo_from_siginfo ((struct compat_x32_siginfo *) inf,
+					 native);
+      else
+	siginfo_from_compat_x32_siginfo (native,
+					 (struct compat_x32_siginfo *) inf);
 
       return 1;
     }
@@ -752,16 +1026,23 @@ amd64_linux_siginfo_fixup (struct siginfo *native, gdb_byte *inf, int direction)
    Value of CS segment register:
      1. 64bit process: 0x33.
      2. 32bit process: 0x23.
+
+   Value of DS segment register:
+     1. LP64 process: 0x0.
+     2. X32 process: 0x2b.
  */
 
 #define AMD64_LINUX_USER64_CS	0x33
+#define AMD64_LINUX_X32_DS	0x2b
 
 static const struct target_desc *
 amd64_linux_read_description (struct target_ops *ops)
 {
   unsigned long cs;
+  unsigned long ds;
   int tid;
   int is_64bit;
+  int is_x32;
   static uint64_t xcr0;
 
   /* GNU/Linux LWP ID's are process ID's.  */
@@ -777,6 +1058,18 @@ amd64_linux_read_description (struct target_ops *ops)
     perror_with_name (_("Couldn't get CS register"));
 
   is_64bit = cs == AMD64_LINUX_USER64_CS;
+
+  /* Get DS register.  */
+  errno = 0;
+  ds = ptrace (PTRACE_PEEKUSER, tid,
+	       offsetof (struct user_regs_struct, ds), 0);
+  if (errno != 0)
+    perror_with_name (_("Couldn't get DS register"));
+
+  is_x32 = ds == AMD64_LINUX_X32_DS;
+
+  if (sizeof (void *) == 4 && is_64bit && !is_x32)
+    error (_("Can't debug 64-bit process with 32-bit GDB"));
 
   if (have_ptrace_getregset == -1)
     {
@@ -805,17 +1098,69 @@ amd64_linux_read_description (struct target_ops *ops)
       && (xcr0 & I386_XSTATE_AVX_MASK) == I386_XSTATE_AVX_MASK)
     {
       if (is_64bit)
-	return tdesc_amd64_avx_linux;
+	{
+	  if (is_x32)
+	    return tdesc_x32_avx_linux;
+	  else
+	    return tdesc_amd64_avx_linux;
+	}
       else
 	return tdesc_i386_avx_linux;
     }
   else
     {
       if (is_64bit)
-	return tdesc_amd64_linux;
+	{
+	  if (is_x32)
+	    return tdesc_x32_linux;
+	  else
+	    return tdesc_amd64_linux;
+	}
       else
 	return tdesc_i386_linux;
     }
+}
+
+/* Enable branch tracing.  */
+
+static struct btrace_target_info *
+amd64_linux_enable_btrace (ptid_t ptid)
+{
+  struct btrace_target_info *tinfo;
+  struct gdbarch *gdbarch;
+
+  errno = 0;
+  tinfo = linux_enable_btrace (ptid);
+
+  if (tinfo == NULL)
+    error (_("Could not enable branch tracing for %s: %s."),
+	   target_pid_to_str (ptid), safe_strerror (errno));
+
+  /* Fill in the size of a pointer in bits.  */
+  gdbarch = target_thread_architecture (ptid);
+  tinfo->ptr_bits = gdbarch_ptr_bit (gdbarch);
+
+  return tinfo;
+}
+
+/* Disable branch tracing.  */
+
+static void
+amd64_linux_disable_btrace (struct btrace_target_info *tinfo)
+{
+  int errcode = linux_disable_btrace (tinfo);
+
+  if (errcode != 0)
+    error (_("Could not disable branch tracing: %s."), safe_strerror (errcode));
+}
+
+/* Teardown branch tracing.  */
+
+static void
+amd64_linux_teardown_btrace (struct btrace_target_info *tinfo)
+{
+  /* Ignore errors.  */
+  linux_disable_btrace (tinfo);
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
@@ -856,9 +1201,18 @@ _initialize_amd64_linux_nat (void)
 
   t->to_read_description = amd64_linux_read_description;
 
+  /* Add btrace methods.  */
+  t->to_supports_btrace = linux_supports_btrace;
+  t->to_enable_btrace = amd64_linux_enable_btrace;
+  t->to_disable_btrace = amd64_linux_disable_btrace;
+  t->to_teardown_btrace = amd64_linux_teardown_btrace;
+  t->to_read_btrace = linux_read_btrace;
+
   /* Register the target.  */
   linux_nat_add_target (t);
   linux_nat_set_new_thread (t, amd64_linux_new_thread);
+  linux_nat_set_new_fork (t, amd64_linux_new_fork);
+  linux_nat_set_forget_process (t, i386_forget_process);
   linux_nat_set_siginfo_fixup (t, amd64_linux_siginfo_fixup);
   linux_nat_set_prepare_to_resume (t, amd64_linux_prepare_to_resume);
 }

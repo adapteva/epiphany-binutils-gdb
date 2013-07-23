@@ -364,7 +364,7 @@
    (r56 56) (r57 57) (r58 58) (r59 59) (r60 60) (r61 61) (r62 62) (r63 63)
 ; some less popular aliases
    (a1  0) (a2  1) (a3  2) (a4  3) (v1  4) (v2  5) (v3  6) (v4  7)
-   (v5  8) (v6  9) (v7 10) (v8 11) 
+   (v5  8) (v6  9) (v7 10) (v8 11)
    (sb 9) (sl 10) (ip 12)
    )
   )
@@ -2582,7 +2582,7 @@
 
 	    (if (or (and invExcEnbit bisbit)
 		    (or (and ovfExcEnbit bvsbit) (and unExcEnbit busbit)))
-		(sequence ()	
+		(sequence ()
 		  (set expcause0bit (const 1))
 		  (set expcause1bit (const 1))
 		  (call-exception #x4 #x2)))

@@ -1,6 +1,6 @@
 /* Routines for name->symbol lookups in GDB.
    
-   Copyright (C) 2003, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    Contributed by David Carlton <carlton@bactrian.org> and by Kealia,
    Inc.
@@ -496,6 +496,22 @@ void
 dict_add_symbol (struct dictionary *dict, struct symbol *sym)
 {
   (DICT_VECTOR (dict))->add_symbol (dict, sym);
+}
+
+/* Utility to add a list of symbols to a dictionary.
+   DICT must be an expandable dictionary.  */
+
+void
+dict_add_pending (struct dictionary *dict, const struct pending *symbol_list)
+{
+  const struct pending *list;
+  int i;
+
+  for (list = symbol_list; list != NULL; list = list->next)
+    {
+      for (i = 0; i < list->nsyms; ++i)
+	dict_add_symbol (dict, list->symbol[i]);
+    }
 }
 
 /* Initialize ITERATOR to point at the first symbol in DICT, and

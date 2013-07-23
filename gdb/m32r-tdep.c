@@ -1,7 +1,6 @@
 /* Target-dependent code for Renesas M32R, for GDB.
 
-   Copyright (C) 1996, 1998-2005, 2007-2012 Free Software Foundation,
-   Inc.
+   Copyright (C) 1996-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -85,7 +84,7 @@ m32r_memory_insert_breakpoint (struct gdbarch *gdbarch,
   CORE_ADDR addr = bp_tgt->placed_address;
   int val;
   gdb_byte buf[4];
-  gdb_byte *contents_cache = bp_tgt->shadow_contents;
+  gdb_byte contents_cache[4];
   gdb_byte bp_entry[] = { 0x10, 0xf1 };	/* dpt */
 
   /* Save the memory contents.  */
@@ -93,6 +92,7 @@ m32r_memory_insert_breakpoint (struct gdbarch *gdbarch,
   if (val != 0)
     return val;			/* return error */
 
+  memcpy (bp_tgt->shadow_contents, contents_cache, 4);
   bp_tgt->placed_size = bp_tgt->shadow_len = 4;
 
   /* Determine appropriate breakpoint contents and size for this address.  */
@@ -536,7 +536,7 @@ m32r_frame_unwind_cache (struct frame_info *this_frame,
   CORE_ADDR pc, scan_limit;
   ULONGEST prev_sp;
   ULONGEST this_base;
-  unsigned long op, op2;
+  unsigned long op;
   int i;
   struct m32r_unwind_cache *info;
 
@@ -696,7 +696,6 @@ m32r_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   gdb_byte *val;
   gdb_byte valbuf[MAX_REGISTER_SIZE];
   int len;
-  int odd_sized_struct;
 
   /* First force sp to a 4-byte alignment.  */
   sp = sp & ~3;
@@ -808,7 +807,7 @@ m32r_extract_return_value (struct type *type, struct regcache *regcache,
 }
 
 static enum return_value_convention
-m32r_return_value (struct gdbarch *gdbarch, struct type *func_type,
+m32r_return_value (struct gdbarch *gdbarch, struct value *function,
 		   struct type *valtype, struct regcache *regcache,
 		   gdb_byte *readbuf, const gdb_byte *writebuf)
 {

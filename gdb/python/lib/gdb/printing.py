@@ -1,5 +1,5 @@
 # Pretty-printer utilities.
-# Copyright (C) 2010-2012 Free Software Foundation, Inc.
+# Copyright (C) 2010-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,12 @@
 import gdb
 import gdb.types
 import re
+import sys
 
+if sys.version_info[0] > 2:
+    # Python 3 removed basestring and long
+    basestring = str
+    long = int
 
 class PrettyPrinter(object):
     """A basic pretty-printer.
@@ -247,10 +252,10 @@ class FlagEnumerationPrinter(PrettyPrinter):
             flags = gdb.lookup_type(self.name)
             self.enumerators = []
             for field in flags.fields():
-                self.enumerators.append((field.name, field.bitpos))
+                self.enumerators.append((field.name, field.enumval))
             # Sorting the enumerators by value usually does the right
             # thing.
-            self.enumerators.sort(key = lambda x: x.bitpos)
+            self.enumerators.sort(key = lambda x: x.enumval)
 
         if self.enabled:
             return _EnumInstance(self.enumerators, val)

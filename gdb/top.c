@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,7 +19,6 @@
 
 #include "defs.h"
 #include "gdbcmd.h"
-#include "call-cmds.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-script.h"
 #include "cli/cli-setshow.h"
@@ -47,6 +46,7 @@
 #include "gdbthread.h"
 #include "python/python.h"
 #include "interps.h"
+#include "observer.h"
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -63,6 +63,8 @@
 #include <ctype.h>
 #include "ui-out.h"
 #include "cli-out.h"
+
+extern void initialize_all_files (void);
 
 #define PROMPT(X) the_prompts.prompt_stack[the_prompts.top + X].prompt
 #define PREFIX(X) the_prompts.prompt_stack[the_prompts.top + X].prefix
@@ -98,11 +100,13 @@ int use_windows = 0;
 
 extern char lang_frame_mismatch_warn[];		/* language.c */
 
-/* Flag for whether we want all the "from_tty" gubbish printed.  */
+/* Flag for whether we want to confirm potentially dangerous
+   operations.  Default is yes.  */
 
-int caution = 1;		/* Default is yes, sigh.  */
+int confirm = 1;
+
 static void
-show_caution (struct ui_file *file, int from_tty,
+show_confirm (struct ui_file *file, int from_tty,
 	      struct cmd_list_element *c, const char *value)
 {
   fprintf_filtered (file, _("Whether to confirm potentially "
@@ -133,9 +137,6 @@ char gdb_dirbuf[1024];
    and a prompt string.  */
 
 void (*window_hook) (FILE *, char *);
-
-int epoch_interface;
-int xgdb_verbose;
 
 /* Buffer used for reading command lines, and the size
    allocated for it so far.  */
@@ -289,9 +290,9 @@ void (*deprecated_context_hook) (int id);
 /* static */ void
 quit_cover (void)
 {
-  caution = 0;			/* Throw caution to the wind -- we're exiting.
-				   This prevents asking the user dumb 
-				   questions.  */
+  /* Stop asking user for confirmation --- we're exiting.  This
+     prevents asking the user dumb questions.  */
+  confirm = 0;
   quit_command ((char *) 0, 0);
 }
 #endif /* defined SIGHUP */
@@ -333,7 +334,7 @@ read_command_file (FILE *stream)
 void (*pre_init_ui_hook) (void);
 
 #ifdef __MSDOS__
-void
+static void
 do_chdir_cleanup (void *old_dir)
 {
   chdir (old_dir);
@@ -468,16 +469,19 @@ execute_command (char *p, int from_tty)
       if (c->flags & DEPRECATED_WARN_USER)
 	deprecated_cmd_warning (&line);
 
-      if (c->class == class_user)
+      /* c->user_commands would be NULL in the case of a python command.  */
+      if (c->class == class_user && c->user_commands)
 	execute_user_command (c, arg);
-      else if (c->type == set_cmd || c->type == show_cmd)
-	do_setshow_command (arg, from_tty & caution, c);
+      else if (c->type == set_cmd)
+	do_set_command (arg, from_tty, c);
+      else if (c->type == show_cmd)
+	do_show_command (arg, from_tty, c);
       else if (!cmd_func_p (c))
 	error (_("That is not a command, just a help topic."));
       else if (deprecated_call_command_hook)
-	deprecated_call_command_hook (c, arg, from_tty & caution);
+	deprecated_call_command_hook (c, arg, from_tty);
       else
-	cmd_func (c, arg, from_tty & caution);
+	cmd_func (c, arg, from_tty);
 
       /* If the interpreter is in sync mode (we're running a user
 	 command's list, running command hooks or similars), and we
@@ -563,7 +567,7 @@ command_loop (void)
       if (window_hook && instream == stdin)
 	(*window_hook) (instream, get_prompt ());
 
-      quit_flag = 0;
+      clear_quit_flag ();
       if (instream == stdin && stdin_is_tty)
 	reinitialize_more_filter ();
       old_chain = make_cleanup (null_cleanup, 0);
@@ -704,7 +708,7 @@ show_write_history_p (struct ui_file *file, int from_tty,
 		    value);
 }
 
-static int history_size;
+static unsigned int history_size;
 static void
 show_history_size (struct ui_file *file, int from_tty,
 		   struct cmd_list_element *c, const char *value)
@@ -938,6 +942,7 @@ command_line_input (char *prompt_arg, int repeat, char *annotation_suffix)
   /* Control-C quits instantly if typed while in this loop
      since it should not wait until the user types a newline.  */
   immediate_quit++;
+  QUIT;
 #ifdef STOP_SIGNAL
   if (job_control)
     signal (STOP_SIGNAL, handle_stop_sig);
@@ -1116,7 +1121,7 @@ print_gdb_version (struct ui_file *stream)
   /* Second line is a copyright notice.  */
 
   fprintf_filtered (stream,
-		    "Copyright (C) 2012 Free Software Foundation, Inc.\n");
+		    "Copyright (C) 2013 Free Software Foundation, Inc.\n");
 
   /* Following the copyright is a brief statement that the program is
      free software, that users are free to copy and change it on
@@ -1294,8 +1299,8 @@ quit_target (void *arg)
   if (write_history_p && history_filename)
     write_history (history_filename);
 
-  do_final_cleanups (ALL_CLEANUPS);    /* Do any final cleanups before
-					  exiting.  */
+  do_final_cleanups (all_cleanups ());    /* Do any final cleanups before
+					     exiting.  */
   return 0;
 }
 
@@ -1373,7 +1378,7 @@ show_commands (char *args, int from_tty)
 
   /* The first command in the history which doesn't exist (i.e. one more
      than the number of the last command).  Relative to history_base.  */
-  int hist_len;
+  unsigned int hist_len;
 
   /* Print out some of the commands from the command history.  */
   /* First determine the length of the history list.  */
@@ -1438,15 +1443,16 @@ show_commands (char *args, int from_tty)
 static void
 set_history_size_command (char *args, int from_tty, struct cmd_list_element *c)
 {
-  if (history_size == INT_MAX)
-    unstifle_history ();
-  else if (history_size >= 0)
-    stifle_history (history_size);
-  else
+  /* The type of parameter in stifle_history is int, so values from INT_MAX up
+     mean 'unlimited'.  */
+  if (history_size >= INT_MAX)
     {
-      history_size = INT_MAX;
-      error (_("History size must be non-negative"));
+      /* Ensure that 'show history size' prints 'unlimited'.  */
+      history_size = UINT_MAX;
+      unstifle_history ();
     }
+  else
+    stifle_history (history_size);
 }
 
 void
@@ -1556,6 +1562,15 @@ show_exec_done_display_p (struct ui_file *file, int from_tty,
 			    "asynchronous execution commands is %s.\n"),
 		    value);
 }
+
+/* "set" command for the gdb_datadir configuration variable.  */
+
+static void
+set_gdb_datadir (char *args, int from_tty, struct cmd_list_element *c)
+{
+  observer_notify_gdb_datadir_changed ();
+}
+
 static void
 init_main (void)
 {
@@ -1617,13 +1632,13 @@ Without an argument, saving is enabled."),
 			   show_write_history_p,
 			   &sethistlist, &showhistlist);
 
-  add_setshow_integer_cmd ("size", no_class, &history_size, _("\
+  add_setshow_uinteger_cmd ("size", no_class, &history_size, _("\
 Set the size of the command history,"), _("\
 Show the size of the command history,"), _("\
 ie. the number of previous commands to keep a record of."),
-			   set_history_size_command,
-			   show_history_size,
-			   &sethistlist, &showhistlist);
+			    set_history_size_command,
+			    show_history_size,
+			    &sethistlist, &showhistlist);
 
   add_setshow_filename_cmd ("filename", no_class, &history_filename, _("\
 Set the filename in which to record the command history"), _("\
@@ -1633,11 +1648,11 @@ Show the filename in which to record the command history"), _("\
 			    show_history_filename,
 			    &sethistlist, &showhistlist);
 
-  add_setshow_boolean_cmd ("confirm", class_support, &caution, _("\
+  add_setshow_boolean_cmd ("confirm", class_support, &confirm, _("\
 Set whether to confirm potentially dangerous operations."), _("\
 Show whether to confirm potentially dangerous operations."), NULL,
 			   NULL,
-			   show_caution,
+			   show_confirm,
 			   &setlist, &showlist);
 
   add_setshow_zinteger_cmd ("annotate", class_obscure, &annotation_level, _("\
@@ -1663,7 +1678,7 @@ Use \"on\" to enable the notification, and \"off\" to disable it."),
                            _("Show GDB's data directory."),
                            _("\
 When set, GDB uses the specified path to search for data files."),
-                           NULL, NULL,
+                           set_gdb_datadir, NULL,
                            &setlist,
                            &showlist);
 }
@@ -1698,6 +1713,7 @@ gdb_init (char *argv0)
   initialize_inferiors ();
   initialize_current_architecture ();
   init_cli_cmds();
+  initialize_event_loop ();
   init_main ();			/* But that omits this file!  Do it now.  */
 
   initialize_stdin_serial ();

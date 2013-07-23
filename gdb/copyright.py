@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# Copyright (C) 2011-2012 Free Software Foundation, Inc.
+# Copyright (C) 2011-2013 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -34,14 +34,6 @@ import datetime
 import os
 import os.path
 import subprocess
-
-# A list of prefixes that start a multi-line comment.  These prefixes
-# should not be repeatead when wraping long lines.
-MULTILINE_COMMENT_PREFIXES = (
-    '/*',    # C/C++
-    '<!--',  # XML
-    '{',     # Pascal
-)
 
 
 def get_update_list():
@@ -80,15 +72,16 @@ def update_files(update_list):
 
     We use gnulib's update-copyright script for that.
     """
-    # Tell the update-copyright script that we do not want it to
-    # repeat the prefixes in MULTILINE_COMMENT_PREFIXES.
-    os.environ['MULTILINE_COMMENT_PREFIXES'] = \
-        '\n'.join(MULTILINE_COMMENT_PREFIXES)
-    # We want to use year intervals in the copyright notices.
-    os.environ['UPDATE_COPYRIGHT_USE_INTERVALS'] = '1'
+    # We want to use year intervals in the copyright notices, and
+    # all years should be collapsed to one single year interval,
+    # even if there are "holes" in the list of years found in the
+    # original copyright notice (OK'ed by the FSF, case [gnu.org #719834]).
+    os.environ['UPDATE_COPYRIGHT_USE_INTERVALS'] = '2'
 
     # Perform the update, and save the output in a string.
-    update_cmd = ['bash', 'gdb/gnulib/extra/update-copyright'] + update_list
+    update_cmd = ['bash', 'gdb/gnulib/import/extra/update-copyright']
+    update_cmd += update_list
+
     p = subprocess.Popen(update_cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     update_out = p.communicate()[0]
@@ -148,7 +141,7 @@ def may_have_copyright_notice(filename):
 
 def main ():
     """The main subprogram."""
-    if not os.path.isfile("gnulib/extra/update-copyright"):
+    if not os.path.isfile("gnulib/import/extra/update-copyright"):
         print "Error: This script must be called from the gdb directory."
     root_dir = os.path.dirname(os.getcwd())
     os.chdir(root_dir)
@@ -161,7 +154,7 @@ def main ():
         print
         print "\033[31mREMINDER: The following files must be updated by hand." \
               "\033[0m"
-        for filename in BY_HAND:
+        for filename in BY_HAND + MULTIPLE_COPYRIGHT_HEADERS:
             print "  ", filename
 
 ############################################################################
@@ -178,7 +171,7 @@ def main ():
 #
 # Filenames are relative to the root directory.
 EXCLUDE_LIST = (
-    'gdb/gdbarch.c', 'gdb/gdbarch.h',
+    'gdb/CONTRIBUTE',
     'gdb/gnulib'
 )
 
@@ -202,11 +195,19 @@ BY_HAND = (
     "gdb/testsuite/gdb.base/step-line.c",
 )
 
+# Files containing multiple copyright headers.  This script is only
+# fixing the first one it finds, so we need to finish the update
+# by hand.
+MULTIPLE_COPYRIGHT_HEADERS = (
+    "gdb/doc/gdb.texinfo",
+    "gdb/doc/refcard.tex",
+    "gdb/gdbarch.sh",
+)
+
 # The list of file which have a copyright, but not head by the FSF.
 # Filenames are relative to the root directory.
 NOT_FSF_LIST = (
     "gdb/exc_request.defs",
-    "gdb/osf-share",
     "gdb/gdbtk",
     "gdb/testsuite/gdb.gdbtk/",
     "sim/arm/armemu.h", "sim/arm/armos.c", "sim/arm/gdbhost.c",
@@ -218,13 +219,12 @@ NOT_FSF_LIST = (
     "sim/arm/bag.c", "sim/arm/armvirt.c", "sim/arm/main.c", "sim/arm/bag.h",
     "sim/arm/communicate.c", "sim/arm/gdbhost.h", "sim/arm/armfpe.h",
     "sim/arm/arminit.c",
-    "sim/common/cgen-fpu.c", "sim/common/cgen-fpu.h", "sim/common/cgen-fpu.h",
-    "sim/common/cgen-accfp.c", "sim/common/sim-fpu.c",
+    "sim/common/cgen-fpu.c", "sim/common/cgen-fpu.h",
+    "sim/common/cgen-accfp.c",
     "sim/erc32/sis.h", "sim/erc32/erc32.c", "sim/erc32/func.c",
     "sim/erc32/float.c", "sim/erc32/interf.c", "sim/erc32/sis.c",
     "sim/erc32/exec.c",
     "sim/mips/m16run.c", "sim/mips/sim-main.c",
-    "sim/mn10300/sim-main.h",
     "sim/moxie/moxie-gdb.dts",
     # Not a single file in sim/ppc/ appears to be copyright FSF :-(.
     "sim/ppc/filter.h", "sim/ppc/gen-support.h", "sim/ppc/ld-insn.h",

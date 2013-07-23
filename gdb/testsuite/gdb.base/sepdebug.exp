@@ -1,5 +1,4 @@
-#   Copyright 1988, 1990-1992, 1994-2000, 2002-2004, 2007-2012 Free
-#   Software Foundation, Inc.
+#   Copyright 1988-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -150,7 +149,6 @@ gdb_test "break multi_line_while_conditional" \
     "Breakpoint.*at.* file .*$srcfile, line $bp_location4\\." \
     "breakpoint at start of multi line while conditional"
 
-set bp_location5 [gdb_get_line_number "set breakpoint 5 here"]
 set bp_location6 [gdb_get_line_number "set breakpoint 6 here"]
 
 set main_line $bp_location6
@@ -175,9 +173,6 @@ gdb_test "info break" \
 # handle arguments.
 # Huh? There doesn't *appear* to be anything that passes arguments
 # below.
-if [istarget "mips-idt-*"] then {
-    return
-}
 
 #
 # run until the breakpoint at main is hit. For non-stubs-using targets.
@@ -412,7 +407,7 @@ gdb_test "break $bp_location12 thread foo" \
 #
 
 gdb_test "break $bp_location12 foo" \
-    "Junk at end of arguments.*" \
+    "malformed linespec error: unexpected string, \"foo\".*" \
     "breakpoint with trailing garbage disallowed"
 
 # Verify that GDB responds gracefully to a "clear" command that has
@@ -653,13 +648,9 @@ test_next_with_recursion
 
 #********
 
-proc test_different_dir {type test_different_dir xfail} {
+proc test_different_dir {type test_different_dir xfail} { with_test_prefix "$type" {
     global srcdir subdir objdir binfile srcfile timeout gdb_prompt
-    global pf_prefix
     global bp_location6 decimal hex
-
-    set old_pf_prefix $pf_prefix
-    append pf_prefix " $type:"
 
     gdb_exit
     gdb_start
@@ -750,9 +741,8 @@ proc test_different_dir {type test_different_dir xfail} {
 	gdb_test_no_output "set args main"
     }
 
-    set pf_prefix $old_pf_prefix
 # proc test_different_dir
-}
+}}
 
 
 # now move the .debug file to a different location so that we can test

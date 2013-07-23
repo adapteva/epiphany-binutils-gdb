@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2012 Free Software Foundation, Inc.
+# Copyright (C) 2007-2013 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -30,13 +30,18 @@
 # in the GDB repository.  To generate C files:
 #   make GDB=/path/to/gdb XMLTOC="xml files" cfiles
 
-WHICH = arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
+WHICH = aarch64 aarch64-without-fpu \
+	arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
+	arm-with-m arm-with-m-fpa-layout arm-with-m-vfp-d16 \
 	i386/i386 i386/i386-linux \
 	i386/i386-mmx i386/i386-mmx-linux \
 	i386/amd64 i386/amd64-linux \
 	i386/i386-avx i386/i386-avx-linux \
 	i386/amd64-avx i386/amd64-avx-linux \
-	mips-linux mips64-linux \
+	i386/x32 i386/x32-linux \
+	i386/x32-avx i386/x32-avx-linux \
+	mips-linux mips-dsp-linux \
+	mips64-linux mips64-dsp-linux \
 	rs6000/powerpc-32 \
 	rs6000/powerpc-32l rs6000/powerpc-altivec32l rs6000/powerpc-e500l \
 	rs6000/powerpc-64l rs6000/powerpc-altivec64l rs6000/powerpc-vsx32l \
@@ -48,6 +53,7 @@ WHICH = arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
 	tic6x-c64xp-linux tic6x-c64x-linux tic6x-c62x-linux
 
 # Record which registers should be sent to GDB by default after stop.
+aarch64-expedite = x29,sp,pc
 arm-expedite = r11,sp,pc
 i386/i386-expedite = ebp,esp,eip
 i386/i386-linux-expedite = ebp,esp,eip
@@ -59,8 +65,14 @@ i386/i386-mmx-expedite = ebp,esp,eip
 i386/i386-mmx-linux-expedite = ebp,esp,eip
 i386/amd64-avx-expedite = rbp,rsp,rip
 i386/amd64-avx-linux-expedite = rbp,rsp,rip
+i386/x32-expedite = rbp,rsp,rip
+i386/x32-linux-expedite = rbp,rsp,rip
+i386/x32-avx-expedite = rbp,rsp,rip
+i386/x32-avx-linux-expedite = rbp,rsp,rip
 mips-expedite = r29,pc
+mips-dsp-expedite = r29,pc
 mips64-expedite = r29,pc
+mips64-dsp-expedite = r29,pc
 powerpc-expedite = r1,pc
 rs6000/powerpc-cell32l-expedite = r1,pc,r0,orig_r3,r4
 rs6000/powerpc-cell64l-expedite = r1,pc,r0,orig_r3,r4
@@ -124,3 +136,9 @@ $(outdir)/i386/i386-mmx-linux.dat: i386/32bit-core.xml i386/32bit-linux.xml
 $(outdir)/i386/amd64-avx.dat: i386/64bit-core.xml i386/64bit-avx.xml
 $(outdir)/i386/amd64-avx-linux.dat: i386/64bit-core.xml i386/64bit-avx.xml \
 				    i386/64bit-linux.xml
+$(outdir)/i386/x32.dat: i386/x32-core.xml i386/64bit-sse.xml
+$(outdir)/i386/x32-linux.dat: i386/x32-core.xml i386/64bit-sse.xml \
+			      i386/64bit-linux.xml
+$(outdir)/i386/x32-avx.dat: i386/x32-core.xml i386/64bit-avx.xml
+$(outdir)/i386/x32-avx-linux.dat: i386/x32-core.xml i386/64bit-avx.xml \
+				  i386/64bit-linux.xml

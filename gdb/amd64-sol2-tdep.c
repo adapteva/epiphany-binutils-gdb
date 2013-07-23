@@ -1,6 +1,6 @@
 /* Target-dependent code for AMD64 Solaris.
 
-   Copyright (C) 2001-2004, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2001-2013 Free Software Foundation, Inc.
 
    Contributed by Joseph Myers, CodeSourcery, LLC.
 
@@ -54,7 +54,7 @@ static int amd64_sol2_gregset_reg_offset[] = {
   1 * 8,
   0 * 8,			/* ... %r15 */
   17 * 8,			/* %rip */
-  16 * 8,			/* %eflags */
+  19 * 8,			/* %eflags */
   18 * 8,			/* %cs */
   21 * 8,			/* %ss */
   25 * 8,			/* %ds */
@@ -71,7 +71,7 @@ static int
 amd64_sol2_sigtramp_p (struct frame_info *this_frame)
 {
   CORE_ADDR pc = get_frame_pc (this_frame);
-  char *name;
+  const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
   return (name && (strcmp ("sigacthandler", name) == 0

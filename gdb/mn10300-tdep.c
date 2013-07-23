@@ -1,6 +1,6 @@
 /* Target-dependent code for the Matsushita MN10300 for GDB, the GNU debugger.
 
-   Copyright (C) 1996-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 1996-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -198,7 +198,7 @@ static void
 mn10300_extract_return_value (struct gdbarch *gdbarch, struct type *type,
 			      struct regcache *regcache, void *valbuf)
 {
-  char buf[MAX_REGISTER_SIZE];
+  gdb_byte buf[MAX_REGISTER_SIZE];
   int len = TYPE_LENGTH (type);
   int reg, regsz;
 
@@ -233,7 +233,7 @@ mn10300_extract_return_value (struct gdbarch *gdbarch, struct type *type,
    from WRITEBUF into REGCACHE.  */
 
 static enum return_value_convention
-mn10300_return_value (struct gdbarch *gdbarch, struct type *func_type,
+mn10300_return_value (struct gdbarch *gdbarch, struct value *function,
 		      struct type *type, struct regcache *regcache,
 		      gdb_byte *readbuf, const gdb_byte *writebuf)
 {
@@ -387,7 +387,7 @@ mn10300_analyze_prologue (struct gdbarch *gdbarch,
                           struct mn10300_prologue *result)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  CORE_ADDR pc, next_pc;
+  CORE_ADDR pc;
   int rn;
   pv_t regs[MN10300_MAX_NUM_REGS];
   struct pv_area *stack;
@@ -1061,7 +1061,7 @@ mn10300_analyze_prologue (struct gdbarch *gdbarch,
 static CORE_ADDR
 mn10300_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  char *name;
+  const char *name;
   CORE_ADDR func_addr, func_end;
   struct mn10300_prologue p;
 

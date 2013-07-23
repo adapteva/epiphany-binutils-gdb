@@ -1,6 +1,6 @@
 /* Target-dependent code for Solaris UltraSPARC.
 
-   Copyright (C) 2003-2004, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -44,6 +44,12 @@ const struct sparc_gregset sparc64_sol2_gregset =
   1 * 8,			/* %g1 */
   16 * 8,			/* %l0 */
   8				/* sizeof (%y) */
+};
+
+const struct sparc_fpregset sparc64_sol2_fpregset =
+{
+  0 * 8,			/* %f0 */
+  33 * 8,			/* %fsr */
 };
 
 
@@ -130,7 +136,7 @@ sparc64_sol2_sigtramp_frame_sniffer (const struct frame_unwind *self,
 				     void **this_cache)
 {
   CORE_ADDR pc = get_frame_pc (this_frame);
-  char *name;
+  const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
   if (sparc_sol2_pc_in_sigtramp (pc, name))

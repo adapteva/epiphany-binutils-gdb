@@ -1,4 +1,4 @@
-# Copyright (C) 1998, 2007-2012 Free Software Foundation, Inc.
+# Copyright (C) 1998-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ set srcfile ${testfile}.c
 set objfile ${objdir}/${subdir}/${testfile}.o
 set binfile ${objdir}/${subdir}/${testfile}
 
-if [get_compiler_info ${binfile} "c++"] {
+if [get_compiler_info "c++"] {
     return -1;
 }
 

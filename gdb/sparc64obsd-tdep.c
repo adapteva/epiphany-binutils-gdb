@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/sparc64.
 
-   Copyright (C) 2004-2012 Free Software Foundation, Inc.
+   Copyright (C) 2004-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -64,7 +64,7 @@ sparc64obsd_supply_gregset (const struct regset *regset,
   const char *regs = gregs;
 
   sparc64_supply_gregset (&sparc64obsd_core_gregset, regcache, regnum, regs);
-  sparc64_supply_fpregset (regcache, regnum, regs + 288);
+  sparc64_supply_fpregset (&sparc64_bsd_fpregset, regcache, regnum, regs + 288);
 }
 
 
@@ -93,7 +93,7 @@ static const int sparc64obsd_sigreturn_offset[] = {
 };
 
 static int
-sparc64obsd_pc_in_sigtramp (CORE_ADDR pc, char *name)
+sparc64obsd_pc_in_sigtramp (CORE_ADDR pc, const char *name)
 {
   CORE_ADDR start_pc = (pc & ~(sparc64obsd_page_size - 1));
   unsigned long insn;
@@ -182,7 +182,7 @@ sparc64obsd_sigtramp_frame_sniffer (const struct frame_unwind *self,
 				    void **this_cache)
 {
   CORE_ADDR pc = get_frame_pc (this_frame);
-  char *name;
+  const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
   if (sparc64obsd_pc_in_sigtramp (pc, name))
@@ -259,7 +259,7 @@ sparc64obsd_trapframe_sniffer (const struct frame_unwind *self,
 {
   CORE_ADDR pc;
   ULONGEST pstate;
-  char *name;
+  const char *name;
 
   /* Check whether we are in privileged mode, and bail out if we're not.  */
   pstate = get_frame_register_unsigned (this_frame, SPARC64_PSTATE_REGNUM);

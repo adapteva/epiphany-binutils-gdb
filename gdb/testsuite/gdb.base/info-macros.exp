@@ -1,4 +1,4 @@
-# Copyright 2011-2012 Free Software Foundation, Inc.
+# Copyright 2011-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,13 +16,14 @@
 set testfile "info-macros"
 set srcfile ${testfile}.c
 set binfile ${objdir}/${subdir}/${testfile}
-get_compiler_info ${binfile}
-if [test_compiler_info gcc*] {
-    lappend options additional_flags=-g3
-} else {
+
+get_compiler_info
+if ![test_compiler_info gcc*] {
   untested ${testfile}.exp
   return -1
 }
+
+set options "debug additional_flags=-g3"
 
 if { [prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} $options] } {
     untested ${testfile}.exp

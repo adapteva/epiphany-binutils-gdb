@@ -1,6 +1,6 @@
 /* Target-dependent code for UltraSPARC.
 
-   Copyright (C) 2003-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -785,7 +785,8 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
       struct type *type = value_type (args[i]);
       int len = TYPE_LENGTH (type);
 
-      if (sparc64_structure_or_union_p (type))
+      if (sparc64_structure_or_union_p (type)
+	  || (sparc64_complex_floating_p (type) && len == 32))
 	{
 	  /* Structure or Union arguments.  */
 	  if (len <= 16)
@@ -816,10 +817,9 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	      num_elements++;
 	    }
 	}
-      else if (sparc64_floating_p (type))
+      else if (sparc64_floating_p (type) || sparc64_complex_floating_p (type))
 	{
 	  /* Floating arguments.  */
-
 	  if (len == 16)
 	    {
 	      /* The psABI says that "Each quad-precision parameter
@@ -887,7 +887,8 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
       int regnum = -1;
       gdb_byte buf[16];
 
-      if (sparc64_structure_or_union_p (type))
+      if (sparc64_structure_or_union_p (type)
+	  || (sparc64_complex_floating_p (type) && len == 32))
 	{
 	  /* Structure or Union arguments.  */
 	  gdb_assert (len <= 16);
@@ -927,7 +928,7 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	      /* The psABI says "Each single-precision parameter value
                  will be assigned to one extended word in the
                  parameter array, and right-justified within that
-                 word; the left half (even floatregister) is
+                 word; the left half (even float register) is
                  undefined."  Even though the psABI says that "the
                  left half is undefined", set it to zero here.  */
 	      memset (buf, 0, 4);
@@ -960,7 +961,7 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	    }
 	  else if (regnum >= SPARC64_Q0_REGNUM && regnum <= SPARC64_Q8_REGNUM)
 	    {
-	      gdb_assert (element < 6);
+	      gdb_assert (element < 5);
 	      regnum = SPARC_O0_REGNUM + element;
 	      regcache_cooked_write (regcache, regnum, valbuf);
 	      regcache_cooked_write (regcache, regnum + 1, valbuf + 8);
@@ -1034,7 +1035,7 @@ sparc64_extract_return_value (struct type *type, struct regcache *regcache,
 	sparc64_extract_floating_fields (regcache, type, buf, 0);
       memcpy (valbuf, buf, len);
     }
-  else if (sparc64_floating_p (type))
+  else if (sparc64_floating_p (type) || sparc64_complex_floating_p (type))
     {
       /* Floating return values.  */
       for (i = 0; i < len / 4; i++)
@@ -1118,7 +1119,7 @@ sparc64_store_return_value (struct type *type, struct regcache *regcache,
 }
 
 static enum return_value_convention
-sparc64_return_value (struct gdbarch *gdbarch, struct type *func_type,
+sparc64_return_value (struct gdbarch *gdbarch, struct value *function,
 		      struct type *type, struct regcache *regcache,
 		      gdb_byte *readbuf, const gdb_byte *writebuf)
 {
@@ -1447,7 +1448,8 @@ sparc64_collect_gregset (const struct sparc_gregset *gregset,
 }
 
 void
-sparc64_supply_fpregset (struct regcache *regcache,
+sparc64_supply_fpregset (const struct sparc_fpregset *fpregset,
+			 struct regcache *regcache,
 			 int regnum, const void *fpregs)
 {
   int sparc32 = (gdbarch_ptr_bit (get_regcache_arch (regcache)) == 32);
@@ -1457,14 +1459,15 @@ sparc64_supply_fpregset (struct regcache *regcache,
   for (i = 0; i < 32; i++)
     {
       if (regnum == (SPARC_F0_REGNUM + i) || regnum == -1)
-	regcache_raw_supply (regcache, SPARC_F0_REGNUM + i, regs + (i * 4));
+	regcache_raw_supply (regcache, SPARC_F0_REGNUM + i,
+			     regs + fpregset->r_f0_offset + (i * 4));
     }
 
   if (sparc32)
     {
       if (regnum == SPARC32_FSR_REGNUM || regnum == -1)
 	regcache_raw_supply (regcache, SPARC32_FSR_REGNUM,
-			     regs + (32 * 4) + (16 * 8) + 4);
+			     regs + fpregset->r_fsr_offset);
     }
   else
     {
@@ -1472,17 +1475,19 @@ sparc64_supply_fpregset (struct regcache *regcache,
 	{
 	  if (regnum == (SPARC64_F32_REGNUM + i) || regnum == -1)
 	    regcache_raw_supply (regcache, SPARC64_F32_REGNUM + i,
-				 regs + (32 * 4) + (i * 8));
+				 (regs + fpregset->r_f0_offset
+				  + (32 * 4) + (i * 8)));
 	}
 
       if (regnum == SPARC64_FSR_REGNUM || regnum == -1)
 	regcache_raw_supply (regcache, SPARC64_FSR_REGNUM,
-			     regs + (32 * 4) + (16 * 8));
+			     regs + fpregset->r_fsr_offset);
     }
 }
 
 void
-sparc64_collect_fpregset (const struct regcache *regcache,
+sparc64_collect_fpregset (const struct sparc_fpregset *fpregset,
+			  const struct regcache *regcache,
 			  int regnum, void *fpregs)
 {
   int sparc32 = (gdbarch_ptr_bit (get_regcache_arch (regcache)) == 32);
@@ -1492,14 +1497,15 @@ sparc64_collect_fpregset (const struct regcache *regcache,
   for (i = 0; i < 32; i++)
     {
       if (regnum == (SPARC_F0_REGNUM + i) || regnum == -1)
-	regcache_raw_collect (regcache, SPARC_F0_REGNUM + i, regs + (i * 4));
+	regcache_raw_collect (regcache, SPARC_F0_REGNUM + i,
+			      regs + fpregset->r_f0_offset + (i * 4));
     }
 
   if (sparc32)
     {
       if (regnum == SPARC32_FSR_REGNUM || regnum == -1)
 	regcache_raw_collect (regcache, SPARC32_FSR_REGNUM,
-			      regs + (32 * 4) + (16 * 8) + 4);
+			      regs + fpregset->r_fsr_offset);
     }
   else
     {
@@ -1507,12 +1513,18 @@ sparc64_collect_fpregset (const struct regcache *regcache,
 	{
 	  if (regnum == (SPARC64_F32_REGNUM + i) || regnum == -1)
 	    regcache_raw_collect (regcache, SPARC64_F32_REGNUM + i,
-				  regs + (32 * 4) + (i * 8));
+				  (regs + fpregset->r_f0_offset
+				   + (32 * 4) + (i * 8)));
 	}
 
       if (regnum == SPARC64_FSR_REGNUM || regnum == -1)
 	regcache_raw_collect (regcache, SPARC64_FSR_REGNUM,
-			      regs + (32 * 4) + (16 * 8));
+			      regs + fpregset->r_fsr_offset);
     }
 }
 
+const struct sparc_fpregset sparc64_bsd_fpregset =
+{
+  0 * 8,			/* %f0 */
+  32 * 8,			/* %fsr */
+};

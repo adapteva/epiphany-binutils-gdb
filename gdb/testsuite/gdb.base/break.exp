@@ -1,5 +1,4 @@
-#   Copyright 1988, 1990-1992, 1994-2000, 2002-2003, 2007-2012 Free
-#   Software Foundation, Inc.
+#   Copyright 1988-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -115,7 +114,6 @@ gdb_test "break multi_line_while_conditional" \
     "Breakpoint.*at.* file .*$srcfile, line $bp_location4\\." \
     "breakpoint at start of multi line while conditional"
 
-set bp_location5 [gdb_get_line_number "set breakpoint 5 here"]
 set bp_location6 [gdb_get_line_number "set breakpoint 6 here"]
 
 set main_line $bp_location6
@@ -355,9 +353,6 @@ gdb_test "disable \$1foo" \
 # handle arguments.
 # Huh? There doesn't *appear* to be anything that passes arguments
 # below.
-if [istarget "mips-idt-*"] then {
-    return
-}
 
 #
 # run until the breakpoint at main is hit. For non-stubs-using targets.
@@ -374,6 +369,13 @@ gdb_expect {
 	fail "run until function breakpoint (timeout)"
     }
 }
+
+# Test the 'list' commands sets current file for the 'break LINENO' command.
+set bp_marker1 [gdb_get_line_number "set breakpoint 16 here" ${srcfile1}]
+gdb_test "list marker1" ".*"
+gdb_test "break $bp_marker1" "Breakpoint \[0-9\]+ at 0x\[0-9a-f\]+: file .*${srcfile1}, line ${bp_marker1}\\." \
+         "break lineno"
+gdb_test_no_output {delete $bpnum}
 
 #
 # run until the breakpoint at a line number
@@ -604,7 +606,7 @@ gdb_test "break $bp_location12 thread foo" \
 # trailing garbage.
 #
 gdb_test "break $bp_location12 foo" \
-    "Junk at end of arguments.*" \
+    "malformed linespec error: unexpected string, \"foo\".*" \
     "breakpoint with trailing garbage disallowed"
 
 # Verify that GDB responds gracefully to a "clear" command that has

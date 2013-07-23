@@ -1,5 +1,5 @@
 /* Target operations for the remote server for GDB.
-   Copyright (C) 2002-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -22,6 +22,8 @@
 #define TARGET_H
 
 struct emit_ops;
+struct btrace_target_info;
+struct buffer;
 
 /* Ways to "resume" a thread.  */
 
@@ -53,7 +55,7 @@ struct thread_resume
      thread.  If stopping a thread, and this is 0, the target should
      stop the thread however it best decides to (e.g., SIGSTOP on
      linux; SuspendThread on win32).  This is a host signal value (not
-     enum target_signal).  */
+     enum gdb_signal).  */
   int sig;
 };
 
@@ -97,7 +99,7 @@ struct target_waitstatus
     union
       {
 	int integer;
-	enum target_signal sig;
+	enum gdb_signal sig;
 	ptid_t related_pid;
 	char *execd_pathname;
       }
@@ -394,6 +396,24 @@ struct target_ops
   int (*qxfer_libraries_svr4) (const char *annex, unsigned char *readbuf,
 			       unsigned const char *writebuf,
 			       CORE_ADDR offset, int len);
+
+  /* Return true if target supports debugging agent.  */
+  int (*supports_agent) (void);
+
+  /* Check whether the target supports branch tracing.  */
+  int (*supports_btrace) (void);
+
+  /* Enable branch tracing for @ptid and allocate a branch trace target
+     information struct for reading and for disabling branch trace.  */
+  struct btrace_target_info *(*enable_btrace) (ptid_t ptid);
+
+  /* Disable branch tracing.  */
+  int (*disable_btrace) (struct btrace_target_info *tinfo);
+
+  /* Read branch trace data into buffer.  We use an int to specify the type
+     to break a cyclic dependency.  */
+  void (*read_btrace) (struct btrace_target_info *, struct buffer *, int type);
+
 };
 
 extern struct target_ops *the_target;
@@ -406,8 +426,7 @@ void set_target_ops (struct target_ops *);
 #define myattach(pid) \
   (*the_target->attach) (pid)
 
-#define kill_inferior(pid) \
-  (*the_target->kill) (pid)
+int kill_inferior (int);
 
 #define detach_inferior(pid) \
   (*the_target->detach) (pid)
@@ -514,6 +533,22 @@ void set_target_ops (struct target_ops *);
   (the_target->supports_disable_randomization ? \
    (*the_target->supports_disable_randomization) () : 0)
 
+#define target_supports_agent() \
+  (the_target->supports_agent ? \
+   (*the_target->supports_agent) () : 0)
+
+#define target_supports_btrace() \
+  (the_target->supports_btrace ? (*the_target->supports_btrace) () : 0)
+
+#define target_enable_btrace(ptid) \
+  (*the_target->enable_btrace) (ptid)
+
+#define target_disable_btrace(tinfo) \
+  (*the_target->disable_btrace) (tinfo)
+
+#define target_read_btrace(tinfo, buffer, type)	\
+  (*the_target->read_btrace) (tinfo, buffer, type)
+
 /* Start non-stop mode, returns 0 on success, -1 on failure.   */
 
 int start_non_stop (int nonstop);
@@ -532,6 +567,10 @@ ptid_t mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
       if (the_target->done_accessing_memory)     	\
 	(*the_target->done_accessing_memory) ();  	\
     } while (0)
+
+#define target_core_of_thread(ptid)		\
+  (the_target->core_of_thread ? (*the_target->core_of_thread) (ptid) \
+   : -1)
 
 int read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len);
 

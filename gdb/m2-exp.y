@@ -1,6 +1,5 @@
 /* YACC grammar for Modula-2 expressions, for GDB.
-   Copyright (C) 1986, 1989-1996, 1999-2000, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
    Generated from expread.y (now c-exp.y) and contributed by the Department
    of Computer Science at the State University of New York at Buffalo, 1991.
 
@@ -100,6 +99,12 @@
 #define yygindex m2_yygindex
 #define yytable	 m2_yytable
 #define yycheck	 m2_yycheck
+#define yyss	m2_yyss
+#define yysslim	m2_yysslim
+#define yyssp	m2_yyssp
+#define yystacksize m2_yystacksize
+#define yyvs	m2_yyvs
+#define yyvsp	m2_yyvsp
 
 #ifndef YYDEBUG
 #define	YYDEBUG 1		/* Default to yydebug support */
@@ -596,7 +601,7 @@ variable:	block COLONCOLON NAME
 /* Base case for variables.  */
 variable:	NAME
 			{ struct symbol *sym;
-			  int is_a_field_of_this;
+			  struct field_of_this_result is_a_field_of_this;
 
  			  sym = lookup_symbol (copy_name ($1),
 					       expression_context_block,

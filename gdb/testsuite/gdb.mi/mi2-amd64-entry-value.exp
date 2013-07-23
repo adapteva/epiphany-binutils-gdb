@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2012 Free Software Foundation, Inc.
+# Copyright (C) 2011-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,8 +21,7 @@ if [mi_gdb_start] {
     continue
 }
 
-set testfile mi2-amd64-entry-value
-set srcfile ${testfile}.s
+standard_testfile .s
 set opts {}
 
 if [info exists COMPILE] {
@@ -35,7 +34,6 @@ if [info exists COMPILE] {
 }
 
 set executable ${testfile}
-set binfile ${objdir}/${subdir}/${executable}
 
 if [build_executable ${testfile}.exp ${executable} ${srcfile} $opts] {
     return -1

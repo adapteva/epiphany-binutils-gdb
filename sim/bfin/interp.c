@@ -1,6 +1,6 @@
 /* Simulator for Analog Devices Blackfin processors.
 
-   Copyright (C) 2005-2012 Free Software Foundation, Inc.
+   Copyright (C) 2005-2013 Free Software Foundation, Inc.
    Contributed by Analog Devices, Inc.
 
    This file is part of simulators.
@@ -1051,7 +1051,7 @@ bfin_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
 
   /* start, at_phdr, at_phnum, at_base, at_entry, pt_dynamic  */
   bu32 elf_addrs[6];
-  bu32 auxvt, auxvt_size;
+  bu32 auxvt;
   bu32 exec_loadmap, ldso_loadmap;
   char *ldso_path;
 
@@ -1144,9 +1144,9 @@ bfin_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
   sp -= 4; \
   auxvt = (at); \
   sim_write (sd, sp, (void *)&auxvt, 4)
-  auxvt_size = 0;
       unsigned int egid = getegid (), gid = getgid ();
       unsigned int euid = geteuid (), uid = getuid ();
+      bu32 auxvt_size = 0;
       AT_PUSH (AT_NULL, 0);
       AT_PUSH (AT_SECURE, egid != gid || euid != uid);
       AT_PUSH (AT_EGID, egid);

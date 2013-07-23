@@ -1,6 +1,6 @@
 /* YACC parser for C++ names, for GDB.
 
-   Copyright (C) 2003-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    Parts of the lexer are based on c-exp.y from GDB.
 
@@ -170,6 +170,12 @@ static struct demangle_component *d_binary (const char *,
 #define yygindex cpname_yygindex
 #define yytable	 cpname_yytable
 #define yycheck	 cpname_yycheck
+#define yyss	cpname_yyss
+#define yysslim	cpname_yysslim
+#define yyssp	cpname_yyssp
+#define yystacksize cpname_yystacksize
+#define yyvs	cpname_yyvs
+#define yyvsp	cpname_yyvsp
 
 int yyparse (void);
 static int yylex (void);
@@ -440,13 +446,29 @@ demangler_special
 		;
 
 operator	:	OPERATOR NEW
-			{ $$ = make_operator ("new", 3); }
+			{
+			  /* Match the whitespacing of cplus_demangle_operators.
+			     It would abort on unrecognized string otherwise.  */
+			  $$ = make_operator ("new", 3);
+			}
 		|	OPERATOR DELETE
-			{ $$ = make_operator ("delete ", 1); }
+			{
+			  /* Match the whitespacing of cplus_demangle_operators.
+			     It would abort on unrecognized string otherwise.  */
+			  $$ = make_operator ("delete ", 1);
+			}
 		|	OPERATOR NEW '[' ']'
-			{ $$ = make_operator ("new[]", 3); }
+			{
+			  /* Match the whitespacing of cplus_demangle_operators.
+			     It would abort on unrecognized string otherwise.  */
+			  $$ = make_operator ("new[]", 3);
+			}
 		|	OPERATOR DELETE '[' ']'
-			{ $$ = make_operator ("delete[] ", 1); }
+			{
+			  /* Match the whitespacing of cplus_demangle_operators.
+			     It would abort on unrecognized string otherwise.  */
+			  $$ = make_operator ("delete[] ", 1);
+			}
 		|	OPERATOR '+'
 			{ $$ = make_operator ("+", 2); }
 		|	OPERATOR '-'
@@ -1177,7 +1199,11 @@ exp	:	FLOAT
 	;
 
 exp	:	SIZEOF '(' type ')'	%prec UNARY
-		{ $$ = d_unary ("sizeof", $3); }
+		{
+		  /* Match the whitespacing of cplus_demangle_operators.
+		     It would abort on unrecognized string otherwise.  */
+		  $$ = d_unary ("sizeof ", $3);
+		}
 	;
 
 /* C++.  */

@@ -1,7 +1,6 @@
 /* This test script is part of GDB, the GNU debugger.
 
-   Copyright 1993-1994, 1997-1999, 2003-2004, 2012 Free Software
-   Foundation, Inc.
+   Copyright 1993-2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -111,6 +110,7 @@ D   d;
 E   e;
 V   v;
 VB  vb;
+VA  va;
 
 
 A* 	pAa	= 	&a;

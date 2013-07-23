@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/amd64.
 
-   Copyright (C) 2003-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -101,7 +101,7 @@ amd64obsd_sigtramp_p (struct frame_info *this_frame)
   };
   size_t buflen = (sizeof sigreturn) + 1;
   gdb_byte *buf;
-  char *name;
+  const char *name;
 
   /* If the function has a valid symbol name, it isn't a
      trampoline.  */
@@ -360,7 +360,7 @@ amd64obsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   struct trad_frame_cache *cache;
   CORE_ADDR func, sp, addr;
   ULONGEST cs;
-  char *name;
+  const char *name;
   int i;
 
   if (*this_cache)
@@ -425,7 +425,7 @@ amd64obsd_trapframe_sniffer (const struct frame_unwind *self,
 			     void **this_prologue_cache)
 {
   ULONGEST cs;
-  char *name;
+  const char *name;
 
   /* Check Current Privilege Level and bail out if we're not executing
      in kernel space.  */

@@ -1,6 +1,6 @@
 /* Target-dependent code for NetBSD/alpha.
 
-   Copyright (C) 2002-2004, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
    Contributed by Wasabi Systems, Inc.
 
@@ -241,7 +241,7 @@ alphanbsd_sigtramp_offset (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 static int
 alphanbsd_pc_in_sigtramp (struct gdbarch *gdbarch,
-		 	  CORE_ADDR pc, char *func_name)
+		 	  CORE_ADDR pc, const char *func_name)
 {
   return (nbsd_pc_in_sigtramp (pc, func_name)
 	  || alphanbsd_sigtramp_offset (gdbarch, pc) >= 0);

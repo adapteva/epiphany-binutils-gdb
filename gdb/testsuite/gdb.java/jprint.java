@@ -1,6 +1,6 @@
 // jprint.java test program.
 //
-// Copyright 2004, 2010-2012 Free Software Foundation, Inc.
+// Copyright 2004-2013 Free Software Foundation, Inc.
 //
 // Written by Jeff Johnston <jjohnstn@redhat.com> 
 // Contributed by Red Hat
@@ -61,6 +61,7 @@ public class jprint extends jvclass {
     jprint x = new jprint ();
     x.dothat (44);
     print (k, 33);
+    print (x.addk(0), 33);
   }
 }
 

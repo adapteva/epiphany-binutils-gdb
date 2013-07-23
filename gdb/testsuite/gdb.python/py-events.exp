@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2012 Free Software Foundation, Inc.
+# Copyright (C) 2010-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,16 +21,14 @@ load_lib gdb-python.exp
 
 set libfile "py-events-shlib"
 set libsrc  $srcdir/$subdir/$libfile.c
-set lib_sl  $objdir/$subdir/$libfile.so
+set lib_sl  [standard_output_file $libfile.so]
 set lib_opts  debug
 
-set testfile "py-events"
-set srcfile ${testfile}.c
-set binfile ${objdir}/${subdir}/${testfile}
+standard_testfile
 set exec_opts [list debug shlib=$lib_sl]
 set pyfile ${srcdir}/${subdir}/${testfile}.py
 
-if [get_compiler_info ${binfile}] {
+if [get_compiler_info] {
     return -1
 }
 
@@ -45,7 +43,7 @@ clean_restart ${testfile}
 
 if { [skip_python_tests] } { continue }
 
-gdb_test_no_output "python execfile ('${pyfile}')" ""
+gdb_test_no_output "python exec (open ('${pyfile}').read ())" ""
 
 gdb_test "Test_Newobj_Events" "New ObjectFile Event tester registered." "Register new objfile event handler"
 
@@ -85,10 +83,12 @@ delete_breakpoints
 gdb_test "continue" ".*event type: continue.*
 .*event type: exit.*
 .*exit code: 12.*
-.*exit inf: 1.*" "Inferior 1 terminated."
+.*exit inf: 1.*
+dir ok: True.*" "Inferior 1 terminated."
 
 gdb_test "inferior 2" ".*Switching to inferior 2.*"
 gdb_test "continue" ".*event type: continue.*
 .*event type: exit.*
 .*exit code: 12.*
-.*exit inf: 2.*" "Inferior 2 terminated."
+.*exit inf: 2.*
+dir ok: True.*" "Inferior 2 terminated."

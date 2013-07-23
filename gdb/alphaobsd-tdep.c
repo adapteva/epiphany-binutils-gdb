@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/alpha.
 
-   Copyright (C) 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2006-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -47,7 +47,7 @@ alphaobsd_sigtramp_offset (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 static int
 alphaobsd_pc_in_sigtramp (struct gdbarch *gdbarch,
-			  CORE_ADDR pc, char *name)
+			  CORE_ADDR pc, const char *name)
 {
   CORE_ADDR start_pc = (pc & ~(alphaobsd_page_size - 1));
   unsigned insn;

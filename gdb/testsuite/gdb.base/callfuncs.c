@@ -1,7 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1993-1995, 1998-2001, 2004, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright 1993-2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -640,6 +639,13 @@ struct struct_with_fnptr
 struct struct_with_fnptr function_struct = { doubleit };
 
 struct struct_with_fnptr *function_struct_ptr = &function_struct;
+
+int *
+voidfunc (void)
+{
+  static int twentythree = 23;
+  return &twentythree;
+}
 
 /* Gotta have a main to be able to generate a linked, runnable
    executable, and also provide a useful place to set a breakpoint. */

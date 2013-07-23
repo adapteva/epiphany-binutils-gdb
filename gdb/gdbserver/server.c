@@ -1,6 +1,5 @@
 /* Main code for remote server for GDB.
-   Copyright (C) 1989, 1993-1995, 1997-2000, 2002-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1989-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,6 +17,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "server.h"
+#include "gdbthread.h"
+#include "agent.h"
+#include "notif.h"
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -25,11 +27,22 @@
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-#if HAVE_SYS_WAIT_H
-#include <sys/wait.h>
-#endif
+#include "gdb_wait.h"
+#include "btrace-common.h"
 
+/* The thread set with an `Hc' packet.  `Hc' is deprecated in favor of
+   `vCont'.  Note the multi-process extensions made `vCont' a
+   requirement, so `Hc pPID.TID' is pretty much undefined.  So
+   CONT_THREAD can be null_ptid for no `Hc' thread, minus_one_ptid for
+   resuming all threads of the process (again, `Hc' isn't used for
+   multi-process), or a specific thread ptid_t.
+
+   We also set this when handling a single-thread `vCont' resume, as
+   some places in the backends check it to know when (and for which
+   thread) single-thread scheduler-locking is in effect.  */
 ptid_t cont_thread;
+
+/* The thread set with an `Hg' packet.  */
 ptid_t general_thread;
 
 int server_waiting;
@@ -57,7 +70,9 @@ int debug_threads;
 /* Enable debugging of h/w breakpoint/watchpoint support.  */
 int debug_hw_points;
 
-int pass_signals[TARGET_SIGNAL_LAST];
+int pass_signals[GDB_SIGNAL_LAST];
+int program_signals[GDB_SIGNAL_LAST];
+int program_signals_p;
 
 jmp_buf toplevel;
 
@@ -101,13 +116,13 @@ static ptid_t last_ptid;
 static char *own_buf;
 static unsigned char *mem_buf;
 
-/* Structure holding information relative to a single stop reply.  We
-   keep a queue of these (really a singly-linked list) to push to GDB
-   in non-stop mode.  */
+/* A sub-class of 'struct notif_event' for stop, holding information
+   relative to a single stop reply.  We keep a queue of these to
+   push to GDB in non-stop mode.  */
+
 struct vstop_notif
 {
-  /* Pointer to next in list.  */
-  struct vstop_notif *next;
+  struct notif_event base;
 
   /* Thread or process that got the event.  */
   ptid_t ptid;
@@ -116,66 +131,39 @@ struct vstop_notif
   struct target_waitstatus status;
 };
 
-/* The pending stop replies list head.  */
-static struct vstop_notif *notif_queue = NULL;
+DEFINE_QUEUE_P (notif_event_p);
 
 /* Put a stop reply to the stop reply queue.  */
 
 static void
 queue_stop_reply (ptid_t ptid, struct target_waitstatus *status)
 {
-  struct vstop_notif *new_notif;
+  struct vstop_notif *new_notif = xmalloc (sizeof (*new_notif));
 
-  new_notif = xmalloc (sizeof (*new_notif));
-  new_notif->next = NULL;
   new_notif->ptid = ptid;
   new_notif->status = *status;
 
-  if (notif_queue)
-    {
-      struct vstop_notif *tail;
-      for (tail = notif_queue;
-	   tail && tail->next;
-	   tail = tail->next)
-	;
-      tail->next = new_notif;
-    }
-  else
-    notif_queue = new_notif;
-
-  if (remote_debug)
-    {
-      int i = 0;
-      struct vstop_notif *n;
-
-      for (n = notif_queue; n; n = n->next)
-	i++;
-
-      fprintf (stderr, "pending stop replies: %d\n", i);
-    }
+  notif_event_enque (&notif_stop, (struct notif_event *) new_notif);
 }
 
-/* Place an event in the stop reply queue, and push a notification if
-   we aren't sending one yet.  */
-
-void
-push_event (ptid_t ptid, struct target_waitstatus *status)
+static int
+remove_all_on_match_pid (QUEUE (notif_event_p) *q,
+			    QUEUE_ITER (notif_event_p) *iter,
+			    struct notif_event *event,
+			    void *data)
 {
-  gdb_assert (status->kind != TARGET_WAITKIND_IGNORE);
+  int *pid = data;
 
-  queue_stop_reply (ptid, status);
-
-  /* If this is the first stop reply in the queue, then inform GDB
-     about it, by sending a Stop notification.  */
-  if (notif_queue->next == NULL)
+  if (*pid == -1
+      || ptid_get_pid (((struct vstop_notif *) event)->ptid) == *pid)
     {
-      char *p = own_buf;
-      strcpy (p, "Stop:");
-      p += strlen (p);
-      prepare_resume_reply (p,
-			    notif_queue->ptid, &notif_queue->status);
-      putpkt_notif (own_buf);
+      if (q->free_func != NULL)
+	q->free_func (event);
+
+      QUEUE_remove_elem (notif_event_p, q, iter);
     }
+
+  return 1;
 }
 
 /* Get rid of the currently pending stop replies for PID.  If PID is
@@ -184,39 +172,22 @@ push_event (ptid_t ptid, struct target_waitstatus *status)
 static void
 discard_queued_stop_replies (int pid)
 {
-  struct vstop_notif *prev = NULL, *reply, *next;
-
-  for (reply = notif_queue; reply; reply = next)
-    {
-      next = reply->next;
-
-      if (pid == -1
-	  || ptid_get_pid (reply->ptid) == pid)
-	{
-	  if (reply == notif_queue)
-	    notif_queue = next;
-	  else
-	    prev->next = reply->next;
-
-	  free (reply);
-	}
-      else
-	prev = reply;
-    }
+  QUEUE_iterate (notif_event_p, notif_stop.queue,
+		 remove_all_on_match_pid, &pid);
 }
-
-/* If there are more stop replies to push, push one now.  */
 
 static void
-send_next_stop_reply (char *own_buf)
+vstop_notif_reply (struct notif_event *event, char *own_buf)
 {
-  if (notif_queue)
-    prepare_resume_reply (own_buf,
-			  notif_queue->ptid,
-			  &notif_queue->status);
-  else
-    write_ok (own_buf);
+  struct vstop_notif *vstop = (struct vstop_notif *) event;
+
+  prepare_resume_reply (own_buf, vstop->ptid, &vstop->status);
 }
+
+struct notif_server notif_stop =
+{
+  "vStopped", "Stop", NULL, vstop_notif_reply,
+};
 
 static int
 target_running (void)
@@ -259,6 +230,10 @@ start_inferior (char **argv)
   signal (SIGTTIN, SIG_DFL);
 #endif
 
+  /* Clear this so the backend doesn't get confused, thinking
+     CONT_THREAD died, and it needs to resume all threads.  */
+  cont_thread = null_ptid;
+
   signal_pid = create_inferior (new_argv[0], new_argv);
 
   /* FIXME: we don't actually know at this point that the create
@@ -300,10 +275,8 @@ start_inferior (char **argv)
 	  current_inferior->last_resume_kind = resume_stop;
 	  current_inferior->last_status = last_status;
 	}
-      while (last_status.value.sig != TARGET_SIGNAL_TRAP);
+      while (last_status.value.sig != GDB_SIGNAL_TRAP);
 
-      current_inferior->last_resume_kind = resume_stop;
-      current_inferior->last_status = last_status;
       return signal_pid;
     }
 
@@ -350,8 +323,8 @@ attach_inferior (int pid)
 	 process using the "attach" command, but this is different; it's
 	 just using "target remote".  Pretend it's just starting up.  */
       if (last_status.kind == TARGET_WAITKIND_STOPPED
-	  && last_status.value.sig == TARGET_SIGNAL_STOP)
-	last_status.value.sig = TARGET_SIGNAL_TRAP;
+	  && last_status.value.sig == GDB_SIGNAL_STOP)
+	last_status.value.sig = GDB_SIGNAL_TRAP;
 
       current_inferior->last_resume_kind = resume_stop;
       current_inferior->last_status = last_status;
@@ -424,6 +397,88 @@ write_qxfer_response (char *buf, const void *data, int len, int is_more)
 			       PBUFSIZ - 2) + 1;
 }
 
+/* Handle btrace enabling.  */
+
+static const char *
+handle_btrace_enable (struct thread_info *thread)
+{
+  if (thread->btrace != NULL)
+    return "E.Btrace already enabled.";
+
+  thread->btrace = target_enable_btrace (thread->entry.id);
+  if (thread->btrace == NULL)
+    return "E.Could not enable btrace.";
+
+  return NULL;
+}
+
+/* Handle btrace disabling.  */
+
+static const char *
+handle_btrace_disable (struct thread_info *thread)
+{
+
+  if (thread->btrace == NULL)
+    return "E.Branch tracing not enabled.";
+
+  if (target_disable_btrace (thread->btrace) != 0)
+    return "E.Could not disable branch tracing.";
+
+  thread->btrace = NULL;
+  return NULL;
+}
+
+/* Handle the "Qbtrace" packet.  */
+
+static int
+handle_btrace_general_set (char *own_buf)
+{
+  struct thread_info *thread;
+  const char *err;
+  char *op;
+
+  if (strncmp ("Qbtrace:", own_buf, strlen ("Qbtrace:")) != 0)
+    return 0;
+
+  op = own_buf + strlen ("Qbtrace:");
+
+  if (!target_supports_btrace ())
+    {
+      strcpy (own_buf, "E.Target does not support branch tracing.");
+      return -1;
+    }
+
+  if (ptid_equal (general_thread, null_ptid)
+      || ptid_equal (general_thread, minus_one_ptid))
+    {
+      strcpy (own_buf, "E.Must select a single thread.");
+      return -1;
+    }
+
+  thread = find_thread_ptid (general_thread);
+  if (thread == NULL)
+    {
+      strcpy (own_buf, "E.No such thread.");
+      return -1;
+    }
+
+  err = NULL;
+
+  if (strcmp (op, "bts") == 0)
+    err = handle_btrace_enable (thread);
+  else if (strcmp (op, "off") == 0)
+    err = handle_btrace_disable (thread);
+  else
+    err = "E.Bad Qbtrace operation. Use bts or off.";
+
+  if (err != 0)
+    strcpy (own_buf, err);
+  else
+    write_ok (own_buf);
+
+  return 1;
+}
+
 /* Handle all of the extended 'Q' packets.  */
 
 static void
@@ -431,7 +486,7 @@ handle_general_set (char *own_buf)
 {
   if (strncmp ("QPassSignals:", own_buf, strlen ("QPassSignals:")) == 0)
     {
-      int numsigs = (int) TARGET_SIGNAL_LAST, i;
+      int numsigs = (int) GDB_SIGNAL_LAST, i;
       const char *p = own_buf + strlen ("QPassSignals:");
       CORE_ADDR cursig;
 
@@ -449,6 +504,33 @@ handle_general_set (char *own_buf)
 	    }
 	  else
 	    pass_signals[i] = 0;
+	}
+      strcpy (own_buf, "OK");
+      return;
+    }
+
+  if (strncmp ("QProgramSignals:", own_buf, strlen ("QProgramSignals:")) == 0)
+    {
+      int numsigs = (int) GDB_SIGNAL_LAST, i;
+      const char *p = own_buf + strlen ("QProgramSignals:");
+      CORE_ADDR cursig;
+
+      program_signals_p = 1;
+
+      p = decode_address_to_semicolon (&cursig, p);
+      for (i = 0; i < numsigs; i++)
+	{
+	  if (i == cursig)
+	    {
+	      program_signals[i] = 1;
+	      if (*p == '\0')
+		/* Keep looping, to clear the remaining signals.  */
+		cursig = -1;
+	      else
+		p = decode_address_to_semicolon (&cursig, p);
+	    }
+	  else
+	    program_signals[i] = 0;
 	}
       strcpy (own_buf, "OK");
       return;
@@ -527,6 +609,33 @@ handle_general_set (char *own_buf)
 
   if (target_supports_tracepoints ()
       && handle_tracepoint_general_set (own_buf))
+    return;
+
+  if (strncmp ("QAgent:", own_buf, strlen ("QAgent:")) == 0)
+    {
+      char *mode = own_buf + strlen ("QAgent:");
+      int req = 0;
+
+      if (strcmp (mode, "0") == 0)
+	req = 0;
+      else if (strcmp (mode, "1") == 0)
+	req = 1;
+      else
+	{
+	  /* We don't know what this value is, so complain to GDB.  */
+	  sprintf (own_buf, "E.Unknown QAgent value");
+	  return;
+	}
+
+      /* Update the flag.  */
+      use_agent = req;
+      if (remote_debug)
+	fprintf (stderr, "[%s agent]\n", req ? "Enable" : "Disable");
+      write_ok (own_buf);
+      return;
+    }
+
+  if (handle_btrace_general_set (own_buf))
     return;
 
   /* Otherwise we didn't know what packet it was.  Say we didn't
@@ -666,8 +775,9 @@ handle_search_memory_1 (CORE_ADDR start_addr, CORE_ADDR search_space_len,
   if (gdb_read_memory (start_addr, search_buf, search_buf_size)
       != search_buf_size)
     {
-      warning ("Unable to access target memory at 0x%lx, halting search.",
-	       (long) start_addr);
+      warning ("Unable to access %ld bytes of target "
+	       "memory at 0x%lx, halting search.",
+	       (long) search_buf_size, (long) start_addr);
       return -1;
     }
 
@@ -718,9 +828,9 @@ handle_search_memory_1 (CORE_ADDR start_addr, CORE_ADDR search_space_len,
 	  if (gdb_read_memory (read_addr, search_buf + keep_len,
 			       nr_to_read) != search_buf_size)
 	    {
-	      warning ("Unable to access target memory "
+	      warning ("Unable to access %ld bytes of target memory "
 		       "at 0x%lx, halting search.",
-		       (long) read_addr);
+		       (long) nr_to_read, (long) read_addr);
 	      return -1;
 	    }
 
@@ -811,7 +921,7 @@ handle_search_memory (char *own_buf, int packet_len)
 /* Handle monitor commands not handled by target-specific handlers.  */
 
 static void
-handle_monitor_command (char *mon)
+handle_monitor_command (char *mon, char *own_buf)
 {
   if (strcmp (mon, "set debug 1") == 0)
     {
@@ -868,10 +978,10 @@ struct qxfer
      data-specific information to the target.
 
      Return the number of bytes actually transfered, zero when no
-     further transfer is possible, -1 on error, and -2 when the
-     transfer is not supported.  Return of a positive value smaller
-     than LEN does not indicate the end of the object, only the end of
-     the transfer.
+     further transfer is possible, -1 on error, -2 when the transfer
+     is not supported, and -3 on a verbose error message that should
+     be preserved.  Return of a positive value smaller than LEN does
+     not indicate the end of the object, only the end of the transfer.
 
      One, and only one, of readbuf or writebuf must be non-NULL.  */
   int (*xfer) (const char *annex,
@@ -944,10 +1054,6 @@ handle_qxfer_libraries (const char *annex,
 
   if (annex[0] != '\0' || !target_running ())
     return -1;
-
-  /* Do not confuse this packet with qXfer:libraries-svr4:read.  */
-  if (the_target->qxfer_libraries_svr4 != NULL)
-    return 0;
 
   /* Over-estimate the necessary memory.  Assume that every character
      in the library name must be escaped.  */
@@ -1095,13 +1201,10 @@ handle_qxfer_threads_proper (struct buffer *buffer)
     {
       ptid_t ptid = thread_to_gdb_id ((struct thread_info *)thread);
       char ptid_s[100];
-      int core = -1;
+      int core = target_core_of_thread (ptid);
       char core_s[21];
 
       write_ptid (ptid_s, ptid);
-
-      if (the_target->core_of_thread)
-	core = (*the_target->core_of_thread) (ptid);
 
       if (core != -1)
 	{
@@ -1234,9 +1337,77 @@ handle_qxfer_fdpic (const char *annex, gdb_byte *readbuf,
   return (*the_target->read_loadmap) (annex, offset, readbuf, len);
 }
 
+/* Handle qXfer:btrace:read.  */
+
+static int
+handle_qxfer_btrace (const char *annex,
+		     gdb_byte *readbuf, const gdb_byte *writebuf,
+		     ULONGEST offset, LONGEST len)
+{
+  static struct buffer cache;
+  struct thread_info *thread;
+  int type;
+
+  if (the_target->read_btrace == NULL || writebuf != NULL)
+    return -2;
+
+  if (!target_running ())
+    return -1;
+
+  if (ptid_equal (general_thread, null_ptid)
+      || ptid_equal (general_thread, minus_one_ptid))
+    {
+      strcpy (own_buf, "E.Must select a single thread.");
+      return -3;
+    }
+
+  thread = find_thread_ptid (general_thread);
+  if (thread == NULL)
+    {
+      strcpy (own_buf, "E.No such thread.");
+      return -3;
+    }
+
+  if (thread->btrace == NULL)
+    {
+      strcpy (own_buf, "E.Btrace not enabled.");
+      return -3;
+    }
+
+  if (strcmp (annex, "all") == 0)
+    type = btrace_read_all;
+  else if (strcmp (annex, "new") == 0)
+    type = btrace_read_new;
+  else
+    {
+      strcpy (own_buf, "E.Bad annex.");
+      return -3;
+    }
+
+  if (offset == 0)
+    {
+      buffer_free (&cache);
+
+      target_read_btrace (thread->btrace, &cache, type);
+    }
+  else if (offset > cache.used_size)
+    {
+      buffer_free (&cache);
+      return -3;
+    }
+
+  if (len > cache.used_size - offset)
+    len = cache.used_size - offset;
+
+  memcpy (readbuf, cache.buffer + offset, len);
+
+  return len;
+}
+
 static const struct qxfer qxfer_packets[] =
   {
     { "auxv", handle_qxfer_auxv },
+    { "btrace", handle_qxfer_btrace },
     { "fdpic", handle_qxfer_fdpic},
     { "features", handle_qxfer_features },
     { "libraries", handle_qxfer_libraries },
@@ -1306,6 +1477,10 @@ handle_qxfer (char *own_buf, int packet_len, int *new_packet_len_p)
 		  free (data);
 		  return 0;
 		}
+	      else if (n == -3)
+		{
+		  /* Preserve error message.  */
+		}
 	      else if (n < 0)
 		write_enn (own_buf);
 	      else if (n > len)
@@ -1343,6 +1518,10 @@ handle_qxfer (char *own_buf, int packet_len, int *new_packet_len_p)
 		{
 		  free (data);
 		  return 0;
+		}
+	      else if (n == -3)
+		{
+		  /* Preserve error message.  */
 		}
 	      else if (n < 0)
 		write_enn (own_buf);
@@ -1559,7 +1738,9 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	  free (qsupported);
 	}
 
-      sprintf (own_buf, "PacketSize=%x;QPassSignals+", PBUFSIZ - 1);
+      sprintf (own_buf,
+	       "PacketSize=%x;QPassSignals+;QProgramSignals+",
+	       PBUFSIZ - 1);
 
       if (the_target->qxfer_libraries_svr4 != NULL)
 	strcat (own_buf, ";qXfer:libraries-svr4:read+");
@@ -1618,7 +1799,22 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	  strcat (own_buf, ";qXfer:statictrace:read+");
 	  strcat (own_buf, ";qXfer:traceframe-info:read+");
 	  strcat (own_buf, ";EnableDisableTracepoints+");
+	  strcat (own_buf, ";QTBuffer:size+");
 	  strcat (own_buf, ";tracenz+");
+	}
+
+      /* Support target-side breakpoint conditions and commands.  */
+      strcat (own_buf, ";ConditionalBreakpoints+");
+      strcat (own_buf, ";BreakpointCommands+");
+
+      if (target_supports_agent ())
+	strcat (own_buf, ";QAgent+");
+
+      if (target_supports_btrace ())
+	{
+	  strcat (own_buf, ";Qbtrace:bts+");
+	  strcat (own_buf, ";Qbtrace:off+");
+	  strcat (own_buf, ";qXfer:btrace:read+");
 	}
 
       return;
@@ -1737,7 +1933,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
       if (the_target->handle_monitor_command == NULL
 	  || (*the_target->handle_monitor_command) (mon) == 0)
 	/* Default processing.  */
-	handle_monitor_command (mon);
+	handle_monitor_command (mon, own_buf);
 
       free (mon);
       return;
@@ -1782,12 +1978,12 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
     {
       /* CRC check (compare-section).  */
       char *comma;
-      CORE_ADDR base;
+      ULONGEST base;
       int len;
       unsigned long long crc;
 
       require_running (own_buf);
-      base = strtoul (own_buf + 5, &comma, 16);
+      comma = unpack_varlen_hex (own_buf + 5, &base);
       if (*comma++ != ',')
 	{
 	  write_enn (own_buf);
@@ -1863,9 +2059,9 @@ handle_v_cont (char *own_buf)
 	    goto err;
 	  p = q;
 
-	  if (!target_signal_to_host_p (sig))
+	  if (!gdb_signal_to_host_p (sig))
 	    goto err;
-	  resume_info[i].sig = target_signal_to_host (sig);
+	  resume_info[i].sig = gdb_signal_to_host (sig);
 	}
       else
 	{
@@ -1900,9 +2096,13 @@ handle_v_cont (char *own_buf)
   if (i < n)
     resume_info[i] = default_action;
 
-  /* Still used in occasional places in the backend.  */
+  /* `cont_thread' is still used in occasional places in the backend,
+     to implement single-thread scheduler-locking.  Doesn't make sense
+     to set it if we see a stop request, or a wildcard action (one
+     with '-1' (all threads), or 'pPID.-1' (all threads of PID)).  */
   if (n == 1
-      && !ptid_equal (resume_info[0].thread, minus_one_ptid)
+      && !(ptid_equal (resume_info[0].thread, minus_one_ptid)
+	   || ptid_get_lwp (resume_info[0].thread) == -1)
       && resume_info[0].kind != resume_stop)
     cont_thread = resume_info[0].thread;
   else
@@ -2082,7 +2282,7 @@ handle_v_kill (char *own_buf)
   if (pid != 0 && kill_inferior (pid) == 0)
     {
       last_status.kind = TARGET_WAITKIND_SIGNALLED;
-      last_status.value.sig = TARGET_SIGNAL_KILL;
+      last_status.value.sig = GDB_SIGNAL_KILL;
       last_ptid = pid_to_ptid (pid);
       discard_queued_stop_replies (pid);
       write_ok (own_buf);
@@ -2093,29 +2293,6 @@ handle_v_kill (char *own_buf)
       write_enn (own_buf);
       return 0;
     }
-}
-
-/* Handle a 'vStopped' packet.  */
-static void
-handle_v_stopped (char *own_buf)
-{
-  /* If we're waiting for GDB to acknowledge a pending stop reply,
-     consider that done.  */
-  if (notif_queue)
-    {
-      struct vstop_notif *head;
-
-      if (remote_debug)
-	fprintf (stderr, "vStopped: acking %s\n",
-		 target_pid_to_str (notif_queue->ptid));
-
-      head = notif_queue;
-      notif_queue = notif_queue->next;
-      free (head);
-    }
-
-  /* Push another stop reply, or if there are no more left, an OK.  */
-  send_next_stop_reply (own_buf);
 }
 
 /* Handle all of the extended 'v' packets.  */
@@ -2178,11 +2355,8 @@ handle_v_requests (char *own_buf, int packet_len, int *new_packet_len)
       return;
     }
 
-  if (strncmp (own_buf, "vStopped", 8) == 0)
-    {
-      handle_v_stopped (own_buf);
-      return;
-    }
+  if (handle_notif_ack (own_buf, packet_len))
+    return;
 
   /* Otherwise we didn't know what packet it was.  Say we didn't
      understand it.  */
@@ -2207,8 +2381,7 @@ myresume (char *own_buf, int step, int sig)
 
   if (step || sig || valid_cont_thread)
     {
-      resume_info[0].thread
-	= ((struct inferior_list_entry *) current_inferior)->id;
+      resume_info[0].thread = current_ptid;
       if (step)
 	resume_info[0].kind = resume_step;
       else
@@ -2264,9 +2437,14 @@ queue_stop_reply_callback (struct inferior_list_entry *entry, void *arg)
      manage the thread's last_status field.  */
   if (the_target->thread_stopped == NULL)
     {
+      struct vstop_notif *new_notif = xmalloc (sizeof (*new_notif));
+
+      new_notif->ptid = entry->id;
+      new_notif->status = thread->last_status;
       /* Pass the last stop reply back to GDB, but don't notify
 	 yet.  */
-      queue_stop_reply (entry->id, &thread->last_status);
+      notif_event_enque (&notif_stop,
+			 (struct notif_event *) new_notif);
     }
   else
     {
@@ -2305,7 +2483,7 @@ gdb_wants_thread_stopped (struct inferior_list_entry *entry)
       /* Most threads are stopped implicitly (all-stop); tag that with
 	 signal 0.  */
       thread->last_status.kind = TARGET_WAITKIND_STOPPED;
-      thread->last_status.value.sig = TARGET_SIGNAL_0;
+      thread->last_status.value.sig = GDB_SIGNAL_0;
     }
 }
 
@@ -2347,7 +2525,7 @@ handle_status (char *own_buf)
       /* The first is sent immediatly.  OK is sent if there is no
 	 stopped thread, which is the same handling of the vStopped
 	 packet (by design).  */
-      send_next_stop_reply (own_buf);
+      notif_write_event (&notif_stop, own_buf);
     }
   else
     {
@@ -2360,7 +2538,7 @@ handle_status (char *own_buf)
 	  struct target_waitstatus status;
 
 	  status.kind = TARGET_WAITKIND_STOPPED;
-	  status.value.sig = TARGET_SIGNAL_TRAP;
+	  status.value.sig = GDB_SIGNAL_TRAP;
 	  prepare_resume_reply (own_buf,
 				all_threads.head->id, &status);
 	}
@@ -2373,7 +2551,7 @@ static void
 gdbserver_version (void)
 {
   printf ("GNU gdbserver %s%s\n"
-	  "Copyright (C) 2012 Free Software Foundation, Inc.\n"
+	  "Copyright (C) 2013 Free Software Foundation, Inc.\n"
 	  "gdbserver is free software, covered by the "
 	  "GNU General Public License.\n"
 	  "This gdbserver was configured as \"%s\"\n",
@@ -2528,8 +2706,8 @@ main (int argc, char *argv[])
   int pid;
   char *arg_end, *port;
   char **next_arg = &argv[1];
-  int multi_mode = 0;
-  int attach = 0;
+  volatile int multi_mode = 0;
+  volatile int attach = 0;
   int was_running;
 
   while (*next_arg != NULL && **next_arg == '-')
@@ -2679,6 +2857,7 @@ main (int argc, char *argv[])
 
   initialize_async_io ();
   initialize_low ();
+  initialize_event_loop ();
   if (target_supports_tracepoints ())
     initialize_tracepoint ();
 
@@ -2716,6 +2895,8 @@ main (int argc, char *argv[])
       last_ptid = minus_one_ptid;
     }
 
+  initialize_notif ();
+
   /* Don't report shared library events on the initial connection,
      even if some libraries are preloaded.  Avoids the "stopped by
      shared library event" notice on gdb side.  */
@@ -2727,13 +2908,10 @@ main (int argc, char *argv[])
 	 inferiors, we'd end up here again, stuck in an infinite loop
 	 trap.  Be sure that if that happens, we exit immediately
 	 instead.  */
-      if (setjmp (toplevel))
-	{
-	  fprintf (stderr, "Detach or kill failed.  Exiting\n");
-	  exit (1);
-	}
-
-      detach_or_kill_for_exit ();
+      if (setjmp (toplevel) == 0)
+	detach_or_kill_for_exit ();
+      else
+	fprintf (stderr, "Detach or kill failed.  Exiting\n");
       exit (1);
     }
 
@@ -2779,8 +2957,20 @@ main (int argc, char *argv[])
 
       if (exit_requested || run_once)
 	{
-	  detach_or_kill_for_exit ();
-	  exit (0);
+	  /* If something fails and longjmps while detaching or
+	     killing inferiors, we'd end up here again, stuck in an
+	     infinite loop trap.  Be sure that if that happens, we
+	     exit immediately instead.  */
+	  if (setjmp (toplevel) == 0)
+	    {
+	      detach_or_kill_for_exit ();
+	      exit (0);
+	    }
+	  else
+	    {
+	      fprintf (stderr, "Detach or kill failed.  Exiting\n");
+	      exit (1);
+	    }
 	}
 
       fprintf (stderr,
@@ -2814,6 +3004,55 @@ main (int argc, char *argv[])
 	    }
 	}
     }
+}
+
+/* Process options coming from Z packets for *point at address
+   POINT_ADDR.  PACKET is the packet buffer.  *PACKET is updated
+   to point to the first char after the last processed option.  */
+
+static void
+process_point_options (CORE_ADDR point_addr, char **packet)
+{
+  char *dataptr = *packet;
+  int persist;
+
+  /* Check if data has the correct format.  */
+  if (*dataptr != ';')
+    return;
+
+  dataptr++;
+
+  while (*dataptr)
+    {
+      if (*dataptr == ';')
+	++dataptr;
+
+      if (*dataptr == 'X')
+	{
+	  /* Conditional expression.  */
+	  if (debug_threads)
+	    fprintf (stderr, "Found breakpoint condition.\n");
+	  add_breakpoint_condition (point_addr, &dataptr);
+	}
+      else if (strncmp (dataptr, "cmds:", strlen ("cmds:")) == 0)
+	{
+	  dataptr += strlen ("cmds:");
+	  if (debug_threads)
+	    fprintf (stderr, "Found breakpoint commands %s.\n", dataptr);
+	  persist = (*dataptr == '1');
+	  dataptr += 2;
+	  add_breakpoint_commands (point_addr, &dataptr, persist);
+	}
+      else
+	{
+	  fprintf (stderr, "Unknown token %c, ignoring.\n",
+		   *dataptr);
+	  /* Skip tokens until we find one that we recognize.  */
+	  while (*dataptr && *dataptr != ';')
+	    dataptr++;
+	}
+    }
+  *packet = dataptr;
 }
 
 /* Event loop callback that handles a serial event.  The first byte in
@@ -2873,10 +3112,9 @@ process_serial_event (void)
 	  pid = strtol (&own_buf[i], NULL, 16);
 	}
       else
-	pid =
-	  ptid_get_pid (((struct inferior_list_entry *) current_inferior)->id);
+	pid = ptid_get_pid (current_ptid);
 
-      if (tracing && disconnected_tracing)
+      if ((tracing && disconnected_tracing) || any_persistent_commands ())
 	{
 	  struct thread_resume resume_info;
 	  struct process_info *process = find_process_pid (pid);
@@ -2887,9 +3125,15 @@ process_serial_event (void)
 	      break;
 	    }
 
-	  fprintf (stderr,
-		   "Disconnected tracing in effect, "
-		   "leaving gdbserver attached to the process\n");
+	  if (tracing && disconnected_tracing)
+	    fprintf (stderr,
+		     "Disconnected tracing in effect, "
+		     "leaving gdbserver attached to the process\n");
+
+	  if (any_persistent_commands ())
+	    fprintf (stderr,
+		     "Persistent commands are present, "
+		     "leaving gdbserver attached to the process\n");
 
 	  /* Make sure we're in non-stop/async mode, so we we can both
 	     wait for an async socket accept, and handle async target
@@ -3090,8 +3334,8 @@ process_serial_event (void)
     case 'C':
       require_running (own_buf);
       convert_ascii_to_int (own_buf + 1, &sig, 1);
-      if (target_signal_to_host_p (sig))
-	signal = target_signal_to_host (sig);
+      if (gdb_signal_to_host_p (sig))
+	signal = gdb_signal_to_host (sig);
       else
 	signal = 0;
       myresume (own_buf, 0, signal);
@@ -3099,8 +3343,8 @@ process_serial_event (void)
     case 'S':
       require_running (own_buf);
       convert_ascii_to_int (own_buf + 1, &sig, 1);
-      if (target_signal_to_host_p (sig))
-	signal = target_signal_to_host (sig);
+      if (gdb_signal_to_host_p (sig))
+	signal = gdb_signal_to_host (sig);
       else
 	signal = 0;
       myresume (own_buf, 1, signal);
@@ -3119,13 +3363,16 @@ process_serial_event (void)
       /* Fallthrough.  */
     case 'z':  /* remove_ ... */
       {
-	char *lenptr;
 	char *dataptr;
-	CORE_ADDR addr = strtoul (&own_buf[3], &lenptr, 16);
-	int len = strtol (lenptr + 1, &dataptr, 16);
+	ULONGEST addr;
+	int len;
 	char type = own_buf[1];
 	int res;
 	const int insert = ch == 'Z';
+	char *p = &own_buf[3];
+
+	p = unpack_varlen_hex (p, &addr);
+	len = strtol (p + 1, &dataptr, 16);
 
 	/* Default to unrecognized/unsupported.  */
 	res = 1;
@@ -3138,7 +3385,22 @@ process_serial_event (void)
 	  case '4': /* access watchpoint */
 	    require_running (own_buf);
 	    if (insert && the_target->insert_point != NULL)
-	      res = (*the_target->insert_point) (type, addr, len);
+	      {
+		/* Insert the breakpoint.  If it is already inserted, nothing
+		   will take place.  */
+		res = (*the_target->insert_point) (type, addr, len);
+
+		/* GDB may have sent us a list of *point parameters to be
+		   evaluated on the target's side.  Read such list here.  If we
+		   already have a list of parameters, GDB is telling us to drop
+		   that list and use this one instead.  */
+		if (!res && (type == '0' || type == '1'))
+		  {
+		    /* Remove previous conditions.  */
+		    clear_gdb_breakpoint_conditions (addr);
+		    process_point_options (addr, &dataptr);
+		  }
+	      }
 	    else if (!insert && the_target->remove_point != NULL)
 	      res = (*the_target->remove_point) (type, addr, len);
 	    break;
@@ -3170,7 +3432,7 @@ process_serial_event (void)
       if (extended_protocol)
 	{
 	  last_status.kind = TARGET_WAITKIND_EXITED;
-	  last_status.value.sig = TARGET_SIGNAL_KILL;
+	  last_status.value.sig = GDB_SIGNAL_KILL;
 	  return 0;
 	}
       else
@@ -3214,7 +3476,7 @@ process_serial_event (void)
 	  else
 	    {
 	      last_status.kind = TARGET_WAITKIND_EXITED;
-	      last_status.value.sig = TARGET_SIGNAL_KILL;
+	      last_status.value.sig = GDB_SIGNAL_KILL;
 	    }
 	  return 0;
 	}
@@ -3250,7 +3512,7 @@ process_serial_event (void)
     {
       /* In non-stop, defer exiting until GDB had a chance to query
 	 the whole vStopped list (until it gets an OK).  */
-      if (!notif_queue)
+      if (QUEUE_is_empty (notif_event_p, notif_stop.queue))
 	{
 	  fprintf (stderr, "GDBserver exiting\n");
 	  remote_close ();
@@ -3338,7 +3600,7 @@ handle_target_event (int err, gdb_client_data client_data)
 
 	      resume_info.thread = last_ptid;
 	      resume_info.kind = resume_continue;
-	      resume_info.sig = target_signal_to_host (last_status.value.sig);
+	      resume_info.sig = gdb_signal_to_host (last_status.value.sig);
 	      (*the_target->resume) (&resume_info, 1);
 	    }
 	  else if (debug_threads)
@@ -3348,8 +3610,14 @@ handle_target_event (int err, gdb_client_data client_data)
 	}
       else
 	{
-	  /* Something interesting.  Tell GDB about it.  */
-	  push_event (last_ptid, &last_status);
+	  struct vstop_notif *vstop_notif
+	    = xmalloc (sizeof (struct vstop_notif));
+
+	  vstop_notif->status = last_status;
+	  vstop_notif->ptid = last_ptid;
+	  /* Push Stop notification.  */
+	  notif_push (&notif_stop,
+		      (struct notif_event *) vstop_notif);
 	}
     }
 

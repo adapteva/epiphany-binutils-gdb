@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2009-2012 Free Software Foundation, Inc.
+   Copyright 2009-2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,9 +18,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-#ifdef __sh__
-#define signal(a,b)	/* Signals not supported on this target - make them go away */
-#endif
 
 /* Signal handlers, we set breakpoints in them to make sure that the
    signals really get delivered.  */

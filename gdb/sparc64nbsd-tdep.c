@@ -1,6 +1,6 @@
 /* Target-dependent code for NetBSD/sparc64.
 
-   Copyright (C) 2002-2012 Free Software Foundation, Inc.
+   Copyright (C) 2002-2013 Free Software Foundation, Inc.
    Based on code contributed by Wasabi Systems, Inc.
 
    This file is part of GDB.
@@ -64,7 +64,7 @@ sparc64nbsd_supply_fpregset (const struct regset *regset,
 			     struct regcache *regcache,
 			     int regnum, const void *fpregs, size_t len)
 {
-  sparc64_supply_fpregset (regcache, regnum, fpregs);
+  sparc64_supply_fpregset (&sparc64_bsd_fpregset, regcache, regnum, fpregs);
 }
 
 
@@ -79,7 +79,7 @@ static const CORE_ADDR sparc64nbsd_sigtramp_start = 0xffffffffffffdee4ULL;
 static const CORE_ADDR sparc64nbsd_sigtramp_end = 0xffffffffffffe000ULL;
 
 static int
-sparc64nbsd_pc_in_sigtramp (CORE_ADDR pc, char *name)
+sparc64nbsd_pc_in_sigtramp (CORE_ADDR pc, const char *name)
 {
   if (pc >= sparc64nbsd_sigtramp_start && pc < sparc64nbsd_sigtramp_end)
     return 1;
@@ -214,7 +214,7 @@ sparc64nbsd_sigtramp_frame_sniffer (const struct frame_unwind *self,
 				    void **this_cache)
 {
   CORE_ADDR pc = get_frame_pc (this_frame);
-  char *name;
+  const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
   if (sparc64nbsd_pc_in_sigtramp (pc, name))

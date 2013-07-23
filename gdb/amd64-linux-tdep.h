@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux AMD64.
 
-   Copyright (C) 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2006-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,6 +34,8 @@
 /* Linux target description.  */
 extern struct target_desc *tdesc_amd64_linux;
 extern struct target_desc *tdesc_amd64_avx_linux;
+extern struct target_desc *tdesc_x32_linux;
+extern struct target_desc *tdesc_x32_avx_linux;
 
 /* Enum that defines the syscall identifiers for amd64 linux.
    Used for process record/replay, these will be translated into

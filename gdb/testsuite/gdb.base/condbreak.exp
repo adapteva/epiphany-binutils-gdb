@@ -1,4 +1,4 @@
-# Copyright 1997-2001, 2003, 2007-2012 Free Software Foundation, Inc.
+# Copyright 1997-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ if  { [gdb_compile "${binfile}0.o ${binfile}1.o" "${binfile}" executable {debug 
      return -1
 }
 
-if [get_compiler_info ${binfile}] {
+if [get_compiler_info] {
     return -1;
 }
 
@@ -261,3 +261,8 @@ gdb_test_multiple "continue" $test {
 	xfail $test
     }
 }
+
+gdb_test "complete cond 1" "cond 1"
+gdb_test "set variable \$var = 1"
+gdb_test "complete cond \$v" "cond \\\$var"
+gdb_test "complete cond 1 values\[0\].a" "cond 1 values.0..a_field"

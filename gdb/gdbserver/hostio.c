@@ -1,5 +1,5 @@
 /* Host file transfer support for gdbserver.
-   Copyright (C) 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2007-2013 Free Software Foundation, Inc.
 
    Contributed by CodeSourcery.
 
@@ -328,10 +328,15 @@ handle_pread (char *own_buf, int *new_packet_len)
 #ifdef HAVE_PREAD
   ret = pread (fd, data, len, offset);
 #else
-  ret = lseek (fd, offset, SEEK_SET);
-  if (ret != -1)
-    ret = read (fd, data, len);
+  ret = -1;
 #endif
+  /* If we have no pread or it failed for this file, use lseek/read.  */
+  if (ret == -1)
+    {
+      ret = lseek (fd, offset, SEEK_SET);
+      if (ret != -1)
+	ret = read (fd, data, len);
+    }
 
   if (ret == -1)
     {
@@ -376,10 +381,15 @@ handle_pwrite (char *own_buf, int packet_len)
 #ifdef HAVE_PWRITE
   ret = pwrite (fd, data, len, offset);
 #else
-  ret = lseek (fd, offset, SEEK_SET);
-  if (ret != -1)
-    ret = write (fd, data, len);
+  ret = -1;
 #endif
+  /* If we have no pwrite or it failed for this file, use lseek/write.  */
+  if (ret == -1)
+    {
+      ret = lseek (fd, offset, SEEK_SET);
+      if (ret != -1)
+	ret = write (fd, data, len);
+    }
 
   if (ret == -1)
     {
@@ -459,6 +469,7 @@ handle_unlink (char *own_buf)
 static void
 handle_readlink (char *own_buf, int *new_packet_len)
 {
+#if defined (HAVE_READLINK)
   char filename[PATH_MAX], linkname[PATH_MAX];
   char *p;
   int ret, bytes_sent;
@@ -472,7 +483,7 @@ handle_readlink (char *own_buf, int *new_packet_len)
       return;
     }
 
-  ret = readlink (filename, linkname, sizeof linkname);
+  ret = readlink (filename, linkname, sizeof (linkname) - 1);
   if (ret == -1)
     {
       hostio_error (own_buf);
@@ -485,6 +496,9 @@ handle_readlink (char *own_buf, int *new_packet_len)
      to return a partial response, but simply fail.  */
   if (bytes_sent < ret)
     sprintf (own_buf, "F-1,%x", FILEIO_ENAMETOOLONG);
+#else /* ! HAVE_READLINK */
+    sprintf (own_buf, "F-1,%x", FILEIO_ENOSYS);
+#endif
 }
 
 /* Handle all the 'F' file transfer packets.  */

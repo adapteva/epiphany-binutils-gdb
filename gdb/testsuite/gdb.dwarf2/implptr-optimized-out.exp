@@ -1,4 +1,4 @@
-# Copyright 2011-2012 Free Software Foundation, Inc.
+# Copyright 2011-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,11 +19,9 @@ if {![dwarf2_support]} {
     return 0  
 }
 
-set testfile "implptr-optimized-out"
-set srcfile ${testfile}.S
+standard_testfile .S
 set mainfile main.c
 set executable ${testfile}
-set binfile ${objdir}/${subdir}/${executable}
 
 if [prepare_for_testing ${testfile}.exp $executable "${srcfile} ${mainfile}" {}] {
     return -1

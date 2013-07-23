@@ -1,4 +1,4 @@
-/* Copyright 1999, 2004, 2007-2012 Free Software Foundation, Inc.
+/* Copyright 1999-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -140,9 +140,9 @@ do_locals_tests ()
   float *lpfloat = 0;
   double ldouble = 0;
   double *lpdouble = 0;
-  struct _simple_struct lsimple;
-  struct _simple_struct *lpsimple;
-  void (*func) (void);
+  struct _simple_struct lsimple = { 0 };
+  struct _simple_struct *lpsimple = 0;
+  void (*func) (void) = 0;
 
   /* Simple assignments */
   linteger = 1234;

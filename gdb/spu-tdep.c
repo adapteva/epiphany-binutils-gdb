@@ -1,5 +1,5 @@
 /* SPU target-dependent code for GDB, the GNU debugger.
-   Copyright (C) 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2006-2013 Free Software Foundation, Inc.
 
    Contributed by Ulrich Weigand <uweigand@de.ibm.com>.
    Based on a port by Sid Manning <sid@us.ibm.com>.
@@ -849,7 +849,7 @@ spu_in_function_epilogue_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   CORE_ADDR scan_pc, func_start, func_end, epilogue_start, epilogue_end;
   bfd_byte buf[4];
   unsigned int insn;
-  int rt, ra, rb, rc, immed;
+  int rt, ra, rb, immed;
 
   /* Find the search limits based on function boundaries and hard limit.
      We assume the epilogue can be up to 64 instructions long.  */
@@ -1186,7 +1186,7 @@ spu2ppu_sniffer (const struct frame_unwind *self,
   CORE_ADDR base, func, backchain;
   gdb_byte buf[4];
 
-  if (gdbarch_bfd_arch_info (target_gdbarch)->arch == bfd_arch_spu)
+  if (gdbarch_bfd_arch_info (target_gdbarch ())->arch == bfd_arch_spu)
     return 0;
 
   base = get_frame_sp (this_frame);
@@ -1217,7 +1217,7 @@ spu2ppu_sniffer (const struct frame_unwind *self,
       else
 	{
 	  struct regcache *regcache;
-	  regcache = get_thread_arch_regcache (inferior_ptid, target_gdbarch);
+	  regcache = get_thread_arch_regcache (inferior_ptid, target_gdbarch ());
 	  cache->regcache = regcache_dup (regcache);
 	  *this_prologue_cache = cache;
 	  return 1;
@@ -1373,8 +1373,7 @@ spu_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       struct value *arg = args[i];
       struct type *type = check_typedef (value_type (arg));
       const gdb_byte *contents = value_contents (arg);
-      int len = TYPE_LENGTH (type);
-      int n_regs = align_up (len, 16) / 16;
+      int n_regs = align_up (TYPE_LENGTH (type), 16) / 16;
 
       /* If the argument doesn't wholly fit into registers, it and
 	 all subsequent arguments go to the stack.  */
@@ -1450,10 +1449,11 @@ spu_dummy_id (struct gdbarch *gdbarch, struct frame_info *this_frame)
 /* Function return value access.  */
 
 static enum return_value_convention
-spu_return_value (struct gdbarch *gdbarch, struct type *func_type,
+spu_return_value (struct gdbarch *gdbarch, struct value *function,
 		  struct type *type, struct regcache *regcache,
 		  gdb_byte *out, const gdb_byte *in)
 {
+  struct type *func_type = function ? value_type (function) : NULL;
   enum return_value_convention rvc;
   int opencl_vector = 0;
 
@@ -1942,12 +1942,13 @@ spu_catch_start (struct objfile *objfile)
   xsnprintf (buf, sizeof buf, "*%s", core_addr_to_string (pc));
   create_breakpoint (get_objfile_arch (objfile), buf /* arg */,
 		     NULL /* cond_string */, -1 /* thread */,
+		     NULL /* extra_string */,
 		     0 /* parse_condition_and_thread */, 1 /* tempflag */,
 		     bp_breakpoint /* type_wanted */,
 		     0 /* ignore_count */,
 		     AUTO_BOOLEAN_FALSE /* pending_break_support */,
 		     &bkpt_breakpoint_ops /* ops */, 0 /* from_tty */,
-		     1 /* enabled */, 0 /* internal  */);
+		     1 /* enabled */, 0 /* internal  */, 0);
 }
 
 
@@ -2030,7 +2031,7 @@ info_spu_event_command (char *args, int from_tty)
   gdb_byte buf[100];
   char annex[32];
   LONGEST len;
-  int rc, id;
+  int id;
 
   if (gdbarch_bfd_arch_info (get_frame_arch (frame))->arch != bfd_arch_spu)
     error (_("\"info spu\" is only supported on the SPU architecture."));
@@ -2087,7 +2088,7 @@ info_spu_signal_command (char *args, int from_tty)
   char annex[32];
   gdb_byte buf[100];
   LONGEST len;
-  int rc, id;
+  int id;
 
   if (gdbarch_bfd_arch_info (gdbarch)->arch != bfd_arch_spu)
     error (_("\"info spu\" is only supported on the SPU architecture."));
@@ -2208,7 +2209,7 @@ info_spu_mailbox_command (char *args, int from_tty)
   char annex[32];
   gdb_byte buf[1024];
   LONGEST len;
-  int i, id;
+  int id;
 
   if (gdbarch_bfd_arch_info (gdbarch)->arch != bfd_arch_spu)
     error (_("\"info spu\" is only supported on the SPU architecture."));
@@ -2356,7 +2357,7 @@ info_spu_dma_cmdlist (gdb_byte *buf, int nr, enum bfd_endian byte_order)
       ULONGEST mfc_cq_dw1;
       ULONGEST mfc_cq_dw2;
       int mfc_cmd_opcode, mfc_cmd_tag, rclass_id, tclass_id;
-      int lsa, size, list_lsa, list_size, mfc_lsa, mfc_size;
+      int list_lsa, list_size, mfc_lsa, mfc_size;
       ULONGEST mfc_ea;
       int list_valid_p, noop_valid_p, qw_valid_p, ea_valid_p, cmd_error_p;
 
@@ -2450,7 +2451,7 @@ info_spu_dma_command (char *args, int from_tty)
   char annex[32];
   gdb_byte buf[1024];
   LONGEST len;
-  int i, id;
+  int id;
 
   if (gdbarch_bfd_arch_info (get_frame_arch (frame))->arch != bfd_arch_spu)
     error (_("\"info spu\" is only supported on the SPU architecture."));
@@ -2529,7 +2530,7 @@ info_spu_proxydma_command (char *args, int from_tty)
   char annex[32];
   gdb_byte buf[1024];
   LONGEST len;
-  int i, id;
+  int id;
 
   if (gdbarch_bfd_arch_info (gdbarch)->arch != bfd_arch_spu)
     error (_("\"info spu\" is only supported on the SPU architecture."));

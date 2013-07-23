@@ -1,4 +1,21 @@
 ## Process this file with automake to generate Makefile.in
+#
+#   Copyright 2012 Free Software Foundation
+#
+# This file is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING3.  If not see
+# <http://www.gnu.org/licenses/>.
+#
 
 AUTOMAKE_OPTIONS = 1.11 no-dist foreign
 ACLOCAL_AMFLAGS = -I . -I .. -I ../config
@@ -35,7 +52,7 @@ AM_CFLAGS = $(WARN_CFLAGS)
 AM_CPPFLAGS = -DBINDIR='"$(bindir)"'
 if PLUGINS
 bfdinclude_HEADERS += $(INCDIR)/plugin-api.h
-LIBDL = -ldl
+LIBDL = @lt_cv_dlopen_libs@
 endif
 
 # bfd.h goes here, for now
@@ -71,6 +88,7 @@ BFD64_LIBS_CFILES = archive64.c
 # This list is alphabetized to make it easier to keep in sync
 # with the decls and initializer in archures.c.
 ALL_MACHINES = \
+	cpu-aarch64.lo \
 	cpu-alpha.lo \
 	cpu-arc.lo \
 	cpu-arm.lo \
@@ -105,16 +123,20 @@ ALL_MACHINES = \
 	cpu-m32r.lo \
 	cpu-m68hc11.lo \
 	cpu-m68hc12.lo \
+	cpu-m9s12x.lo \
+	cpu-m9s12xg.lo \
 	cpu-m68k.lo \
 	cpu-m88k.lo \
 	cpu-mcore.lo \
 	cpu-mep.lo \
+	cpu-metag.lo \
 	cpu-microblaze.lo \
 	cpu-mips.lo \
 	cpu-mmix.lo \
 	cpu-moxie.lo \
 	cpu-msp430.lo \
 	cpu-mt.lo \
+	cpu-nios2.lo \
 	cpu-ns32k.lo \
 	cpu-openrisc.lo \
 	cpu-or32.lo \
@@ -138,16 +160,19 @@ ALL_MACHINES = \
 	cpu-tilegx.lo \
 	cpu-tilepro.lo \
 	cpu-v850.lo \
+	cpu-v850_rh850.lo \
 	cpu-vax.lo \
 	cpu-w65.lo \
 	cpu-we32k.lo \
 	cpu-xc16x.lo \
+	cpu-xgate.lo \
 	cpu-xstormy16.lo \
 	cpu-xtensa.lo \
 	cpu-z80.lo \
 	cpu-z8k.lo
 
 ALL_MACHINES_CFILES = \
+	cpu-aarch64.c \
 	cpu-alpha.c \
 	cpu-arc.c \
 	cpu-arm.c \
@@ -182,10 +207,13 @@ ALL_MACHINES_CFILES = \
 	cpu-m32r.c \
 	cpu-m68hc11.c \
 	cpu-m68hc12.c \
+	cpu-m9s12x.c \
+	cpu-m9s12xg.c \
 	cpu-m68k.c \
 	cpu-m88k.c \
 	cpu-mcore.c \
 	cpu-mep.c \
+	cpu-metag.c \
 	cpu-microblaze.c \
 	cpu-mips.c \
 	cpu-mmix.c \
@@ -193,6 +221,7 @@ ALL_MACHINES_CFILES = \
 	cpu-msp430.c \
 	cpu-mt.c \
 	cpu-ns32k.c \
+	cpu-nios2.c \
 	cpu-openrisc.c \
 	cpu-or32.c \
 	cpu-pdp11.c \
@@ -215,10 +244,12 @@ ALL_MACHINES_CFILES = \
 	cpu-tilegx.c \
 	cpu-tilepro.c \
 	cpu-v850.c \
+	cpu-v850_rh850.c \
 	cpu-vax.c \
 	cpu-w65.c \
 	cpu-we32k.c \
 	cpu-xc16x.c \
+	cpu-xgate.c \
 	cpu-xstormy16.c \
 	cpu-xtensa.c \
 	cpu-z80.c \
@@ -275,6 +306,7 @@ BFD32_BACKENDS = \
 	elf-ifunc.lo \
 	elf-m10200.lo \
 	elf-m10300.lo \
+	elf-nacl.lo \
 	elf-strtab.lo \
 	elf-vxworks.lo \
 	elf.lo \
@@ -312,11 +344,13 @@ BFD32_BACKENDS = \
 	elf32-m88k.lo \
 	elf32-mcore.lo \
 	elf32-mep.lo \
+	elf32-metag.lo \
 	elf32-microblaze.lo \
 	elf32-mips.lo \
 	elf32-moxie.lo \
 	elf32-msp430.lo \
 	elf32-mt.lo \
+	elf32-nios2.lo \
 	elf32-openrisc.lo \
 	elf32-or32.lo \
 	elf32-pj.lo \
@@ -336,6 +370,7 @@ BFD32_BACKENDS = \
 	elf32-v850.lo \
 	elf32-vax.lo \
 	elf32-xc16x.lo \
+	elf32-xgate.lo \
 	elf32-xstormy16.lo \
 	elf32-xtensa.lo \
 	elf32.lo \
@@ -461,6 +496,7 @@ BFD32_BACKENDS_CFILES = \
 	elf-ifunc.c \
 	elf-m10200.c \
 	elf-m10300.c \
+	elf-nacl.c \
 	elf-strtab.c \
 	elf-vxworks.c \
 	elf.c \
@@ -498,11 +534,13 @@ BFD32_BACKENDS_CFILES = \
 	elf32-m88k.c \
 	elf32-mcore.c \
 	elf32-mep.c \
+	elf32-metag.c \
 	elf32-microblaze.c \
 	elf32-mips.c \
 	elf32-moxie.c \
 	elf32-msp430.c \
 	elf32-mt.c \
+	elf32-nios2.c \
 	elf32-openrisc.c \
 	elf32-or32.c \
 	elf32-pj.c \
@@ -522,6 +560,7 @@ BFD32_BACKENDS_CFILES = \
 	elf32-v850.c \
 	elf32-vax.c \
 	elf32-xc16x.c \
+	elf32-xgate.c \
 	elf32-xstormy16.c \
 	elf32-xtensa.c \
 	elf32.c \
@@ -603,6 +642,7 @@ BFD32_BACKENDS_CFILES = \
 # elf32-ia64.c requires a 64-bit bfd_vma, and hence can not be put in
 # BFD32_BACKENDS.
 BFD64_BACKENDS = \
+	elf64-aarch64.lo \
 	aix5ppc-core.lo \
 	aout64.lo \
 	coff-alpha.lo \
@@ -616,6 +656,7 @@ BFD64_BACKENDS = \
 	elf64-gen.lo \
 	elf64-hppa.lo \
 	elf64-ia64.lo \
+	elf64-ia64-vms.lo \
 	elf64-mips.lo \
 	elf64-mmix.lo \
 	elf64-ppc.lo \
@@ -639,6 +680,7 @@ BFD64_BACKENDS = \
 	vms-alpha.lo
 
 BFD64_BACKENDS_CFILES = \
+	elf64-aarch64.c \
 	aix5ppc-core.c \
 	aout64.c \
 	coff-alpha.c \
@@ -650,6 +692,7 @@ BFD64_BACKENDS_CFILES = \
 	elf64-alpha.c \
 	elf64-gen.c \
 	elf64-hppa.c \
+	elf64-ia64-vms.c \
 	elf64-mips.c \
 	elf64-mmix.c \
 	elf64-ppc.c \
@@ -728,7 +771,7 @@ CFILES = $(SOURCE_CFILES) $(BUILD_CFILES)
 ## This is a list of all .h files which are in the source tree.
 SOURCE_HFILES = \
 	aout-target.h aoutf1.h aoutx.h coffcode.h coffswap.h ecoffswap.h \
-	elf-bfd.h elf-hppa.h elf32-hppa.h \
+	elf-bfd.h elf-hppa.h elf-linux-psinfo.h elf32-hppa.h \
 	elf64-hppa.h elfcode.h elfcore.h \
 	freebsd.h genlink.h go32stub.h \
 	libaout.h libbfd.h libcoff.h libecoff.h libhppa.h libieee.h \

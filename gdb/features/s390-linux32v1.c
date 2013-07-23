@@ -1,4 +1,5 @@
-/* THIS FILE IS GENERATED.  Original: s390-linux32v1.xml */
+/* THIS FILE IS GENERATED.  -*- buffer-read-only: t -*- vi:set ro:
+  Original: s390-linux32v1.xml */
 
 #include "defs.h"
 #include "osabi.h"
@@ -10,7 +11,6 @@ initialize_tdesc_s390_linux32v1 (void)
 {
   struct target_desc *result = allocate_target_description ();
   struct tdesc_feature *feature;
-  struct tdesc_type *field_type, *type;
 
   set_tdesc_architecture (result, bfd_scan_arch ("s390:31-bit"));
 

@@ -1,6 +1,6 @@
 /* Target dependent code for GDB on TI C6x systems.
 
-   Copyright (C) 2010-2012 Free Software Foundation, Inc.
+   Copyright (C) 2010-2013 Free Software Foundation, Inc.
    Contributed by Andrew Jenner <andrew@codesourcery.com>
    Contributed by Yao Qi <yao@codesourcery.com>
 
@@ -146,7 +146,7 @@ static int tic6x_register_number (int reg, int side, int crosspath);
    Bail out early if CURRENT_PC is reached.  Returns the address of the first
    instruction after the prologue.  */
 
-CORE_ADDR
+static CORE_ADDR
 tic6x_analyze_prologue (struct gdbarch *gdbarch, const CORE_ADDR start_pc,
 			const CORE_ADDR current_pc,
 			struct tic6x_unwind_cache *cache,
@@ -298,10 +298,9 @@ tic6x_analyze_prologue (struct gdbarch *gdbarch, const CORE_ADDR start_pc,
 
 /* This is the implementation of gdbarch method skip_prologue.  */
 
-CORE_ADDR
+static CORE_ADDR
 tic6x_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 {
-  CORE_ADDR limit_pc;
   CORE_ADDR func_addr;
   struct tic6x_unwind_cache cache;
 
@@ -324,7 +323,7 @@ tic6x_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 
 /* This is the implementation of gdbarch method breakpiont_from_pc.  */
 
-const unsigned char*
+static const unsigned char*
 tic6x_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *bp_addr,
 			  int *bp_size)
 {
@@ -398,14 +397,13 @@ tic6x_unwind_sp (struct gdbarch *gdbarch, struct frame_info *this_frame)
 
 /* Frame base handling.  */
 
-struct tic6x_unwind_cache*
+static struct tic6x_unwind_cache*
 tic6x_frame_unwind_cache (struct frame_info *this_frame,
 			  void **this_prologue_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   CORE_ADDR current_pc;
   struct tic6x_unwind_cache *cache;
-  int i;
 
   if (*this_prologue_cache)
     return *this_prologue_cache;
@@ -606,7 +604,6 @@ tic6x_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   unsigned long inst;
-  int offset;
   int register_number;
   int last = 0;
 
@@ -698,7 +695,7 @@ tic6x_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
 
 /* This is the implementation of gdbarch method software_single_step.  */
 
-int
+static int
 tic6x_software_single_step (struct frame_info *frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -716,27 +713,6 @@ static CORE_ADDR
 tic6x_frame_align (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   return align_down (addr, 8);
-}
-
-/* This is the implementation of gdbarch method register_to_value.  */
-
-static int
-tic6x_register_to_value (struct frame_info *frame, int regnum,
-			 struct type *type, gdb_byte * to,
-			 int *optimizedp, int *unavailablep)
-{
-  get_frame_register (frame, regnum, (char *) to);
-  *optimizedp = *unavailablep = 0;
-  return 1;
-}
-
-/* This is the implementation of gdbarch method value_to_register.  */
-
-static void
-tic6x_value_to_register (struct frame_info *frame, int regnum,
-			 struct type *type, const gdb_byte *from)
-{
-  put_frame_register (frame, regnum, from);
 }
 
 /* Given a return value in REGCACHE with a type VALTYPE, extract and copy its
@@ -821,10 +797,23 @@ tic6x_store_return_value (struct type *valtype, struct regcache *regcache,
 /* This is the implementation of gdbarch method return_value.  */
 
 static enum return_value_convention
-tic6x_return_value (struct gdbarch *gdbarch, struct type *func_type,
+tic6x_return_value (struct gdbarch *gdbarch, struct value *function,
 		    struct type *type, struct regcache *regcache,
 		    gdb_byte *readbuf, const gdb_byte *writebuf)
 {
+  /* In C++, when function returns an object, even its size is small
+     enough, it stii has to be passed via reference, pointed by register
+     A3.  */
+  if (current_language->la_language == language_cplus)
+    {
+      if (type != NULL)
+	{
+	  CHECK_TYPEDEF (type);
+	  if (language_pass_by_reference (type))
+	    return RETURN_VALUE_STRUCT_CONVENTION;
+	}
+    }
+
   if (TYPE_LENGTH (type) > 8)
     return RETURN_VALUE_STRUCT_CONVENTION;
 
@@ -906,7 +895,6 @@ tic6x_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 {
   int argreg = 0;
   int argnum;
-  int len = 0;
   int stack_offset = 4;
   int references_offset = 4;
   CORE_ADDR func_addr = find_function_addr (function, NULL);
@@ -915,32 +903,7 @@ tic6x_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* The first arg passed on stack.  Mostly the first 10 args are passed by
      registers.  */
   int first_arg_on_stack = 10;
-  /* If this inf-call is a cpp method call, and return value is passed by
-     reference, this flag is set to 1, otherwise set to 0.  We need this flag
-     because computation of the return location in
-     infcall.c:call_function_by_hand is wrong for C6000 ELF ABI.  In
-     call_function_by_hand, the language is considered first, and then
-     target ABI is considered.  If language_pass_by_reference returns true,
-     the return location is passed as the first parameter to the function,
-     which is conflict with C6000 ELF ABI.  If this flag is true, we should
-     adjust args and return locations accordingly to comply with C6000 ELF
-     ABI.  */
-  int cplus_return_struct_by_reference = 0;
 
-  if (current_language->la_language == language_cplus)
-    {
-      struct type *values_type;
-
-      find_function_addr (function, &values_type);
-
-      if (values_type)
-	{
-	  CHECK_TYPEDEF (values_type);
-	  if (language_pass_by_reference (values_type))
-	    cplus_return_struct_by_reference = 1;
-	}
-
-    }
   /* Set the return address register to point to the entry point of
      the program, where a breakpoint lies in wait.  */
   regcache_cooked_write_unsigned (regcache, TIC6X_RA_REGNUM, bp_addr);
@@ -949,12 +912,6 @@ tic6x_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
      for the returned value.  The callee returns the object by copying it to
      the address in A3.  */
   if (struct_return)
-    regcache_cooked_write_unsigned (regcache, 3, struct_addr);
-  else if (cplus_return_struct_by_reference)
-    /* When cplus_return_struct_by_reference is 1, means local variable
-       lang_struct_return in call_function_by_hand is 1, so struct is
-       returned by reference, even STRUCT_RETURN is 0.  Note that STRUCT_ADDR
-       is still valid in this case.  */
     regcache_cooked_write_unsigned (regcache, 3, struct_addr);
 
   /* Determine the type of this function.  */
@@ -970,10 +927,8 @@ tic6x_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   if (TYPE_VARARGS (func_type))
     first_arg_on_stack = TYPE_NFIELDS (func_type) - 1;
 
-  /* Now make space on the stack for the args.  If
-     cplus_return_struct_by_reference is 1, means GDB pass an extra parameter
-     in ARGS, which is useless here, skip it.  */
-  for (argnum = cplus_return_struct_by_reference; argnum < nargs; argnum++)
+  /* Now make space on the stack for the args.  */
+  for (argnum = 0; argnum < nargs; argnum++)
     {
       int len = align_up (TYPE_LENGTH (value_type (args[argnum])), 4);
       if (argnum >= 10 - argreg)
@@ -989,7 +944,7 @@ tic6x_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* Now load as many as possible of the first arguments into
      registers, and push the rest onto the stack.  Loop through args
      from first to last.  */
-  for (argnum = cplus_return_struct_by_reference; argnum < nargs; argnum++)
+  for (argnum = 0; argnum < nargs; argnum++)
     {
       const gdb_byte *val;
       struct value *arg = args[argnum];
@@ -1195,7 +1150,7 @@ tic6x_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   struct gdbarch *gdbarch = get_frame_arch (frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR jb_addr;
-  char buf[4];
+  gdb_byte buf[4];
 
   /* JMP_BUF is passed by reference in A4.  */
   jb_addr = get_frame_register_unsigned (frame, 4);
@@ -1208,6 +1163,16 @@ tic6x_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   *pc = extract_unsigned_integer (buf, 4, byte_order);
 
   return 1;
+}
+
+/* This is the implementation of gdbarch method
+   return_in_first_hidden_param_p.  */
+
+static int
+tic6x_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
+				      struct type *type)
+{
+  return 0;
 }
 
 static struct gdbarch *
@@ -1354,9 +1319,6 @@ tic6x_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Call dummy code.  */
   set_gdbarch_frame_align (gdbarch, tic6x_frame_align);
 
-  set_gdbarch_register_to_value (gdbarch, tic6x_register_to_value);
-  set_gdbarch_value_to_register (gdbarch, tic6x_value_to_register);
-
   set_gdbarch_return_value (gdbarch, tic6x_return_value);
 
   set_gdbarch_dummy_id (gdbarch, tic6x_dummy_id);
@@ -1368,6 +1330,9 @@ tic6x_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_in_function_epilogue_p (gdbarch, tic6x_in_function_epilogue_p);
 
+  set_gdbarch_return_in_first_hidden_param_p (gdbarch,
+					      tic6x_return_in_first_hidden_param_p);
+
   /* Hook in ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);
 
@@ -1376,6 +1341,9 @@ tic6x_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   return gdbarch;
 }
+
+/* -Wmissing-prototypes */
+extern initialize_file_ftype _initialize_tic6x_tdep;
 
 void
 _initialize_tic6x_tdep (void)

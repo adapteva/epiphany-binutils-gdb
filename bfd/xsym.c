@@ -1,6 +1,6 @@
 /* xSYM symbol-file support for BFD.
    Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010, 2011 Free Software Foundation, Inc.
+   2009, 2010, 2011, 2012  Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -21,8 +21,8 @@
 
 /* xSYM is the debugging format used by CodeWarrior on Mac OS classic.  */
 
-#include "alloca-conf.h"
 #include "sysdep.h"
+#include "alloca-conf.h"
 #include "xsym.h"
 #include "bfd.h"
 #include "libbfd.h"
@@ -2249,32 +2249,26 @@ bfd_sym_scan (bfd *abfd, bfd_sym_version version, bfd_sym_data_struct *mdata)
 const bfd_target *
 bfd_sym_object_p (bfd *abfd)
 {
-  struct bfd_preserve preserve;
   bfd_sym_version version = -1;
+  bfd_sym_data_struct *mdata;
 
-  preserve.marker = NULL;
   bfd_seek (abfd, 0, SEEK_SET);
   if (bfd_sym_read_version (abfd, &version) != 0)
     goto wrong;
 
-  preserve.marker = bfd_alloc (abfd, sizeof (bfd_sym_data_struct));
-  if (preserve.marker == NULL
-      || ! bfd_preserve_save (abfd, &preserve))
+  mdata = (bfd_sym_data_struct *) bfd_alloc (abfd, sizeof (*mdata));
+  if (mdata == NULL)
     goto fail;
 
-  if (bfd_sym_scan (abfd, version,
-		    (bfd_sym_data_struct *) preserve.marker) != 0)
+  if (bfd_sym_scan (abfd, version, mdata) != 0)
     goto wrong;
 
-  bfd_preserve_finish (abfd, &preserve);
   return abfd->xvec;
 
  wrong:
   bfd_set_error (bfd_error_wrong_format);
 
  fail:
-  if (preserve.marker != NULL)
-    bfd_preserve_restore (abfd, &preserve);
   return NULL;
 }
 

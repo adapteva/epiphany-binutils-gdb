@@ -1,6 +1,6 @@
 /* Exception (throw catch) mechanism, for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1988-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -221,10 +221,10 @@ exceptions_state_mc_action_iter_1 (void)
 void
 throw_exception (struct gdb_exception exception)
 {
-  quit_flag = 0;
+  clear_quit_flag ();
   immediate_quit = 0;
 
-  do_cleanups (ALL_CLEANUPS);
+  do_cleanups (all_cleanups ());
 
   /* Jump to the containing catch_errors() call, communicating REASON
      to that call via setjmp's return value.  Note that REASON can't
