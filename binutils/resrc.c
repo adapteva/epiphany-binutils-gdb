@@ -32,11 +32,6 @@
 #include "windres.h"
 
 #include <assert.h>
-#include <errno.h>
-#include <sys/stat.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
@@ -2655,7 +2650,13 @@ write_rc_dialog_control (FILE *e, const rc_dialog_control *control)
       ci = NULL;
     }
 
-  if (control->text.named || control->text.u.id != 0)
+  /* For EDITTEXT, COMBOBOX, LISTBOX, and SCROLLBAR don't dump text.  */
+  if ((control->text.named || control->text.u.id != 0)
+      && (!ci
+          || (ci->class != CTL_EDIT
+              && ci->class != CTL_COMBOBOX
+              && ci->class != CTL_LISTBOX
+              && ci->class != CTL_SCROLLBAR)))
     {
       fprintf (e, " ");
       res_id_print (e, control->text, 1);

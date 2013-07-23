@@ -111,20 +111,6 @@ extern "C" void *gold_mremap(void *, size_t, size_t, int);
 # define MREMAP_MAYMOVE 1
 #endif
 
-#ifndef HAVE_POSIX_FALLOCATE
-// A dummy, non general, version of posix_fallocate.  Here we just set
-// the file size and hope that there is enough disk space.  FIXME: We
-// could allocate disk space by walking block by block and writing a
-// zero byte into each block.
-static int
-posix_fallocate(int o, off_t offset, off_t len)
-{
-  if (ftruncate(o, offset + len) < 0)
-    return errno;
-  return 0;
-}
-#endif // !defined(HAVE_POSIX_FALLOCATE)
-
 // Mingw does not have S_ISLNK.
 #ifndef S_ISLNK
 # define S_ISLNK(mode) 0
@@ -132,6 +118,27 @@ posix_fallocate(int o, off_t offset, off_t len)
 
 namespace gold
 {
+
+// A wrapper around posix_fallocate.  If we don't have posix_fallocate,
+// or the --no-posix-fallocate option is set, we try the fallocate
+// system call directly.  If that fails, we use ftruncate to set
+// the file size and hope that there is enough disk space.
+
+static int
+gold_fallocate(int o, off_t offset, off_t len)
+{
+#ifdef HAVE_POSIX_FALLOCATE
+  if (parameters->options().posix_fallocate())
+    return ::posix_fallocate(o, offset, len);
+#endif // defined(HAVE_POSIX_FALLOCATE)
+#ifdef HAVE_FALLOCATE
+  if (::fallocate(o, 0, offset, len) == 0)
+    return 0;
+#endif // defined(HAVE_FALLOCATE)
+  if (::ftruncate(o, offset + len) < 0)
+    return errno;
+  return 0;
+}
 
 // Output_data variables.
 
@@ -705,10 +712,11 @@ Output_reloc<elfcpp::SHT_REL, dynamic, size, big_endian>::Output_reloc(
     Output_data* od,
     Address address,
     bool is_relative,
-    bool is_symbolless)
+    bool is_symbolless,
+    bool use_plt_offset)
   : address_(address), local_sym_index_(GSYM_CODE), type_(type),
     is_relative_(is_relative), is_symbolless_(is_symbolless),
-    is_section_symbol_(false), use_plt_offset_(false), shndx_(INVALID_CODE)
+    is_section_symbol_(false), use_plt_offset_(use_plt_offset), shndx_(INVALID_CODE)
 {
   // this->type_ is a bitfield; make sure TYPE fits.
   gold_assert(this->type_ == type);
@@ -726,10 +734,11 @@ Output_reloc<elfcpp::SHT_REL, dynamic, size, big_endian>::Output_reloc(
     unsigned int shndx,
     Address address,
     bool is_relative,
-    bool is_symbolless)
+    bool is_symbolless,
+    bool use_plt_offset)
   : address_(address), local_sym_index_(GSYM_CODE), type_(type),
     is_relative_(is_relative), is_symbolless_(is_symbolless),
-    is_section_symbol_(false), use_plt_offset_(false), shndx_(shndx)
+    is_section_symbol_(false), use_plt_offset_(use_plt_offset), shndx_(shndx)
 {
   gold_assert(shndx != INVALID_CODE);
   // this->type_ is a bitfield; make sure TYPE fits.
@@ -1116,7 +1125,14 @@ Output_reloc<elfcpp::SHT_REL, dynamic, size, big_endian>::symbol_value(
     {
       const Sized_symbol<size>* sym;
       sym = static_cast<const Sized_symbol<size>*>(this->u1_.gsym);
-      return sym->value() + addend;
+      if (this->use_plt_offset_ && sym->has_plt_offset())
+	{
+	  uint64_t plt_address =
+	    parameters->target().plt_address_for_global(sym);
+	  return plt_address + sym->plt_offset();
+	}
+      else
+	return sym->value() + addend;
     }
   gold_assert(this->local_sym_index_ != SECTION_CODE
 	      && this->local_sym_index_ != TARGET_CODE
@@ -5005,7 +5021,7 @@ Output_file::map_no_anonymous(bool writable)
   // but that would be a more significant performance hit.
   if (writable)
     {
-      int err = ::posix_fallocate(o, 0, this->file_size_);
+      int err = gold_fallocate(o, 0, this->file_size_);
       if (err != 0)
        gold_fatal(_("%s: %s"), this->name_, strerror(err));
     }
@@ -5032,7 +5048,8 @@ Output_file::map_no_anonymous(bool writable)
 void
 Output_file::map()
 {
-  if (this->map_no_anonymous(true))
+  if (parameters->options().mmap_output_file()
+      && this->map_no_anonymous(true))
     return;
 
   // The mmap call might fail because of file system issues: the file

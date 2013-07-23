@@ -32,7 +32,7 @@ ATOF_TARG_O = atof-@atof@.@OBJEXT@
 
 # use @target_cpu_type@ for refering to configured target name
 IT_HDRS=itbl-parse.h $(srcdir)/itbl-ops.h
-IT_SRCS=itbl-parse.c itbl-lex.c $(srcdir)/itbl-ops.c
+IT_SRCS=itbl-parse.c itbl-lex-wrapper.c $(srcdir)/itbl-ops.c
 IT_DEPS=$(srcdir)/itbl-parse.y $(srcdir)/itbl-lex.l $(srcdir)/config/itbl-@target_cpu_type@.h
 IT_OBJS=itbl-parse.@OBJEXT@ itbl-lex.@OBJEXT@ itbl-ops.@OBJEXT@
 
@@ -169,6 +169,7 @@ TARGET_CPU_CFILES = \
 	config/tc-v850.c \
 	config/tc-xstormy16.c \
 	config/tc-xc16x.c \
+	config/tc-xgate.c \
 	config/tc-xtensa.c \
 	config/tc-z80.c \
 	config/tc-z8k.c \
@@ -236,6 +237,7 @@ TARGET_CPU_HFILES = \
 	config/tc-v850.h \
 	config/tc-xstormy16.h \
 	config/tc-xc16x.h \
+	config/tc-xgate.h \
 	config/tc-xtensa.h \
 	config/tc-z80.h \
 	config/tc-z8k.h \
@@ -391,6 +393,7 @@ check-DEJAGNU: site.exp
 	cp site.exp testsuite/site.exp
 	rootme=`pwd`; export rootme; \
 	srcdir=`cd ${srcdir}; pwd` ; export srcdir ; \
+	LC_ALL=C; export LC_ALL; \
 	EXPECT=${EXPECT} ; export EXPECT ; \
 	runtest=$(RUNTEST); \
 	cd testsuite; \
@@ -456,16 +459,16 @@ $(srcdir)/config/bfin-parse.h: ; @true
 
 bfin-lex.c: $(srcdir)/config/bfin-lex.l
 	$(SHELL) $(YLWRAP) $(srcdir)/config/bfin-lex.l lex.yy.c bfin-lex.c -- $(LEXCOMPILE)
-bfin-lex.@OBJEXT@: bfin-lex.c bfin-parse.h $(srcdir)/config/bfin-defs.h
+bfin-lex-wrapper.@OBJEXT@: $(srcdir)/config/bfin-lex-wrapper.c bfin-lex.c bfin-parse.h $(srcdir)/config/bfin-defs.h
 if am__fastdepCC
-	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `test -f bfin-lex.c || echo $(srcdir)/`bfin-lex.c $(NO_WERROR)
+	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $(srcdir)/config/bfin-lex-wrapper.c $(NO_WERROR)
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 else
 if AMDEP
-	source='bfin-lex.c' object='$@' libtool=no @AMDEPBACKSLASH@
+	source='bfin-lex-wrapper.c' object='$@' libtool=no @AMDEPBACKSLASH@
 	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 endif
-	$(COMPILE) -c `test -f bfin-lex.c || echo $(srcdir)/`bfin-lex.c $(NO_WERROR)
+	$(COMPILE) -c $(srcdir)/config/bfin-lex-wrapper.c $(NO_WERROR)
 endif
 
 rl78-parse.c: $(srcdir)/config/rl78-parse.y
@@ -489,16 +492,16 @@ $(srcdir)/config/rx-defs.h: ; @true
 
 # Disable -Werror, if it has been enabled, since old versions of bison/
 # yacc will produce working code which contain compile time warnings.
-itbl-lex.@OBJEXT@: itbl-lex.c itbl-parse.h
+itbl-lex-wrapper.@OBJEXT@: itbl-lex-wrapper.c itbl-lex.c itbl-parse.h
 if am__fastdepCC
-	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `test -f itbl-lex.c || echo $(srcdir)/`itbl-lex.c $(NO_WERROR)
+	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $(srcdir)/itbl-lex-wrapper.c $(NO_WERROR)
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 else
 if AMDEP
-	source='itbl-lex.c' object='$@' libtool=no @AMDEPBACKSLASH@
+	source='itbl-lex-wrapper.c' object='$@' libtool=no @AMDEPBACKSLASH@
 	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 endif
-	$(COMPILE) -c `test -f itbl-lex.c || echo $(srcdir)/`itbl-lex.c $(NO_WERROR)
+	$(COMPILE) -c $(srcdir)/itbl-lex-wrapper.c $(NO_WERROR)
 endif
 
 # Disable -Werror, if it has been enabled, since old versions of bison/

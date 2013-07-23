@@ -1,6 +1,6 @@
 # Support routines for LD testsuite.
 #   Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-#    2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+#    2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 #    Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
@@ -31,7 +31,7 @@ load_common_lib binutils-common.exp
 # Returns 0 otherwise.
 #
 proc at_least_gcc_version { major minor } {
-    
+
     if {![info exists CC]} {
 	set CC [find_gcc]
     }
@@ -415,7 +415,7 @@ proc ld_simple_link_defsyms {} {
     }
 
     # m6811/m6812 code has references to soft registers.
-    if {[istarget m6811-*-*] || [istarget m6812-*-*]} {
+    if {[istarget m6811-*-*] || [istarget m6812-*-*] || [istarget m68hc1*-*-*]} {
 	append flags " --defsym _.frame=0 --defsym _.d1=0 --defsym _.d2=0"
 	append flags " --defsym _.d3=0 --defsym _.d4=0"
 	append flags " --defsym _.tmp=0 --defsym _.xy=0 --defsym _.z=0"
@@ -623,7 +623,18 @@ proc run_dump_test { name } {
 	if { $opt_name == "as" || $opt_name == "ld" } {
 	    set opt_val [subst $opt_val]
 	}
-	set opts($opt_name) [concat $opts($opt_name) $opt_val]
+
+	# Append differently whether it's a message (without space) or
+	# an option or list (with space).
+	switch -- $opt_name {
+	    warning -
+	    error {
+		append opts($opt_name) $opt_val
+	    }
+	    default {
+		set opts($opt_name) [concat $opts($opt_name) $opt_val]
+	    }
+	}
     }
     foreach opt { as ld } {
 	regsub {\[big_or_little_endian\]} $opts($opt) \
@@ -870,6 +881,10 @@ proc run_dump_test { name } {
 }
 
 proc slurp_options { file } {
+    # If options_regsub(foo) is set to {a b}, then the contents of a
+    # "#foo:" line will have regsub -all applied to replace a with b.
+    global options_regsub
+
     if [catch { set f [open $file r] } x] {
 	#perror "couldn't open `$file': $x"
 	perror "$x"
@@ -887,6 +902,11 @@ proc slurp_options { file } {
 	# Whitespace here is space-tab.
 	if [regexp $pat $line xxx opt_name opt_val] {
 	    # match!
+	    if [info exists options_regsub($opt_name)] {
+		set subst $options_regsub($opt_name)
+		regsub -all -- [lindex $subst 0] $opt_val [lindex $subst 1] \
+		    opt_val
+	    }
 	    lappend opt_array [list $opt_name $opt_val]
 	} else {
 	    break
@@ -940,7 +960,7 @@ proc ar_simple_create { ar aropts target objects } {
 #   objdump: Apply objdump options on result.
 #   nm: Apply nm options on result.
 #   readelf: Apply readelf options on result.
-#   ld: Don't apply anything on result.  Compare output during linking with 
+#   ld: Don't apply anything on result.  Compare output during linking with
 #     the file containing regexps (which is the second arg, not the third).
 #     Note that this *must* be the first action if it is to be used at all;
 #     in all other cases, any output from the linker during linking is
@@ -1076,7 +1096,7 @@ proc run_ld_link_tests { ldtests } {
     		    set comp_output [prune_warnings [file_contents "ld.stderr"]]
     		    remote_file host delete "ld.stderr"
     		    remote_file build delete "ld.stderr"
-                    
+
 		    if {[info exists old_lc_all]} {
 			set env(LC_ALL) $old_lc_all
 		    } else {
@@ -1237,7 +1257,7 @@ proc run_ld_link_exec_tests { targets_to_xfail ldtests } {
 		send_log "Running: $binfile > $binfile.out\n"
 		verbose "Running: $binfile > $binfile.out"
 		catch "exec $binfile > $binfile.out" exec_output
-	    
+
 		if ![string match "" $exec_output] then {
 		    send_log "$exec_output\n"
 		    verbose "$exec_output" 1
@@ -1435,7 +1455,7 @@ proc run_cc_link_tests { ldtests } {
 proc check_gc_sections_available { } {
     global gc_sections_available_saved
     global ld
-    
+
     if {![info exists gc_sections_available_saved]} {
 	# Some targets don't support gc-sections despite whatever's
 	# advertised by ld's options.
@@ -1502,6 +1522,8 @@ proc check_shared_lib_support { } {
 	 && ![istarget lm32-*-*]
 	 && ![istarget m32c-*-*]
 	 && ![istarget m32r-*-*]
+	 && ![istarget m6811-*-*]
+	 && ![istarget m6812-*-*]
 	 && ![istarget m68hc1*-*-*]
 	 && ![istarget mcore*-*-*]
 	 && ![istarget mep-*-*]

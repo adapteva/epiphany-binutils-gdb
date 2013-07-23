@@ -1,6 +1,7 @@
 /* Instruction printing code for the ARM
    Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-   2004, 2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012
+   Free Software Foundation, Inc.
    Contributed by Richard Earnshaw (rwe@pegasus.esprit.ec.org)
    Modification by James G. Smith (jsmith@cygnus.co.uk)
 
@@ -1159,12 +1160,46 @@ static const struct opcode32 arm_opcodes[] =
   {ARM_EXT_V1, 0x04300000, 0x0d700000, "ldrt%c\t%12-15R, %a"},
   {ARM_EXT_V1, 0x04100000, 0x0c500000, "ldr%c\t%12-15r, %a"},
   
+  {ARM_EXT_V1, 0x092d0001, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0002, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0004, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0008, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0010, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0020, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0040, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0080, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0100, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0200, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0400, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d0800, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d1000, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d2000, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d4000, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x092d8000, 0x0fffffff, "stmfd%c\t%16-19R!, %m"},
   {ARM_EXT_V1, 0x092d0000, 0x0fff0000, "push%c\t%m"},
   {ARM_EXT_V1, 0x08800000, 0x0ff00000, "stm%c\t%16-19R%21'!, %m%22'^"},
   {ARM_EXT_V1, 0x08000000, 0x0e100000, "stm%23?id%24?ba%c\t%16-19R%21'!, %m%22'^"},
+
+  {ARM_EXT_V1, 0x08bd0001, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0002, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0004, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0008, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0010, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0020, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0040, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0080, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0100, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0200, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0400, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd0800, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd1000, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd2000, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd4000, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
+  {ARM_EXT_V1, 0x08bd8000, 0x0fffffff, "ldmfd%c\t%16-19R!, %m"},
   {ARM_EXT_V1, 0x08bd0000, 0x0fff0000, "pop%c\t%m"},
   {ARM_EXT_V1, 0x08900000, 0x0f900000, "ldm%c\t%16-19R%21'!, %m%22'^"},
   {ARM_EXT_V1, 0x08100000, 0x0e100000, "ldm%23?id%24?ba%c\t%16-19R%21'!, %m%22'^"},
+
   {ARM_EXT_V1, 0x0a000000, 0x0e000000, "b%24'l%c\t%b"},
   {ARM_EXT_V1, 0x0f000000, 0x0f000000, "svc%c\t%0-23x"},
 
@@ -1891,7 +1926,7 @@ print_insn_coprocessor (bfd_vma pc,
 		      {
 			if (offset)
 			  func (stream, ", #%d]%s",
-				offset,
+				(int) offset,
 				WRITEBACK_BIT_SET ? "!" : "");
 			else if (NEGATIVE_BIT_SET)
 			  func (stream, ", #-0]");
@@ -1905,7 +1940,7 @@ print_insn_coprocessor (bfd_vma pc,
 			if (WRITEBACK_BIT_SET)
 			  {
 			    if (offset)
-			      func (stream, ", #%d", offset);
+			      func (stream, ", #%d", (int) offset);
 			    else if (NEGATIVE_BIT_SET)
 			      func (stream, ", #-0");
 			  }
@@ -1913,7 +1948,7 @@ print_insn_coprocessor (bfd_vma pc,
 			  {
 			    func (stream, ", {%s%d}",
 				  (NEGATIVE_BIT_SET && !offset) ? "-" : "",
-				  offset);
+				  (int) offset);
 			    value_in_comment = offset;
 			  }
 		      }
@@ -2224,7 +2259,7 @@ print_insn_coprocessor (bfd_vma pc,
 		    {
 		      /* given (20, 23) | given (0, 3) */
 		      value = ((given >> 16) & 0xf0) | (given & 0xf);
-		      func (stream, "%d", value);
+		      func (stream, "%d", (int) value);
 		    }
 		    break;
 
@@ -2349,7 +2384,7 @@ print_arm_address (bfd_vma pc, struct disassemble_info *info, long given)
 	  /* Pre-indexed.  Elide offset of positive zero when
 	     non-writeback.  */
 	  if (WRITEBACK_BIT_SET || NEGATIVE_BIT_SET || offset)
-	    func (stream, ", #%s%d", NEGATIVE_BIT_SET ? "-" : "", offset);
+	    func (stream, ", #%s%d", NEGATIVE_BIT_SET ? "-" : "", (int) offset);
 
 	  if (NEGATIVE_BIT_SET)
 	    offset = -offset;
@@ -2364,7 +2399,7 @@ print_arm_address (bfd_vma pc, struct disassemble_info *info, long given)
 	}
       else  /* Post indexed.  */
 	{
-	  func (stream, "], #%s%d", NEGATIVE_BIT_SET ? "-" : "", offset);
+	  func (stream, "], #%s%d", NEGATIVE_BIT_SET ? "-" : "", (int) offset);
 
 	  /* Ie ignore the offset.  */
 	  offset = pc + 8;
@@ -2386,7 +2421,7 @@ print_arm_address (bfd_vma pc, struct disassemble_info *info, long given)
 	      /* Elide offset of positive zero when non-writeback.  */
 	      offset = given & 0xfff;
 	      if (WRITEBACK_BIT_SET || NEGATIVE_BIT_SET || offset)
-		func (stream, ", #%s%d", NEGATIVE_BIT_SET ? "-" : "", offset);
+		func (stream, ", #%s%d", NEGATIVE_BIT_SET ? "-" : "", (int) offset);
 	    }
 	  else
 	    {
@@ -2404,7 +2439,7 @@ print_arm_address (bfd_vma pc, struct disassemble_info *info, long given)
 	      /* Always show offset.  */
 	      offset = given & 0xfff;
 	      func (stream, "], #%s%d",
-		    NEGATIVE_BIT_SET ? "-" : "", offset);
+		    NEGATIVE_BIT_SET ? "-" : "", (int) offset);
 	    }
 	  else
 	    {
@@ -3002,7 +3037,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 			      /* Elide positive zero offset.  */
 			      if (offset || NEGATIVE_BIT_SET)
 				func (stream, "[pc, #%s%d]\t; ",
-				      NEGATIVE_BIT_SET ? "-" : "", offset);
+				      NEGATIVE_BIT_SET ? "-" : "", (int) offset);
 			      else
 				func (stream, "[pc]\t; ");
 			      if (NEGATIVE_BIT_SET)
@@ -3013,7 +3048,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 			    {
 			      /* Always show the offset.  */
 			      func (stream, "[pc], #%s%d",
-				    NEGATIVE_BIT_SET ? "-" : "", offset);
+				    NEGATIVE_BIT_SET ? "-" : "", (int) offset);
 			      if (! allow_unpredictable)
 				is_unpredictable = TRUE;
 			    }
@@ -3192,7 +3227,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 			  {
 			    if (offset)
 			      func (stream, ", #%d]%s",
-				    value_in_comment,
+				    (int) value_in_comment,
 				    WRITEBACK_BIT_SET ? "!" : "");
 			    else
 			      func (stream, "]");
@@ -3204,11 +3239,11 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 			    if (WRITEBACK_BIT_SET)
 			      {
 				if (offset)
-				  func (stream, ", #%d", value_in_comment);
+				  func (stream, ", #%d", (int) value_in_comment);
 			      }
 			    else
 			      {
-				func (stream, ", {%d}", offset);
+				func (stream, ", {%d}", (int) offset);
 				value_in_comment = offset;
 			      }
 			  }
@@ -3250,7 +3285,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 			  if (name != NULL)
 			    func (stream, "%s", name);
 			  else
-			    func (stream, "(UNDEF: %lu)", sysm);
+			    func (stream, "(UNDEF: %lu)", (unsigned long) sysm);
 			}
 		      else
 			{
@@ -3414,7 +3449,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 			  if (name != NULL)
 			    func (stream, "%s", name);
 			  else
-			    func (stream, "(UNDEF: %lu)", sysm);
+			    func (stream, "(UNDEF: %lu)", (unsigned long) sysm);
 			}
 			break;
 
@@ -3573,14 +3608,14 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, long given)
 		      if (started)
 			func (stream, ", ");
 		      started = 1;
-		      func (stream, arm_regnames[14] /* "lr" */);
+		      func (stream, "%s", arm_regnames[14] /* "lr" */);
 		    }
 
 		  if (domaskpc)
 		    {
 		      if (started)
 			func (stream, ", ");
-		      func (stream, arm_regnames[15] /* "pc" */);
+		      func (stream, "%s", arm_regnames[15] /* "pc" */);
 		    }
 
 		  func (stream, "}");
@@ -3646,17 +3681,17 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, long given)
 			    break;
 
 			  case 'd':
-			    func (stream, "%ld", reg);
+			    func (stream, "%ld", (long) reg);
 			    value_in_comment = reg;
 			    break;
 
 			  case 'H':
-			    func (stream, "%ld", reg << 1);
+			    func (stream, "%ld", (long) (reg << 1));
 			    value_in_comment = reg << 1;
 			    break;
 
 			  case 'W':
-			    func (stream, "%ld", reg << 2);
+			    func (stream, "%ld", (long) (reg << 2));
 			    value_in_comment = reg << 2;
 			    break;
 
@@ -3670,7 +3705,7 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, long given)
 			    break;
 
 			  case 'x':
-			    func (stream, "0x%04lx", reg);
+			    func (stream, "0x%04lx", (long) reg);
 			    break;
 
 			  case 'B':
@@ -3976,11 +4011,11 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, long given)
 		    }
 
 		  if (postind)
-		    func (stream, "], #%d", offset);
+		    func (stream, "], #%d", (int) offset);
 		  else
 		    {
 		      if (offset)
-			func (stream, ", #%d", offset);
+			func (stream, ", #%d", (int) offset);
 		      func (stream, writeback ? "]!" : "]");
 		    }
 
@@ -4209,11 +4244,11 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, long given)
 		    if (name != NULL)
 		      func (stream, "%s", name);
 		    else
-		      func (stream, "(UNDEF: %lu)", sysm);
+		      func (stream, "(UNDEF: %lu)", (unsigned long) sysm);
 		  }
 		else
 		  {
-		    func (stream, psr_name (given & 0xff));
+		    func (stream, "%s", psr_name (given & 0xff));
 		  }
 		break;
 
@@ -4231,10 +4266,10 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, long given)
 		    if (name != NULL)
 		      func (stream, "%s", name);
 		    else
-		      func (stream, "(UNDEF: %lu)", sm);
+		      func (stream, "(UNDEF: %lu)", (unsigned long) sm);
 		  }
 		else
-		  func (stream, psr_name (given & 0xff));
+		  func (stream, "%s", psr_name (given & 0xff));
 		break;
 
 	      case '0': case '1': case '2': case '3': case '4':
@@ -4697,9 +4732,19 @@ print_insn (bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
 
       /* Start scanning at the start of the function, or wherever
 	 we finished last time.  */
-      start = info->symtab_pos + 1;
-      if (start < private_data->last_mapping_sym)
-	start = private_data->last_mapping_sym;
+      /* PR 14006.  When the address is 0 we are either at the start of the
+	 very first function, or else the first function in a new, unlinked
+	 executable section (eg because uf -ffunction-sections).  Either way
+	 start scanning from the beginning of the symbol table, not where we
+	 left off last time.  */
+      if (pc == 0)
+	start = 0;
+      else
+	{
+	  start = info->symtab_pos + 1;
+	  if (start < private_data->last_mapping_sym)
+	    start = private_data->last_mapping_sym;
+	}
       found = FALSE;
 
       /* First, look for mapping symbols.  */

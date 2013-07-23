@@ -87,7 +87,6 @@ FILE *
 real_fopen (const char *filename, const char *modes)
 {
 #ifdef VMS
-  char vms_modes[4];
   char *vms_attr;
 
   /* On VMS, fopen allows file attributes as optionnal arguments.
@@ -185,7 +184,8 @@ bfd_bread (void *ptr, bfd_size_type size, bfd *abfd)
      this element.  */
   if (abfd->arelt_data != NULL)
     {
-      size_t maxbytes = arelt_size (abfd);
+      bfd_size_type maxbytes = arelt_size (abfd);
+
       if (abfd->where + size > maxbytes)
         {
           if (abfd->where >= maxbytes)

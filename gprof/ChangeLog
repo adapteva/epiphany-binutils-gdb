@@ -1,3 +1,18 @@
+2012-06-02  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* Makefile.am (TEXINFO_TEX): Remove $(top_srcdir) prefix.
+	* Makefile.in: Regenerate.
+
+2012-03-06  Tristan Gingold  <gingold@adacore.com>
+
+	* corefile.c (core_create_function_syms): Do not call bsearch if
+	symbol_map_count is 0.
+
+2012-02-06  Nick Clifton  <nickc@redhat.com>
+
+	* po/sr.po: New Serbian translation.
+	* configure.in (ALL_LINGUAS): Add sr.
+	* configure: Regenerate.
 
 For older changes see ChangeLog-2011
 

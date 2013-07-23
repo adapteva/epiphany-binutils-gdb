@@ -1,6 +1,6 @@
 /* readelf.c -- display contents of an ELF format file
    Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010, 2011
+   2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
 
    Originally developed by Eric Youngdale <eric@andante.jic.com>
@@ -42,14 +42,13 @@
   ELF file than is provided by objdump.  In particular it can display DWARF
   debugging information which (at the moment) objdump cannot.  */
 
-#include "config.h"
 #include "sysdep.h"
 #include <assert.h>
-#include <sys/stat.h>
 #include <time.h>
 #ifdef HAVE_ZLIB_H
 #include <zlib.h>
 #endif
+#include <wchar.h>
 
 #if __GNUC__ >= 2
 /* Define BFD64 here, even if our default architecture is 32 bit ELF
@@ -148,6 +147,7 @@
 #include "elf/vax.h"
 #include "elf/x86-64.h"
 #include "elf/xc16x.h"
+#include "elf/xgate.h"
 #include "elf/xstormy16.h"
 #include "elf/xtensa.h"
 
@@ -384,93 +384,89 @@ print_vma (bfd_vma vma, print_mode mode)
   return 0;
 }
 
-/* Display a symbol on stdout.  Handles the display of non-printing characters.
+/* Display a symbol on stdout.  Handles the display of control characters and
+   multibye characters.
 
-   If DO_WIDE is not true then format the symbol to be at most WIDTH characters,
-   truncating as necessary.  If WIDTH is negative then format the string to be
-   exactly - WIDTH characters, truncating or padding as necessary.
+   Display at most abs(WIDTH) characters, truncating as necessary, unless do_wide is true.
+
+   If WIDTH is negative then ensure that the output is at least (- WIDTH) characters,
+   padding as necessary.
 
    Returns the number of emitted characters.  */
 
 static unsigned int
 print_symbol (int width, const char *symbol)
 {
-  const char *c;
   bfd_boolean extra_padding = FALSE;
-  unsigned int num_printed = 0;
+  int num_printed = 0;
+  mbstate_t state;
+  int width_remaining;
 
-  if (do_wide)
-    {
-      /* Set the width to a very large value.  This simplifies the
-	 code below.  */
-      width = INT_MAX;
-    }
-  else if (width < 0)
+  if (width < 0)
     {
       /* Keep the width positive.  This also helps.  */
       width = - width;
       extra_padding = TRUE;
-    }
+    }  
 
-  while (width)
+  if (do_wide)
+    /* Set the remaining width to a very large value.
+       This simplifies the code below.  */
+    width_remaining = INT_MAX;
+  else
+    width_remaining = width;
+
+  /* Initialise the multibyte conversion state.  */
+  memset (& state, 0, sizeof (state));
+
+  while (width_remaining)
     {
-      int len;
+      size_t  n;
+      wchar_t w;
+      const char c = *symbol++;
 
-      c = symbol;
-
-      /* Look for non-printing symbols inside the symbol's name.
-	 This test is triggered in particular by the names generated
-	 by the assembler for local labels.  */
-      while (ISPRINT (*c))
-	c++;
-
-      len = c - symbol;
-
-      if (len)
-	{
-	  if (len > width)
-	    len = width;
-
-	  printf ("%.*s", len, symbol);
-
-	  width -= len;
-	  num_printed += len;
-	}
-
-      if (*c == 0 || width == 0)
+      if (c == 0)
 	break;
 
-      /* Now display the non-printing character, if
-	 there is room left in which to dipslay it.  */
-      if ((unsigned char) *c < 32)
+      /* Do not print control characters directly as they can affect terminal
+	 settings.  Such characters usually appear in the names generated
+	 by the assembler for local labels.  */
+      if (ISCNTRL (c))
 	{
-	  if (width < 2)
+	  if (width_remaining < 2)
 	    break;
 
-	  printf ("^%c", *c + 0x40);
-
-	  width -= 2;
+	  printf ("^%c", c + 0x40);
+	  width_remaining -= 2;
 	  num_printed += 2;
+	}
+      else if (ISPRINT (c))
+	{
+	  putchar (c);
+	  width_remaining --;
+	  num_printed ++;
 	}
       else
 	{
-	  if (width < 6)
-	    break;
+	  /* Let printf do the hard work of displaying multibyte characters.  */
+	  printf ("%.1s", symbol - 1);
+	  width_remaining --;
+	  num_printed ++;
 
-	  printf ("<0x%.2x>", (unsigned char) *c);
-
-	  width -= 6;
-	  num_printed += 6;
+	  /* Try to find out how many bytes made up the character that was
+	     just printed.  Advance the symbol pointer past the bytes that
+	     were displayed.  */
+	  n = mbrtowc (& w, symbol - 1, MB_CUR_MAX, & state);
+	  if (n != (size_t) -1 && n != (size_t) -2 && n > 0)
+	    symbol += (n - 1);
 	}
-
-      symbol = c + 1;
     }
 
-  if (extra_padding && width > 0)
+  if (extra_padding && num_printed < width)
     {
       /* Fill in the remaining spaces.  */
-      printf ("%-*s", width, " ");
-      num_printed += 2;
+      printf ("%-*s", width - num_printed, " ");
+      num_printed = width;
     }
 
   return num_printed;
@@ -549,6 +545,7 @@ guess_is_rela (unsigned int e_machine)
     case EM_OPENRISC:
     case EM_OR32:
     case EM_SCORE:
+    case EM_XGATE:
       return FALSE;
 
       /* Targets that use RELA relocations.  */
@@ -561,7 +558,6 @@ guess_is_rela (unsigned int e_machine)
     case EM_AVR_OLD:
     case EM_BLACKFIN:
     case EM_CR16:
-    case EM_CR16_OLD:
     case EM_CRIS:
     case EM_CRX:
     case EM_D30V:
@@ -1212,7 +1208,6 @@ dump_relocations (FILE * file,
 	  break;
 
 	case EM_CR16:
-	case EM_CR16_OLD:
 	  rtype = elf_cr16_reloc_type (type);
 	  break;
 
@@ -1244,6 +1239,10 @@ dump_relocations (FILE * file,
 
 	case EM_TILEPRO:
 	  rtype = elf_tilepro_reloc_type (type);
+	  break;
+
+	case EM_XGATE:
+	  rtype = elf_xgate_reloc_type (type);
 	  break;
 	}
 
@@ -1385,9 +1384,13 @@ dump_relocations (FILE * file,
 	}
       else if (is_rela)
 	{
-	  printf ("%*c", is_32bit_elf ?
-		  (do_wide ? 34 : 28) : (do_wide ? 26 : 20), ' ');
-	  print_vma (rels[i].r_addend, LONG_HEX);
+	  bfd_signed_vma off = rels[i].r_addend;
+
+	  printf ("%*c", is_32bit_elf ? 12 : 20, ' ');
+	  if (off < 0)
+	    printf ("-%" BFD_VMA_FMT "x", - off);
+	  else
+	    printf ("%" BFD_VMA_FMT "x", off);
 	}
 
       if (elf_header.e_machine == EM_SPARCV9
@@ -1862,7 +1865,6 @@ get_machine_name (unsigned e_machine)
     case EM_IA_64:		return "Intel IA-64";
     case EM_MIPS_X:		return "Stanford MIPS-X";
     case EM_COLDFIRE:		return "Motorola Coldfire";
-    case EM_68HC12:		return "Motorola M68HC12";
     case EM_ALPHA:		return "Alpha";
     case EM_CYGNUS_D10V:
     case EM_D10V:		return "d10v";
@@ -1871,7 +1873,7 @@ get_machine_name (unsigned e_machine)
     case EM_CYGNUS_M32R:
     case EM_M32R:		return "Renesas M32R (formerly Mitsubishi M32r)";
     case EM_CYGNUS_V850:
-    case EM_V850:		return "Renesas v850";
+    case EM_V850:		return "Renesas V850";
     case EM_CYGNUS_MN10300:
     case EM_MN10300:		return "mn10300";
     case EM_CYGNUS_MN10200:
@@ -1897,6 +1899,7 @@ get_machine_name (unsigned e_machine)
     case EM_ST9PLUS:		return "STMicroelectronics ST9+ 8/16 bit microcontroller";
     case EM_ST7:		return "STMicroelectronics ST7 8-bit microcontroller";
     case EM_68HC16:		return "Motorola MC68HC16 Microcontroller";
+    case EM_68HC12:		return "Motorola MC68HC12 Microcontroller";
     case EM_68HC11:		return "Motorola MC68HC11 Microcontroller";
     case EM_68HC08:		return "Motorola MC68HC08 Microcontroller";
     case EM_68HC05:		return "Motorola MC68HC05 Microcontroller";
@@ -1981,8 +1984,7 @@ get_machine_name (unsigned e_machine)
     case EM_CRAYNV2:		return "Cray Inc. NV2 vector architecture";
     case EM_CYGNUS_MEP:         return "Toshiba MeP Media Engine";
     case EM_CR16:
-    case EM_CR16_OLD:		return "National Semiconductor's CR16";
-    case EM_MICROBLAZE:		return "Xilinx MicroBlaze";
+    case EM_MICROBLAZE:
     case EM_MICROBLAZE_OLD:	return "Xilinx MicroBlaze";
     case EM_RL78:		return "Renesas RL78";
     case EM_RX:			return "Renesas RX";
@@ -1997,6 +1999,7 @@ get_machine_name (unsigned e_machine)
     case EM_TILEPRO:		return "Tilera TILEPro multicore architecture family";
     case EM_TILEGX:		return "Tilera TILE-Gx multicore architecture family";
     case EM_CUDA:		return "NVIDIA CUDA architecture";
+    case EM_XGATE:		return "Motorola XGATE embedded processor";
     default:
       snprintf (buff, sizeof (buff), _("<unknown>: 0x%x"), e_machine);
       return buff;
@@ -3122,6 +3125,7 @@ get_section_type_name (unsigned int sh_type)
 #define OPTION_DYN_SYMS		513
 #define OPTION_DWARF_DEPTH	514
 #define OPTION_DWARF_START	515
+#define OPTION_DWARF_CHECK	516
 
 static struct option options[] =
 {
@@ -3157,6 +3161,7 @@ static struct option options[] =
 
   {"dwarf-depth",      required_argument, 0, OPTION_DWARF_DEPTH},
   {"dwarf-start",      required_argument, 0, OPTION_DWARF_START},
+  {"dwarf-check",      no_argument, 0, OPTION_DWARF_CHECK},
 
   {"version",	       no_argument, 0, 'v'},
   {"wide",	       no_argument, 0, 'W'},
@@ -3424,6 +3429,9 @@ parse_args (int argc, char ** argv)
 
 	    dwarf_start_die = strtoul (optarg, & cp, 0);
 	  }
+	  break;
+	case OPTION_DWARF_CHECK:
+	  dwarf_check = 1;
 	  break;
 	case OPTION_DYN_SYMS:
 	  do_dyn_syms++;
@@ -4633,19 +4641,19 @@ process_section_headers (FILE * file)
             name += sizeof (".debug_") - 1;
 
 	  if (do_debugging
-	      || (do_debug_info     && streq (name, "info"))
-	      || (do_debug_info     && streq (name, "types"))
-	      || (do_debug_abbrevs  && streq (name, "abbrev"))
-	      || (do_debug_lines    && streq (name, "line"))
-	      || (do_debug_pubnames && streq (name, "pubnames"))
-	      || (do_debug_pubtypes && streq (name, "pubtypes"))
-	      || (do_debug_aranges  && streq (name, "aranges"))
-	      || (do_debug_ranges   && streq (name, "ranges"))
-	      || (do_debug_frames   && streq (name, "frame"))
-	      || (do_debug_macinfo  && streq (name, "macinfo"))
-	      || (do_debug_macinfo  && streq (name, "macro"))
-	      || (do_debug_str      && streq (name, "str"))
-	      || (do_debug_loc      && streq (name, "loc"))
+	      || (do_debug_info     && const_strneq (name, "info"))
+	      || (do_debug_info     && const_strneq (name, "types"))
+	      || (do_debug_abbrevs  && const_strneq (name, "abbrev"))
+	      || (do_debug_lines    && const_strneq (name, "line"))
+	      || (do_debug_pubnames && const_strneq (name, "pubnames"))
+	      || (do_debug_pubtypes && const_strneq (name, "pubtypes"))
+	      || (do_debug_aranges  && const_strneq (name, "aranges"))
+	      || (do_debug_ranges   && const_strneq (name, "ranges"))
+	      || (do_debug_frames   && const_strneq (name, "frame"))
+	      || (do_debug_macinfo  && const_strneq (name, "macinfo"))
+	      || (do_debug_macinfo  && const_strneq (name, "macro"))
+	      || (do_debug_str      && const_strneq (name, "str"))
+	      || (do_debug_loc      && const_strneq (name, "loc"))
 	      )
 	    request_dump_bynumber (i, DEBUG_DUMP);
 	}
@@ -4726,22 +4734,20 @@ process_section_headers (FILE * file)
        i < elf_header.e_shnum;
        i++, section++)
     {
+      printf ("  [%2u] ", i);
       if (do_section_details)
 	{
-	  printf ("  [%2u] %s\n",
-		  i,
-		  SECTION_NAME (section));
-	  if (is_32bit_elf || do_wide)
-	    printf ("       %-15.15s ",
-		    get_section_type_name (section->sh_type));
+	  print_symbol (INT_MAX, SECTION_NAME (section));
+	  printf ("\n      ");
 	}
       else
-	printf ((do_wide ? "  [%2u] %-17s %-15s "
-			 : "  [%2u] %-17.17s %-15.15s "),
-		i,
-		SECTION_NAME (section),
-		get_section_type_name (section->sh_type));
-
+	{
+	  print_symbol (-17, SECTION_NAME (section));
+	}
+      
+      printf (do_wide ? " %-15s " : " %-15.15s ",
+	      get_section_type_name (section->sh_type));
+      
       if (is_32bit_elf)
 	{
 	  const char * link_too_big = NULL;
@@ -4961,7 +4967,8 @@ process_section_groups (FILE * file)
   if (section_headers == NULL)
     {
       error (_("Section headers are not available!\n"));
-      abort ();
+      /* PR 13622: This can happen with a corrupt ELF header.  */
+      return 0;
     }
 
   section_headers_groups = (struct group **) calloc (elf_header.e_shnum,
@@ -9779,7 +9786,6 @@ is_32bit_abs_reloc (unsigned int reloc_type)
     case EM_CRIS:
       return reloc_type == 3; /* R_CRIS_32.  */
     case EM_CR16:
-    case EM_CR16_OLD:
       return reloc_type == 3; /* R_CR16_NUM32.  */
     case EM_CRX:
       return reloc_type == 15; /* R_CRX_NUM32.  */
@@ -9891,6 +9897,8 @@ is_32bit_abs_reloc (unsigned int reloc_type)
     case EM_XC16X:
     case EM_C166:
       return reloc_type == 3; /* R_XC16C_ABS_32.  */
+    case EM_XGATE:
+      return reloc_type == 4; /* R_XGATE_32.  */
     case EM_XSTORMY16:
       return reloc_type == 1; /* R_XSTROMY16_32.  */
     case EM_XTENSA_OLD:
@@ -10085,6 +10093,14 @@ is_16bit_abs_reloc (unsigned int reloc_type)
     case EM_XC16X:
     case EM_C166:
       return reloc_type == 2; /* R_XC16C_ABS_16.  */
+    case EM_CYGNUS_MN10200:
+    case EM_MN10200:
+      return reloc_type == 2; /* R_MN10200_16.  */
+    case EM_CYGNUS_MN10300:
+    case EM_MN10300:
+      return reloc_type == 2; /* R_MN10300_16.  */
+    case EM_XGATE:
+      return reloc_type == 3; /* R_XGATE_16.  */
     default:
       return FALSE;
     }
@@ -12993,7 +13009,7 @@ process_corefile_note_segment (FILE * file, bfd_vma offset, bfd_vma length)
       external = next;
 
       /* Prevent out-of-bounds indexing.  */
-      if (inote.namedata + inote.namesz >= (char *) pnotes + length
+      if (inote.namedata + inote.namesz > (char *) pnotes + length
 	  || inote.namedata + inote.namesz < inote.namedata)
         {
           warn (_("corrupt note found at offset %lx into core notes\n"),
@@ -13007,7 +13023,7 @@ process_corefile_note_segment (FILE * file, bfd_vma offset, bfd_vma length)
 	 one version of Linux (RedHat 6.0) generates corefiles that don't
 	 comply with the ELF spec by failing to include the null byte in
 	 namesz.  */
-      if (inote.namedata[inote.namesz] != '\0')
+      if (inote.namedata[inote.namesz - 1] != '\0')
 	{
 	  temp = (char *) malloc (inote.namesz + 1);
 
@@ -13070,7 +13086,7 @@ process_note_sections (FILE * file)
   int res = 1;
 
   for (i = 0, section = section_headers;
-       i < elf_header.e_shnum;
+       i < elf_header.e_shnum && section != NULL;
        i++, section++)
     if (section->sh_type == SHT_NOTE)
       res &= process_corefile_note_segment (file,
@@ -13426,7 +13442,7 @@ process_archive (char * file_name, FILE * file, bfd_boolean is_thin_archive)
 	  unsigned long current_pos;
 
 	  printf (_("Index of archive %s: (%ld entries, 0x%lx bytes in the symbol table)\n"),
-		  file_name, arch.index_num, arch.sym_size);
+		  file_name, (long) arch.index_num, arch.sym_size);
 	  current_pos = ftell (file);
 
 	  for (i = l = 0; i < arch.index_num; i++)
@@ -13443,7 +13459,9 @@ process_archive (char * file_name, FILE * file, bfd_boolean is_thin_archive)
 
                       if (qualified_name != NULL)
                         {
-		          printf (_("Binary %s contains:\n"), qualified_name);
+		          printf (_("Contents of binary %s at offset "), qualified_name);
+			  (void) print_vma (arch.index_array[i], PREFIX_HEX);
+			  putchar ('\n');
 		          free (qualified_name);
 		        }
 		    }
@@ -13459,11 +13477,14 @@ process_archive (char * file_name, FILE * file, bfd_boolean is_thin_archive)
 	      l += strlen (arch.sym_table + l) + 1;
 	    }
 
-          if (l & 01)
-            ++l;
+	  if (arch.uses_64bit_indicies)
+	    l = (l + 7) & ~ 7;
+	  else
+	    l += l & 1;
+
 	  if (l < arch.sym_size)
-	    error (_("%s: symbols remain in the index symbol table, but without corresponding entries in the index table\n"),
-		   file_name);
+	    error (_("%s: %ld bytes remain in the symbol table, but without corresponding entries in the index table\n"),
+		   file_name, arch.sym_size - l);
 
 	  if (fseek (file, current_pos, SEEK_SET) != 0)
 	    {

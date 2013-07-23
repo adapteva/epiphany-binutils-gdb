@@ -1,6 +1,6 @@
 /* Print mips instructions for GDB, the GNU debugger, or for objdump.
    Copyright 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009, 2012
    Free Software Foundation, Inc.
    Contributed by Nobuyuki Hikichi(hikichi@sra.co.jp).
 
@@ -615,6 +615,14 @@ const struct mips_arch_choice mips_arch_choices[] =
 
   { "xlr", 1, bfd_mach_mips_xlr, CPU_XLR,
     ISA_MIPS64 | INSN_XLR,
+    mips_cp0_names_xlr,
+    mips_cp0sel_names_xlr, ARRAY_SIZE (mips_cp0sel_names_xlr),
+    mips_hwr_names_numeric },
+
+  /* XLP is mostly like XLR, with the prominent exception it is being
+     MIPS64R2.  */
+  { "xlp", 1, bfd_mach_mips_xlr, CPU_XLR,
+    ISA_MIPS64R2 | INSN_XLR,
     mips_cp0_names_xlr,
     mips_cp0sel_names_xlr, ARRAY_SIZE (mips_cp0sel_names_xlr),
     mips_hwr_names_numeric },
@@ -1344,7 +1352,6 @@ print_insn_args (const char *d,
 
 	case 'B':
 	  (*info->fprintf_func) (info->stream, "0x%lx",
-
 				 (l >> OP_SH_CODE20) & OP_MASK_CODE20);
 	  break;
 
@@ -2401,19 +2408,19 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		  break;
 
 		case '1':
-		  infprintf (is, "0x%lx", GET_OP (insn, STYPE));
+		  infprintf (is, "0x%x", GET_OP (insn, STYPE));
 		  break;
 
 		case '<':
-		  infprintf (is, "0x%lx", GET_OP (insn, SHAMT));
+		  infprintf (is, "0x%x", GET_OP (insn, SHAMT));
 		  break;
 
 		case '\\':
-		  infprintf (is, "0x%lx", GET_OP (insn, 3BITPOS));
+		  infprintf (is, "0x%x", GET_OP (insn, 3BITPOS));
 		  break;
 
 		case '|':
-		  infprintf (is, "0x%lx", GET_OP (insn, TRAP));
+		  infprintf (is, "0x%x", GET_OP (insn, TRAP));
 		  break;
 
 		case '~':
@@ -2445,7 +2452,7 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		  break;
 
 		case 'c':
-		  infprintf (is, "0x%lx", GET_OP (insn, CODE));
+		  infprintf (is, "0x%x", GET_OP (insn, CODE));
 		  break;
 
 		case 'd':
@@ -2453,12 +2460,12 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		  break;
 
 		case 'h':
-		  infprintf (is, "0x%lx", GET_OP (insn, PREFX));
+		  infprintf (is, "0x%x", GET_OP (insn, PREFX));
 		  break;
 
 		case 'i':
 		case 'u':
-		  infprintf (is, "0x%lx", GET_OP (insn, IMMEDIATE));
+		  infprintf (is, "0x%x", GET_OP (insn, IMMEDIATE));
 		  break;
 
 		case 'j': /* Same as i, but sign-extended.  */
@@ -2512,7 +2519,7 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		  break;
 
 		case 'q':
-		  infprintf (is, "0x%lx", GET_OP (insn, CODE2));
+		  infprintf (is, "0x%x", GET_OP (insn, CODE2));
 		  break;
 
 		case 't':
@@ -2529,11 +2536,11 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		  break;
 
 		case 'B':
-		  infprintf (is, "0x%lx", GET_OP (insn, CODE10));
+		  infprintf (is, "0x%x", GET_OP (insn, CODE10));
 		  break;
 
 		case 'C':
-		  infprintf (is, "0x%lx", GET_OP (insn, COPZ));
+		  infprintf (is, "0x%x", GET_OP (insn, COPZ));
 		  break;
 
 		case 'D':
@@ -2548,7 +2555,7 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		    'T' format.  Therefore, until we gain understanding of
 		    cp2 register names, we can simply print the register
 		    numbers.  */
-		  infprintf (is, "$%ld", GET_OP (insn, RT));
+		  infprintf (is, "$%d", GET_OP (insn, RT));
 		  break;
 
 		case 'G':
@@ -2570,13 +2577,13 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		      infprintf (is, "%s", mips_cp0_names[GET_OP (insn, RS)]);
 		      break;
 		    default:
-		      infprintf (is, "$%ld", GET_OP (insn, RS));
+		      infprintf (is, "$%d", GET_OP (insn, RS));
 		      break;
 		    }
 		  break;
 
 		case 'H':
-		  infprintf (is, "%ld", GET_OP (insn, SEL));
+		  infprintf (is, "%d", GET_OP (insn, SEL));
 		  break;
 
 		case 'K':
@@ -2584,13 +2591,13 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 		  break;
 
 		case 'M':
-		  infprintf (is, "$fcc%ld", GET_OP (insn, CCC));
+		  infprintf (is, "$fcc%d", GET_OP (insn, CCC));
 		  break;
 
 		case 'N':
 		  infprintf (is,
 			   (op->pinfo & (FP_D | FP_S)) != 0
-			   ? "$fcc%ld" : "$cc%ld",
+			   ? "$fcc%d" : "$cc%d",
 			   GET_OP (insn, BCC));
 		  break;
 
@@ -2786,7 +2793,7 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 
 		    case 'C':
 		      immed = micromips_imm_c_map[GET_OP (insn, IMMC)];
-		      infprintf (is, "0x%lx", immed);
+		      infprintf (is, "0x%x", immed);
 		      break;
 
 		    case 'D':

@@ -1,6 +1,6 @@
 /* tc-mips.c -- assemble code for a MIPS chip.
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by the OSF and Ralph Campbell.
    Written by Keith Knowles and Ralph Campbell, working independently.
@@ -15005,7 +15005,10 @@ mips_after_parse_args (void)
     }
 
   if (arch_info == 0)
-    arch_info = mips_parse_cpu ("default CPU", MIPS_CPU_STRING_DEFAULT);
+    {
+      arch_info = mips_parse_cpu ("default CPU", MIPS_CPU_STRING_DEFAULT);
+      gas_assert (arch_info);
+    }
 
   if (ABI_NEEDS_64BIT_REGS (mips_abi) && !ISA_HAS_64BIT_REGS (arch_info->isa))
     as_bad (_("-march=%s is not compatible with the selected ABI"),
@@ -17009,8 +17012,8 @@ pic_need_relax (symbolS *sym, asection *segtype)
   symsec = S_GET_SEGMENT (sym);
 
   /* This must duplicate the test in adjust_reloc_syms.  */
-  return (symsec != &bfd_und_section
-	  && symsec != &bfd_abs_section
+  return (!bfd_is_und_section (symsec)
+	  && !bfd_is_abs_section (symsec)
 	  && !bfd_is_com_section (symsec)
 	  && !s_is_linkonce (sym, segtype)
 #ifdef OBJ_ELF
@@ -19114,6 +19117,11 @@ static const struct mips_cpu_info mips_cpu_info_table[] =
 
   /* RMI Xlr */
   { "xlr",	      0,      ISA_MIPS64,     CPU_XLR },
+
+  /* Broadcom XLP.
+     XLP is mostly like XLR, with the prominent exception that it is
+     MIPS64R2 rather than MIPS64.  */
+  { "xlp",	      0,      ISA_MIPS64R2,     CPU_XLR },
 
   /* End marker */
   { NULL, 0, 0, 0 }

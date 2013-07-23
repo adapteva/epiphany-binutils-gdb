@@ -121,10 +121,10 @@ static const mach_o_section_name_xlat text_section_names_xlat[] =
 	SEC_CODE | SEC_LOAD,			BFD_MACH_O_S_REGULAR,
 	BFD_MACH_O_S_ATTR_NONE,			0},
     {	".eh_frame",				"__eh_frame",
-	SEC_READONLY | SEC_LOAD,		BFD_MACH_O_S_COALESCED,
+	SEC_READONLY | SEC_DATA | SEC_LOAD,	BFD_MACH_O_S_COALESCED,
 	BFD_MACH_O_S_ATTR_LIVE_SUPPORT
 	| BFD_MACH_O_S_ATTR_STRIP_STATIC_SYMS
-	| BFD_MACH_O_S_ATTR_NO_TOC,		3},
+	| BFD_MACH_O_S_ATTR_NO_TOC,		2},
     { NULL, NULL, 0, 0, 0, 0}
   };
 
@@ -975,6 +975,35 @@ bfd_mach_o_get_reloc_upper_bound (bfd *abfd ATTRIBUTE_UNUSED,
   return (asect->reloc_count + 1) * sizeof (arelent *);
 }
 
+/* In addition to the need to byte-swap the symbol number, the bit positions
+   of the fields in the relocation information vary per target endian-ness.  */
+
+static void
+bfd_mach_o_swap_in_non_scattered_reloc (bfd *abfd, bfd_mach_o_reloc_info *rel,
+				       unsigned char *fields)
+{
+  unsigned char info = fields[3];
+
+  if (bfd_big_endian (abfd))
+    {
+      rel->r_value = (fields[0] << 16) | (fields[1] << 8) | fields[2];
+      rel->r_type = (info >> BFD_MACH_O_BE_TYPE_SHIFT) & BFD_MACH_O_TYPE_MASK;
+      rel->r_pcrel = (info & BFD_MACH_O_BE_PCREL) ? 1 : 0;
+      rel->r_length = (info >> BFD_MACH_O_BE_LENGTH_SHIFT) 
+		      & BFD_MACH_O_LENGTH_MASK;
+      rel->r_extern = (info & BFD_MACH_O_BE_EXTERN) ? 1 : 0;
+    }
+  else
+    {
+      rel->r_value = (fields[2] << 16) | (fields[1] << 8) | fields[0];
+      rel->r_type = (info >> BFD_MACH_O_LE_TYPE_SHIFT) & BFD_MACH_O_TYPE_MASK;
+      rel->r_pcrel = (info & BFD_MACH_O_LE_PCREL) ? 1 : 0;
+      rel->r_length = (info >> BFD_MACH_O_LE_LENGTH_SHIFT) 
+		      & BFD_MACH_O_LENGTH_MASK;
+      rel->r_extern = (info & BFD_MACH_O_LE_EXTERN) ? 1 : 0;
+    }
+}
+
 static int
 bfd_mach_o_canonicalize_one_reloc (bfd *abfd,
                                    struct mach_o_reloc_info_external *raw,
@@ -984,20 +1013,28 @@ bfd_mach_o_canonicalize_one_reloc (bfd *abfd,
   bfd_mach_o_backend_data *bed = bfd_mach_o_get_backend_data (abfd);
   bfd_mach_o_reloc_info reloc;
   bfd_vma addr;
-  bfd_vma symnum;
   asymbol **sym;
 
   addr = bfd_get_32 (abfd, raw->r_address);
-  symnum = bfd_get_32 (abfd, raw->r_symbolnum);
+  res->sym_ptr_ptr = NULL;
+  res->addend = 0;
   
   if (addr & BFD_MACH_O_SR_SCATTERED)
     {
       unsigned int j;
+      bfd_vma symnum = bfd_get_32 (abfd, raw->r_symbolnum);
 
-      /* Scattered relocation.
-         Extract section and offset from r_value.  */
-      res->sym_ptr_ptr = NULL;
-      res->addend = 0;
+      /* Scattered relocation, can't be extern. */
+      reloc.r_scattered = 1;
+      reloc.r_extern = 0;
+
+      /*   Extract section and offset from r_value (symnum).  */
+      reloc.r_value = symnum;
+      /* FIXME: This breaks when a symbol in a reloc exactly follows the
+	 end of the data for the section (e.g. in a calculation of section
+	 data length).  At present, the symbol will end up associated with
+	 the following section or, if it falls within alignment padding, as
+	 null - which will assert later.  */
       for (j = 0; j < mdata->nsects; j++)
         {
           bfd_mach_o_section *sect = mdata->sections[j];
@@ -1008,42 +1045,62 @@ bfd_mach_o_canonicalize_one_reloc (bfd *abfd,
               break;
             }
         }
-      res->address = BFD_MACH_O_GET_SR_ADDRESS (addr);
+
+      /* Extract the info and address fields from r_address.  */
       reloc.r_type = BFD_MACH_O_GET_SR_TYPE (addr);
       reloc.r_length = BFD_MACH_O_GET_SR_LENGTH (addr);
       reloc.r_pcrel = addr & BFD_MACH_O_SR_PCREL;
-      reloc.r_scattered = 1;
+      reloc.r_address = BFD_MACH_O_GET_SR_TYPE (addr);
+      res->address = BFD_MACH_O_GET_SR_ADDRESS (addr);
     }
   else
     {
-      unsigned int num = BFD_MACH_O_GET_R_SYMBOLNUM (symnum);
-      res->addend = 0;
-      res->address = addr;
-      if (symnum & BFD_MACH_O_R_EXTERN)
-        {
+      unsigned int num;
+      
+      /* Non-scattered relocation.  */
+      reloc.r_scattered = 0;
+      
+      /* The value and info fields have to be extracted dependent on target
+         endian-ness.  */
+      bfd_mach_o_swap_in_non_scattered_reloc (abfd, &reloc, raw->r_symbolnum);
+      num = reloc.r_value;
+
+      if (reloc.r_extern)
           sym = syms + num;
-          reloc.r_extern = 1;
-        }
-      else
+      else if (reloc.r_scattered
+	       || (reloc.r_type != BFD_MACH_O_GENERIC_RELOC_PAIR))
         {
           BFD_ASSERT (num != 0);
           BFD_ASSERT (num <= mdata->nsects);
           sym = mdata->sections[num - 1]->bfdsection->symbol_ptr_ptr;
           /* For a symbol defined in section S, the addend (stored in the
              binary) contains the address of the section.  To comply with
-             bfd conventio, substract the section address.
+             bfd convention, subtract the section address.
              Use the address from the header, so that the user can modify
              the vma of the section.  */
           res->addend = -mdata->sections[num - 1]->addr;
-          reloc.r_extern = 0;
+        }
+      else /* ... The 'symnum' in a non-scattered PAIR will be 0x00ffffff.  */
+        {
+          /* Pairs for PPC LO/HI/HA are not scattered, but contain the offset
+             in the lower 16bits of the address value.  So we have to find the
+             'symbol' from the preceding reloc.  We do this even thoough the
+             section symbol is probably not needed here, because NULL symbol
+             values cause an assert in generic BFD code.  */
+          sym = (res - 1)->sym_ptr_ptr;
         }
       res->sym_ptr_ptr = sym;
-      reloc.r_type = BFD_MACH_O_GET_R_TYPE (symnum);
-      reloc.r_length = BFD_MACH_O_GET_R_LENGTH (symnum);
-      reloc.r_pcrel = (symnum & BFD_MACH_O_R_PCREL) ? 1 : 0;
-      reloc.r_scattered = 0;
+      
+      /* The 'address' is just r_address.
+         ??? maybe this should be masked with  0xffffff for safety.  */
+      res->address = addr;
+      reloc.r_address = addr;
     }
   
+  /* We have set up a reloc with all the information present, so the swapper can
+     modify address, value and addend fields, if necessary, to convey information
+     in the generic BFD reloc that is mach-o specific.  */
+
   if (!(*bed->_bfd_mach_o_swap_reloc_in)(res, &reloc))
     return -1;
   return 0;
@@ -1182,6 +1239,41 @@ bfd_mach_o_canonicalize_dynamic_reloc (bfd *abfd, arelent **rels,
   return i;
 }
 
+/* In addition to the need to byte-swap the symbol number, the bit positions
+   of the fields in the relocation information vary per target endian-ness.  */
+
+static void
+bfd_mach_o_swap_out_non_scattered_reloc (bfd *abfd, unsigned char *fields,
+				       bfd_mach_o_reloc_info *rel)
+{
+  unsigned char info = 0;
+
+  BFD_ASSERT (rel->r_type <= 15);
+  BFD_ASSERT (rel->r_length <= 3);
+
+  if (bfd_big_endian (abfd))
+    {
+      fields[0] = (rel->r_value >> 16) & 0xff;
+      fields[1] = (rel->r_value >> 8) & 0xff;
+      fields[2] = rel->r_value & 0xff;
+      info |= rel->r_type << BFD_MACH_O_BE_TYPE_SHIFT;
+      info |= rel->r_pcrel ? BFD_MACH_O_BE_PCREL : 0;
+      info |= rel->r_length << BFD_MACH_O_BE_LENGTH_SHIFT;
+      info |= rel->r_extern ? BFD_MACH_O_BE_EXTERN : 0;
+    }
+  else
+    {
+      fields[2] = (rel->r_value >> 16) & 0xff;
+      fields[1] = (rel->r_value >> 8) & 0xff;
+      fields[0] = rel->r_value & 0xff;
+      info |= rel->r_type << BFD_MACH_O_LE_TYPE_SHIFT;
+      info |= rel->r_pcrel ? BFD_MACH_O_LE_PCREL : 0;
+      info |= rel->r_length << BFD_MACH_O_LE_LENGTH_SHIFT;
+      info |= rel->r_extern ? BFD_MACH_O_LE_EXTERN : 0;
+    }
+  fields[3] = info;
+}
+
 static bfd_boolean
 bfd_mach_o_write_relocs (bfd *abfd, bfd_mach_o_section *section)
 {
@@ -1228,15 +1320,9 @@ bfd_mach_o_write_relocs (bfd *abfd, bfd_mach_o_section *section)
         }
       else
         {
-          unsigned long v;
-
           bfd_put_32 (abfd, pinfo->r_address, raw.r_address);
-          v = BFD_MACH_O_SET_R_SYMBOLNUM (pinfo->r_value)
-            | (pinfo->r_pcrel ? BFD_MACH_O_R_PCREL : 0)
-            | BFD_MACH_O_SET_R_LENGTH (pinfo->r_length)
-            | (pinfo->r_extern ? BFD_MACH_O_R_EXTERN : 0)
-            | BFD_MACH_O_SET_R_TYPE (pinfo->r_type);
-          bfd_put_32 (abfd, v, raw.r_symbolnum);
+          bfd_mach_o_swap_out_non_scattered_reloc (abfd, raw.r_symbolnum,
+						   pinfo);
         }
 
       if (bfd_bwrite (&raw, BFD_MACH_O_RELENT_SIZE, abfd)
@@ -2026,7 +2112,12 @@ bfd_mach_o_build_seg_command (const char *segment,
   seg->sect_head = NULL;
   seg->sect_tail = NULL;
 
-  /*  Append sections to the segment.  */
+  /*  Append sections to the segment.  
+
+      This is a little tedious, we have to honor the need to account zerofill
+      sections after all the rest.  This forces us to do the calculation of
+      total vmsize in three passes so that any alignment increments are 
+      properly accounted.  */
 
   for (i = 0; i < mdata->nsects; ++i)
     {
@@ -2039,14 +2130,10 @@ bfd_mach_o_build_seg_command (const char *segment,
 	  && strncmp (segment, s->segname, BFD_MACH_O_SEGNAME_SIZE) != 0)
 	continue;
 
+      /* Although we account for zerofill section sizes in vm order, they are
+	 placed in the file in source sequence.  */
       bfd_mach_o_append_section_to_segment (seg, sec);
-
       s->offset = 0;
-      if (s->size > 0)
-       {
-          seg->vmsize = FILE_ALIGN (seg->vmsize, s->align);
-	  seg->vmsize += s->size;
-        }
       
       /* Zerofill sections have zero file size & offset, 
 	 and are not written.  */
@@ -2057,19 +2144,59 @@ bfd_mach_o_build_seg_command (const char *segment,
 
       if (s->size > 0)
        {
+	  seg->vmsize = FILE_ALIGN (seg->vmsize, s->align);
+	  seg->vmsize += s->size;
+
+	  seg->filesize = FILE_ALIGN (seg->filesize, s->align);
+	  seg->filesize += s->size;
+
           mdata->filelen = FILE_ALIGN (mdata->filelen, s->align);
           s->offset = mdata->filelen;
         }
 
       sec->filepos = s->offset;
-
       mdata->filelen += s->size;
     }
 
-  seg->filesize = mdata->filelen - seg->fileoff;
-  seg->filesize = FILE_ALIGN(seg->filesize, 2);
+  /* Now pass through again, for zerofill, only now we just update the vmsize.  */
+  for (i = 0; i < mdata->nsects; ++i)
+    {
+      bfd_mach_o_section *s = mdata->sections[i];
 
-  /* Allocate relocation room.  */
+      if ((s->flags & BFD_MACH_O_SECTION_TYPE_MASK) != BFD_MACH_O_S_ZEROFILL)
+        continue;
+
+      if (! is_mho 
+	  && strncmp (segment, s->segname, BFD_MACH_O_SEGNAME_SIZE) != 0)
+	continue;
+
+      if (s->size > 0)
+	{
+	  seg->vmsize = FILE_ALIGN (seg->vmsize, s->align);
+	  seg->vmsize += s->size;
+	}
+    }
+
+  /* Now pass through again, for zerofill_GB.  */
+  for (i = 0; i < mdata->nsects; ++i)
+    {
+      bfd_mach_o_section *s = mdata->sections[i];
+ 
+      if ((s->flags & BFD_MACH_O_SECTION_TYPE_MASK) != BFD_MACH_O_S_GB_ZEROFILL)
+        continue;
+
+      if (! is_mho 
+	  && strncmp (segment, s->segname, BFD_MACH_O_SEGNAME_SIZE) != 0)
+	continue;
+
+      if (s->size > 0)
+	{
+	  seg->vmsize = FILE_ALIGN (seg->vmsize, s->align);
+	  seg->vmsize += s->size;
+	}
+    }
+
+  /* Allocate space for the relocations.  */
   mdata->filelen = FILE_ALIGN(mdata->filelen, 2);
 
   for (i = 0; i < mdata->nsects; ++i)
@@ -2522,6 +2649,8 @@ bfd_mach_o_read_header (bfd *abfd, bfd_mach_o_header *header)
 
   if (mach_o_wide_p (header))
     header->reserved = (*get32) (raw.reserved);
+  else
+    header->reserved = 0;
 
   return TRUE;
 }
@@ -4707,7 +4836,7 @@ bfd_mach_o_find_nearest_line (bfd *abfd,
   if (_bfd_dwarf2_find_nearest_line (abfd, dwarf_debug_sections,
 				     section, symbols, offset,
 				     filename_ptr, functionname_ptr,
-				     line_ptr, 0,
+				     line_ptr, NULL, 0,
 				     &mdata->dwarf2_find_line_info))
     return TRUE;
   return FALSE;

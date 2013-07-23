@@ -55,7 +55,7 @@ static bfd_reloc_status_type ppc64_elf_toc64_reloc
 static bfd_reloc_status_type ppc64_elf_unhandled_reloc
   (bfd *, arelent *, asymbol *, void *, asection *, bfd *, char **);
 static bfd_vma opd_entry_value
-  (asection *, bfd_vma, asection **, bfd_vma *);
+  (asection *, bfd_vma, asection **, bfd_vma *, bfd_boolean);
 
 #define TARGET_LITTLE_SYM	bfd_elf64_powerpcle_vec
 #define TARGET_LITTLE_NAME	"elf64-powerpcle"
@@ -105,6 +105,7 @@ static bfd_vma opd_entry_value
 #define elf_backend_gc_sweep_hook	      ppc64_elf_gc_sweep_hook
 #define elf_backend_adjust_dynamic_symbol     ppc64_elf_adjust_dynamic_symbol
 #define elf_backend_hide_symbol		      ppc64_elf_hide_symbol
+#define elf_backend_maybe_function_sym	      ppc64_elf_maybe_function_sym
 #define elf_backend_always_size_sections      ppc64_elf_func_desc_adjust
 #define elf_backend_size_dynamic_sections     ppc64_elf_size_dynamic_sections
 #define elf_backend_init_index_section	      _bfd_elf_init_2_index_sections
@@ -2346,7 +2347,7 @@ ppc64_elf_branch_reloc (bfd *abfd, arelent *reloc_entry, asymbol *symbol,
     {
       bfd_vma dest = opd_entry_value (symbol->section,
 				      symbol->value + reloc_entry->addend,
-				      NULL, NULL);
+				      NULL, NULL, FALSE);
       if (dest != (bfd_vma) -1)
 	reloc_entry->addend = dest - (symbol->value
 				      + symbol->section->output_section->vma
@@ -4244,7 +4245,7 @@ create_linkage_sections (bfd *dynobj, struct bfd_link_info *info)
 								 ".eh_frame",
 								 flags);
       if (htab->glink_eh_frame == NULL
-	  || !bfd_set_section_alignment (abfd, htab->glink_eh_frame, 2))
+	  || !bfd_set_section_alignment (dynobj, htab->glink_eh_frame, 2))
 	return FALSE;
     }
 
@@ -4307,7 +4308,7 @@ create_got_section (bfd *abfd, struct bfd_link_info *info)
       if (! _bfd_elf_create_got_section (htab->elf.dynobj, info))
 	return FALSE;
 
-      htab->got = bfd_get_section_by_name (htab->elf.dynobj, ".got");
+      htab->got = bfd_get_linker_section (htab->elf.dynobj, ".got");
       if (!htab->got)
 	abort ();
     }
@@ -4346,12 +4347,12 @@ ppc64_elf_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
     return FALSE;
 
   if (!htab->got)
-    htab->got = bfd_get_section_by_name (dynobj, ".got");
-  htab->plt = bfd_get_section_by_name (dynobj, ".plt");
-  htab->relplt = bfd_get_section_by_name (dynobj, ".rela.plt");
-  htab->dynbss = bfd_get_section_by_name (dynobj, ".dynbss");
+    htab->got = bfd_get_linker_section (dynobj, ".got");
+  htab->plt = bfd_get_linker_section (dynobj, ".plt");
+  htab->relplt = bfd_get_linker_section (dynobj, ".rela.plt");
+  htab->dynbss = bfd_get_linker_section (dynobj, ".dynbss");
   if (!info->shared)
-    htab->relbss = bfd_get_section_by_name (dynobj, ".rela.bss");
+    htab->relbss = bfd_get_linker_section (dynobj, ".rela.bss");
 
   if (!htab->got || !htab->plt || !htab->relplt || !htab->dynbss
       || (!info->shared && !htab->relbss))
@@ -5521,14 +5522,16 @@ static bfd_vma
 opd_entry_value (asection *opd_sec,
 		 bfd_vma offset,
 		 asection **code_sec,
-		 bfd_vma *code_off)
+		 bfd_vma *code_off,
+		 bfd_boolean in_code_sec)
 {
   bfd *opd_bfd = opd_sec->owner;
   Elf_Internal_Rela *relocs;
   Elf_Internal_Rela *lo, *hi, *look;
   bfd_vma val;
 
-  /* No relocs implies we are linking a --just-symbols object.  */
+  /* No relocs implies we are linking a --just-symbols object, or looking
+     at a final linked executable with addr2line or somesuch.  */
   if (opd_sec->reloc_count == 0)
     {
       char buf[8];
@@ -5540,11 +5543,22 @@ opd_entry_value (asection *opd_sec,
       if (code_sec != NULL)
 	{
 	  asection *sec, *likely = NULL;
-	  for (sec = opd_bfd->sections; sec != NULL; sec = sec->next)
-	    if (sec->vma <= val
-		&& (sec->flags & SEC_LOAD) != 0
-		&& (sec->flags & SEC_ALLOC) != 0)
-	      likely = sec;
+
+	  if (in_code_sec)
+	    {
+	      sec = *code_sec;
+	      if (sec->vma <= val
+		  && val < sec->vma + sec->size)
+		likely = sec;
+	      else
+		val = -1;
+	    }
+	  else
+	    for (sec = opd_bfd->sections; sec != NULL; sec = sec->next)
+	      if (sec->vma <= val
+		  && (sec->flags & SEC_LOAD) != 0
+		  && (sec->flags & SEC_ALLOC) != 0)
+		likely = sec;
 	  if (likely != NULL)
 	    {
 	      *code_sec = likely;
@@ -5583,15 +5597,18 @@ opd_entry_value (asection *opd_sec,
 	      unsigned long symndx = ELF64_R_SYM (look->r_info);
 	      asection *sec;
 
-	      if (symndx < symtab_hdr->sh_info)
+	      if (symndx < symtab_hdr->sh_info
+		  || elf_sym_hashes (opd_bfd) == NULL)
 		{
 		  Elf_Internal_Sym *sym;
 
 		  sym = (Elf_Internal_Sym *) symtab_hdr->contents;
 		  if (sym == NULL)
 		    {
-		      sym = bfd_elf_get_elf_syms (opd_bfd, symtab_hdr,
-						  symtab_hdr->sh_info,
+		      size_t symcnt = symtab_hdr->sh_info;
+		      if (elf_sym_hashes (opd_bfd) == NULL)
+			symcnt = symtab_hdr->sh_size / symtab_hdr->sh_entsize;
+		      sym = bfd_elf_get_elf_syms (opd_bfd, symtab_hdr, symcnt,
 						  0, NULL, NULL, NULL);
 		      if (sym == NULL)
 			break;
@@ -5620,7 +5637,12 @@ opd_entry_value (asection *opd_sec,
 	      if (code_off != NULL)
 		*code_off = val;
 	      if (code_sec != NULL)
-		*code_sec = sec;
+		{
+		  if (in_code_sec && *code_sec != sec)
+		    return -1;
+		  else
+		    *code_sec = sec;
+		}
 	      if (sec != NULL && sec->output_section != NULL)
 		val += sec->output_section->vma + sec->output_offset;
 	    }
@@ -5629,6 +5651,55 @@ opd_entry_value (asection *opd_sec,
     }
 
   return val;
+}
+
+/* If the ELF symbol SYM might be a function in SEC, return the
+   function size and set *CODE_OFF to the function's entry point,
+   otherwise return zero.  */
+
+static bfd_size_type
+ppc64_elf_maybe_function_sym (const asymbol *sym, asection *sec,
+			      bfd_vma *code_off)
+{
+  bfd_size_type size;
+
+  if ((sym->flags & (BSF_SECTION_SYM | BSF_FILE | BSF_OBJECT
+		     | BSF_THREAD_LOCAL | BSF_RELC | BSF_SRELC)) != 0)
+    return 0;
+
+  size = 0;
+  if (!(sym->flags & BSF_SYNTHETIC))
+    size = ((elf_symbol_type *) sym)->internal_elf_sym.st_size;
+
+  if (strcmp (sym->section->name, ".opd") == 0)
+    {
+      if (opd_entry_value (sym->section, sym->value,
+			   &sec, code_off, TRUE) == (bfd_vma) -1)
+	return 0;
+      /* An old ABI binary with dot-syms has a size of 24 on the .opd
+	 symbol.  This size has nothing to do with the code size of the
+	 function, which is what we're supposed to return, but the
+	 code size isn't available without looking up the dot-sym.
+	 However, doing that would be a waste of time particularly
+	 since elf_find_function will look at the dot-sym anyway.
+	 Now, elf_find_function will keep the largest size of any
+	 function sym found at the code address of interest, so return
+	 1 here to avoid it incorrectly caching a larger function size
+	 for a small function.  This does mean we return the wrong
+	 size for a new-ABI function of size 24, but all that does is
+	 disable caching for such functions.  */
+      if (size == 24)
+	size = 1;
+    }
+  else
+    {
+      if (sym->section != sec)
+	return 0;
+      *code_off = sym->value;
+    }
+  if (size == 0)
+    size = 1;
+  return size;
 }
 
 /* Return true if symbol is defined in a regular object file.  */
@@ -5708,7 +5779,7 @@ ppc64_elf_gc_keep (struct bfd_link_info *info)
       else if (get_opd_info (eh->elf.root.u.def.section) != NULL
 	       && opd_entry_value (eh->elf.root.u.def.section,
 				   eh->elf.root.u.def.value,
-				   &sec, NULL) != (bfd_vma) -1)
+				   &sec, NULL, FALSE) != (bfd_vma) -1)
 	sec->flags |= SEC_KEEP;
 
       sec = eh->elf.root.u.def.section;
@@ -5759,7 +5830,7 @@ ppc64_elf_gc_mark_dynamic_ref (struct elf_link_hash_entry *h, void *inf)
       else if (get_opd_info (eh->elf.root.u.def.section) != NULL
 	       && opd_entry_value (eh->elf.root.u.def.section,
 				   eh->elf.root.u.def.value,
-				   &code_sec, NULL) != (bfd_vma) -1)
+				   &code_sec, NULL, FALSE) != (bfd_vma) -1)
 	code_sec->flags |= SEC_KEEP;
     }
 
@@ -5819,7 +5890,7 @@ ppc64_elf_gc_mark_hook (asection *sec,
 	      else if (get_opd_info (eh->elf.root.u.def.section) != NULL
 		       && opd_entry_value (eh->elf.root.u.def.section,
 					   eh->elf.root.u.def.value,
-					   &rsec, NULL) != (bfd_vma) -1)
+					   &rsec, NULL, FALSE) != (bfd_vma) -1)
 		eh->elf.root.u.def.section->gc_mark = 1;
 	      else
 		rsec = h->root.u.def.section;
@@ -6288,7 +6359,7 @@ func_desc_adjust (struct elf_link_hash_entry *h, void *inf)
       && opd_entry_value (fdh->elf.root.u.def.section,
 			  fdh->elf.root.u.def.value,
 			  &fh->elf.root.u.def.section,
-			  &fh->elf.root.u.def.value) != (bfd_vma) -1)
+			  &fh->elf.root.u.def.value, FALSE) != (bfd_vma) -1)
     {
       fh->elf.root.type = fdh->elf.root.type;
       fh->elf.forced_local = 1;
@@ -6397,7 +6468,7 @@ ppc64_elf_func_desc_adjust (bfd *obfd ATTRIBUTE_UNUSED,
 {
   struct ppc_link_hash_table *htab;
   unsigned int i;
-  const struct sfpr_def_parms funcs[] =
+  static const struct sfpr_def_parms funcs[] =
     {
       { "_savegpr0_", 14, 31, savegpr0, savegpr0_tail },
       { "_restgpr0_", 14, 29, restgpr0, restgpr0_tail },
@@ -6423,9 +6494,10 @@ ppc64_elf_func_desc_adjust (bfd *obfd ATTRIBUTE_UNUSED,
 
   /* Provide any missing _save* and _rest* functions.  */
   htab->sfpr->size = 0;
-  for (i = 0; i < sizeof (funcs) / sizeof (funcs[0]); i++)
-    if (!sfpr_define (info, &funcs[i]))
-      return FALSE;
+  if (!info->relocatable)
+    for (i = 0; i < sizeof (funcs) / sizeof (funcs[0]); i++)
+      if (!sfpr_define (info, &funcs[i]))
+	return FALSE;
 
   elf_link_hash_traverse (&htab->elf, func_desc_adjust, info);
 
@@ -6544,13 +6616,6 @@ ppc64_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
   /* This is a reference to a symbol defined by a dynamic object which
      is not a function.  */
 
-  if (h->size == 0)
-    {
-      info->callbacks->einfo (_("%P: dynamic variable `%s' is zero size\n"),
-			      h->root.root.string);
-      return TRUE;
-    }
-
   /* We must allocate the symbol in our .dynbss section, which will
      become part of the .bss section of the executable.  There will be
      an entry for this symbol in the .dynsym section.  The dynamic
@@ -6565,7 +6630,7 @@ ppc64_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
      to copy the initial value out of the dynamic object and into the
      runtime process image.  We need to remember the offset into the
      .rela.bss section we are going to use.  */
-  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0)
+  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0 && h->size != 0)
     {
       htab->relbss->size += sizeof (Elf64_External_Rela);
       h->needs_copy = 1;
@@ -6866,7 +6931,7 @@ adjust_opd_syms (struct elf_link_hash_entry *h, void *inf ATTRIBUTE_UNUSED)
 	  if (dsec == NULL)
 	    {
 	      for (dsec = sym_sec->owner->sections; dsec; dsec = dsec->next)
-		if (elf_discarded_section (dsec))
+		if (discarded_section (dsec))
 		  {
 		    ppc64_elf_tdata (sym_sec->owner)->deleted_section = dsec;
 		    break;
@@ -7047,7 +7112,7 @@ ppc64_elf_edit_opd (struct bfd_link_info *info, bfd_boolean non_overlapping)
       if (sec == NULL || sec->size == 0)
 	continue;
 
-      if (sec->sec_info_type == ELF_INFO_TYPE_JUST_SYMS)
+      if (sec->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
 	continue;
 
       if (sec->output_section == bfd_abs_section_ptr)
@@ -8091,8 +8156,8 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
       toc = bfd_get_section_by_name (ibfd, ".toc");
       if (toc == NULL
 	  || toc->size == 0
-	  || toc->sec_info_type == ELF_INFO_TYPE_JUST_SYMS
-	  || elf_discarded_section (toc))
+	  || toc->sec_info_type == SEC_INFO_TYPE_JUST_SYMS
+	  || discarded_section (toc))
 	continue;
 
       toc_relocs = NULL;
@@ -8105,7 +8170,7 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
       for (sec = ibfd->sections; sec != NULL; sec = sec->next)
 	{
 	  if (sec->reloc_count == 0
-	      || !elf_discarded_section (sec)
+	      || !discarded_section (sec)
 	      || get_opd_info (sec)
 	      || (sec->flags & SEC_ALLOC) == 0
 	      || (sec->flags & SEC_DEBUGGING) != 0)
@@ -8215,7 +8280,7 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
 		goto error_ret;
 
 	      if (sym_sec == NULL
-		  || elf_discarded_section (sym_sec))
+		  || discarded_section (sym_sec))
 		continue;
 
 	      if (!SYMBOL_CALLS_LOCAL (info, h))
@@ -8295,7 +8360,7 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
 	  int repeat;
 
 	  if (sec->reloc_count == 0
-	      || elf_discarded_section (sec)
+	      || discarded_section (sec)
 	      || get_opd_info (sec)
 	      || (sec->flags & SEC_ALLOC) == 0
 	      || (sec->flags & SEC_DEBUGGING) != 0)
@@ -8517,7 +8582,7 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
 	  for (sec = ibfd->sections; sec != NULL; sec = sec->next)
 	    {
 	      if (sec->reloc_count == 0
-		  || elf_discarded_section (sec))
+		  || discarded_section (sec))
 		continue;
 
 	      relstart = _bfd_elf_link_read_relocs (ibfd, sec, NULL, NULL,
@@ -9075,7 +9140,7 @@ ppc64_elf_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       /* Set the contents of the .interp section to the interpreter.  */
       if (info->executable)
 	{
-	  s = bfd_get_section_by_name (dynobj, ".interp");
+	  s = bfd_get_linker_section (dynobj, ".interp");
 	  if (s == NULL)
 	    abort ();
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
@@ -10489,7 +10554,9 @@ ppc64_elf_next_toc_section (struct bfd_link_info *info, asection *isec)
   if (!htab->second_toc_pass)
     {
       /* Keep track of the first .toc or .got section for this input bfd.  */
-      if (htab->toc_bfd != isec->owner)
+      bfd_boolean new_bfd = htab->toc_bfd != isec->owner;
+
+      if (new_bfd)
 	{
 	  htab->toc_bfd = isec->owner;
 	  htab->toc_first_sec = isec;
@@ -10517,7 +10584,8 @@ ppc64_elf_next_toc_section (struct bfd_link_info *info, asection *isec)
 
       /* Die if someone uses a linker script that doesn't keep input
 	 file .toc and .got together.  */
-      if (elf_gp (isec->owner) != 0
+      if (new_bfd
+	  && elf_gp (isec->owner) != 0
 	  && elf_gp (isec->owner) != off)
 	return FALSE;
 
@@ -10886,7 +10954,8 @@ toc_adjusting_stub_needed (struct bfd_link_info *info, asection *isec)
 		  sym_value += adjust;
 		}
 
-	      dest = opd_entry_value (sym_sec, sym_value, &sym_sec, NULL);
+	      dest = opd_entry_value (sym_sec, sym_value,
+				      &sym_sec, NULL, FALSE);
 	      if (dest == (bfd_vma) -1)
 		continue;
 	    }
@@ -11461,7 +11530,7 @@ ppc64_elf_size_stubs (struct bfd_link_info *info, bfd_signed_vma group_size,
 			  sym_value += adjust;
 			}
 		      dest = opd_entry_value (sym_sec, sym_value,
-					      &code_sec, &code_value);
+					      &code_sec, &code_value, FALSE);
 		      if (dest != (bfd_vma) -1)
 			{
 			  destination = dest;
@@ -11630,9 +11699,9 @@ ppc64_elf_size_stubs (struct bfd_link_info *info, bfd_signed_vma group_size,
 
       if (htab->glink_eh_frame != NULL
 	  && !bfd_is_abs_section (htab->glink_eh_frame->output_section)
-	  && (htab->glink_eh_frame->flags & SEC_EXCLUDE) == 0)
+	  && htab->glink_eh_frame->output_section->size != 0)
 	{
-	  bfd_size_type size = 0;
+	  size_t size = 0, align;
 
 	  for (stub_sec = htab->stub_bfd->sections;
 	       stub_sec != NULL;
@@ -11643,6 +11712,10 @@ ppc64_elf_size_stubs (struct bfd_link_info *info, bfd_signed_vma group_size,
 	    size += 24;
 	  if (size != 0)
 	    size += sizeof (glink_eh_frame_cie);
+	  align = 1;
+	  align <<= htab->glink_eh_frame->output_section->alignment_power;
+	  align -= 1;
+	  size = (size + align) & ~align;
 	  htab->glink_eh_frame->rawsize = htab->glink_eh_frame->size;
 	  htab->glink_eh_frame->size = size;
 	}
@@ -11884,17 +11957,21 @@ ppc64_elf_build_stubs (bfd_boolean emit_stub_syms,
       && htab->glink_eh_frame->size != 0)
     {
       bfd_vma val;
+      bfd_byte *last_fde;
+      size_t last_fde_len, size, align, pad;
 
       p = bfd_zalloc (htab->glink_eh_frame->owner, htab->glink_eh_frame->size);
       if (p == NULL)
 	return FALSE;
       htab->glink_eh_frame->contents = p;
+      last_fde = p;
 
       htab->glink_eh_frame->rawsize = htab->glink_eh_frame->size;
 
       memcpy (p, glink_eh_frame_cie, sizeof (glink_eh_frame_cie));
       /* CIE length (rewrite in case little-endian).  */
-      bfd_put_32 (htab->elf.dynobj, sizeof (glink_eh_frame_cie) - 4, p);
+      last_fde_len = sizeof (glink_eh_frame_cie) - 4;
+      bfd_put_32 (htab->elf.dynobj, last_fde_len, p);
       p += sizeof (glink_eh_frame_cie);
 
       for (stub_sec = htab->stub_bfd->sections;
@@ -11902,6 +11979,8 @@ ppc64_elf_build_stubs (bfd_boolean emit_stub_syms,
 	   stub_sec = stub_sec->next)
 	if ((stub_sec->flags & SEC_LINKER_CREATED) == 0)
 	  {
+	    last_fde = p;
+	    last_fde_len = 16;
 	    /* FDE length.  */
 	    bfd_put_32 (htab->elf.dynobj, 16, p);
 	    p += 4;
@@ -11934,6 +12013,8 @@ ppc64_elf_build_stubs (bfd_boolean emit_stub_syms,
 	  }
       if (htab->glink != NULL && htab->glink->size != 0)
 	{
+	  last_fde = p;
+	  last_fde_len = 20;
 	  /* FDE length.  */
 	  bfd_put_32 (htab->elf.dynobj, 20, p);
 	  p += 4;
@@ -11971,7 +12052,16 @@ ppc64_elf_build_stubs (bfd_boolean emit_stub_syms,
 	  *p++ = DW_CFA_restore_extended;
 	  *p++ = 65;
 	}
-      htab->glink_eh_frame->size = p - htab->glink_eh_frame->contents;
+      /* Subsume any padding into the last FDE if user .eh_frame
+	 sections are aligned more than glink_eh_frame.  Otherwise any
+	 zero padding will be seen as a terminator.  */
+      size = p - htab->glink_eh_frame->contents;
+      align = 1;
+      align <<= htab->glink_eh_frame->output_section->alignment_power;
+      align -= 1;
+      pad = ((size + align) & ~align) - size;
+      htab->glink_eh_frame->size = size + pad;
+      bfd_put_32 (htab->elf.dynobj, last_fde_len + pad, last_fde);
     }
 
   /* Build the stubs as directed by the stub hash table.  */
@@ -12241,10 +12331,10 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	}
       h = (struct ppc_link_hash_entry *) h_elf;
 
-      if (sec != NULL && elf_discarded_section (sec))
+      if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, relend,
-					 ppc64_elf_howto_table[r_type],
+					 rel, 1, relend,
+					 ppc64_elf_howto_table[r_type], 0,
 					 contents);
 
       if (info->relocatable)
@@ -12854,7 +12944,7 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	      bfd_vma off = (relocation + addend
 			     - sec->output_section->vma
 			     - sec->output_offset);
-	      bfd_vma dest = opd_entry_value (sec, off, NULL, NULL);
+	      bfd_vma dest = opd_entry_value (sec, off, NULL, NULL, FALSE);
 	      if (dest != (bfd_vma) -1)
 		{
 		  relocation = dest;
@@ -13837,7 +13927,7 @@ static bfd_boolean
 ppc64_elf_finish_dynamic_symbol (bfd *output_bfd,
 				 struct bfd_link_info *info,
 				 struct elf_link_hash_entry *h,
-				 Elf_Internal_Sym *sym)
+				 Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {
   struct ppc_link_hash_table *htab;
   struct plt_entry *ent;
@@ -13906,10 +13996,6 @@ ppc64_elf_finish_dynamic_symbol (bfd *output_bfd,
       bfd_elf64_swap_reloca_out (output_bfd, &rela, loc);
     }
 
-  /* Mark some specially defined symbols as absolute.  */
-  if (strcmp (h->root.root.string, "_DYNAMIC") == 0)
-    sym->st_shndx = SHN_ABS;
-
   return TRUE;
 }
 
@@ -13950,7 +14036,7 @@ ppc64_elf_finish_dynamic_sections (bfd *output_bfd,
     return FALSE;
 
   dynobj = htab->elf.dynobj;
-  sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
+  sdyn = bfd_get_linker_section (dynobj, ".dynamic");
 
   if (htab->elf.dynamic_sections_created)
     {
@@ -14078,7 +14164,7 @@ ppc64_elf_finish_dynamic_sections (bfd *output_bfd,
 
 
   if (htab->glink_eh_frame != NULL
-      && htab->glink_eh_frame->sec_info_type == ELF_INFO_TYPE_EH_FRAME
+      && htab->glink_eh_frame->sec_info_type == SEC_INFO_TYPE_EH_FRAME
       && !_bfd_elf_write_section_eh_frame (output_bfd, info,
 					   htab->glink_eh_frame,
 					   htab->glink_eh_frame->contents))

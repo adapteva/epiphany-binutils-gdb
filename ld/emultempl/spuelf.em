@@ -1,5 +1,5 @@
 # This shell script emits a C file. -*- C -*-
-#   Copyright 2006, 2007, 2008, 2009, 2010, 2011
+#   Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012
 #   Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
@@ -151,7 +151,7 @@ spu_place_special_section (asection *s, asection *o, const char *output_name)
       lang_statement_list_type add;
 
       lang_list_init (&add);
-      lang_add_section (&add, s, os);
+      lang_add_section (&add, s, NULL, os);
       *add.tail = os->children.head;
       os->children.head = add.head;
     }
@@ -168,7 +168,7 @@ spu_place_special_section (asection *s, asection *o, const char *output_name)
 	  lang_add_assignment (exp_assign (".", e_size));
 	  pop_stat_ptr ();
 	}
-      lang_add_section (&os->children, s, os);
+      lang_add_section (&os->children, s, NULL, os);
     }
 
   s->output_section->size += s->size;
@@ -535,7 +535,7 @@ embedded_spu_file (lang_input_statement_type *entry, const char *flags)
   cmd[3] = entry->the_bfd->filename;
   cmd[4] = oname;
   cmd[5] = NULL;
-  if (trace_file_tries)
+  if (verbose)
     {
       info_msg (_("running: %s \"%s\" \"%s\" \"%s\" \"%s\"\n"),
 		cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
@@ -579,7 +579,7 @@ embedded_spu_file (lang_input_statement_type *entry, const char *flags)
 
   /* Ensure bfd sections are excluded from the output.  */
   bfd_section_list_clear (entry->the_bfd);
-  entry->loaded = TRUE;
+  entry->flags.loaded = TRUE;
   return TRUE;
 }
 

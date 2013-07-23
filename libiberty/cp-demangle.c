@@ -1419,7 +1419,12 @@ d_unqualified_name (struct d_info *di)
 
       ret = d_operator_name (di);
       if (ret != NULL && ret->type == DEMANGLE_COMPONENT_OPERATOR)
-	di->expansion += sizeof "operator" + ret->u.s_operator.op->len - 2;
+	{
+	  di->expansion += sizeof "operator" + ret->u.s_operator.op->len - 2;
+	  if (!strcmp (ret->u.s_operator.op->code, "li"))
+	    ret = d_make_comp (di, DEMANGLE_COMPONENT_UNARY, ret,
+			       d_source_name (di));
+	}
       return ret;
     }
   else if (peek == 'C' || peek == 'D')
@@ -1577,11 +1582,13 @@ const struct demangle_operator_info cplus_demangle_operators[] =
   { "an", NL ("&"),         2 },
   { "at", NL ("alignof "),   1 },
   { "az", NL ("alignof "),   1 },
+  { "cc", NL ("const_cast"), 2 },
   { "cl", NL ("()"),        2 },
   { "cm", NL (","),         2 },
   { "co", NL ("~"),         1 },
   { "dV", NL ("/="),        2 },
   { "da", NL ("delete[] "), 1 },
+  { "dc", NL ("dynamic_cast"), 2 },
   { "de", NL ("*"),         1 },
   { "dl", NL ("delete "),   1 },
   { "ds", NL (".*"),        2 },
@@ -1596,6 +1603,7 @@ const struct demangle_operator_info cplus_demangle_operators[] =
   { "ix", NL ("[]"),        2 },
   { "lS", NL ("<<="),       2 },
   { "le", NL ("<="),        2 },
+  { "li", NL ("operator\"\" "), 1 },
   { "ls", NL ("<<"),        2 },
   { "lt", NL ("<"),         2 },
   { "mI", NL ("-="),        2 },
@@ -1620,8 +1628,10 @@ const struct demangle_operator_info cplus_demangle_operators[] =
   { "qu", NL ("?"),         3 },
   { "rM", NL ("%="),        2 },
   { "rS", NL (">>="),       2 },
+  { "rc", NL ("reinterpret_cast"), 2 },
   { "rm", NL ("%"),         2 },
   { "rs", NL (">>"),        2 },
+  { "sc", NL ("static_cast"), 2 },
   { "st", NL ("sizeof "),   1 },
   { "sz", NL ("sizeof "),   1 },
   { "tr", NL ("throw"),     0 },
@@ -2264,6 +2274,11 @@ cplus_demangle_type (struct d_info *di)
 			     cplus_demangle_type (di), NULL);
 	  can_subst = 1;
 	  break;
+
+	case 'a':
+	  /* auto */
+	  ret = d_make_name (di, "auto", 4);
+	  break;
 	  
 	case 'f':
 	  /* 32-bit decimal floating point */
@@ -2798,6 +2813,18 @@ d_exprlist (struct d_info *di, char terminator)
   return list;
 }
 
+/* Returns nonzero iff OP is an operator for a C++ cast: const_cast,
+   dynamic_cast, static_cast or reinterpret_cast.  */
+
+static int
+op_is_new_cast (struct demangle_component *op)
+{
+  const char *code = op->u.s_operator.op->code;
+  return (code[1] == 'c'
+	  && (code[0] == 's' || code[0] == 'd'
+	      || code[0] == 'c' || code[0] == 'r'));
+}
+
 /* <expression> ::= <(unary) operator-name> <expression>
                 ::= <(binary) operator-name> <expression> <expression>
                 ::= <(trinary) operator-name> <expression> <expression> <expression>
@@ -2960,7 +2987,10 @@ d_expression (struct d_info *di)
 	    struct demangle_component *left;
 	    struct demangle_component *right;
 
-	    left = d_expression (di);
+	    if (op_is_new_cast (op))
+	      left = cplus_demangle_type (di);
+	    else
+	      left = d_expression (di);
 	    if (!strcmp (code, "cl"))
 	      right = d_exprlist (di, 'E');
 	    else if (!strcmp (code, "dt") || !strcmp (code, "pt"))
@@ -3704,6 +3734,7 @@ d_find_pack (struct d_print_info *dpi,
     case DEMANGLE_COMPONENT_SUB_STD:
     case DEMANGLE_COMPONENT_CHARACTER:
     case DEMANGLE_COMPONENT_FUNCTION_PARAM:
+    case DEMANGLE_COMPONENT_UNNAMED_TYPE:
       return NULL;
 
     case DEMANGLE_COMPONENT_EXTENDED_OPERATOR:
@@ -4440,6 +4471,17 @@ d_print_comp (struct d_print_info *dpi, int options,
       if (d_right (dc)->type != DEMANGLE_COMPONENT_BINARY_ARGS)
 	{
 	  d_print_error (dpi);
+	  return;
+	}
+
+      if (op_is_new_cast (d_left (dc)))
+	{
+	  d_print_expr_op (dpi, options, d_left (dc));
+	  d_append_char (dpi, '<');
+	  d_print_comp (dpi, options, d_left (d_right (dc)));
+	  d_append_string (dpi, ">(");
+	  d_print_comp (dpi, options, d_right (d_right (dc)));
+	  d_append_char (dpi, ')');
 	  return;
 	}
 

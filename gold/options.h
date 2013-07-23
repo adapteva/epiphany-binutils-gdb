@@ -739,6 +739,9 @@ class General_options
               N_("Export all dynamic symbols"),
 	      N_("Do not export all dynamic symbols (default)"));
 
+  DEFINE_set(export_dynamic_symbol, options::TWO_DASHES, '\0',
+	     N_("Export SYMBOL to dynamic symbol table"), N_("SYMBOL"));
+
   DEFINE_special(EB, options::ONE_DASH, '\0',
 		 N_("Link big-endian objects."), NULL);
 
@@ -790,6 +793,10 @@ class General_options
 
   DEFINE_bool(g, options::EXACTLY_ONE_DASH, '\0', false,
 	      N_("Ignored"), NULL);
+
+  DEFINE_bool(gdb_index, options::TWO_DASHES, '\0', false,
+	      N_("Generate .gdb_index section"),
+	      N_("Do not generate .gdb_index section"));
 
   DEFINE_bool(gnu_unique, options::TWO_DASHES, '\0', true,
 	      N_("Enable STB_GNU_UNIQUE symbol binding (default)"),
@@ -882,6 +889,10 @@ class General_options
   DEFINE_string(m, options::EXACTLY_ONE_DASH, 'm', "",
                 N_("Set GNU linker emulation; obsolete"), N_("EMULATION"));
 
+  DEFINE_bool(mmap_output_file, options::TWO_DASHES, '\0', true,
+              N_("Map the output file for writing (default)."),
+              N_("Do not map the output file for writing."));
+
   DEFINE_bool(print_map, options::TWO_DASHES, 'M', false,
 	      N_("Write map file on standard output"), NULL);
   DEFINE_string(Map, options::ONE_DASH, '\0', NULL, N_("Write map file"),
@@ -931,6 +942,11 @@ class General_options
   DEFINE_special(plugin_opt, options::TWO_DASHES, '\0',
                  N_("Pass an option to the plugin"), N_("OPTION"));
 #endif
+
+  DEFINE_bool(posix_fallocate, options::TWO_DASHES, '\0', true,
+              N_("Use posix_fallocate to reserve space in the output file"
+		 " (default)."),
+              N_("Use fallocate or ftruncate to reserve space."));
 
   DEFINE_bool(preread_archive_symbols, options::TWO_DASHES, '\0', false,
               N_("Preread archive symbols when multi-threaded"), NULL);
@@ -995,7 +1011,7 @@ class General_options
               N_("Emit only debug line number information"), NULL);
   DEFINE_bool(strip_debug_gdb, options::TWO_DASHES, '\0', false,
               N_("Strip debug symbols that are unused by gdb "
-                 "(at least versions <= 6.7)"), NULL);
+                 "(at least versions <= 7.4)"), NULL);
   DEFINE_bool(strip_lto_sections, options::TWO_DASHES, '\0', true,
               N_("Strip LTO intermediate code sections"), NULL);
 

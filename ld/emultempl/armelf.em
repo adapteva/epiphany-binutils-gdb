@@ -1,6 +1,6 @@
 # This shell script emits a C file. -*- C -*-
 #   Copyright 1991, 1993, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-#   2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+#   2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 #   Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
@@ -50,7 +50,7 @@ gld${EMULATION_NAME}_before_parse (void)
 #ifndef TARGET_			/* I.e., if not generic.  */
   ldfile_set_output_arch ("`echo ${ARCH}`", bfd_arch_unknown);
 #endif /* not TARGET_ */
-  config.dynamic_link = ${DYNAMIC_LINK-TRUE};
+  input_flags.dynamic = ${DYNAMIC_LINK-TRUE};
   config.has_shared = `if test -n "$GENERATE_SHLIB_SCRIPT" ; then echo TRUE ; else echo FALSE ; fi`;
 }
 
@@ -208,7 +208,7 @@ elf32_arm_add_stub_section (const char *stub_sec_name,
 
   info.input_section = input_section;
   lang_list_init (&info.add);
-  lang_add_section (&info.add, stub_sec, os);
+  lang_add_section (&info.add, stub_sec, NULL, os);
 
   if (info.add.head == NULL)
     goto err_ret;
@@ -240,7 +240,7 @@ build_section_lists (lang_statement_union_type *statement)
     {
       asection *i = statement->input_section.section;
 
-      if (!((lang_input_statement_type *) i->owner->usrdata)->just_syms_flag
+      if (i->sec_info_type != SEC_INFO_TYPE_JUST_SYMS
 	  && (i->flags & SEC_EXCLUDE) == 0
 	  && i->output_section != NULL
 	  && i->output_section->owner == link_info.output_bfd)
@@ -299,7 +299,7 @@ gld${EMULATION_NAME}_after_allocation (void)
 		  && elf_section_type (sec) == SHT_PROGBITS
 		  && (elf_section_flags (sec) & SHF_EXECINSTR) != 0
 		  && (sec->flags & SEC_EXCLUDE) == 0
-		  && sec->sec_info_type != ELF_INFO_TYPE_JUST_SYMS
+		  && sec->sec_info_type != SEC_INFO_TYPE_JUST_SYMS
 		  && out_sec != bfd_abs_section_ptr)
 		{
 		  if (sec_count == list_size)
