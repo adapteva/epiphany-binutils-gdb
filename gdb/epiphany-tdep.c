@@ -238,8 +238,8 @@
 #define SEXTEND16(v) (((v) ^ (long int) 0x8000) - (long int) 0x8000)
 
 /* External debug flags */
-extern int frame_debug;			/*!< frame debugging flag */
-extern int debug_infrun;		/*!< infrun debugging flag */
+extern unsigned int frame_debug;		/*!< frame debugging flag */
+extern unsigned int debug_infrun;		/*!< infrun debugging flag */
 
 
 /*============================================================================*/
@@ -1400,7 +1400,7 @@ epiphany_print_registers_info (struct gdbarch    *gdbarch,
       val = allocate_value (regtype);
 
       /* Get the data in raw format.  */
-      if (! frame_register_read (frame, i, value_contents_raw (val)))
+      if (! deprecated_frame_register_read (frame, i, value_contents_raw (val)))
 	{
 	  fprintf_filtered (file, "*value not available*\n");
 	  continue;
