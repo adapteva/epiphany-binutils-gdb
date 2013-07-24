@@ -1,3 +1,46 @@
+2013-06-24  Roland McGrath  <mcgrathr@google.com>
+
+	* gas/arm/macro-vld1.s: Add a case with whitespace before '}'.
+	* gas/arm/macro-vld1.d: Update.
+
+2013-01-07  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/14887
+	* gas/arm/neon-ldst-es.s: Add more whitespace.
+
+2013-01-02  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/14987
+	* gas/arm/neon-ldst-es.s: Add whitespace test.
+	* gas/arm/neon-ldst-es.d: Update expected disassembly.
+
+2013-06-24  Roland McGrath  <mcgrathr@google.com>
+
+	* gas/arm/macro-pld.s: Add a 'push {r0}' case.
+	* gas/arm/macro-pld.d: Update expected output.
+	* gas/arm/macro-vld1.s: New file.
+	* gas/arm/macro-vld1.d: New file.
+
+2013-05-13  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	Backport from mainline:
+
+	2013-05-13  Yufeng Zhang  <yufeng.zhang@arm.com>
+	* gas/aarch64/diagnostic.s: Update.
+	* gas/aarch64/diagnostic.l: Ditto.
+	* gas/aarch64/movi.s: Add new tests.
+	* gas/aarch64/movi.d: Update.
+
+2013-05-13 Yufeng Zhang <yufeng.zhang@arm.com>
+
+	Backport from mainline:
+
+	2013-02-27 Yufeng Zhang <yufeng.zhang@arm.com>
+	* gas/aarch64/illegal.l: Delete the error message for
+	msr S3_1_C13_C15_1,x7.
+	* gas/aarch64/sysreg.s: Add new tests.
+	* gas/aarch64/sysreg.d: Update.
+
 2013-03-08  Christian Groessler  <chris@groessler.org>
 
 	Backport from mainline:

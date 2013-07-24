@@ -1,3 +1,39 @@
+2013-06-24  Roland McGrath  <mcgrathr@google.com>
+
+	* config/tc-arm.c (parse_reg_list): Use skip_past_char for '}',
+	so it skips whitespace before it.
+	(s_arm_unwind_save_mmxwr, s_arm_unwind_save_mmxwcg): Likewise.
+
+2013-01-07  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/14887
+	* config/tc-arm.c (skip_past_char): Skip whitespace before the
+	anticipated character.
+	* config/tc-arm.c (parse_address_main): Delete skip of whitespace
+	here as it is no longer needed.
+
+2013-01-02  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/14987
+	* config/tc-arm.c (parse_address_main): Skip whitespace before a
+	closing bracket.
+
+2013-06-24  Roland McGrath  <mcgrathr@google.com>
+
+	* config/tc-arm.c (arm_symbol_chars): Include '{' and '}'.
+	(arm_reg_parse_multi): Skip whitespace first.
+	(parse_reg_list): Likewise.
+	(parse_vfp_reg_list): Likewise.
+	(s_arm_unwind_save_mmxwcg): Likewise.
+
+2013-05-13 Yufeng Zhang <yufeng.zhang@arm.com>
+
+	Backport from mainline:
+
+	2013-02-27 Yufeng Zhang <yufeng.zhang@arm.com>
+	* config/tc-aarch64.c (parse_sys_reg): Allow the full range of CRn
+	for system registers.
+
 2013-03-05  Yufeng Zhang  <yufeng.zhang@arm.com>
 
 	* config/tc-aarch64.c (aarch64_imm_float_p): Rename 'e' to 'pattern';

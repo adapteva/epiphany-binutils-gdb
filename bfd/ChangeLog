@@ -1,3 +1,71 @@
+2013-08-26  Roland McGrath  <mcgrathr@google.com>
+
+	* elf-nacl.c (nacl_modify_segment_map): Fix logic reordering the
+	elf_segment_map list.  If an executable segment is page-aligned
+	but does not end with a full page, then append a fake section into
+	the segment map entry that pads out the page.
+	(nacl_final_write_processing): New function.  Write the code fill
+	laid out in nacl_modify_segment_map.
+	* elf-nacl.h: Declare it.
+	* elf32-arm.c (elf32_arm_nacl_final_write_processing): New function.
+	(elf_backend_final_write_processing): Define it for NaCl backend.
+	* elf32-i386.c (elf_backend_final_write_processing): Likewise.
+	* elf64-x86-64.c (elf_backend_final_write_processing): Likewise.
+
+	* elf-nacl.c (segment_eligible_for_headers): Rename MAXPAGESIZE
+	parameter to MINPAGESIZE.
+	(nacl_modify_segment_map): Use minpagesize instead of maxpagesize.
+
+	* elf32-arm.c (ELF_MINPAGESIZE, ELF_COMMONPAGESIZE): #undef for NaCl.
+
+2013-07-25  Alan Modra  <amodra@gmail.com>
+
+	PR ld/15762
+	PR ld/12761
+	* elflink.c (elf_link_add_object_symbols): Correct test in
+	last patch.  Remove unnecessary code.
+
+2013-07-20  Alan Modra  <amodra@gmail.com>
+
+	PR ld/15762
+	PR ld/12761
+	* elflink.c (elf_link_add_object_symbols): Don't clobber
+	.gnu.warning.symbol sections when shared.
+
+2013-07-18  Roland McGrath  <mcgrathr@google.com>
+
+	* elf32-arm.c (elf32_arm_stub_long_branch_arm_nacl): New variable.
+	(elf32_arm_stub_long_branch_arm_nacl_pic): New variable.
+	(arm_build_one_stub): Increase MAXRELOCS to 3.
+	(arm_type_of_stub): Use them if GLOBALS->nacl_p.
+	(struct elf32_arm_link_hash_table): Give add_stub_section member's
+	pointee type a third argument.
+	(elf32_arm_create_or_find_stub_sec): Update caller.
+	(elf32_arm_size_stubs): Update argument type.
+	* bfd-in.h (elf32_arm_size_stubs): Update decl.
+	* bfd-in2.h: Regenerate.
+	* libbfd.h: Regenerate.
+
+2013-05-28  Will Newton  <will.newton@linaro.org>
+
+	* elf32-arm.c (elf32_arm_populate_plt_entry): Call
+	elf32_arm_add_dynreloc when emitting R_ARM_IRELATIVE relocs.
+
+2013-04-24  Roland McGrath  <mcgrathr@google.com>
+
+	* elf32-arm.c (elf32_arm_allocate_plt_entry): If HTAB->nacl_p,
+	allocate space for PLT header even if IS_IPLT_ENTRY.
+	(arm_nacl_put_plt0): New function, broken out of ...
+	(elf32_arm_finish_dynamic_sections): ... here.  Call it.
+	If HTAB->nacl_p, set up the PLT header in .iplt too.
+	(elf32_arm_output_arch_local_syms): If HTAB->nacl_p, write
+	a mapping symbol for the start of .iplt too.
+
+2013-03-25  Tristan Gingold  <gingold@adacore.com>
+
+	* Makefile.am (RELEASE): Unset.
+	* Makefile.in: Regenerate.
+
 2013-03-25  Tristan Gingold  <gingold@adacore.com>
 
 	* configure.in: Bump version to 2.23.2
@@ -256,7 +324,7 @@
 
 2012-11-19  Joey Ye  <joey.ye@arm.com>
 
-	* elf32-arm.c (elf32_arm_final_link_relocate, 
+	* elf32-arm.c (elf32_arm_final_link_relocate,
 	case R_ARM_THM_ALU_PREL_11_0, case R_ARM_THM_PC12): Align address of
 	the place being relocated.
 	(elf32_arm_final_link_relocate, case R_ARM_THM_PC8): Align address

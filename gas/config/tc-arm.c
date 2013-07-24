@@ -323,8 +323,9 @@ static bfd_boolean unified_syntax = FALSE;
 
 /* An immediate operand can start with #, and ld*, st*, pld operands
    can contain [ and ].  We need to tell APP not to elide whitespace
-   before a [, which can appear as the first operand for pld.  */
-const char arm_symbol_chars[] = "#[]";
+   before a [, which can appear as the first operand for pld.
+   Likewise, a { can appear as the first operand for push, pop, vld*, etc.  */
+const char arm_symbol_chars[] = "#[]{}";
 
 enum neon_el_type
 {
@@ -885,6 +886,9 @@ const char FLT_CHARS[] = "rRsSfFdDxXeEpP";
 static inline int
 skip_past_char (char ** str, char c)
 {
+  /* PR gas/14987: Allow for whitespace before the expected character.  */
+  skip_whitespace (*str);
+  
   if (**str == c)
     {
       (*str)++;
@@ -1153,6 +1157,8 @@ arm_reg_parse_multi (char **ccp)
   char *start = *ccp;
   char *p;
   struct reg_entry *reg;
+
+  skip_whitespace (start);
 
 #ifdef REGISTER_PREFIX
   if (*start != REGISTER_PREFIX)
@@ -1579,6 +1585,8 @@ parse_reg_list (char ** strp)
   /* We come back here if we get ranges concatenated by '+' or '|'.  */
   do
     {
+      skip_whitespace (str);
+
       another_range = 0;
 
       if (*str == '{')
@@ -1632,7 +1640,7 @@ parse_reg_list (char ** strp)
 		 || (in_range = 1, *str++ == '-'));
 	  str--;
 
-	  if (*str++ != '}')
+	  if (skip_past_char (&str, '}') == FAIL)
 	    {
 	      first_error (_("missing `}'"));
 	      return FAIL;
@@ -1730,13 +1738,11 @@ parse_vfp_reg_list (char **ccp, unsigned int *pbase, enum reg_list_els etype)
   unsigned long mask = 0;
   int i;
 
-  if (*str != '{')
+  if (skip_past_char (&str, '{') == FAIL)
     {
       inst.error = _("expecting {");
       return FAIL;
     }
-
-  str++;
 
   switch (etype)
     {
@@ -3928,8 +3934,7 @@ s_arm_unwind_save_mmxwr (void)
     }
   while (skip_past_comma (&input_line_pointer) != FAIL);
 
-  if (*input_line_pointer == '}')
-    input_line_pointer++;
+  skip_past_char (&input_line_pointer, '}');
 
   demand_empty_rest_of_line ();
 
@@ -4026,6 +4031,8 @@ s_arm_unwind_save_mmxwcg (void)
   if (*input_line_pointer == '{')
     input_line_pointer++;
 
+  skip_whitespace (input_line_pointer);
+
   do
     {
       reg = arm_reg_parse (&input_line_pointer, REG_TYPE_MMXWCG);
@@ -4061,8 +4068,7 @@ s_arm_unwind_save_mmxwcg (void)
     }
   while (skip_past_comma (&input_line_pointer) != FAIL);
 
-  if (*input_line_pointer == '}')
-    input_line_pointer++;
+  skip_past_char (&input_line_pointer, '}');
 
   demand_empty_rest_of_line ();
 
@@ -5167,6 +5173,9 @@ parse_address_main (char **str, int i, int group_relocations,
       *str = p;
       return PARSE_OPERAND_SUCCESS;
     }
+
+  /* PR gas/14887: Allow for whitespace after the opening bracket.  */
+  skip_whitespace (p);
 
   if ((reg = arm_reg_parse (&p, REG_TYPE_RN)) == FAIL)
     {

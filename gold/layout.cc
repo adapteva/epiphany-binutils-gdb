@@ -1,6 +1,6 @@
 // layout.cc -- lay out output file sections for gold
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
 // Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
@@ -245,7 +245,8 @@ Free_list::print_stats()
 void
 Layout::Relaxation_debug_check::check_output_data_for_reset_values(
     const Layout::Section_list& sections,
-    const Layout::Data_list& special_outputs)
+    const Layout::Data_list& special_outputs,
+    const Layout::Data_list& relax_outputs)
 {
   for(Layout::Section_list::const_iterator p = sections.begin();
       p != sections.end();
@@ -256,6 +257,8 @@ Layout::Relaxation_debug_check::check_output_data_for_reset_values(
       p != special_outputs.end();
       ++p)
     gold_assert((*p)->address_and_file_offset_have_reset_values());
+
+  gold_assert(relax_outputs.empty());
 }
 
 // Save information of SECTIONS for checking later.
@@ -376,6 +379,7 @@ Layout::Layout(int number_of_input_files, Script_options* script_options)
     section_list_(),
     unattached_section_list_(),
     special_output_list_(),
+    relax_output_list_(),
     section_headers_(NULL),
     tls_segment_(NULL),
     relro_segment_(NULL),
@@ -2140,6 +2144,20 @@ Layout::clean_up_after_relaxation()
        ++p)
     delete *p;
   this->script_output_section_data_list_.clear();
+
+  // Special-case fill output objects are recreated each time through
+  // the relaxation loop.
+  this->reset_relax_output();
+}
+
+void
+Layout::reset_relax_output()
+{
+  for (Data_list::const_iterator p = this->relax_output_list_.begin();
+       p != this->relax_output_list_.end();
+       ++p)
+    delete *p;
+  this->relax_output_list_.clear();
 }
 
 // Prepare for relaxation.
@@ -2162,10 +2180,27 @@ Layout::prepare_for_relaxation()
 
   if (is_debugging_enabled(DEBUG_RELAXATION))
     this->relaxation_debug_check_->check_output_data_for_reset_values(
-	this->section_list_, this->special_output_list_);
+	this->section_list_, this->special_output_list_,
+	this->relax_output_list_);
 
   // Also enable recording of output section data from scripts.
   this->record_output_section_data_from_script_ = true;
+}
+
+// If the user set the address of the text segment, that may not be
+// compatible with putting the segment headers and file headers into
+// that segment.  For isolate_execinstr() targets, it's the rodata
+// segment rather than text where we might put the headers.
+static inline bool
+load_seg_unusable_for_headers(const Target* target)
+{
+  const General_options& options = parameters->options();
+  if (target->isolate_execinstr())
+    return (options.user_set_Trodata_segment()
+	    && options.Trodata_segment() % target->common_pagesize() != 0);
+  else
+    return (options.user_set_Ttext()
+	    && options.Ttext() % target->common_pagesize() != 0);
 }
 
 // Relaxation loop body:  If target has no relaxation, this runs only once
@@ -2220,11 +2255,7 @@ Layout::relaxation_loop_body(
       != General_options::OBJECT_FORMAT_ELF)
     load_seg = NULL;
 
-  // If the user set the address of the text segment, that may not be
-  // compatible with putting the segment headers and file headers into
-  // that segment.
-  if (parameters->options().user_set_Ttext()
-      && parameters->options().Ttext() % target->common_pagesize() != 0)
+  if (load_seg_unusable_for_headers(target))
     {
       load_seg = NULL;
       phdr_seg = NULL;
@@ -3114,6 +3145,20 @@ align_file_offset(off_t off, uint64_t addr, uint64_t abi_pagesize)
   return aligned_off;
 }
 
+// On targets where the text segment contains only executable code,
+// a non-executable segment is never the text segment.
+
+static inline bool
+is_text_segment(const Target* target, const Output_segment* seg)
+{
+  elfcpp::Elf_Xword flags = seg->flags();
+  if ((flags & elfcpp::PF_W) != 0)
+    return false;
+  if ((flags & elfcpp::PF_X) == 0)
+    return !target->isolate_execinstr();
+  return true;
+}
+
 // Set the file offsets of all the segments, and all the sections they
 // contain.  They have all been created.  LOAD_SEG must be be laid out
 // first.  Return the offset of the data to follow.
@@ -3205,8 +3250,15 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 	      addr = (*p)->paddr();
 	    }
 	  else if (parameters->options().user_set_Ttext()
-		   && ((*p)->flags() & elfcpp::PF_W) == 0)
+		   && (parameters->options().omagic()
+		       || is_text_segment(target, *p)))
 	    {
+	      are_addresses_set = true;
+	    }
+	  else if (parameters->options().user_set_Trodata_segment()
+		   && ((*p)->flags() & (elfcpp::PF_W | elfcpp::PF_X)) == 0)
+	    {
+	      addr = parameters->options().Trodata_segment();
 	      are_addresses_set = true;
 	    }
 	  else if (parameters->options().user_set_Tdata()
@@ -3255,7 +3307,10 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 
 		  // If the target wants a fixed minimum distance from the
 		  // text segment to the read-only segment, move up now.
-		  uint64_t min_addr = start_addr + target->rosegment_gap();
+		  uint64_t min_addr =
+		    start_addr + (parameters->options().user_set_rosegment_gap()
+				  ? parameters->options().rosegment_gap()
+				  : target->rosegment_gap());
 		  if (addr < min_addr)
 		    addr = min_addr;
 
@@ -3293,7 +3348,8 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 
 	  unsigned int shndx_hold = *pshndx;
 	  bool has_relro = false;
-	  uint64_t new_addr = (*p)->set_section_addresses(this, false, addr,
+	  uint64_t new_addr = (*p)->set_section_addresses(target, this,
+							  false, addr,
 							  &increase_relro,
 							  &has_relro,
 							  &off, pshndx);
@@ -3332,7 +3388,8 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 		    increase_relro = 0;
 		  has_relro = false;
 
-		  new_addr = (*p)->set_section_addresses(this, true, addr,
+		  new_addr = (*p)->set_section_addresses(target, this,
+							 true, addr,
 							 &increase_relro,
 							 &has_relro,
 							 &off, pshndx);
@@ -3368,6 +3425,8 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
       // so they land after the segments starting at LOAD_SEG.
       off = align_file_offset(off, 0, target->abi_pagesize());
 
+      this->reset_relax_output();
+
       for (Segment_list::iterator p = this->segment_list_.begin();
 	   *p != load_seg;
 	   ++p)
@@ -3381,8 +3440,8 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 	      bool has_relro = false;
 	      const uint64_t old_addr = (*p)->vaddr();
 	      const uint64_t old_end = old_addr + (*p)->memsz();
-	      uint64_t new_addr = (*p)->set_section_addresses(this, true,
-							      old_addr,
+	      uint64_t new_addr = (*p)->set_section_addresses(target, this,
+							      true, old_addr,
 							      &increase_relro,
 							      &has_relro,
 							      &off,
@@ -4997,6 +5056,13 @@ Layout::write_data(const Symbol_table* symtab, Output_file* of) const
   // Write out the Output_data which are not in an Output_section.
   for (Data_list::const_iterator p = this->special_output_list_.begin();
        p != this->special_output_list_.end();
+       ++p)
+    (*p)->write(of);
+
+  // Write out the Output_data which are not in an Output_section
+  // and are regenerated in each iteration of relaxation.
+  for (Data_list::const_iterator p = this->relax_output_list_.begin();
+       p != this->relax_output_list_.end();
        ++p)
     (*p)->write(of);
 }

@@ -1,3 +1,62 @@
+2013-08-27  Roland McGrath  <mcgrathr@google.com>
+
+	* output.cc (Output_segment::set_section_addresses): Take new
+	Target* argument.  If target->isolate_execinstr() and the segment
+	is executable and starts at a target->abi_pagesize() boundary,
+	pad its end out to a target->abi_pagesize() boundary with code fill.
+	* output.h (Output_segment::set_section_addresses): Update decl.
+	* layout.h (Layout::check_output_data_for_reset_values): Take new
+	argument RELAX_OUTPUTS.
+	(Layout): New member relax_output_list_.
+	(Layout::add_relax_output): New method.
+	* layout.cc (Layout::Layout): Update constructor.
+	(Layout::reset_relax_output): New method.
+	(Layout::clean_up_after_relaxation): Call it.
+	(Layout::prepare_for_relaxation): Update caller.
+	(Layout::set_segment_offsets): Update callers of set_section_addresses.
+	Call reset_relax_output before re-processing segments for
+	isolate_execinstr case.
+	(Layout::write_data): Handle relax_output_list_.
+	(Layout::Relaxation_debug_check::check_output_data_for_reset_values):
+	Take new argument RELAX_OUTPUTS.  Assert it's an empty collection.
+
+2013-08-16  Roland McGrath  <mcgrathr@google.com>
+
+	* i386.cc (Target_i386_nacl::do_code_fill): New virtual function.
+	* x86_64.cc (Target_x86_64_nacl::do_code_fill): New virtual function.
+
+2013-07-19  Roland McGrath  <mcgrathr@google.com>
+
+	* options.h (General_options): Add -Trodata-segment option.
+	* parameters.cc (Parameters::check_rodata_segment): New function.
+	(Parameters::set_target_once): Call it.
+	* parameters.h (Parameters): Declare it (private member function).
+	* layout.cc (load_seg_unusable_for_headers): New function, broken
+	out of Layout::relaxation_loop_body.  If TARGET->isolate_execinstr()
+	then validate rodata segment rather than text segment.
+	(relaxation_loop_body): Call that.
+	(is_text_segment): New function.  Don't admit a non-executable
+	segment if TARGET->isolate_execinstr().
+	(set_segment_offsets): Call it.  Honor -Trodata-segment option.
+
+2013-02-15  Ian Lance Taylor  <iant@google.com>
+
+	* options.h (DEFINE_uint64_alias): Define.
+	(class General_options): Add -Ttext-segment as an alias for
+	-Ttext.
+
+2013-05-10  Roland McGrath  <mcgrathr@google.com>
+
+	* options.h (General_options): Add --rosegment-gap option.
+	* options.cc (finalize): --rosegment-gap implies --rosegment.
+	* layout.cc (set_segment_offsets): Let user option override
+	target->rosegment_gap().
+
+2013-05-10  Roland McGrath  <mcgrathr@google.com>
+
+	* options.h (General_options): Remove leading space from help
+	messages for -nostdlib and --rosegment.
+
 2012-12-06  Roland McGrath  <mcgrathr@google.com>
 
 	* configure.ac (HAVE_ZLIB): Use AM_ZLIB instead of AC_SEARCH_LIBS.

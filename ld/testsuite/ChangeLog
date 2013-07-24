@@ -1,3 +1,42 @@
+2013-08-26  Roland McGrath  <mcgrathr@google.com>
+
+	* ld-x86-64/ilp32-4-nacl.d: Loosen .shstrtab line regexp to match
+	any file offset.
+	* ld-x86-64/tlsbin-nacl.rd: Update expected code segment PT_LOAD.
+	* ld-x86-64/tlsbindesc-nacl.rd: Likewise.
+	* ld-scripts/rgn-at3.d: XFAIL for *-*-nacl* targets.
+	* ld-scripts/rgn-over8-ok.d: Likewise.
+
+2013-07-18  Roland McGrath  <mcgrathr@google.com>
+
+	* ld-arm/farcall-arm-nacl.d: New file.
+	* ld-arm/farcall-arm-nacl-pic.d: New file.
+	* ld-arm/farcall-data-nacl.d: New file.
+	* ld-arm/arm-elf.exp (armeabitests_common): Add extra element to
+	"action" lists for those cases to use a different dump file for NaCl
+	targets.
+	Massage $armeabitests_common to drop the extra element or the one
+	before it, depending on [istarget "arm*-*-nacl*"].
+
+	* ld-arm/arm-elf.exp (armelftests_common): Move all "Cortex-A8
+	erratum fix", Thumb-only and interworking cases to ...
+	(armelftests_nonacl): ... here.
+	(armeabitests_common): Move all "erratum 760522 fix", Thumb-only
+	and interworking cases to ...
+	(armeabitests_nonacl): ... here.
+
+2013-05-28  Will Newton  <will.newton@linaro.org>
+
+	* ld-arm/arm-elf.exp: Add IFUNC test 17.
+	* ld-arm/ifunc-17.dd: New file.
+	* ld-arm/ifunc-17.gd: Likewise.
+	* ld-arm/ifunc-17.rd: Likewise.
+	* ld-arm/ifunc-17.s: Likweise.
+	* ld-arm/ifunc-1.rd: Reorder relocs to match linker output.
+	* ld-arm/ifunc-2.rd: Likewise.
+	* ld-arm/ifunc-5.rd: Likewise.
+	* ld-arm/ifunc-6.rd: Likewise.
+
 2013-03-05  Alan Modra  <amodra@gmail.com>
 
 	* ld-scripts/rgn-at6.s, * ld-scripts/rgn-at6.t, * ld-scripts/rgn-at6.d,
