@@ -1,3 +1,27 @@
+2013-04-12  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Eli Zaretskii  <eliz@gnu.org>
+
+	* gdb.texinfo (Auto-loading safe path): Add quick -iex using command
+	line below the sample output.
+
+2013-04-02  Pedro Alves  <palves@redhat.com>
+
+	* gdb.texinfo (Debugging Output): Document "set/show debug
+	aarch64", "set/show debug coff-pe-read" and "set/show debug
+	mach-o".
+
+2013-04-02  Pedro Alves  <palves@redhat.com>
+
+	* gdb.texinfo (Remote Configuration) <set remote @var{name}-packet
+	table>: Add entry for "trace-buffer-size".
+
+2013-03-28  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/15294
+
+	* gdb.texinfo (List) <set listsize>: Adjust to document that
+	listsize 0 means no limit, and remove mention of -1.
+
 2013-03-11  Eli Zaretskii  <eliz@gnu.org>
 
 	* gdb.texinfo (General Query Packets): Don't use colon in index

@@ -1,3 +1,120 @@
+2013-04-25  Sergio Durigan Junior  <sergiodj@redhat.com>
+
+	* gdb.arch/arm-bl-branch-dest.c: New file.
+	* gdb.arch/arm-bl-branch-dest.exp: Likewise.
+
+2013-04-25  Hui Zhu  <hui@codesourcery.com>
+
+	PR gdb/15293
+	* gdb.base/dprintf.exp: Add ignore command.
+
+2013-04-24  Hui Zhu  <hui@codesourcery.com>
+
+	PR gdb/15165
+	* gdb.base/save-bp.exp: Add test for dprintf.
+
+2013-04-19  Vladimir Kargov  <kargov@gmail.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	* gdb.arch/i386-float.S: New file.
+	* gdb.arch/i386-float.exp: New file.
+
+2013-04-12  Hui Zhu  <hui@codesourcery.com>
+	
+	* gdb.base/Makefile.in (EXECUTABLES): Add dprintf-pending.
+	(MISCELLANEOUS): Add dprintf-pendshr.sl.
+	* gdb.base/dprintf-pending.c, gdb.base/dprintf-pending.exp: New.
+
+2013-04-09  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.server/server-kill.exp (tstatus): Permit also ECONNRESET
+	response.
+
+2013-04-04  Stan Shebs  <stan@codesourcery.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	* gdb.trace/Makefile.in (PROGS): Add actions-changed.
+	* gdb.trace/actions-changed.c: New file.
+	* gdb.trace/actions-changed.exp: New file.
+	* lib/trace-support.exp (gdb_trace_setactions): Rename to ...
+	(gdb_trace_setactions_command): ... this.  Add "actions_command"
+	parameter, and handle it.
+	(gdb_trace_setactions, gdb_trace_setcommands): New procedures.
+
+2013-04-04  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.server/server-kill.exp: Use command 'tstatus' instead of
+	'step'.
+
+2013-03-28  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/15294
+
+	* gdb.base/list.exp (set_listsize): Adjust to accept $arg == 0 to
+	mean unlimited instead of $arg < 0.
+	(test_listsize): Remove "listsize of 0 suppresses output" test.
+	Test that "set listsize 0" ends up with an unlimited listsize.
+
+2013-03-28  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/list.exp (last_line): New global.
+	(last_line_re): New global.
+	(test_listsize, test_list_function, test_list_forward)
+	(test_repeat_list_command, test_list_range)
+	(test_list_filename_and_function): Use them.
+	* gdb.base/list0.c: Comment the last line of the file with "last
+	line".
+
+2013-03-28  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/list.exp (test_listsize): Adjust test to make sure we
+	list the whole file.
+
+2013-03-28  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/list.exp (set_listsize): Use gdb_test_no_output for
+	"set listsize".
+
+2013-03-26  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/enable.exp: Add regression test.
+
+2013-03-22  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	* gdb.server/server-kill.c: New file.
+	* gdb.server/server-kill.exp: New file.
+
+2013-03-21  Pedro Alves  <palves@redhat.com>
+
+	* gdb.trace/trace-buffer-size.exp (get default buffer size):
+	Expect $gdb_prompt in gdb_test_multiple.
+
+2013-03-20  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/15289
+
+	* gdb.base/remote.exp: Test
+	"set remote hardware-watchpoint-limit -1",
+	"set remote hardware-breakpoint-limit -1",
+	"set remote hardware-watchpoint-limit 2147483647" and
+	"set remote hardware-breakpoint-limit 2147483647".
+
+2013-03-14  Sergio Durigan Junior  <sergiodj@redhat.com>
+
+	PR c++/15203
+	PR c++/15210
+	* gdb.cp/m-static.cc (keepalive_int): New function.
+	(gnu_obj_1::method): New variable `sintvar', call `keepalive_int'.
+	* gdb.cp/m-static.exp: New test for `sintvar'.
+
+2013-03-17  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/valgrind-infcall.exp
+	(continue #$continue_count) <remote connection closed>
+	(continue #$continue_count) <valgrind vgdb has terminated>: Add kill of
+	$valgrind_pid.
+
 2013-03-12  Paul Hilfinger  <hilfingr@adacore.com>
 
         * gdb.ada/expr_delims.exp: New file.

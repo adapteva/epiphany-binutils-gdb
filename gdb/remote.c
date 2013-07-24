@@ -122,6 +122,8 @@ static void remote_send (char **buf, long *sizeof_buf_p);
 
 static int readchar (int timeout);
 
+static void remote_serial_write (const char *str, int len);
+
 static void remote_kill (struct target_ops *ops);
 
 static int tohex (int nib);
@@ -430,8 +432,6 @@ trace_error (char *buf)
       else
 	error (_("remote.c: error in outgoing packet at field #%ld."),
 	       strtol (buf, NULL, 16));
-    case '2':
-      error (_("trace API error 0x%s."), ++buf);
     default:
       error (_("Target returns error code '%s'."), buf);
     }
@@ -3211,13 +3211,13 @@ static void
 send_interrupt_sequence (void)
 {
   if (interrupt_sequence_mode == interrupt_sequence_control_c)
-    serial_write (remote_desc, "\x03", 1);
+    remote_serial_write ("\x03", 1);
   else if (interrupt_sequence_mode == interrupt_sequence_break)
     serial_send_break (remote_desc);
   else if (interrupt_sequence_mode == interrupt_sequence_break_g)
     {
       serial_send_break (remote_desc);
-      serial_write (remote_desc, "g", 1);
+      remote_serial_write ("g", 1);
     }
   else
     internal_error (__FILE__, __LINE__,
@@ -4211,6 +4211,14 @@ remote_query_supported (void)
       }
 }
 
+/* Remove any of the remote.c targets from target stack.  Upper targets depend
+   on it so remove them first.  */
+
+static void
+remote_unpush_target (void)
+{
+  pop_all_targets_above (process_stratum - 1, 0);
+}
 
 static void
 remote_open_1 (char *name, int from_tty,
@@ -4228,29 +4236,17 @@ remote_open_1 (char *name, int from_tty,
     wait_forever_enabled_p = 1;
 
   /* If we're connected to a running target, target_preopen will kill it.
-     But if we're connected to a target system with no running process,
-     then we will still be connected when it returns.  Ask this question
-     first, before target_preopen has a chance to kill anything.  */
+     Ask this question first, before target_preopen has a chance to kill
+     anything.  */
   if (remote_desc != NULL && !have_inferiors ())
     {
-      if (!from_tty
-	  || query (_("Already connected to a remote target.  Disconnect? ")))
-	pop_target ();
-      else
+      if (from_tty
+	  && !query (_("Already connected to a remote target.  Disconnect? ")))
 	error (_("Still connected."));
     }
 
+  /* Here the possibly existing remote target gets unpushed.  */
   target_preopen (from_tty);
-
-  unpush_target (target);
-
-  /* This time without a query.  If we were connected to an
-     extended-remote target and target_preopen killed the running
-     process, we may still be connected.  If we are starting "target
-     remote" now, the extended-remote target will not have been
-     removed by unpush_target.  */
-  if (remote_desc != NULL && !have_inferiors ())
-    pop_target ();
 
   /* Make sure we send the passed signals list the next time we resume.  */
   xfree (last_pass_packet);
@@ -4371,7 +4367,7 @@ remote_open_1 (char *name, int from_tty,
 	/* Pop the partially set up target - unless something else did
 	   already before throwing the exception.  */
 	if (remote_desc != NULL)
-	  pop_target ();
+	  remote_unpush_target ();
 	if (target_async_permitted)
 	  wait_forever_enabled_p = 1;
 	throw_exception (ex);
@@ -5119,7 +5115,7 @@ interrupt_query (void)
       if (query (_("Interrupted while waiting for the program.\n\
 Give up (and stop debugging it)? ")))
 	{
-	  pop_target ();
+	  remote_unpush_target ();
 	  deprecated_throw_reason (RETURN_QUIT);
 	}
     }
@@ -7074,18 +7070,34 @@ readchar (int timeout)
   switch ((enum serial_rc) ch)
     {
     case SERIAL_EOF:
-      pop_target ();
-      error (_("Remote connection closed"));
+      remote_unpush_target ();
+      throw_error (TARGET_CLOSE_ERROR, _("Remote connection closed"));
       /* no return */
     case SERIAL_ERROR:
-      pop_target ();
-      perror_with_name (_("Remote communication error.  "
-			  "Target disconnected."));
+      remote_unpush_target ();
+      throw_perror_with_name (TARGET_CLOSE_ERROR,
+			      _("Remote communication error.  "
+				"Target disconnected."));
       /* no return */
     case SERIAL_TIMEOUT:
       break;
     }
   return ch;
+}
+
+/* Wrapper for serial_write that closes the target and throws if
+   writing fails.  */
+
+static void
+remote_serial_write (const char *str, int len)
+{
+  if (serial_write (remote_desc, str, len))
+    {
+      remote_unpush_target ();
+      throw_perror_with_name (TARGET_CLOSE_ERROR,
+			      _("Remote communication error.  "
+				"Target disconnected."));
+    }
 }
 
 /* Send the command in *BUF to the remote machine, and read the reply
@@ -7208,8 +7220,7 @@ putpkt_binary (char *buf, int cnt)
 	  gdb_flush (gdb_stdlog);
 	  do_cleanups (old_chain);
 	}
-      if (serial_write (remote_desc, buf2, p - buf2))
-	perror_with_name (_("putpkt: write failed"));
+      remote_serial_write (buf2, p - buf2);
 
       /* If this is a no acks version of the remote protocol, send the
 	 packet and move on.  */
@@ -7264,7 +7275,7 @@ putpkt_binary (char *buf, int cnt)
 		   doesn't get retransmitted when we resend this
 		   packet.  */
 		skip_frame ();
-		serial_write (remote_desc, "+", 1);
+		remote_serial_write ("+", 1);
 		continue;	/* Now, go look for +.  */
 	      }
 
@@ -7602,8 +7613,10 @@ getpkt_or_notif_sane_1 (char **buf, long *sizeof_buf, int forever,
 	      if (forever)	/* Watchdog went off?  Kill the target.  */
 		{
 		  QUIT;
-		  pop_target ();
-		  error (_("Watchdog timeout has expired.  Target detached."));
+		  remote_unpush_target ();
+		  throw_error (TARGET_CLOSE_ERROR,
+			       _("Watchdog timeout has expired.  "
+				 "Target detached."));
 		}
 	      if (remote_debug)
 		fputs_filtered ("Timed out.\n", gdb_stdlog);
@@ -7617,7 +7630,7 @@ getpkt_or_notif_sane_1 (char **buf, long *sizeof_buf, int forever,
 		break;
 	    }
 
-	  serial_write (remote_desc, "-", 1);
+	  remote_serial_write ("-", 1);
 	}
 
       if (tries > MAX_TRIES)
@@ -7628,7 +7641,7 @@ getpkt_or_notif_sane_1 (char **buf, long *sizeof_buf, int forever,
 
 	  /* Skip the ack char if we're in no-ack mode.  */
 	  if (!rs->noack_mode)
-	    serial_write (remote_desc, "+", 1);
+	    remote_serial_write ("+", 1);
 	  return -1;
 	}
 
@@ -7648,7 +7661,7 @@ getpkt_or_notif_sane_1 (char **buf, long *sizeof_buf, int forever,
 
 	  /* Skip the ack char if we're in no-ack mode.  */
 	  if (!rs->noack_mode)
-	    serial_write (remote_desc, "+", 1);
+	    remote_serial_write ("+", 1);
 	  if (is_notif != NULL)
 	    *is_notif = 0;
 	  return val;
@@ -9934,7 +9947,8 @@ remote_bfd_iovec_close (struct bfd *abfd, void *stream)
      connection was already torn down.  */
   remote_hostio_close (fd, &remote_errno);
 
-  return 1;
+  /* Zero means success.  */
+  return 0;
 }
 
 static file_ptr
@@ -10726,8 +10740,12 @@ remote_get_trace_status (struct trace_status *ts)
     }
   if (ex.reason < 0)
     {
-      exception_fprintf (gdb_stderr, ex, "qTStatus: ");
-      return -1;
+      if (ex.error != TARGET_CLOSE_ERROR)
+	{
+	  exception_fprintf (gdb_stderr, ex, "qTStatus: ");
+	  return -1;
+	}
+      throw_exception (ex);
     }
 
   /* If the remote target doesn't do tracing, flag it.  */

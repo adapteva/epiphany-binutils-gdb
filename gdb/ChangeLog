@@ -1,3 +1,303 @@
+2013-04-26  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Change "since GDB 7.5" into "in GDB 7.6".
+
+2013-04-26  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Update GDB version number to 7.6.
+
+2013-04-25  Sergio Durigan Junior  <sergiodj@redhat.com>
+
+	* arm-tdep.c (BranchDest): Cast result as "unsigned long",
+	instead of "long".
+
+2013-04-25  Hui Zhu  <hui@codesourcery.com>
+
+	* breakpoint.c (build_target_command_list): Change loc->cond_bytecode
+	to loc->cmd_bytecode.
+
+2013-04-25  Hui Zhu  <hui@codesourcery.com>
+
+	PR gdb/15293
+	* breakpoint.c (bpstat_what): Add BPSTAT_WHAT_SINGLE to bp_dprintf.
+
+2013-04-24  Hui Zhu  <hui@codesourcery.com>
+
+	PR gdb/15165
+	* breakpoint.c (dprintf_print_recreate): New.
+	(save_breakpoints): Let it not save dprintf commands.
+	(initialize_breakpoint_ops): Set dprintf_print_recreate.
+
+2013-04-19  Vladimir Kargov <kargov@gmail.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	* i387-tdep.c (i387_print_float_info): Use gdb_byte for pointer to
+	value contents.
+
+2013-04-12  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix GDB regression related to PR binutils/14813.
+	* jit.c (mem_bfd_iovec_close): Return 0 for success.
+	* minidebug.c (lzma_close): Add return value comment.
+	* remote.c (remote_bfd_iovec_close): Return 0 for success.
+	* solib-spu.c (spu_bfd_iovec_close): Likewise.
+	* spu-linux-nat.c (spu_bfd_iovec_close): Likewise.
+
+2013-04-12  Pedro Alves  <palves@redhat.com>
+	    Hui Zhu  <hui@codesourcery.com>
+	
+	* breakpoint.c (dprintf_re_set): New.
+	(initialize_breakpoint_ops): Set dprintf_breakpoint_ops re_set
+	to dprintf_re_set.
+
+2013-04-10  Joel Brobecker  <brobecker@adacore.com>
+
+	* solib-darwin.c (darwin_bfd_open): Set the filename of the
+	returned bfd to a copy of PATHNAME.
+
+2013-04-09  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* NEWS: Mention new btrace RSP packets.
+
+2013-04-06  Eli Zaretskii  <eliz@gnu.org>
+
+	* mingw-hdep.c (windows_get_absolute_argv0): New function.
+	Include main.h.
+
+	* main.h (windows_get_absolute_argv0): Add prototype.
+
+	* main.c (get_init_files): Use filename_ncmp instead of strncmp.
+	Use IS_DIR_SEPARATOR instead of looking for a character inside
+	SLASH_STRING.  Include filenames.h.
+	(captured_main) [__MINGW32__]: Make argv[0] absolute, so that
+	relocate_gdb_directory works when passed gdb_program_name.
+
+2013-04-05  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix compatibility with Linux kernel 3.8.3.
+	* linux-tdep.c (linux_find_memory_regions_full): Move variable number
+	to more inner block.  Remove parsing of NUMBER from outer block.
+	Parse NUMBER only if KEYWORD has been identified.
+
+2013-04-05  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix variable name shadowing.
+	* linux-tdep.c (linux_find_memory_regions_full): Rename outer variable
+	filename to mapsfilename and update its uses.
+
+2013-04-04  Pedro Alves  <palves@redhat.com>
+	    Hui Zhu  <hui@codesourcery.com>
+
+	* breakpoint.c (validate_commands_for_breakpoint): If validating a
+	tracepoint, reset its STEP_COUNT and call validate_actionline.
+
+2013-04-03  Doug Evans  <dje@google.com>
+
+	* psymtab.c (read_psymtabs_with_fullname): Don't call
+	psymtab_to_fullname if the basenames are different.
+
+2013-04-03  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* NEWS (Changes in GDB 7.6): Update the data-disassemble for "fullname".
+	New entry about "fullname" presence.
+
+2013-04-03  Pedro Alves  <palves@redhat.com>
+
+	* NEWS: Mention x86_64/Cygwin as new native configuration.
+
+2013-04-02  Pedro Alves  <palves@redhat.com>
+
+	* NEWS: Mention "set/show debug aarch64", "set/show debug
+	coff-pe-read" and "set/show debug mach-o".
+
+2013-04-02  Pedro Alves  <palves@redhat.com>
+
+	* NEWS: Mention "set/show remote trace-buffer-size-packet".
+
+2013-04-02  Eli Zaretskii  <eliz@gnu.org>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Remove call-cmds.h.
+	gdb_string.h is now in common/.
+
+2013-04-02  Pedro Alves  <palves@redhat.com>
+
+	* NEWS: Move "set debug notification" and "set trace-buffer-size"
+	under "New options".
+
+2013-04-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Revert this patch:
+	PR gdb/15275
+	* remote.c (remote_get_trace_status): Include putpkt in TRY_CATCH.
+
+2013-04-02  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/15275
+
+	* remote.c (send_interrupt_sequence): Use remote_serial_write.
+	(remote_serial_write): New function.
+	(putpkt_binary, getpkt_or_notif_sane_1): Use remote_serial_write.
+
+2013-04-01  Jiong Wang  <jiwang@tilera.com>
+
+	* NEWS: Mention TILE-Gx in "New native configurations" and
+	"New targets" sections. 
+
+2013-04-01  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (free_dwo_file): Add comment.
+	(dwarf2_per_objfile_free): Unref dwp bfd.
+
+2013-03-29  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (open_and_init_dwp_file): Remove incorrect, and
+	unnecessary, cleanup.
+
+2013-03-28  Doug Evans  <dje@google.com>
+
+	* python/python.c (finish_python_initialization): Provide suggestion
+	for how to tell gdb to find its python files.
+
+2013-03-28  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/15294
+
+	* source.c (_initialize_source): Change back "set listsize" to an
+	integer command.
+
+2013-03-27  Gareth McMullin  <gareth@blacksphere.co.nz>
+
+	PR gdb/15275
+	* remote.c (remote_get_trace_status): Include putpkt in TRY_CATCH.
+
+2013-03-27  Pedro Alves  <palves@redhat.com>
+
+	* top.c (history_size): Rename to ...
+	(history_size_setshow_var): ... this.  Add comment.
+	(show_commands): Use readline's 'history_length' instead of
+	computing the history length by calling history_get in a loop.
+	(set_history_size_command): Error out for sizes over INT_MAX.
+	Restore previous history size on invalid size.
+	(init_history): If HISTSIZE is negative, leave the history size as
+	zero.  Add comments.
+	(init_main): Adjust.
+
+2013-03-27  Pedro Alves  <palves@redhat.com>
+
+	* coff-pe-read.c (_initialize_coff_pe_read): Rename "set debug
+	coff_pe_read" command to "set debug coff-pe-read".
+
+2013-03-27  Pedro Alves  <palves@redhat.com>
+
+	* coff-pe-read.c (_initialize_coff_pe_read): Make the command
+	zuinteger instead of uinteger.
+
+2013-03-26  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* record-btrace.c (record_btrace_close): Call
+	record_btrace_auto_disable.
+
+2013-03-25  Doug Evans  <dje@google.com>
+
+	* contrib/cc-with-tweaks.sh: Check exit code of dwp.
+
+2013-03-22  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* exceptions.h (enum errors): New entry TARGET_CLOSE_ERROR.
+	* remote.c (trace_error): Remove the special handling of '2'.
+	(readchar) <SERIAL_EOF>
+	(readchar) <SERIAL_ERROR>
+	(getpkt_or_notif_sane_1): Use TARGET_CLOSE_ERROR for them.
+	(remote_get_trace_status): Call throw_exception if EX is
+	TARGET_CLOSE_ERROR.
+	* utils.c (perror_with_name): Rename to ...
+	(throw_perror_with_name): ... here.  New parameter errcode, describe it
+	in the function comment.
+	(perror_with_name): New function wrapper.
+	* utils.h (enum errors): New stub declaration.
+	(throw_perror_with_name): New declaration.
+
+2013-03-22  Pedro Alves  <palves@redhat.com>
+	    Yao Qi  <yao@codesourcery.com>
+	    Mark Kettenis  <kettenis@gnu.org>
+
+	* cli/cli-setshow.c (do_set_command) <var_uinteger>:
+	Don't let the user set the value to UINT_MAX directly.
+	<var_integer>: Don't let the user set the value to INT_MAX
+	directly.
+
+2013-03-22  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* remote.c (remote_unpush_target): New function.
+	(remote_open_1): Remove two pop_target calls, update one comment, add
+	comment to target_preopen call.  Replace pop_target call by
+	remote_unpush_target call.
+	(interrupt_query, readchar, getpkt_or_notif_sane_1): Replace
+	pop_target calls by remote_unpush_target calls.
+
+2013-03-20  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/15289
+
+	* cli/cli-setshow.c (do_set_command)
+	<var_uinteger, var_zuinteger>: Use LONGEST for variable holding
+	the result of parsing the command argument.  Throw error if the
+	value is greater than UINT_MAX.  Print the invalid value with
+	plongest.
+	<var_integer, var_zinteger>: Use LONGEST for variable holding the
+	result of parsing the command argument.  Throw error if the value
+	is greater than INT_MAX, not greater or equal.  Also throw error
+	if the value is less than INT_MIN.  Print the invalid value with
+	plongest.
+	<var_zuinteger_unlimited>: Throw error if the value is greater
+	than INT_MAX, not greater or equal.
+	(do_show_command) <var_integer, var_zinteger,
+	var_zuinteger_unlimited>: Use %d for printing int, not %u.
+
+2013-03-14  Keith Seitz  <keiths@redhat.com>
+	    Alan Matsuoka  <alanm@redhat.com>
+
+	PR c++/15203
+	PR c++/15210
+	* cp-namespace.c (cp_lookup_nested_symbol): Handle TYPE_CODE_FUNC and
+	TYPE_CODE_METHOD.
+	* elfread.c (elf_symtab_read): Handle BSF_GNU_UNIQUE for certain
+	symbols.
+
+2013-03-19  Eli Zaretskii  <eliz@gnu.org>
+
+	* python/python-internal.h (HAVE_SNPRINTF)
+	[_WIN32 && HAVE_DECL_SNPRINTF]: Define, to avoid compiler warnings
+	about redefinition of snprintf by pyerrors.h.
+
+2013-03-14  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* source.c (print_source_lines_base): Make a local copy of
+	symtab_to_fullname.
+
+2013-03-14  Hui Zhu  <hui_zhu@mentor.com>
+	    Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* source.c (print_source_lines_base): Suppress "file" for TUI.
+
+2013-03-12  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set version to 7.5.91.20130312-cvs.
+
+2013-03-12  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Update GDB version number to 7.5.91.
+
+2013-03-12  Joel Brobecker  <brobecker@adacore.com>
+
+	* configure.ac (development): Set to false.
+	* configure: Regenerate.
+
+2013-03-12  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.6 branch created (branch timestamp: 2013-03-12 22:15 UTC)
+	* version.in: Bump version to 7.5.90.20130312-cvs.
+
 2013-03-12  Keith Seitz  <keiths@redhat.com>
 
 	* mi/mi-cmds.h (mi_execute_command): Make "cmd" const.

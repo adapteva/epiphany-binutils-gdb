@@ -1,7 +1,7 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 7.5
+*** Changes in GDB 7.6
 
 * Target record has been renamed to record-full.
   Record/replay is now enabled with the "record full" command.
@@ -37,6 +37,8 @@ record function-call-history    prints the execution history at
 
 ARM AArch64 GNU/Linux		aarch64*-*-linux-gnu
 FreeBSD/powerpc			powerpc*-*-freebsd
+x86_64/Cygwin			x86_64-*-cygwin*
+Tilera TILE-Gx GNU/Linux	tilegx*-*-linux-gnu
 
 * New targets
 
@@ -44,6 +46,7 @@ ARM AArch64			aarch64*-*-elf
 ARM AArch64 GNU/Linux		aarch64*-*-linux
 Lynx 178 PowerPC		powerpc-*-lynx*178
 x86_64/Cygwin			x86_64-*-cygwin*
+Tilera TILE-Gx GNU/Linux	tilegx*-*-linux
 
 * If the configured location of system.gdbinit file (as given by the
   --with-system-gdbinit option at configure time) is in the
@@ -131,14 +134,6 @@ enable type-printer [name]...
 disable type-printer [name]...
   Enable or disable type printers.
 
-set debug notification
-show debug notification
-  Control display of debugging info for async remote notification.
-
-set trace-buffer-size
-show trace-buffer-size
-  Request target to change the size of trace buffer.
-
 * Removed commands
 
   ** For the Renesas Super-H architecture, the "regs" command has been removed
@@ -162,6 +157,33 @@ show filename-display
   Control the way in which filenames is displayed.
   The default is "relative", which preserves previous behavior.
 
+set trace-buffer-size
+show trace-buffer-size
+  Request target to change the size of trace buffer.
+
+set remote trace-buffer-size-packet auto|on|off
+show remote trace-buffer-size-packet
+  Control the use of the remote protocol `QTBuffer:size' packet.
+
+set debug aarch64
+show debug aarch64
+  Control display of debugging messages related to ARM AArch64.
+  The default is off.
+
+set debug coff-pe-read
+show debug coff-pe-read
+  Control display of debugging messages related to reading of COFF/PE
+  exported symbols.
+
+set debug mach-o
+show debug mach-o
+  Control display of debugging messages related to Mach-O symbols
+  processing.
+
+set debug notification
+show debug notification
+  Control display of debugging info for async remote notification.
+
 * MI changes
 
   ** Command parameter changes are now notified using new async record
@@ -176,8 +198,7 @@ show filename-display
   ** Memory changes are now notified using new async record
      "=memory-changed".
   ** The data-disassemble command response will include a "fullname" field
-     containing the absolute file name when GDB can determine it and source
-     has been requested.
+     containing the absolute file name when source has been requested.
   ** New optional parameter COUNT added to the "-data-write-memory-bytes" 
      command, to allow pattern filling of memory areas.
   ** New commands "-catch-load"/"-catch-unload" added for intercepting
@@ -188,6 +209,8 @@ show filename-display
   ** Output of the "-trace-status" command includes a "trace-file" field 
      containing the name of the trace file being examined.  This field is
      optional, and only present when examining a trace file.
+  ** The "fullname" field is now always present along with the "file" field,
+     even if the file cannot be found by GDB.
 
 * GDB now supports the "mini debuginfo" section, .gnu_debugdata.
   You must have the LZMA library available when configuring GDB for this
@@ -199,6 +222,19 @@ show filename-display
 QTBuffer:size
    Set the size of trace buffer.  The remote stub reports support for this
    packet to gdb's qSupported query.
+
+Qbtrace:bts
+  Enable Branch Trace Store (BTS)-based branch tracing for the current
+  thread.  The remote stub reports support for this packet to gdb's
+  qSupported query.
+
+Qbtrace:off
+  Disable branch tracing for the current thread.  The remote stub reports
+  support for this packet to gdb's qSupported query.
+
+qXfer:btrace:read
+  Read the traced branches for the current thread.  The remote stub
+  reports support for this packet to gdb's qSupported query.
 
 *** Changes in GDB 7.5
 

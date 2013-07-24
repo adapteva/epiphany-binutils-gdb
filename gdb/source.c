@@ -1344,18 +1344,30 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
 	{
 	  ui_out_field_int (uiout, "line", line);
 	  ui_out_text (uiout, "\tin ");
-	  ui_out_field_string (uiout, "file",
-			       symtab_to_filename_for_display (s));
 
-	  /* TUI expects the "fullname" field.  While it is
-	     !ui_out_is_mi_like_p compared to CLI it is !ui_source_list.  */
+	  /* CLI expects only the "file" field.  TUI expects only the
+	     "fullname" field (and TUI does break if "file" is printed).
+	     MI expects both fields.  ui_source_list is set only for CLI,
+	     not for TUI.  */
+	  if (ui_out_is_mi_like_p (uiout)
+	      || ui_out_test_flags (uiout, ui_source_list))
+	    ui_out_field_string (uiout, "file",
+				 symtab_to_filename_for_display (s));
 	  if (ui_out_is_mi_like_p (uiout)
 	      || !ui_out_test_flags (uiout, ui_source_list))
-	    {
-	      const char *fullname = symtab_to_fullname (s);
+ 	    {
+	      const char *s_fullname = symtab_to_fullname (s);
+	      char *local_fullname;
 
-	      ui_out_field_string (uiout, "fullname", fullname);
-	    }
+	      /* ui_out_field_string may free S_FULLNAME by calling
+		 open_source_file for it again.  See e.g.,
+		 tui_field_string->tui_show_source.  */
+	      local_fullname = alloca (strlen (s_fullname) + 1);
+	      strcpy (local_fullname, s_fullname);
+
+	      ui_out_field_string (uiout, "fullname", local_fullname);
+ 	    }
+
 	  ui_out_text (uiout, "\n");
 	}
 
@@ -2032,12 +2044,12 @@ The matching line number is also stored as the value of \"$_\"."));
       add_com_alias ("?", "reverse-search", class_files, 0);
     }
 
-  add_setshow_zuinteger_unlimited_cmd ("listsize", class_support,
-				       &lines_to_list, _("\
+  add_setshow_integer_cmd ("listsize", class_support, &lines_to_list, _("\
 Set number of source lines gdb will list by default."), _("\
 Show number of source lines gdb will list by default."), NULL,
-				       NULL, show_lines_to_list,
-				       &setlist, &showlist);
+			    NULL,
+			    show_lines_to_list,
+			    &setlist, &showlist);
 
   add_cmd ("substitute-path", class_files, set_substitute_path_command,
            _("\
