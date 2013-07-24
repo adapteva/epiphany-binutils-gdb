@@ -1,3 +1,16 @@
+2013-02-19  Alan Modra  <amodra@gmail.com>
+
+	* configure.in: Bump version to 2.23.52.
+	* elf-bfd.h (struct elf_build_id_info): New.
+	(struct elf_obj_tdata): Delete after_write_object_contents,
+	after_write_object_contents_info and build_id_size.  Make build_id
+	a pointer to struct elf_build_id_info.
+	* elf.c (_bfd_elf_write_object_contents): Style.  Update
+	after_write_ibject_contents invocation.
+	(elfobj_grok_gnu_build_id): Update for new build_id struct.  Don't
+	allow zero size notes.
+	* configure: Regenerate.
+
 2013-08-26  Roland McGrath  <mcgrathr@google.com>
 
 	* elf-nacl.c (nacl_modify_segment_map): Fix logic reordering the
@@ -15,7 +28,7 @@
 	* elf-nacl.c (segment_eligible_for_headers): Rename MAXPAGESIZE
 	parameter to MINPAGESIZE.
 	(nacl_modify_segment_map): Use minpagesize instead of maxpagesize.
-
+a
 	* elf32-arm.c (ELF_MINPAGESIZE, ELF_COMMONPAGESIZE): #undef for NaCl.
 
 2013-07-25  Alan Modra  <amodra@gmail.com>
