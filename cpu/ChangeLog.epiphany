@@ -1,0 +1,5 @@
+2013-09-03  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany.cpu: Update fp alias.
+	* epiphany.opc (parse_imm16): Add processing of 16bit immediate
+	@PLT instructions.
