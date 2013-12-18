@@ -131,9 +131,9 @@ static const CGEN_MACH epiphany_cgen_mach_table[] = {
 
 static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_gr_names_entries[] =
 {
+  { "fp", 11, {0, {{{0, 0}}}}, 0, 0 },
   { "sp", 13, {0, {{{0, 0}}}}, 0, 0 },
   { "lr", 14, {0, {{{0, 0}}}}, 0, 0 },
-  { "fp", 15, {0, {{{0, 0}}}}, 0, 0 },
   { "r0", 0, {0, {{{0, 0}}}}, 0, 0 },
   { "r1", 1, {0, {{{0, 0}}}}, 0, 0 },
   { "r2", 2, {0, {{{0, 0}}}}, 0, 0 },

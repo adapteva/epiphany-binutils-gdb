@@ -1,3 +1,7 @@
+2013-12-18  Simon Cook  <simon.cook@embecosm.com>
+
+	* epiphany.cpu: Reset fp alias to r11.
+
 2013-09-03  Simon Cook  <simon.cook@embecosm.com>
 
 	* epiphany.cpu: Update fp alias.
