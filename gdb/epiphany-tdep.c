@@ -88,43 +88,53 @@
 #define EPIPHANY_NUM_GPRS         64
 
 /* Offsets into SCRs (in GDB sequence) */
-#define EPIPHANY_SCR_CONFIG       0 /*!< Offset to config register */
-#define EPIPHANY_SCR_STATUS       1 /*!< Offset to status register */
-#define EPIPHANY_SCR_PC           2 /*!< Offset to program counter register */
-#define EPIPHANY_SCR_DEBUG        3 /*!< Offset to debug register */
-#define EPIPHANY_SCR_IAB          4 /*!< Offset to IAB register */
-#define EPIPHANY_SCR_LC           5 /*!< Offset to loop count register */
-#define EPIPHANY_SCR_LS           6 /*!< Offset to loop start register */
-#define EPIPHANY_SCR_LE           7 /*!< Offset to loop end register */
-#define EPIPHANY_SCR_IRET         8 /*!< Offset to interrupt return register */
-#define EPIPHANY_SCR_IMASK        9 /*!< Offset to interrupt mask register */
-#define EPIPHANY_SCR_ILAT        10 /*!< Offset to interrupt latch register */
-#define EPIPHANY_SCR_ILATST      11 /*!< Offset to interrupt set register */
-#define EPIPHANY_SCR_ILATCL      12 /*!< Offset to interrupt clear register */
-#define EPIPHANY_SCR_IPEND       13 /*!< Offset to interrupt status register */
-#define EPIPHANY_SCR_CTIMER0     14 /*!< Offset to core timer 1 register */
-#define EPIPHANY_SCR_CTIMER1     15 /*!< Offset to core timer 1 register */
-#define EPIPHANY_SCR_DMA0CONFIG  16
-#define EPIPHANY_SCR_DMA0COUNT   17
-#define EPIPHANY_SCR_DMA0STRIDE  18
-#define EPIPHANY_SCR_DMA0SRCADDR 19
-#define EPIPHANY_SCR_DMA0DSTADDR 20
-#define EPIPHANY_SCR_DMA0AUTO0   21
-#define EPIPHANY_SCR_DMA0AUTO1   22
-#define EPIPHANY_SCR_DMA0STATUS  23
-#define EPIPHANY_SCR_DMA1CONFIG  24
-#define EPIPHANY_SCR_DMA1COUNT   25
-#define EPIPHANY_SCR_DMA1STRIDE  26
-#define EPIPHANY_SCR_DMA1SRCADDR 27
-#define EPIPHANY_SCR_DMA1DSTADDR 28
-#define EPIPHANY_SCR_DMA1AUTO0   29
-#define EPIPHANY_SCR_DMA1AUTO1   30
-#define EPIPHANY_SCR_DMA1STATUS  31
+#define EPIPHANY_SCR_CONFIG       0 /*!< Offset to config register */	       
+#define EPIPHANY_SCR_STATUS	  1 /*!< Offset to status register */	       
+#define EPIPHANY_SCR_PC		  2 /*!< Offset to program counter register */ 
+#define EPIPHANY_SCR_DEBUGSTATUS  3 /*!< Offset to debug register */	       
+#define EPIPHANY_SCR_LC		  4 /*!< Offset to loop count register */      
+#define EPIPHANY_SCR_LS		  5 /*!< Offset to loop start register */      
+#define EPIPHANY_SCR_LE		  6 /*!< Offset to loop end register */	       
+#define EPIPHANY_SCR_IRET	  7 /*!< Offset to interrupt return register */
+#define EPIPHANY_SCR_IMASK	  8 /*!< Offset to interrupt mask register */  
+#define EPIPHANY_SCR_ILAT	  9 /*!< Offset to interrupt latch register */ 
+#define EPIPHANY_SCR_ILATST	 10 /*!< Offset to interrupt set register */   
+#define EPIPHANY_SCR_ILATCL	 11 /*!< Offset to interrupt clear register */ 
+#define EPIPHANY_SCR_IPEND	 12 /*!< Offset to interrupt status register */
+#define EPIPHANY_SCR_FSTATUS	 13					       
+#define EPIPHANY_SCR_DEBUGCMD	 14					       
+#define EPIPHANY_SCR_RESETCORE	 15 /*!< Offset to core timer 0 register */    
+#define EPIPHANY_SCR_CTIMER0	 16 /*!< Offset to core timer 1 register */    
+#define EPIPHANY_SCR_CTIMER1	 17
+#define EPIPHANY_SCR_MEMSTATUS	 18					       
+#define EPIPHANY_SCR_MEMPROTECT	 19					       
+#define EPIPHANY_SCR_DMA0CONFIG	 20					       
+#define EPIPHANY_SCR_DMA0STRIDE	 21					       
+#define EPIPHANY_SCR_DMA0COUNT	 22					       
+#define EPIPHANY_SCR_DMA0SRCADDR 23					       
+#define EPIPHANY_SCR_DMA0DSTADDR 24					       
+#define EPIPHANY_SCR_DMA0AUTO0	 25					       
+#define EPIPHANY_SCR_DMA0AUTO1	 26					       
+#define EPIPHANY_SCR_DMA0STATUS	 27					       
+#define EPIPHANY_SCR_DMA1CONFIG	 28					       
+#define EPIPHANY_SCR_DMA1STRIDE	 29					       
+#define EPIPHANY_SCR_DMA1COUNT	 30					       
+#define EPIPHANY_SCR_DMA1SRCADDR 31                                            
+#define EPIPHANY_SCR_DMA1DSTADDR 32
+#define EPIPHANY_SCR_DMA1AUTO0   33
+#define EPIPHANY_SCR_DMA1AUTO1   34
+#define EPIPHANY_SCR_DMA1STATUS  35
+#define EPIPHANY_SCR_MESHCONFIG  36
+#define EPIPHANY_SCR_COREID      37
+#define EPIPHANY_SCR_MULTICAST   38
+#define EPIPHANY_SCR_CMESHROUTE  39
+#define EPIPHANY_SCR_XMESHROUTE  40
+#define EPIPHANY_SCR_RMESHROUTE  41
 
 /*! @todo What about the MEMPROTECT, COREID and SWRESET registers? */
 
 /*! Number of Special Core Registers (SCRs). */
-#define EPIPHANY_NUM_SCRS         (EPIPHANY_SCR_DMA1STATUS + 1)
+#define EPIPHANY_NUM_SCRS         (EPIPHANY_SCR_RMESHROUTE + 1)
 
 /*! Number of raw registers used. */
 #define EPIPHANY_NUM_REGS         (EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS)
@@ -865,23 +875,28 @@ epiphany_register_name (struct gdbarch *gdbarch,
       "r56", "r57", "r58", "r59", "r60", "r61", "r62", "r63",
 
       /* All the SCRs */
-      "config",      "status",       "pc",            "debug",
-      "iab",         "lc",           "ls",           "le",
-
-      "iret",        "imask",        "ilat",         "ilatst",
-      "ilatcl" ,     "ipend",        "ctimer0",      "ctimer1",
-
-      "dma0config",  "dma0stride",   "dma0count",    "dma0srcaddr",
-      "dma0dstaddr", "dma0autodma0", "dma0autodma1", "dma0status",
-
-      "dma1config",  "dma1stride",   "dma1count",    "dma1srcaddr",
-      "dma1dstaddr", "dma1autodma0", "dma1autodma1", "dma1status"
+      "config",       "status",       "pc",           "debugstatus",
+      "lc",           "ls",           "le",           "iret",
+      "imask",        "ilat",         "ilatst",       "ilatcl",
+      "ipend",        "fstatus",      "debugcmd",     "resetcore",
+      "ctimer0",      "ctimer1",      "memstatus",    "memprotect",
+      "dma0config",   "dma0stride",   "dma0count",    "dma0srcaddr",
+      "dma0dstaddr",  "dma0auto0",    "dma0auto1",    "dma0status",
+      "dma1config",   "dma1stride",   "dma1count",    "dma1srcaddr",
+      "dma1dstaddr",  "dma1auto0",    "dma1auto1",    "dma1status",
+      "meshconfig",   "coreid",       "multicast",    "cmeshroute",
+      "xmeshroute",   "rmeshroute"
 
       /* Floating point registers may appear as pseudo registers in the
 	 future. */
     };
 
-  return epiphany_gdb_reg_names[regnum];
+  if (regnum < EPIPHANY_TOTAL_NUM_REGS)
+    return epiphany_gdb_reg_names[regnum];
+  else
+    internal_error (__FILE__, __LINE__,
+		    _("epiphany_register_name: illegal register number %d"),
+		    regnum); 
 
 }	/* epiphany_register_name() */
 
