@@ -20,6 +20,11 @@
 
 #include "sim-main.h"
 #include "sim-options.h"
+
+#if (WITH_HW)
+#include "sim-hw.h"
+#endif
+
 #include "libiberty.h"
 #include "bfd.h"
 
@@ -166,6 +171,10 @@ sim_open (kind, callback, abfd, argv)
 
   /* Allocate core managed memory if none specified by user.  */
 
+#if (WITH_HW)
+  sim_hw_parse (sd, "/epiphany_mem");
+  /* TODO: Need to be able to map external mem */
+#else
   if (sim_core_read_buffer (sd, NULL, read_map, &c, 0, 1) == 0)
     sim_do_commandf (sd, "memory region 0,0x%x", EPIPHANY_DEFAULT_MEM_SIZE);
 
@@ -184,6 +193,8 @@ sim_open (kind, callback, abfd, argv)
 			 EPIPHANY_DEFAULT_EXT_MEM_BANK_SIZE);
 
     }
+#endif /* (WITH_HW) */
+
   /* check for/establish the reference program image */
   if (sim_analyze_program (sd,
 			   (STATE_PROG_ARGV (sd) != NULL
