@@ -145,7 +145,7 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
     {
       /* General R regs.  */
 #ifdef DEBUG
-      fprintf (stderr, "epiphanybf_fetch_register REG VALHEX  %x \n" ,
+      fprintf (stderr, "epiphanybf_store_register REG VALHEX  %x \n" ,
 	       epiphanybf_h_registers_get (current_cpu, rn));
 #endif
       epiphanybf_h_registers_set (current_cpu, rn, GETTWI (buf));
