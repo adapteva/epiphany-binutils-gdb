@@ -393,10 +393,16 @@ epiphanybf_model_epiphany32_u_exec (SIM_CPU * cpu, const IDESC * idesc,
 USI
 epiphany_post_isn_callback (SIM_CPU * current_cpu, USI pc)
 {
-
+  USI oob_pc = GET_H_PC();
 #ifdef DEBUG
-  fprintf (stderr, "-------------PC   %x GET_H_PC %x\n", pc, GET_H_PC ());
+  fprintf (stderr, "-------------PC   %x GET_H_PC %x\n", pc, oob_pc);
 #endif
+
+  /* TODO: Check for interrupts... and all other OOB events */
+  if (oob_pc != pc)
+    {
+      return oob_pc;
+    }
 
   CGEN_INSN_INT insn = GETIMEMUHI (current_cpu, pc);	/* Try 16bit insn.  */
 
