@@ -54,6 +54,24 @@
 
    */
 
+
+/* From Epiphany Reference Manual 3.12.12.18 page 40 and 126. */
+/* And from epiphany.c */
+
+/* TODO: These were copied from epiphany.c. Move to separate definition
+   include file */
+/* Number of general purpose registers (GPRs).  */
+#define EPIPHANY_NUM_GPRS  64
+/* Number of Special Core Registers (SCRs).  */
+#define EPIPHANY_NUM_SCRS  32
+
+#define CORE_MMR_BASE      0xf0000
+#define CORE_MMR_SIZE      2048
+#define CORE_MMR_GPRS_BASE (CORE_MMR_BASE)
+#define CORE_MMR_GPRS_SIZE (EPIPHANY_NUM_GPRS << 2)
+#define CORE_MMR_SCRS_BASE 0xf0400
+#define CORE_MMR_SCRS_SIZE (EPIPHANY_NUM_SCRS << 2)
+
 #define IS_PARTIALLY_INSIDE_LOCAL_MEM(C,BASE,NR_BYTES) \
   (BASE < C->core_mem_size)
 #define IS_INSIDE_LOCAL_MEM(C,BASE,NR_BYTES) \
@@ -67,7 +85,16 @@
   (IS_PARTIALLY_INSIDE_GLOBAL_MEM(C, BASE, NR_BYTES) && \
   (BASE+NR_BYTES <= C->global_base_addr+C->core_mem_size))
 
+#define IS_INSIDE_LOCAL_MMR(C,BASE,NR_BYTES) \
+  (BASE >= CORE_MMR_BASE && BASE+NR_BYTES <= CORE_MMR_BASE+CORE_MMR_SIZE)
 
+#define IS_MMR_GPR(C,ADDR) \
+  (CORE_MMR_GPRS_BASE <= ADDR && \
+  ADDR < CORE_MMR_GPRS_BASE+CORE_MMR_GPRS_SIZE)
+
+#define IS_MMR_SCR(C,ADDR) \
+  (CORE_MMR_SCRS_BASE <= ADDR && \
+  ADDR < CORE_MMR_SCRS_BASE+CORE_MMR_SCRS_SIZE)
 
 struct epiphany_mem {
   /* Per instance state */
@@ -152,6 +179,23 @@ epiphany_mem_port_event (struct hw *me,
   hw_abort (me, "epiphany_mem_port_event: not implemented");
 }
 
+
+/* This is a bit fragile (depends on epiphanybf_*_register internals) */
+int
+mmr_to_regnr(struct epiphany_mem *controller, unsigned_word addr)
+{
+  int reg = -1;
+  if (IS_MMR_GPR(controller, addr))
+    reg = (addr-CORE_MMR_GPRS_BASE) >> 2;
+  else if (IS_MMR_SCR(controller, addr))
+    reg = EPIPHANY_NUM_GPRS + ((addr-CORE_MMR_SCRS_BASE) >> 2);
+
+#ifdef DEBUG
+      fprintf (stderr, "mmr_to_reg reg=%d\n" , reg);
+#endif
+  return reg;
+}
+
 /* TODO: check if is memory mapped register ..... */
 static unsigned
 epiphany_mem_io_read_buffer (struct hw *me,
@@ -161,6 +205,9 @@ epiphany_mem_io_read_buffer (struct hw *me,
 			 unsigned nr_bytes)
 {
   struct epiphany_mem *controller = hw_data (me);
+  unsigned_word reg;
+  int rn, left, size;
+  unsigned8 *dest8; /* To avoid void pointer arithmetics */
 
   HW_TRACE ((me, "read 0x%08lx %d", (long) base, (int) nr_bytes));
 
@@ -178,7 +225,35 @@ epiphany_mem_io_read_buffer (struct hw *me,
 
   /* This will match both the local and global address since 'base' was
      adjusted above */
-  if (IS_INSIDE_LOCAL_MEM(controller, base, nr_bytes))
+  if (IS_INSIDE_LOCAL_MMR(controller, base, nr_bytes))
+    {
+      HW_TRACE ((me, "read-mmr 0x%08lx %d", (long) base, (int) nr_bytes));
+      if (base % 4 || nr_bytes % 4)
+        {
+          /* TODO: Add support for unaligned MMR reads */
+          hw_abort (me, "Unaligned MMR reads currently not supported.");
+        }
+
+      left = nr_bytes;
+      dest8 = (unsigned8 *) dest;
+      while (left > 0)
+        {
+          rn = mmr_to_regnr(controller, base);
+          if (rn < 0) {
+              hw_abort (me, "invalid mmr register");
+          }
+
+          size = epiphanybf_fetch_register (hw_system_cpu(me), rn, dest8, 4);
+          if ( size != 4 )
+            {
+              hw_abort (me, "error writing to register");
+            }
+          left -= size;
+          dest8 += size;
+          base += size;
+        }
+    }
+  else if (IS_INSIDE_LOCAL_MEM(controller, base, nr_bytes))
     {
       /* Should we check if memory overlap? /return value */
       memcpy ((unsigned8 *)dest, &controller->core_mem[base], nr_bytes);
@@ -201,6 +276,9 @@ epiphany_mem_io_write_buffer (struct hw *me,
 			  unsigned nr_bytes)
 {
   struct epiphany_mem *controller = hw_data (me);
+  unsigned_word reg;
+  int rn, left, size;
+  unsigned8 *source8; /* To avoid void pointer arithmetics */
 
   HW_TRACE ((me, "write 0x%08lx %d", (long) base, (int) nr_bytes));
 
@@ -218,7 +296,35 @@ epiphany_mem_io_write_buffer (struct hw *me,
 
   /* This will match both the local and global address since 'base' was
      adjusted above */
-  if (IS_INSIDE_LOCAL_MEM(controller, base, nr_bytes))
+  if (IS_INSIDE_LOCAL_MMR(controller, base, nr_bytes))
+    {
+      HW_TRACE ((me, "write-mmr 0x%08lx %d", (long) base, (int) nr_bytes));
+      if (base % 4 || nr_bytes % 4)
+        {
+          /* TODO: Add support for unaligned MMR writes */
+          hw_abort (me, "Unaligned MMR writes currently not supported.");
+        }
+
+      left = nr_bytes;
+      source8 = (unsigned8 *) source;
+      while (left > 0)
+        {
+          rn = mmr_to_regnr(controller, base);
+          if (rn < 0) {
+              hw_abort (me, "invalid mmr register");
+          }
+
+          size = epiphanybf_store_register (hw_system_cpu(me), rn, source8, 4);
+          if ( size != 4 )
+            {
+              hw_abort (me, "error writing to register");
+            }
+          left -= size;
+          source8 += size;
+          base += size;
+        }
+    }
+  else if (IS_INSIDE_LOCAL_MEM(controller, base, nr_bytes))
     {
       /* Should we check if memory overlap? /return value */
       memcpy (&controller->core_mem[base], (unsigned8 *)source, nr_bytes);
