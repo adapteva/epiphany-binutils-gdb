@@ -14,7 +14,7 @@
 #define SIM_HANDLES_LMA 1
 
 /* For MSPR support.  FIXME: revisit.  */
-#define WITH_DEVICES 1
+#define WITH_DEVICES 0
 
 /* FIXME: Revisit.  */
 #ifdef HAVE_DV_SOCKSER

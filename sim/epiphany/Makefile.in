@@ -20,8 +20,6 @@
 
 EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o
 
-CONFIG_DEVICES = dv-sockser.o
-CONFIG_DEVICES =
 SIM_EXTRA_LIBS = -lm
 
 SIM_OBJS = \
@@ -35,9 +33,8 @@ SIM_OBJS = \
 	cgen-run.o sim-reason.o sim-engine.o sim-stop.o \
 	sim-if.o arch.o \
 	$(EPIPHANY_OBJS) \
-	devices.o \
-	traps.o \
-	$(CONFIG_DEVICES)
+	traps.o
+
 
 # Extra headers included by sim-main.h.
 SIM_EXTRA_DEPS = \
@@ -67,7 +64,6 @@ epiphany-fp.o : epiphany-fp.c $(EPIPHANYBF_INCLUDE_DEPS)
 
 arch.o: arch.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
-devices.o: devices.c $(SIM_MAIN_DEPS)
 traps.o: traps.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
 

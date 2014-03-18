@@ -138,12 +138,6 @@ do { \
 #define EPIPHANY_DEVICE_ADDR  0x0
 #define EPIPHANY_DEVICE_LEN   0x2040
 
-/* sim_core_attach device argument.  */
-extern device epiphany_devices;
-
-/* FIXME: Temporary, until device support ready.  */
-struct _device { int foo; };
-
 /* Handle the trap insn.  */
 extern USI epiphany_trap (SIM_CPU *, PCADDR, int);
 
