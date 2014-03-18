@@ -97,27 +97,27 @@ CGEN_MAINT = ; @true
 # The following line is commented in or out depending upon --enable-cgen-maint.
 @CGEN_MAINT@CGEN_MAINT =
 
-stamp-arch: $(CGEN_READ_SCM) $(CGEN_ARCH_SCM) $(CGEN_CPU_DIR)/epiphany.cpu
+stamp-arch: $(CGEN_READ_SCM) $(CGEN_ARCH_SCM) $(CPU_DIR)/epiphany.cpu
 	$(MAKE) cgen-arch $(CGEN_FLAGS_TO_PASS) mach=all \
-	  archfile=$(CGEN_CPU_DIR)/epiphany.cpu \
+	  archfile=$(CPU_DIR)/epiphany.cpu \
 	  FLAGS="with-scache with-profile=fn"
 	touch stamp-arch
 arch.h arch.c cpuall.h: $(CGEN_MAINT) stamp-arch
 
 
 
-stamp-desc: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CGEN_CPU_DIR)/epiphany.cpu $(CGEN_CPU_DIR)/epiphany.opc Makefile
+stamp-desc: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CPU_DIR)/epiphany.cpu $(CPU_DIR)/epiphany.opc Makefile
 	$(MAKE) cgen-desc $(CGEN_FLAGS_TO_PASS) cpu=epiphany mach=all \
-			archfile=$(CGEN_CPU_DIR)/epiphany.cpu
+			archfile=$(CPU_DIR)/epiphany.cpu
 	touch $@
 
 desc.h: $(CGEN_MAINT) stamp-desc
 	@true
 
-stamp-cpu: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CGEN_DECODE_SCM) $(CGEN_CPU_DIR)/epiphany.cpu
+stamp-cpu: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CGEN_DECODE_SCM) $(CPU_DIR)/epiphany.cpu
 	$(MAKE) cgen-cpu-decode $(CGEN_FLAGS_TO_PASS) \
 	  cpu=epiphanybf mach=epiphany32 SUFFIX= \
-	  archfile=$(CGEN_CPU_DIR)/epiphany.cpu \
+	  archfile=$(CPU_DIR)/epiphany.cpu \
 	  FLAGS="with-scache with-profile=fn" \
 	  EXTRAFILES="$(CGEN_CPU_SEM) $(CGEN_CPU_SEMSW)"
 	touch stamp-cpu
