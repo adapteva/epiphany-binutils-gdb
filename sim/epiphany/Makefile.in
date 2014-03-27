@@ -22,6 +22,12 @@ EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o
 
 SIM_EXTRA_LIBS = -lm
 
+ifeq (@emesh@, yes)
+	EMESH_OBJS = emesh.o
+else
+	EMESH_OBJS =
+endif
+
 SIM_OBJS = \
 	$(SIM_NEW_COMMON_OBJS) \
 	sim-cpu.o \
@@ -33,7 +39,8 @@ SIM_OBJS = \
 	cgen-run.o sim-reason.o sim-engine.o sim-stop.o \
 	sim-if.o arch.o \
 	$(EPIPHANY_OBJS) \
-	traps.o
+	traps.o \
+	$(EMESH_OBJS)
 
 
 # Extra headers included by sim-main.h.
@@ -65,6 +72,8 @@ epiphany-fp.o : epiphany-fp.c $(EPIPHANYBF_INCLUDE_DEPS)
 arch.o: arch.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
 traps.o: traps.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
+
+emesh.o: emesh.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
 
 # FIXME: Use of `mono' is wip.
