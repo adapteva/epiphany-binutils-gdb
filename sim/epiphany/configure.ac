@@ -25,4 +25,19 @@ SIM_AC_OPTION_HARDWARE(yes,,\
 	epiphany_mem \
 )
 
+dnl --enable-emesh-sim
+AC_ARG_ENABLE(emesh-sim,
+[  --enable-emesh-sim			Enable simulation of emesh],
+[case "${enableval}" in
+  yes) emesh="yes"; sim_cflags="-DEMESH_SIM=1 -DWITH_EMESH_SIM=1";;
+  no)  emesh=""   ; sim_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0";;
+  *)   AC_MSG_ERROR("--enable-emesh-sim does not take a value"); sim_cflags="#" ;;
+esac
+if test x"$silent" != x"yes" && test x"$sim_cflags" != x""; then
+  echo "Setting emesh sim cflags = $sim_cflags" 6>&1
+fi],[sim_cflags=""])dnl
+AC_SUBST(emesh)
+AC_SUBST(sim_cflags)
+
+
 SIM_AC_OUTPUT
