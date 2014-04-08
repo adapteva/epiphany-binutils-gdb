@@ -22,6 +22,9 @@
 #include "hw-main.h"
 
 #include "sim-types.h"
+#if WITH_EMESH_SIM
+#include "emesh.h"
+#endif
 
 /* DEVICE
 
@@ -103,6 +106,8 @@ struct epiphany_mem {
   unsigned core_region_size;          /* Memory region per core */
   address_word global_base_addr;      /* base address of global core mem address*/
   unsigned8 *core_mem;                /* Pointer to allocated local memory */
+#if WITH_EMESH_SIM
+#endif
   /* TODO: Add pointer to MPI struct ... */
 };
 
@@ -147,6 +152,9 @@ epiphany_mem_finish (struct hw *me)
   set_hw_port_event (me, epiphany_mem_port_event);
 
 
+#if WITH_EMESH_SIM
+#endif
+
   /* TODO: Initialize epiphany_mem structure from device tree */
   controller->core_id = (row*64+col);
   controller->global_base_addr =
@@ -157,7 +165,6 @@ epiphany_mem_finish (struct hw *me)
   controller->core_mem_size = EPIPHANY_DEFAULT_MEM_SIZE;
   alloc_size = controller->core_mem_size * sizeof controller->core_mem_size;
   controller->core_mem = hw_zalloc(me, alloc_size);
-
   /* Attach ourself to our parent bus */
   /* TODO: Don't map full address space. Local mem should go trough sim
      directly to avoid memcpy??? */
@@ -179,6 +186,38 @@ epiphany_mem_port_event (struct hw *me,
   hw_abort (me, "epiphany_mem_port_event: not implemented");
 }
 
+#if WITH_EMESH_SIM
+static unsigned
+epiphany_mem_io_read_buffer (struct hw *me,
+			 void *dest,
+			 int space,
+			 unsigned_word base,
+			 unsigned nr_bytes)
+{
+  struct epiphany_mem *controller = hw_data (me);
+  HW_TRACE ((me, "read 0x%08lx %d", (long) base, (int) nr_bytes));
+  if ( es_mem_load(&hw_system(me)->esim, base, nr_bytes, dest))
+    hw_abort (me, "Read failed");
+  else
+    return nr_bytes;
+}
+
+static unsigned
+epiphany_mem_io_write_buffer (struct hw *me,
+			  const void *source,
+			  int space,
+			  unsigned_word base,
+			  unsigned nr_bytes)
+{
+  struct epiphany_mem *controller = hw_data (me);
+  HW_TRACE ((me, "write 0x%08lx %d", (long) base, (int) nr_bytes));
+  if (es_mem_store(&hw_system(me)->esim, base, nr_bytes, source))
+    hw_abort (me, "Write failed");
+  else
+    return nr_bytes;
+
+}
+#else
 
 /* This is a bit fragile (depends on epiphanybf_*_register internals) */
 int
@@ -336,7 +375,7 @@ epiphany_mem_io_write_buffer (struct hw *me,
 
   return nr_bytes;
 }
-
+#endif /* (!WITH_EMESH_SIM) */
 
 const struct hw_descriptor dv_epiphany_mem_descriptor[] = {
   { "epiphany_mem", epiphany_mem_finish, },

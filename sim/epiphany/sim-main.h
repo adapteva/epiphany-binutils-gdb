@@ -18,6 +18,10 @@
 #include "epiphany-opc.h"
 #include "arch.h"
 
+#if WITH_EMESH_SIM
+#include "emesh.h"
+#endif
+
 /* These must be defined before sim-base.h.  */
 typedef USI sim_cia;
 
@@ -72,6 +76,11 @@ struct sim_state {
   CGEN_STATE cgen_state;
 
   sim_state_base base;
+
+#if WITH_EMESH_SIM
+  es_state esim;
+#define STATE_ESIM(sd) (&(sd)->esim)
+#endif
 };
 
 /* Misc.  */
