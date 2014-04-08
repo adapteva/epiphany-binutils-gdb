@@ -308,10 +308,11 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 #endif
     }
 #ifdef ES_DEBUG
-  fprintf(stderr, "es_addr_translate: location=%d addr=%8x in_region=%ld"
-	  " coreid=%d node=%d mem=%016lx\n",
+  /* TODO: Revisit when adding network support */
+  fprintf(stderr, "es_addr_translate: location=%d addr=0x%8x in_region=%ld"
+	  " coreid=%d node=%d mem=0x%016lx\n shm_offset=0x%016lx\n",
 	  transl->location, transl->addr, transl->in_region, transl->coreid,
-	  transl->node, (uint64_t) transl->mem);
+	  transl->node, (uint64_t) transl->mem, transl->mem-esim->cores_mem);
 #endif
 }
 
