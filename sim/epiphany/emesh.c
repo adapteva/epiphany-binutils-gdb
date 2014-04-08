@@ -697,6 +697,12 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
 void
 es_cleanup(es_state *esim)
 {
+#ifdef ES_DEBUG
+  fprintf(stderr, "es_cleanup\n");
+#endif
+  if (!esim->shm)
+    return;
+
   munmap(esim->shm, esim->shm_size);
   esim->shm = NULL;
   esim->shm_size = 0;
