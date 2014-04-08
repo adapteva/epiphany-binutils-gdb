@@ -1,0 +1,13 @@
+Build instructions:
+
+In source root directory
+mkdir build
+cd build
+LDFLAGS="-lrt" ../configure --target=epiphany-elf                           \
+  --with-pkgversion="Epiphany gdb eMesh-sim (built `date +%Y%m%d`)"         \
+  --with-bugurl=dev@null --enable-fast-install=N/A --enable-languages=c,c++ \
+  --disable-gdbtk --disable-werror --enable-emesh-sim --enable-hardware     \
+  --prefix="/SOME/PREFIX"
+(Change prefix to match your settings)
+make
+make install
