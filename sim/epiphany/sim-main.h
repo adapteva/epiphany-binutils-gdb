@@ -21,6 +21,10 @@ typedef struct _sim_cpu SIM_CPU;
 
 #include "arch.h"
 
+#if WITH_EMESH_SIM
+#include "emesh.h"
+#endif
+
 /* These must be defined before sim-base.h.  */
 typedef USI sim_cia;
 
@@ -60,6 +64,7 @@ struct _sim_cpu {
 #endif
   EPIPHANY_MISC_PROFILE epiphany_misc_profile;
 #define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
+
 };
 
 /* The sim_state struct.  */
@@ -71,6 +76,11 @@ struct sim_state {
   CGEN_STATE cgen_state;
 
   sim_state_base base;
+
+#if WITH_EMESH_SIM
+  es_state esim;
+#define STATE_ESIM(sd) (&(sd)->esim)
+#endif
 };
 
 /* Misc.  */
