@@ -41,6 +41,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <pthread.h>
+
 /* TODO: We use standard errnos now but we need more specific, e.g. EALIGN */
 
 /* Only support homogeneous configurations for now */
@@ -82,6 +84,8 @@ typedef struct es_shm_header_ {
     size_t ext_ram_base;
     size_t cores_base;
     size_t core_state_size;
+    pthread_barrier_t run_barrier;  /* Start barrier */
+    pthread_barrier_t exit_barrier; /* Exit barrier  */
 } es_shm_header;
 
 typedef struct es_shm_core_state_header_ {
@@ -110,7 +114,8 @@ int es_mem_testset(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *
 int es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster);
 void es_cleanup(es_state *esim);
 void es_set_ready(es_state *esim);
-void es_wait(const es_state *esim);
+void es_wait_run(const es_state *esim);
+void es_wait_exit(const es_state *esim);
 void es_dump_config(const es_state *esim);
 int es_valid_coreid(const es_state *esim, unsigned coreid);
 int es_set_coreid(es_state *esim, unsigned coreid);
