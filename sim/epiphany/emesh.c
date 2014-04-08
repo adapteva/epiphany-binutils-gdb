@@ -499,8 +499,7 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
   struct stat st;
   unsigned msecs_wait = 0;
 
-  /* Remove any stale esim shm file */
-  shm_unlink(shm_name);
+  /* TODO: Find out reliable way to remove any stale esim shm file here. */
 
   fd = shm_open(shm_name, O_RDWR|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR);
   if (fd == -1)
@@ -610,7 +609,6 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
 	      fprintf(stderr, "es_init:stat: errno=%d\n", errno);
 #endif
 	      close(fd);
-	      shm_unlink(shm_name);
 	      return -errno;
 	    }
 	  else
@@ -630,7 +628,6 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
 	  fprintf(stderr, "es_init: Timed out waiting.\n");
 #endif
 	  close(fd);
-	  shm_unlink(shm_name);
 	  return -ETIME;
 	}
 
@@ -641,7 +638,8 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
   if (shm == MAP_FAILED)
     {
       close(fd);
-      shm_unlink(shm_name);
+      if (creator)
+	shm_unlink(shm_name);
 #ifdef ES_DEBUG
       fprintf(stderr, "es_init:mmap: failed\n");
 #endif
@@ -653,6 +651,7 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
   esim->fd  = fd;
   esim->coreid = coreid;
   esim->cores_mem = ((uint8_t *) shm) + ES_SHM_CONFIG_SIZE;
+  esim->creator = creator ? 1 : 0;
   strncpy(esim->shm_name, shm_name, sizeof(esim->shm_name)-1);
   if (creator)
     {
@@ -675,7 +674,6 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
 #ifdef ES_DEBUG
 	  fprintf(stderr, "es_init: Timed out waiting.\n");
 	  close(fd);
-	  shm_unlink(shm_name);
 	  return -ETIME;
 #endif
 	}
@@ -704,7 +702,8 @@ es_cleanup(es_state *esim)
   esim->shm_size = 0;
   close(esim->fd);
   esim->fd = -1;
-  shm_unlink(esim->shm_name);
+  if (esim->creator)
+    shm_unlink(esim->shm_name);
   esim->shm_name[0] = '\0';
 }
 
