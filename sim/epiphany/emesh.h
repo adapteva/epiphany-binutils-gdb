@@ -84,13 +84,20 @@ typedef struct es_shm_header_ {
     size_t core_state_size;
 } es_shm_header;
 
+typedef struct es_shm_core_state_header_ {
+  uint32_t reserved; /* Set to one if reserved by a sim process */
+} es_shm_core_state_header;
+
 /* Process local */
 typedef struct es_state_ {
     uint8_t ready;
     es_shm_header *shm;
     char shm_name[256];
     size_t shm_size;
-    uint8_t *cores_mem;
+    uint8_t *cores_mem;       /* Base address for core mem (and core state) */
+    uint8_t *this_core_mem;   /* Ptr to this cores memory region            */
+    es_shm_core_state_header *this_core_state_header; /*                    */
+    uint8_t *this_core_cpu_state;    /* GDB sim_cpu struct                  */
     uint8_t *ext_ram;
     unsigned coreid;
     int fd;
@@ -100,10 +107,12 @@ typedef struct es_state_ {
 int es_mem_store(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
 int es_mem_load(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
 int es_mem_testset(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
-int es_init(es_state *esim, unsigned coreid, es_node_cfg node,
-	    es_cluster_cfg cluster);
+int es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster);
 void es_cleanup(es_state *esim);
 void es_set_ready(es_state *esim);
 void es_wait(const es_state *esim);
 void es_dump_config(const es_state *esim);
+int es_valid_coreid(const es_state *esim, unsigned coreid);
+int es_set_coreid(es_state *esim, unsigned coreid);
+void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
 #endif /* __emesh_h__ */

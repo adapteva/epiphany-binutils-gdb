@@ -79,8 +79,10 @@
 /* openmpi-x86 should be set in include flag */
 //#include <openmpi-x86_64/mpi.h>
 
-#define ES_SHM_CORE_STATE_SIZE (1024*1024) // 1 MB
-#define ES_SHM_CONFIG_SIZE     (1024*1024) // 1 MB
+#define ES_SHM_CORE_STATE_HEADER_SIZE 4096 /* Should be plenty */
+
+#define ES_SHM_CORE_STATE_SIZE (1024*1024) /* 1 MB */
+#define ES_SHM_CONFIG_SIZE     (1024*1024) /* 1 MB es_shm_header */
 
 #define ES_CORE_MMR_BASE 0xf0000
 #define ES_CORE_MMR_SIZE 2048
@@ -195,6 +197,18 @@ es_shm_core_offset(const es_state *esim, unsigned coreid)
   col_offset = ES_CORE_COL(coreid) - ES_NODE_CFG.col_base;
 
   return row_offset*ES_CLUSTER_CFG.cols_per_node + col_offset;
+}
+
+/* Get pointer to core mem */
+static uint8_t *
+es_shm_core_base(const es_state *esim, unsigned coreid)
+{
+  signed offset = es_shm_core_offset(esim, coreid);
+  if (offset < 0 || offset > (signed) ES_CLUSTER_CFG.cores_per_node)
+    return NULL;
+
+  return esim->cores_mem + ((size_t) offset) *
+   (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region);
 }
 
 /* Get node that holds this address. Must be a global address */
@@ -485,9 +499,10 @@ unsigned isqrt(unsigned n)
   return low;
 }
 
+
+/* Returns 0 on success */
 int
-es_init(es_state *esim, unsigned coreid, es_node_cfg node,
-	es_cluster_cfg cluster)
+es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 {
   /* TODO: Revisit once we have MPI support
    * Cluster cfg should be set in leader (rank0) and then passed to all other
@@ -651,7 +666,7 @@ es_init(es_state *esim, unsigned coreid, es_node_cfg node,
   esim->shm = shm;
   esim->shm_size = size;
   esim->fd  = fd;
-  esim->coreid = coreid;
+  esim->coreid = 0;
   esim->cores_mem = ((uint8_t *) shm) + ES_SHM_CONFIG_SIZE;
   esim->creator = creator ? 1 : 0;
   strncpy(esim->shm_name, shm_name, sizeof(esim->shm_name)-1);
@@ -736,6 +751,75 @@ es_wait(const es_state *esim)
     sched_yield();
 }
 
+
+/* Return true on success */
+int
+es_valid_coreid(const es_state *esim, unsigned coreid)
+{
+  unsigned row = ES_CORE_ROW(coreid);
+  unsigned col = ES_CORE_COL(coreid);
+  return (coreid &&
+	  ES_NODE_CFG.row_base <= row &&
+	  row < ES_NODE_CFG.row_base + ES_CLUSTER_CFG.rows_per_node &&
+	  ES_NODE_CFG.col_base <= col &&
+	  col < ES_NODE_CFG.col_base + ES_CLUSTER_CFG.cols_per_node);
+}
+
+/* Return true on success */
+int
+es_set_coreid(es_state *esim, unsigned coreid)
+{
+  uint8_t *new_cpu_state;
+  es_shm_core_state_header *new_hdr, *old_hdr;
+
+
+  if (!es_valid_coreid(esim, coreid))
+    return 0;
+
+  if (coreid == esim->coreid)
+    return 1;
+
+  new_hdr = (es_shm_core_state_header *) es_shm_core_base(esim, coreid);
+
+  if (!new_hdr)
+    return 0;
+
+  if (es_cas32(&new_hdr->reserved, 0, 1))
+    return 0;
+
+  new_cpu_state = es_shm_core_base(esim, coreid) +
+   ES_SHM_CORE_STATE_HEADER_SIZE;
+
+  old_hdr = (es_shm_core_state_header *) es_shm_core_base(esim, esim->coreid);
+  if (old_hdr)
+    old_hdr->reserved = 0;
+
+  esim->coreid = coreid;
+
+  esim->this_core_state_header = (es_shm_core_state_header *) new_hdr;
+  esim->this_core_cpu_state = new_cpu_state;
+  esim->this_core_mem = (uint8_t *) new_hdr + ES_SHM_CORE_STATE_SIZE;
+
+  return 1;
+}
+
+/* Return pointer on success */
+void *
+es_set_cpu_state(es_state *esim, void *cpu, size_t size)
+{
+
+  if (!es_valid_coreid(esim, esim->coreid))
+    return NULL;
+
+  if (esim->this_core_cpu_state == cpu)
+    return cpu;
+
+  memset((void *)esim->this_core_cpu_state, 0,
+	 ES_SHM_CORE_STATE_SIZE - ES_SHM_CORE_STATE_HEADER_SIZE);
+  memcpy((void *)esim->this_core_cpu_state, cpu, size);
+
+  return esim->this_core_cpu_state;
+}
 
 void
 es_dump_config(const es_state *esim)
