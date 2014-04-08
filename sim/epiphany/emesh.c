@@ -853,10 +853,10 @@ es_dump_config(const es_state *esim)
 	  "  .ext_ram_base    = 0x%.8x\n"
 	  "  .ext_ram_size    = %zu\n"
 	  "  .nodes           = %d\n"
-          "  .cores           = %d\n"
-          "  .cores_per_node  = %d\n"
-          "  .rows_per_node   = %d\n"
-          "  .cols_per_node   = %d\n"
+	  "  .cores           = %d\n"
+	  "  .cores_per_node  = %d\n"
+	  "  .rows_per_node   = %d\n"
+	  "  .cols_per_node   = %d\n"
 	  "}\n",
 	  ES_CLUSTER_CFG.row_base,
 	  ES_CLUSTER_CFG.col_base,
@@ -867,20 +867,47 @@ es_dump_config(const es_state *esim)
 	  ES_CLUSTER_CFG.ext_ram_base,
 	  ES_CLUSTER_CFG.ext_ram_size,
 	  ES_CLUSTER_CFG.nodes,
-          ES_CLUSTER_CFG.cores,
-          ES_CLUSTER_CFG.cores_per_node,
-          ES_CLUSTER_CFG.rows_per_node,
-          ES_CLUSTER_CFG.cols_per_node);
+	  ES_CLUSTER_CFG.cores,
+	  ES_CLUSTER_CFG.cores_per_node,
+	  ES_CLUSTER_CFG.rows_per_node,
+	  ES_CLUSTER_CFG.cols_per_node);
   fprintf(stderr,
 	  "es_node_cfg = {\n"
-          "  .rank     = %d\n"
-          "  .mem_base = 0x%.8x\n"
-          "  .row_base = %d\n"
-          "  .col_base = %d\n"
+	  "  .rank     = %d\n"
+	  "  .mem_base = 0x%.8x\n"
+	  "  .row_base = %d\n"
+	  "  .col_base = %d\n"
 	  "}\n",
-          ES_NODE_CFG.rank,
-          ES_NODE_CFG.mem_base,
-          ES_NODE_CFG.row_base,
-          ES_NODE_CFG.col_base);
+	  ES_NODE_CFG.rank,
+	  ES_NODE_CFG.mem_base,
+	  ES_NODE_CFG.row_base,
+	  ES_NODE_CFG.col_base);
+  fprintf(stderr,
+	  ".esim = {\n"
+	  ".ready                  = %d\n"
+	  ".shm                    = 0x%p\n"
+	  ".shm_name               = %s\n"
+	  ".shm_size               = %lu\n"
+	  ".cores_mem              = 0x%p\n"
+	  ".this_core_mem          = 0x%p\n"
+	  ".this_core_state_header = 0x%p\n"
+	  ".this_core_cpu_state    = 0x%p\n"
+	  ".ext_ram                = 0x%p\n"
+	  ".coreid                 = %d\n"
+	  ".fd                     = %d\n"
+	  ".creator                = %d\n"
+	  "}\n",
+	  esim->ready,
+	  esim->shm,
+	  esim->shm_name,
+	  esim->shm_size,
+	  esim->cores_mem,
+	  esim->this_core_mem,
+	  esim->this_core_state_header,
+	  esim->this_core_cpu_state,
+	  esim->ext_ram,
+	  esim->coreid,
+	  esim->fd,
+	  esim->creator);
 }
 
