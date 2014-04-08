@@ -1416,6 +1416,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -1531,6 +1540,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -1710,6 +1728,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -1835,6 +1862,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -1947,6 +1983,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2063,6 +2108,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2188,6 +2242,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2296,6 +2359,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2411,6 +2483,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2590,6 +2671,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2715,6 +2805,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2827,6 +2926,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -2943,6 +3051,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3068,6 +3185,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3176,6 +3302,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3291,6 +3426,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3470,6 +3614,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3595,6 +3748,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3707,6 +3869,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3823,6 +3994,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -3948,6 +4128,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -4071,6 +4260,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -4201,6 +4399,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -4410,6 +4617,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -4550,6 +4766,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -4677,6 +4902,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -4808,6 +5042,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -4948,6 +5191,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5074,6 +5326,15 @@ if (* FLD (i_rd6)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5200,6 +5461,15 @@ if (* FLD (i_rd6)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5326,6 +5596,15 @@ if (* FLD (i_rd6)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5434,6 +5713,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5613,6 +5901,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5726,6 +6023,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5849,6 +6155,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -5961,6 +6276,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6077,6 +6401,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6202,6 +6535,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6310,6 +6652,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6489,6 +6840,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6602,6 +6962,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6725,6 +7094,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6837,6 +7215,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -6953,6 +7340,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7078,6 +7474,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7186,6 +7591,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7365,6 +7779,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7478,6 +7901,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7601,6 +8033,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7713,6 +8154,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 19);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7829,6 +8279,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -7954,6 +8413,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 20);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8077,6 +8545,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8286,6 +8763,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 22);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8414,6 +8900,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8552,6 +9047,15 @@ if (FLD (f_addsubx)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 22);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8679,6 +9183,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 21);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8810,6 +9323,15 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 22);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8950,6 +9472,15 @@ if (FLD (f_subd)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 22);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -8996,6 +9527,15 @@ if (EQBI (CPU (h_zbit), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9042,6 +9582,15 @@ if (EQBI (CPU (h_zbit), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9088,6 +9637,15 @@ if (EQBI (CPU (h_zbit), 0)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9134,6 +9692,15 @@ if (EQBI (CPU (h_zbit), 0)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9180,6 +9747,15 @@ if (ANDBI (CPU (h_cbit), NOTBI (CPU (h_zbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9226,6 +9802,15 @@ if (ANDBI (CPU (h_cbit), NOTBI (CPU (h_zbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9272,6 +9857,15 @@ if (EQBI (CPU (h_cbit), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9318,6 +9912,15 @@ if (EQBI (CPU (h_cbit), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9364,6 +9967,15 @@ if (ORBI (NOTBI (CPU (h_cbit)), CPU (h_zbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9410,6 +10022,15 @@ if (ORBI (NOTBI (CPU (h_cbit)), CPU (h_zbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9456,6 +10077,15 @@ if (EQBI (CPU (h_cbit), 0)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9502,6 +10132,15 @@ if (EQBI (CPU (h_cbit), 0)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9548,6 +10187,15 @@ if (ANDBI (NOTBI (CPU (h_zbit)), EQBI (CPU (h_vbit), CPU (h_nbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 9);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9594,6 +10242,15 @@ if (ANDBI (NOTBI (CPU (h_zbit)), EQBI (CPU (h_vbit), CPU (h_nbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 9);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9640,6 +10297,15 @@ if (EQBI (CPU (h_vbit), CPU (h_nbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9686,6 +10352,15 @@ if (EQBI (CPU (h_vbit), CPU (h_nbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9732,6 +10407,15 @@ if (XORBI (CPU (h_vbit), CPU (h_nbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9778,6 +10462,15 @@ if (XORBI (CPU (h_vbit), CPU (h_nbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9824,6 +10517,15 @@ if (ORBI (CPU (h_zbit), XORBI (CPU (h_vbit), CPU (h_nbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 9);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9870,6 +10572,15 @@ if (ORBI (CPU (h_zbit), XORBI (CPU (h_vbit), CPU (h_nbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 9);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9913,6 +10624,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -9956,6 +10676,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10002,6 +10731,15 @@ if (ORBI (CPU (h_bzbit), CPU (h_bzbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10048,6 +10786,15 @@ if (ORBI (CPU (h_bzbit), CPU (h_bzbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10094,6 +10841,15 @@ if (NOTBI (CPU (h_bzbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10140,6 +10896,15 @@ if (NOTBI (CPU (h_bzbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10186,6 +10951,15 @@ if (ANDBI (CPU (h_bnbit), NOTBI (CPU (h_bzbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10232,6 +11006,15 @@ if (ANDBI (CPU (h_bnbit), NOTBI (CPU (h_bzbit)))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10278,6 +11061,15 @@ if (ORBI (CPU (h_bnbit), CPU (h_bzbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10324,6 +11116,15 @@ if (ORBI (CPU (h_bnbit), CPU (h_bzbit))) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 8);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10367,6 +11168,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10410,6 +11220,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10453,6 +11272,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10496,6 +11324,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10539,6 +11376,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10582,6 +11428,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10625,6 +11480,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10668,6 +11532,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10711,6 +11584,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10754,6 +11636,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10793,6 +11684,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 ((void) 0); /*nop*/
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 5);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10832,6 +11732,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 ((void) 0); /*nop*/
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 5);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -10871,6 +11780,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 ((void) 0); /*nop*/
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 5);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11012,6 +11930,15 @@ epiphany_break (current_cpu, pc);
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 5);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11051,6 +11978,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 ((void) 0); /*nop*/
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 5);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11094,6 +12030,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11137,6 +12082,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11292,6 +12246,15 @@ if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 128), 0)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11364,6 +12327,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11436,6 +12408,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11508,6 +12489,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11575,6 +12565,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11642,6 +12641,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11709,6 +12717,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11776,6 +12793,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11843,6 +12869,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11910,6 +12945,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -11982,6 +13026,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12054,6 +13107,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12126,6 +13188,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12198,6 +13269,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 12);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12265,6 +13345,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12332,6 +13421,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12399,6 +13497,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12466,6 +13573,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12533,6 +13649,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12600,6 +13725,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12667,6 +13801,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12734,6 +13877,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12801,6 +13953,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12868,6 +14029,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -12935,6 +14105,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13002,6 +14181,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 10);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13076,6 +14264,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 9);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13150,6 +14347,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 9);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13200,6 +14406,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13250,6 +14465,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13300,6 +14524,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13343,6 +14576,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13386,6 +14628,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13429,6 +14680,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13606,6 +14866,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13781,6 +15049,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -13956,6 +15232,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -14131,6 +15415,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -14306,6 +15598,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -14481,6 +15781,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -14656,6 +15964,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -14831,6 +16147,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15006,6 +16330,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15181,6 +16513,14 @@ if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15252,6 +16592,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15325,6 +16674,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15398,6 +16756,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15471,6 +16838,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 18);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15620,6 +16996,14 @@ if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15761,6 +17145,14 @@ if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15831,6 +17223,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 14);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
@@ -15903,6 +17304,15 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 }
 {
   USI tmp_tmpPC;
+  tmp_tmpPC = epiphany_post_isn_callback (current_cpu, pc);
+if (NOTBI (EQSI (tmp_tmpPC, pc))) {
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 14);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
