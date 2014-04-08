@@ -20,7 +20,7 @@
 
 EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o
 
-SIM_EXTRA_LIBS = -lm
+SIM_EXTRA_LIBS = -lm @epiphany_extra_libs@
 
 ifeq (@emesh@, yes)
 	EMESH_OBJS = emesh.o
