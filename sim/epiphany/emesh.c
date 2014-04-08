@@ -242,6 +242,7 @@ out:
 static void
 es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 {
+  addr = ES_ADDR_TO_GLOBAL(addr);
   transl->addr = addr;
   transl->node = es_addr_to_node(esim, addr);
   transl->coreid = ES_ADDR_TO_CORE(addr);
@@ -275,7 +276,8 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 	   ((uint8_t *) esim->cores_mem) +
 	    (es_shm_core_offset(esim, transl->coreid) *
 	      (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region)) +
-	    (addr % ES_CLUSTER_CFG.core_mem_region);
+	      ES_SHM_CORE_STATE_SIZE +
+	      (addr % ES_CLUSTER_CFG.core_mem_region);
 
 	  /* TODO: We have to check on which side of the memory mapped
 	   * register we are and take that into account.
