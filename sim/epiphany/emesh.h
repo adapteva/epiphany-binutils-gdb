@@ -69,7 +69,7 @@ typedef struct es_node_cfg_ {
     unsigned rank; /* == lowest mpi rank on node / nodes */
 
     /* Keep your grubby little mitts off of these plz :) */
-    uint32_t mem_base; /* ??? */
+    uint32_t mem_base; /* First addr in first core, not used */
     unsigned row_base;
     unsigned col_base;
 } es_node_cfg;
