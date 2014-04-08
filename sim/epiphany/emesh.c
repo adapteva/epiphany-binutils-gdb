@@ -516,6 +516,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   int fd;
   struct stat st;
   unsigned msecs_wait = 0;
+  pthread_barrierattr_t attr;
 
   /* TODO: Find out reliable way to remove any stale esim shm file here. */
 
@@ -678,6 +679,13 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
       memcpy((void *) &ES_NODE_CFG, (void *) &node,
 	     sizeof(es_node_cfg));
 
+      pthread_barrierattr_init(&attr);
+      pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+      pthread_barrier_init(&esim->shm->run_barrier, &attr,
+			   ES_CLUSTER_CFG.cores_per_node);
+      pthread_barrier_init(&esim->shm->exit_barrier, &attr,
+			   ES_CLUSTER_CFG.cores_per_node);
+      pthread_barrierattr_destroy(&attr);
       shm->initialized = 1;
     }
   else /* if (!creator) */
@@ -742,16 +750,25 @@ es_set_ready(es_state *esim)
   es_atomic_incr32(&esim->shm->node_core_sims_ready);
 }
 
-
 void
-es_wait(const es_state *esim)
+es_wait_run(const es_state *esim)
 {
-  /* TODO: Revisit when we add MPI support. Then whole cluster must be ready */
-  /* TODO: Might be better to use a pthread barrier here. */
-  while (esim->shm->node_core_sims_ready != ES_CLUSTER_CFG.cores_per_node)
-    sched_yield();
+  /* TODO: Would be nice to support Ctrl-C here */
+  pthread_barrier_wait(&esim->shm->run_barrier);
+  /* TODO: After this, leader process (the one that created shm file should wait
+     for network and then set condition variable all other local cores watch.
+   */
 }
 
+void
+es_wait_exit(const es_state *esim)
+{
+  /* TODO: Would be nice to support Ctrl-C here */
+  pthread_barrier_wait(&esim->shm->exit_barrier);
+  /* TODO: After this, leader process (the one that created shm file should wait
+     for network and then set condition variable all other local cores watch.
+   */
+}
 
 /* Return true on success */
 int
