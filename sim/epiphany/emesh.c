@@ -47,6 +47,7 @@
 #endif
 
 #include "emesh.h"
+#include "sim-main.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -66,6 +67,13 @@
 
 #include <stdio.h>
 
+int
+epiphanybf_fetch_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
+			   int len);
+int
+epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
+			   int len);
+
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -79,13 +87,20 @@
 /* openmpi-x86 should be set in include flag */
 //#include <openmpi-x86_64/mpi.h>
 
+
 #define ES_SHM_CORE_STATE_HEADER_SIZE 4096 /* Should be plenty */
 
 #define ES_SHM_CORE_STATE_SIZE (1024*1024) /* 1 MB */
 #define ES_SHM_CONFIG_SIZE     (1024*1024) /* 1 MB es_shm_header */
 
 #define ES_CORE_MMR_BASE 0xf0000
+#define ES_CORE_MMR_SCRS_BASE 0xf0400
 #define ES_CORE_MMR_SIZE 2048
+/* Number of general purpose registers (GPRs).  */
+#define ES_EPIPHANY_NUM_GPRS  64
+/* Number of Special Core Registers (SCRs).  */
+#define ES_EPIPHANY_NUM_SCRS  32
+
 
 #define ES_CAS_DEF(S) \
 static inline uint##S##_t \
@@ -167,6 +182,7 @@ typedef struct es_transl_ {
   unsigned	coreid;
   unsigned	node;
   uint8_t	*mem; /* Native pointer into shm region */
+  unsigned      reg;  /* If memory mapped register      */
 #if 0
 #ifdef HAVE_MPI2
   MPI_AInt  mpi_offset;
@@ -273,15 +289,26 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 	}
       else if (ES_ADDR_IS_MMR(addr))
 	{
-	  /* TODO: This data is in gdb sim state structure which is now
-	   * allocated in the sim process address space in sim_open(). So
-	   * until we put the sim state in shm we cannot access it.
-	   */
-	  /* transl->location = ES_LOC_SHM_MMR; */
-	  transl->location = ES_LOC_INVALID;
-#ifdef ES_DEBUG
-	  fprintf(stderr, "es_addr_translate: mmr not implemented\n");
-#endif
+	  if (addr % 4)
+	    {
+	      /* Unaligned */
+	      /* TODO: ES_LOC_UNALIGNED would be more accurate */
+	      transl->location = ES_LOC_INVALID;
+	    }
+	  else
+	    {
+	      transl->location = ES_LOC_SHM_MMR;
+	      transl->reg = (addr & (ES_CORE_MMR_SIZE-1)) >> 2;
+	      /* Point mem to sim cpu struct */
+	      transl->mem =
+	       ((uint8_t *) esim->cores_mem) +
+		(es_shm_core_offset(esim, transl->coreid) *
+		  (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region)) +
+		  ES_SHM_CORE_STATE_HEADER_SIZE;
+	      /* TODO: Could optimize this so that entire region is one
+		 transaction */
+	      transl->in_region = 4;
+	    }
 	}
       else
 	{
@@ -310,9 +337,10 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 #ifdef ES_DEBUG
   /* TODO: Revisit when adding network support */
   fprintf(stderr, "es_addr_translate: location=%d addr=0x%8x in_region=%ld"
-	  " coreid=%d node=%d mem=0x%016lx\n shm_offset=0x%016lx\n",
+	  " coreid=%d node=%d mem=0x%016lx\n reg=%d shm_offset=0x%016lx\n",
 	  transl->location, transl->addr, transl->in_region, transl->coreid,
-	  transl->node, (uint64_t) transl->mem, transl->mem-esim->cores_mem);
+	  transl->node, (uint64_t) transl->mem, transl->reg,
+	  transl->mem-esim->cores_mem);
 #endif
 }
 
@@ -370,6 +398,48 @@ es_tx_one_shm_testset(es_transaction *tx)
 }
 
 static int
+es_tx_one_shm_mmr(es_transaction *tx)
+{
+  int reg, n;
+  sim_cpu *cpu = (sim_cpu *) tx->sim_addr.mem;
+
+  /* TODO: Revisit when epiphanybf_*_register have support for
+     more register types (e.g. coreid)
+     TODO: Writes are racy by design. We need to verify that this is the
+     correct behavior when we get access to the real hardware.
+  */
+
+  /* Adjust reg for epiphanybf_*_register */
+  reg = tx->sim_addr.reg;
+  if (reg >= ES_EPIPHANY_NUM_GPRS)
+    {
+      reg -= ( ( (ES_CORE_MMR_SCRS_BASE-ES_CORE_MMR_BASE) >> 2) -
+	      ES_EPIPHANY_NUM_GPRS);
+    }
+
+  switch (tx->type)
+    {
+    case ES_REQ_LOAD:
+      n = epiphanybf_fetch_register(cpu, reg, tx->target, 4);
+      break;
+    case ES_REQ_STORE:
+      n = epiphanybf_store_register(cpu, reg, tx->target, 4);
+      break;
+    default:
+      n = -EINVAL;
+    }
+  if (n != 4)
+    {
+      return -EINVAL;
+    }
+  tx->target += n;
+  tx->remaining -= n;
+
+  /* TODO: Should we return nr of bytes ? */
+  return 0;
+}
+
+static int
 es_tx_one(const es_state *esim, es_transaction *tx)
 {
   /* TODO: Use function vtable instead? */
@@ -395,10 +465,7 @@ es_tx_one(const es_state *esim, es_transaction *tx)
       break;
 
     case ES_LOC_SHM_MMR:
-#ifdef ES_DEBUG
-      fprintf(stderr, "es_tx_one: mmr access not implemented\n");
-#endif
-      return -EINVAL;
+      return es_tx_one_shm_mmr(tx);
       break;
 
     case ES_LOC_NET:
