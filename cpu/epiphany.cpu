@@ -1068,10 +1068,7 @@
     (dni isnid stdrdesc attr_ strassembl iopcode
 	 (sequence () proceed
 		   (sequence ((USI tmpPC))
-				 ;; Check if PC was changed by OOB events
-				 (set tmpPC (c-call USI "epiphany_post_isn_callback" pc))
-				 ;; For performance, only set PC if it was modified
-				 (if (not (eq tmpPC pc)) (set pc tmpPC))
+			     (set pc (c-call  USI "epiphany_post_isn_callback" pc))
 
 			     (if (eq pc (hcr-le))
 				 (set (hcr-lc) (sub (hcr-lc) #x1)))
