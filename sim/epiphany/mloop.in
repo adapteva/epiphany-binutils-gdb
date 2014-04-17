@@ -138,7 +138,7 @@ xextract-simple | xextract-scache)
 
 cat <<EOF
 {
-  CGEN_INSN_INT insn = GETIMEMUHI (current_cpu, CPU2INSN(vpc));
+  CGEN_INSN_INT insn = GETIMEMUHI (current_cpu, vpc);
   switch (insn&0xf) {
   case OP4_BRANCH16:
   case OP4_LDSTR16X:
@@ -153,7 +153,7 @@ cat <<EOF
     break;
 
   default:
-    insn |= ( GETIMEMUHI (current_cpu, 2 + CPU2INSN(vpc)) << 16);
+    insn |= ( GETIMEMUHI (current_cpu, 2 + vpc) << 16);
   }
 
   extract (current_cpu, vpc, insn, SEM_ARGBUF (sc), FAST_P);
@@ -229,8 +229,10 @@ cat <<EOF
 #if (! FAST_P && WITH_SEM_SWITCH_FULL) || (FAST_P && WITH_SEM_SWITCH_FAST)
 #define DEFINE_SWITCH
 #include "sem-switch.c"
-#else
+#elif WITH_SCACHE_PBB
   vpc = execute (current_cpu, vpc, FAST_P);
+#else
+  vpc = execute (current_cpu, sc, FAST_P);
 #endif
 }
 EOF
