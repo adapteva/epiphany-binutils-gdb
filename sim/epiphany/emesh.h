@@ -120,4 +120,6 @@ void es_dump_config(const es_state *esim);
 int es_valid_coreid(const es_state *esim, unsigned coreid);
 int es_set_coreid(es_state *esim, unsigned coreid);
 void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
+
+size_t es_get_core_mem_region_size(const es_state *esim);
 #endif /* __emesh_h__ */
