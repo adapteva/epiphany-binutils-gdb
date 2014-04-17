@@ -988,3 +988,8 @@ es_dump_config(const es_state *esim)
 	  esim->creator);
 }
 
+inline size_t
+es_get_core_mem_region_size(const es_state *esim)
+{
+  return ES_CLUSTER_CFG.core_mem_region;
+}
