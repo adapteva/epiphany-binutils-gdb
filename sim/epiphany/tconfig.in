@@ -39,6 +39,6 @@ MODULE_INSTALL_FN dv_sockser_install;
 /* This is a global setting.  Different cpu families can't mix-n-match -scache
    and -pbb.  However some cpu families may use -simple while others use
    one of -scache/-pbb.  */
-#define WITH_SCACHE_PBB 1   /* cache + pseudo basic block */
+#define WITH_SCACHE_PBB 0   /* cache + pseudo basic block */
 
 #endif /* EPIPHANY_TCONFIG_H */
