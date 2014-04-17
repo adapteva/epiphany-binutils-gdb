@@ -993,3 +993,8 @@ es_get_core_mem_region_size(const es_state *esim)
 {
   return ES_CLUSTER_CFG.core_mem_region;
 }
+inline unsigned
+es_get_coreid(const es_state *esim)
+{
+  return esim->coreid;
+}
