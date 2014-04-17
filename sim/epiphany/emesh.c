@@ -46,6 +46,10 @@
 #define HAVE_MPI2_ACC_REPLACE
 #endif
 
+/* Need these for correct cpu struct */
+#define WANT_CPU epiphanybf
+#define WANT_CPU_EPIPHANYBF
+
 #include "emesh.h"
 #include "sim-main.h"
 
@@ -182,6 +186,7 @@ typedef struct es_transl_ {
   unsigned	coreid;
   unsigned	node;
   uint8_t	*mem; /* Native pointer into shm region */
+  sim_cpu       *cpu; /* Pointer to 'remote' sim cpu    */
   unsigned      reg;  /* If memory mapped register      */
 #if 0
 #ifdef HAVE_MPI2
@@ -272,6 +277,8 @@ out:
 static void
 es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 {
+  uint8_t *tmp_ptr;
+
   addr = ES_ADDR_TO_GLOBAL(addr);
   transl->addr = addr;
   transl->node = es_addr_to_node(esim, addr);
@@ -287,44 +294,47 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 	   (addr % ES_CLUSTER_CFG.ext_ram_size);
 
 	}
-      else if (ES_ADDR_IS_MMR(addr))
+      else
 	{
-	  if (addr % 4)
+	  tmp_ptr = ((uint8_t *) esim->cores_mem) +
+	    (es_shm_core_offset(esim, transl->coreid) *
+	      (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region)) +
+	      ES_SHM_CORE_STATE_HEADER_SIZE;
+	  transl->cpu = (sim_cpu *) tmp_ptr;
+	  if (ES_ADDR_IS_MMR(addr))
 	    {
-	      /* Unaligned */
-	      /* TODO: ES_LOC_UNALIGNED would be more accurate */
-	      transl->location = ES_LOC_INVALID;
+	      if (addr % 4)
+		{
+		  /* Unaligned */
+		  /* TODO: ES_LOC_UNALIGNED would be more accurate */
+		  transl->location = ES_LOC_INVALID;
+		}
+	      else
+		{
+		  transl->location = ES_LOC_SHM_MMR;
+		  transl->reg = (addr & (ES_CORE_MMR_SIZE-1)) >> 2;
+		  /* Point mem to sim cpu struct */
+		  /* TODO: Could optimize this so that entire region is one
+		     transaction */
+		  transl->in_region = 4;
+		}
 	    }
 	  else
 	    {
-	      transl->location = ES_LOC_SHM_MMR;
-	      transl->reg = (addr & (ES_CORE_MMR_SIZE-1)) >> 2;
-	      /* Point mem to sim cpu struct */
+	      transl->location = ES_LOC_SHM;
 	      transl->mem =
 	       ((uint8_t *) esim->cores_mem) +
 		(es_shm_core_offset(esim, transl->coreid) *
 		  (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region)) +
-		  ES_SHM_CORE_STATE_HEADER_SIZE;
-	      /* TODO: Could optimize this so that entire region is one
-		 transaction */
-	      transl->in_region = 4;
-	    }
-	}
-      else
-	{
-	  transl->location = ES_LOC_SHM;
-	  transl->mem =
-	   ((uint8_t *) esim->cores_mem) +
-	    (es_shm_core_offset(esim, transl->coreid) *
-	      (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region)) +
-	      ES_SHM_CORE_STATE_SIZE +
-	      (addr % ES_CLUSTER_CFG.core_mem_region);
+		  ES_SHM_CORE_STATE_SIZE +
+		  (addr % ES_CLUSTER_CFG.core_mem_region);
 
-	  /* TODO: We have to check on which side of the memory mapped
-	   * register we are and take that into account.
-	   */
-	  transl->in_region = (ES_CLUSTER_CFG.core_mem_region) -
-	    (addr % ES_CLUSTER_CFG.core_mem_region);
+	      /* TODO: We have to check on which side of the memory mapped
+	       * register we are and take that into account.
+	       */
+	      transl->in_region = (ES_CLUSTER_CFG.core_mem_region) -
+		(addr % ES_CLUSTER_CFG.core_mem_region);
+	    }
 	}
     }
   else
@@ -351,7 +361,7 @@ es_addr_translate_next_region(const es_state *esim, es_transl *transl)
 }
 
 static int
-es_tx_one_shm_load(es_transaction *tx)
+es_tx_one_shm_load(es_state *esim, es_transaction *tx)
 {
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
   memcpy(tx->target, tx->sim_addr.mem, n);
@@ -364,7 +374,7 @@ es_tx_one_shm_load(es_transaction *tx)
 
 
 static int
-es_tx_one_shm_store(es_transaction *tx)
+es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 {
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
   memcpy(tx->sim_addr.mem, tx->target, n);
@@ -374,7 +384,7 @@ es_tx_one_shm_store(es_transaction *tx)
   return 0;
 }
 static int
-es_tx_one_shm_testset(es_transaction *tx)
+es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
 {
   /* TODO: Revisit, might not work as expected. Probably need to modify
    * single-core simulator.
@@ -398,10 +408,10 @@ es_tx_one_shm_testset(es_transaction *tx)
 }
 
 static int
-es_tx_one_shm_mmr(es_transaction *tx)
+es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 {
   int reg, n;
-  sim_cpu *cpu = (sim_cpu *) tx->sim_addr.mem;
+  sim_cpu *cpu = tx->sim_addr.cpu;
 
   /* TODO: Revisit when epiphanybf_*_register have support for
      more register types (e.g. coreid)
@@ -450,11 +460,11 @@ es_tx_one(const es_state *esim, es_transaction *tx)
       switch (tx->type)
 	{
 	case ES_REQ_LOAD:
-	  return es_tx_one_shm_load(tx);
+	  return es_tx_one_shm_load(esim, tx);
 	case ES_REQ_STORE:
-	  return es_tx_one_shm_store(tx);
+	  return es_tx_one_shm_store(esim, tx);
 	case ES_REQ_TESTSET:
-	  return es_tx_one_shm_testset(tx);
+	  return es_tx_one_shm_testset(esim, tx);
 	default:
 #ifdef ES_DEBUG
 	  fprintf(stderr, "es_tx_one: BUG\n");
@@ -465,7 +475,7 @@ es_tx_one(const es_state *esim, es_transaction *tx)
       break;
 
     case ES_LOC_SHM_MMR:
-      return es_tx_one_shm_mmr(tx);
+      return es_tx_one_shm_mmr(esim, tx);
       break;
 
     case ES_LOC_NET:
