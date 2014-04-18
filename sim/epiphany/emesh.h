@@ -108,9 +108,9 @@ typedef struct es_state_ {
     unsigned creator;         /* True if process created shm file */
 } es_state;
 
-int es_mem_store(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
-int es_mem_load(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
-int es_mem_testset(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
+int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
+int es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
+int es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
 int es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster);
 void es_cleanup(es_state *esim);
 void es_set_ready(es_state *esim);
