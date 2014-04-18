@@ -479,7 +479,7 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 }
 
 static int
-es_tx_one(const es_state *esim, es_transaction *tx)
+es_tx_one(es_state *esim, es_transaction *tx)
 {
   /* TODO: Use function vtable instead? */
   switch (tx->sim_addr.location)
@@ -531,7 +531,7 @@ es_tx_one(const es_state *esim, es_transaction *tx)
 
 
 static int
-es_tx_run(const es_state *esim, es_transaction *tx)
+es_tx_run(es_state *esim, es_transaction *tx)
 {
   int ret;
 
@@ -547,7 +547,7 @@ es_tx_run(const es_state *esim, es_transaction *tx)
 }
 
 int
-es_mem_store(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
+es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
 {
   es_transaction tx = {
     ES_REQ_STORE,
@@ -561,7 +561,7 @@ es_mem_store(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
 }
 
 int
-es_mem_load(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
+es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
 {
   es_transaction tx = {
     ES_REQ_LOAD,
@@ -575,7 +575,7 @@ es_mem_load(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
 }
 
 int
-es_mem_testset(const es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
+es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
 {
   es_transaction tx = {
     ES_REQ_TESTSET,
