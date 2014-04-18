@@ -376,10 +376,33 @@ es_tx_one_shm_load(es_state *esim, es_transaction *tx)
 static int
 es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 {
+  uint32_t i, invalidate;
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
   memcpy(tx->sim_addr.mem, tx->target, n);
   tx->target += n;
   tx->remaining -= n;
+  if (tx->sim_addr.coreid == esim->coreid && esim->this_core_cpu_state)
+    {
+      /* Invalidate all instructions in the range.
+       * Instructions are either 2 or 4 bytes long and must be half-word
+       * aligned */
+      for (i = 0; i < n+1; i += 2)
+	{
+	  invalidate = ((i+tx->addr) & ~1);
+#ifdef ES_DEBUG
+	  fprintf(stderr, "Invalidating %08x\n", invalidate);
+#endif
+	  epiphanybf_scache_invalidate((sim_cpu *) esim->this_core_cpu_state,
+				       invalidate);
+        }
+    }
+  else if (tx->sim_addr.location == ES_LOC_SHM)
+    {
+      /* Signal other CPU simulator a write from another core did occur so that
+       * it can flush its scache.
+       */
+      tx->sim_addr.cpu->write_from_other = 1;
+    }
 
   return 0;
 }
@@ -400,6 +423,12 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
       *tx->target = old;
       tx->target += n;
       tx->remaining -= n;
+      /* Signal other CPU simulator a write from another core did occur so that
+       * it can invalidate its scache.
+       */
+      if (tx->sim_addr.location != ES_LOC_RAM
+	  && tx->sim_addr.coreid != esim->coreid)
+	tx->sim_addr.cpu->write_from_other = 1;
       return 0;
     default:
       return -EINVAL;

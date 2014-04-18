@@ -12,6 +12,7 @@
 struct _sim_cpu; /* FIXME: should be in sim-basics.h */
 typedef struct _sim_cpu SIM_CPU;
 
+#include <stdint.h>
 
 #include "symcat.h"
 #include "sim-basics.h"
@@ -64,6 +65,9 @@ struct _sim_cpu {
 #endif
   EPIPHANY_MISC_PROFILE epiphany_misc_profile;
 #define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
+#if WITH_EMESH_SIM
+  uint32_t write_from_other;
+#endif
 
 };
 

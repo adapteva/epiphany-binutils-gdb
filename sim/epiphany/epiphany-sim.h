@@ -153,5 +153,8 @@ extern USI epiphany_rti (SIM_CPU *, USI ipend, USI imask);
 /* Call back after every instruction.  */
 extern USI epiphany_post_isn_callback (SIM_CPU *cpu , USI pc) ;
 
+#if WITH_SCACHE
+extern void epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc);
+#endif
 
 #endif /* EPIPHANY_SIM_H */

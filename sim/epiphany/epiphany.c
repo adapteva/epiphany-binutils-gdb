@@ -435,3 +435,32 @@ epiphany_post_isn_callback (SIM_CPU * current_cpu, USI pc)
     }
   return pc + 2;
 }
+
+#if WITH_SCACHE
+void
+epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc)
+{
+  SCACHE *sc;
+  unsigned int hash_mask;
+  CGEN_INSN_WORD unused_addr;
+
+  hash_mask = CPU_SCACHE_HASH_MASK (current_cpu);
+
+  unused_addr = 0xffffffff;
+  /* Look up current insn in hash table. */
+#if WITH_SCACHE_PBB
+  /* TODO: Not tested */
+  sc = scache_lookup(current_cpu, vpc);
+#else
+  sc = CPU_SCACHE_CACHE (current_cpu) + SCACHE_HASH_PC (vpc, hash_mask);
+#endif
+
+  if (sc && sc->argbuf.addr == vpc)
+    {
+#ifdef DEBUG
+      fprintf (stderr, "---------------   scache invalidate %08x\n", vpc);
+#endif
+      sc->argbuf.addr = unused_addr;
+    }
+}
+#endif /* WITH_SCACHE */
