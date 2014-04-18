@@ -805,9 +805,9 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	{
 #ifdef ES_DEBUG
 	  fprintf(stderr, "es_init: Timed out waiting.\n");
+#endif
 	  close(fd);
 	  return -ETIME;
-#endif
 	}
     }
     if (ES_CLUSTER_CFG.ext_ram_node == ES_NODE_CFG.rank)
