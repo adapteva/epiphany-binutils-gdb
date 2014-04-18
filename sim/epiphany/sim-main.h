@@ -11,6 +11,8 @@
    sim-basics.h and cgen-types.h needs config.h.  */
 #include "config.h"
 
+#include <stdint.h>
+
 #include "symcat.h"
 #include "sim-basics.h"
 #include "cgen-types.h"
@@ -55,6 +57,9 @@ struct _sim_cpu {
   CGEN_CPU cgen_cpu;
   EPIPHANY_MISC_PROFILE epiphany_misc_profile;
 #define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
+#if WITH_EMESH_SIM
+  uint32_t write_from_other;
+#endif
 
   /* CPU specific parts go here.
      Note that in files that don't need to access these pieces WANT_CPU_FOO
