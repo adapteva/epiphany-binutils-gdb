@@ -873,18 +873,23 @@ es_set_ready(es_state *esim)
 void
 es_wait_run(const es_state *esim)
 {
-  /* TODO: Would be nice to support Ctrl-C here */
-  pthread_barrier_wait(&esim->shm->run_barrier);
-  /* TODO: After this, leader process (the one that created shm file should wait
+  /* TODO: Before this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
    */
+
+  /* TODO: Would be nice to support Ctrl-C here */
+  pthread_barrier_wait(&esim->shm->run_barrier);
+  es_set_ready(esim);
 }
 
 void
 es_wait_exit(const es_state *esim)
 {
   /* TODO: Would be nice to support Ctrl-C here */
-  pthread_barrier_wait(&esim->shm->exit_barrier);
+  if (esim->ready)
+    {
+      pthread_barrier_wait(&esim->shm->exit_barrier);
+    }
   /* TODO: After this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
    */
