@@ -286,7 +286,6 @@ cat <<EOF
    */
   if (current_cpu->write_from_other)
     {
-      fprintf(stderr, "write_from_other\n");
       scache_flush_cpu(current_cpu);
       current_cpu->write_from_other = 0;
     }
