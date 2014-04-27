@@ -95,14 +95,14 @@ typedef struct es_shm_core_state_header_ {
 /* Process local */
 typedef struct es_state_ {
     uint8_t ready;
-    es_shm_header *shm;
+    volatile es_shm_header *shm;
     char shm_name[256];
     size_t shm_size;
-    uint8_t *cores_mem;       /* Base address for core mem (and core state) */
-    uint8_t *this_core_mem;   /* Ptr to this cores memory region            */
-    es_shm_core_state_header *this_core_state_header; /*                    */
-    uint8_t *this_core_cpu_state;    /* GDB sim_cpu struct                  */
-    uint8_t *ext_ram;
+    volatile uint8_t *cores_mem;       /* Base address for core mem (and core state) */
+    volatile uint8_t *this_core_mem;   /* Ptr to this cores memory region            */
+    volatile es_shm_core_state_header *this_core_state_header; /*                    */
+    volatile uint8_t *this_core_cpu_state;    /* GDB sim_cpu struct                  */
+    volatile uint8_t *ext_ram;
     unsigned coreid;
     int fd;
     unsigned creator;         /* True if process created shm file */
