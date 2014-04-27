@@ -226,6 +226,18 @@ xfull-exec-* | xfast-exec-*)
 
 cat <<EOF
 {
+#if WITH_EMESH_SIM
+  static int initialized = 0;
+  if (!initialized)
+    {
+      sim_io_eprintf(current_state, "ESIM: Waiting for other cores...");
+      /* TODO: Would be nice to support Ctrl-C here */
+      es_wait_run(STATE_ESIM(current_state));
+      sim_io_eprintf(current_state, " done.\n");
+      initialized = 1;
+    }
+#endif
+
 #if (! FAST_P && WITH_SEM_SWITCH_FULL) || (FAST_P && WITH_SEM_SWITCH_FAST)
 #define DEFINE_SWITCH
 #include "sem-switch.c"

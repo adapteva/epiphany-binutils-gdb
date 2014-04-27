@@ -436,10 +436,6 @@ sim_create_inferior (sd, abfd, argv, envp)
    */
   epiphanybf_h_coremesh_registers_set(STATE_CPU(sd, 0), 1,
 				      STATE_ESIM(sd)->coreid);
-  sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
-  /* TODO: Would be nice to support Ctrl-C here */
-  es_wait_run(STATE_ESIM(sd));
-  sim_io_eprintf(sd, " done.\n");
 #endif
 
   return SIM_RC_OK;
