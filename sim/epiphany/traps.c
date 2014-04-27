@@ -37,11 +37,7 @@ sim_engine_invalid_insn (SIM_CPU *current_cpu, IADDR cia, SEM_PC pc)
   SIM_DESC sd = CPU_STATE (current_cpu);
 
   fprintf(stderr, "----------- sim_engine_invalid_insn at pc 0x%p\n", pc);
-#if WITH_EMESH_SIM
-      sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
-      es_wait_exit(STATE_ESIM(sd));
-      sim_io_eprintf(sd, " done.\n");
-#endif
+
   sim_engine_halt (sd, current_cpu, NULL, cia, sim_stopped, SIM_SIGILL);
 
   return pc;

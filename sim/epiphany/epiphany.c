@@ -262,31 +262,19 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
 
     case TRAP_EXIT:
       /*void exit (int status);  */
-#if WITH_EMESH_SIM
-      sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
-      es_wait_exit(STATE_ESIM(sd));
-      sim_io_eprintf(sd, " done.\n");
-#endif
+
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_exited, PARM0);
       break;
 
     case TRAP_PASS:
       sim_io_write (sd, 1, "pass\n", 5);
-#if WITH_EMESH_SIM
-      sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
-      es_wait_exit(STATE_ESIM(sd));
-      sim_io_eprintf(sd, " done.\n");
-#endif
+
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_exited, 0);
       break;
 
     case TRAP_FAIL:
       sim_io_write (sd, 1, "fail\n", 5);
-#if WITH_EMESH_SIM
-      sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
-      es_wait_exit(STATE_ESIM(sd));
-      sim_io_eprintf(sd, " done.\n");
-#endif
+
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_exited, 1);
       break;
 

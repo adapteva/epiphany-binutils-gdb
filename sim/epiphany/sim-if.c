@@ -390,6 +390,11 @@ sim_close (sd, quitting)
      int quitting;
 {
   epiphany_cgen_cpu_close (CPU_CPU_DESC (STATE_CPU (sd, 0)));
+#if WITH_EMESH_SIM
+  sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
+  es_wait_exit(STATE_ESIM(sd));
+  sim_io_eprintf(sd, " done.\n");
+#endif
   sim_module_uninstall (sd);
   free_state(sd);
 }
