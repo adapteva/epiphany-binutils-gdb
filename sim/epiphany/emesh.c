@@ -448,6 +448,7 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
      correct behavior when we get access to the real hardware.
   */
 
+  /* TODO: Don't use epiphanybf_{fetch,store}_register */
   /* Adjust reg for epiphanybf_*_register */
   reg = tx->sim_addr.reg;
   if (reg >= ES_EPIPHANY_NUM_GPRS)
@@ -459,7 +460,20 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
   switch (tx->type)
     {
     case ES_REQ_LOAD:
-      n = epiphanybf_fetch_register(cpu, reg, tx->target, 4);
+      if (reg < ES_EPIPHANY_NUM_GPRS && tx->sim_addr.coreid != esim->coreid)
+	{
+	  /* Reading directly from the general-purpose registers by an external
+	   * agent is not supported while the CPU is active.
+	   * TODO: It is unclear if this is allowed from local core so allow it
+	   * for now.
+	   * TODO: We pretend remote core is always active.
+	   */
+	  n = -EINVAL;
+	}
+      else
+	{
+	  n = epiphanybf_fetch_register(cpu, reg, tx->target, 4);
+	}
       break;
     case ES_REQ_STORE:
       n = epiphanybf_store_register(cpu, reg, tx->target, 4);
