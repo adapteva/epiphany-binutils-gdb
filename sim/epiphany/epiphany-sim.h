@@ -159,4 +159,8 @@ extern USI epiphany_post_isn_callback (SIM_CPU *cpu , USI pc) ;
 extern void epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc);
 #endif
 
+void
+epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
+				    SI newval);
+
 #endif /* EPIPHANY_SIM_H */

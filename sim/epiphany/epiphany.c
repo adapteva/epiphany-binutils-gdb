@@ -179,6 +179,15 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
   return 4;
 }
 
+
+/* Backdoor access for e.g read-only register */
+void
+epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
+				    SI newval)
+{
+  (CPU (h_all_registers)[regno] = (newval));
+}
+
 USI
 epiphanybf_h_cr_get_handler (SIM_CPU * current_cpu, UINT cr)
 {
