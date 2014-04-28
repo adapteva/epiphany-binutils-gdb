@@ -616,7 +616,8 @@ host_alias
 target_alias'
 ac_subdirs_all='frv-elf
 m32r-elf
-mips64el-elf'
+mips64el-elf
+epiphany-elf'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -1804,6 +1805,10 @@ subdirs="$subdirs frv-elf"
 	;;
     mips64el-*-elf )
         subdirs="$subdirs mips64el-elf"
+
+    ;;
+    epiphany-*-elf )
+        subdirs="$subdirs epiphany-elf"
 
 	;;
 esac

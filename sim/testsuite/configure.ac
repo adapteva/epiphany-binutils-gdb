@@ -22,6 +22,9 @@ case ${target} in
 	;;
     mips64el-*-elf )
         AC_CONFIG_SUBDIRS(mips64el-elf)
+    ;;
+    epiphany-*-elf )
+        AC_CONFIG_SUBDIRS(epiphany-elf)
 	;;
 esac
 
