@@ -436,11 +436,13 @@ sim_create_inferior (sd, abfd, argv, envp)
 	sim_io_eprintf(sd, "Invalid coreid. Set with \"sim coreid\"");
       return SIM_RC_FAIL;
     }
-  /* Set coreid in cpu register
-   * TODO: coreid register offset is hardcoded.
+
+  /* Set coreid in cpu register. Do it via backdoor since it is (should be)
+   * read only.
    */
-  epiphanybf_h_coremesh_registers_set(STATE_CPU(sd, 0), 1,
-				      STATE_ESIM(sd)->coreid);
+  epiphanybf_h_all_registers_set_raw(STATE_CPU(sd, 0), H_REG_MESH_COREID,
+				 STATE_ESIM(sd)->coreid);
+
 #endif
 
   return SIM_RC_OK;
