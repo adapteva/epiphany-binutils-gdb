@@ -51,15 +51,61 @@ epiphany_decode_gdb_ctrl_regnum (int gdb_regnum)
   abort ();
 }
 
+static int epiphanybf_src_gdb_regmap[42] =
+{
+  H_REG_SCR_CONFIG,
+  H_REG_SCR_STATUS,
+  H_REG_SCR_PC,
+  H_REG_SCR_DEBUG,
+  H_REG_SCR_LC,
+  H_REG_SCR_LS,
+  H_REG_SCR_LE,
+  H_REG_SCR_IRET,
+  H_REG_SCR_IMASK,
+  H_REG_SCR_ILAT,
+  H_REG_SCR_ILATST,
+  H_REG_SCR_ILATCL,
+  H_REG_SCR_IPEND,
+  H_REG_SCR_FSTATUS,
+  H_REG_SCR_DEBUGCMD,
+  H_REG_MESH_SWRESET,
+  H_REG_SCR_CTIMER0,
+  H_REG_SCR_CTIMER1,
+  H_REG_MEM_STATUS,
+  H_REG_MEM_PROTECT,
+  H_REG_DMA0_CONFIG,
+  H_REG_DMA0_STRIDE,
+  H_REG_DMA0_COUNT,
+  H_REG_DMA0_SRCADDR,
+  H_REG_DMA0_DSTADDR,
+  H_REG_DMA0_AUTODMA0,
+  H_REG_DMA0_AUTODMA1,
+  H_REG_DMA0_STATUS,
+  H_REG_DMA1_CONFIG,
+  H_REG_DMA1_STRIDE,
+  H_REG_DMA1_COUNT,
+  H_REG_DMA1_SRCADDR,
+  H_REG_DMA1_DSTADDR,
+  H_REG_DMA1_AUTODMA0,
+  H_REG_DMA1_AUTODMA1,
+  H_REG_DMA1_STATUS,
+  H_REG_MESH_CONFIG,
+  H_REG_MESH_COREID,
+  H_REG_MESH_MULTICAST,
+  H_REG_MESH_CMESHROUTE,
+  H_REG_MESH_XMESHROUTE,
+  H_REG_MESH_RMESHROUTE
+};
+static size_t epiphanybf_src_gdb_regmap_num_regs =
+  sizeof(epiphanybf_src_gdb_regmap) / sizeof(epiphanybf_src_gdb_regmap[0]);
+
+
+
 /* Number of general purpose registers (GPRs).  */
 #define EPIPHANY_NUM_GPRS   64
 /* Number of Special Core Registers (SCRs).  */
-#define EPIPHANY_NUM_SCRS   32
-
-/* Number of Special Core Registers (SCRs), first group.  */
-#define EPIPHANY_NUM_SCRS_0  16
-/* Number of Special Core Registers (SCRs), DMA group.  */
-#define EPIPHANY_NUM_SCRS_1   16
+#define EPIPHANY_NUM_SCRS_0 16
+#define EPIPHANY_NUM_SCRS   (epiphanybf_src_gdb_regmap_num_regs)
 
 /* Number of raw registers used.  */
 #define  EPIPHANY_NUM_REGS   (EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS)
@@ -90,10 +136,18 @@ epiphany_decode_gdb_ctrl_regnum (int gdb_regnum)
 #define EPIPHANY_SCR_HSCONFIG 17
 #define EPIPHANY_SCR_DEBUGCMD 18
 
+/* TODO: Reg fetch/store can be simplified ((reg mmr offset - mmr base) / 4 )
+   ... but then we have to modify gdb/epiphany-tdep.c
+   ... but then we probably need modify e-server (epiphany remote gdb server)
+   ... so leave it be for now and *never* use in simulator code until
+       (if ever) we get consistency across the board.
+ */
+
 int
 epiphanybf_fetch_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 			   int len)
 {
+  unsigned reg;
 #ifdef DEBUG
   fprintf(stderr, "epiphanybf_fetch_register %d \n" ,  rn);
 #endif
@@ -110,24 +164,11 @@ epiphanybf_fetch_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
     }
   else if (rn < EPIPHANY_TOTAL_NUM_REGS)
     {
+      reg = epiphanybf_src_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
       /* Other.  */
-
-      /* Special group 0.  */
-      if (rn < EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS_0)
-	{
-
-	  if (rn - EPIPHANY_NUM_GPRS == EPIPHANY_SCR_PC)
-	    SETTWI (buf, epiphanybf_h_pc_get (current_cpu));
-	  else
-	    SETTWI (buf,
-		    epiphanybf_h_core_registers_get (current_cpu,
-						     rn - EPIPHANY_NUM_GPRS));
-	}
-      else
-	SETTWI (buf,
-		epiphanybf_h_coredma_registers_get (current_cpu,
-						    rn - EPIPHANY_NUM_GPRS -
-						    EPIPHANY_NUM_SCRS_0));
+      SETTWI (buf,
+	      epiphanybf_h_all_registers_get (current_cpu,
+					      reg));
     }
   else
     fprintf (stderr,
@@ -141,6 +182,10 @@ int
 epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 			   int len)
 {
+  unsigned reg;
+#ifdef DEBUG
+  fprintf(stderr, "epiphanybf_store_register %d \n" ,  rn);
+#endif
   if (rn < EPIPHANY_NUM_GPRS)
     {
       /* General R regs.  */
@@ -153,24 +198,9 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
     }
   else if (rn < EPIPHANY_TOTAL_NUM_REGS)
     {
+      reg = epiphanybf_src_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
       /* Other.  */
-
-      /* Special group 0.  */
-      if (rn < EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS_0)
-	{
-	  if (rn - EPIPHANY_NUM_GPRS == EPIPHANY_SCR_PC)
-	    epiphanybf_h_pc_set (current_cpu, GETTWI (buf));
-
-	  else
-	    epiphanybf_h_core_registers_set (current_cpu,
-					     rn - EPIPHANY_NUM_GPRS,
-					     GETTWI (buf));
-	}
-      else
-	epiphanybf_h_coredma_registers_set (current_cpu,
-					    rn - EPIPHANY_NUM_GPRS -
-					    EPIPHANY_NUM_SCRS_0,
-					    GETTWI (buf));
+      epiphanybf_h_all_registers_set (current_cpu, reg, GETTWI (buf));
     }
   else
     fprintf (stderr,
