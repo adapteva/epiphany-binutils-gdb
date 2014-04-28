@@ -43,334 +43,427 @@ typedef struct {
   /* Hardware elements.  */
   struct {
   /* all addressable registers */
-  SI h_registers[64];
-#define GET_H_REGISTERS(a1) CPU (h_registers)[a1]
-#define SET_H_REGISTERS(a1, x) (CPU (h_registers)[a1] = (x))
-  /* integer zero bit */
-  BI h_zbit;
-#define GET_H_ZBIT() CPU (h_zbit)
-#define SET_H_ZBIT(x) (CPU (h_zbit) = (x))
-  /* integer neg bit */
-  BI h_nbit;
-#define GET_H_NBIT() CPU (h_nbit)
-#define SET_H_NBIT(x) (CPU (h_nbit) = (x))
-  /* integer carry bit */
-  BI h_cbit;
-#define GET_H_CBIT() CPU (h_cbit)
-#define SET_H_CBIT(x) (CPU (h_cbit) = (x))
-  /* integer overflow bit */
-  BI h_vbit;
-#define GET_H_VBIT() CPU (h_vbit)
-#define SET_H_VBIT(x) (CPU (h_vbit) = (x))
-  /* integer overflow sticky */
-  BI h_vsbit;
-#define GET_H_VSBIT() CPU (h_vsbit)
-#define SET_H_VSBIT(x) (CPU (h_vsbit) = (x))
-  /* floating point zero bit */
-  BI h_bzbit;
-#define GET_H_BZBIT() CPU (h_bzbit)
-#define SET_H_BZBIT(x) (CPU (h_bzbit) = (x))
-  /* floating point neg bit */
-  BI h_bnbit;
-#define GET_H_BNBIT() CPU (h_bnbit)
-#define SET_H_BNBIT(x) (CPU (h_bnbit) = (x))
-  /* floating point ovfl bit */
-  BI h_bvbit;
-#define GET_H_BVBIT() CPU (h_bvbit)
-#define SET_H_BVBIT(x) (CPU (h_bvbit) = (x))
-  /* floating point underfl bit */
-  BI h_bubit;
-#define GET_H_BUBIT() CPU (h_bubit)
-#define SET_H_BUBIT(x) (CPU (h_bubit) = (x))
-  /* floating point invalid bit */
-  BI h_bibit;
-#define GET_H_BIBIT() CPU (h_bibit)
-#define SET_H_BIBIT(x) (CPU (h_bibit) = (x))
-  /* floating point carry bit */
-  BI h_bcbit;
-#define GET_H_BCBIT() CPU (h_bcbit)
-#define SET_H_BCBIT(x) (CPU (h_bcbit) = (x))
-  /* floating point overflow sticky */
-  BI h_bvsbit;
-#define GET_H_BVSBIT() CPU (h_bvsbit)
-#define SET_H_BVSBIT(x) (CPU (h_bvsbit) = (x))
-  /* floating point invalid sticky */
-  BI h_bisbit;
-#define GET_H_BISBIT() CPU (h_bisbit)
-#define SET_H_BISBIT(x) (CPU (h_bisbit) = (x))
-  /* floating point underflow sticky */
-  BI h_busbit;
-#define GET_H_BUSBIT() CPU (h_busbit)
-#define SET_H_BUSBIT(x) (CPU (h_busbit) = (x))
-  /* exceprion cause bit0 */
-  BI h_expcause0bit;
-#define GET_H_EXPCAUSE0BIT() CPU (h_expcause0bit)
-#define SET_H_EXPCAUSE0BIT(x) (CPU (h_expcause0bit) = (x))
-  /* exceprion cause bit1 */
-  BI h_expcause1bit;
-#define GET_H_EXPCAUSE1BIT() CPU (h_expcause1bit)
-#define SET_H_EXPCAUSE1BIT(x) (CPU (h_expcause1bit) = (x))
-  /* external load stalled bit */
-  BI h_expcause2bit;
-#define GET_H_EXPCAUSE2BIT() CPU (h_expcause2bit)
-#define SET_H_EXPCAUSE2BIT(x) (CPU (h_expcause2bit) = (x))
-  /* external fetch stalled bit */
-  BI h_extFstallbit;
-#define GET_H_EXTFSTALLBIT() CPU (h_extFstallbit)
-#define SET_H_EXTFSTALLBIT(x) (CPU (h_extFstallbit) = (x))
-  /* 0=round to nearest, 1=trunacte select bit */
-  BI h_trmbit;
-#define GET_H_TRMBIT() CPU (h_trmbit)
-#define SET_H_TRMBIT(x) (CPU (h_trmbit) = (x))
-  /* invalid exception enable bit */
-  BI h_invExcEnbit;
-#define GET_H_INVEXCENBIT() CPU (h_invExcEnbit)
-#define SET_H_INVEXCENBIT(x) (CPU (h_invExcEnbit) = (x))
-  /* overflow exception enable bit */
-  BI h_ovfExcEnbit;
-#define GET_H_OVFEXCENBIT() CPU (h_ovfExcEnbit)
-#define SET_H_OVFEXCENBIT(x) (CPU (h_ovfExcEnbit) = (x))
-  /* underflow exception enablebit  */
-  BI h_unExcEnbit;
-#define GET_H_UNEXCENBIT() CPU (h_unExcEnbit)
-#define SET_H_UNEXCENBIT(x) (CPU (h_unExcEnbit) = (x))
-  /* timer 0 mode selection 0 */
-  BI h_timer0bit0;
-#define GET_H_TIMER0BIT0() CPU (h_timer0bit0)
-#define SET_H_TIMER0BIT0(x) (CPU (h_timer0bit0) = (x))
-  /* timer 0 mode selection 1 */
-  BI h_timer0bit1;
-#define GET_H_TIMER0BIT1() CPU (h_timer0bit1)
-#define SET_H_TIMER0BIT1(x) (CPU (h_timer0bit1) = (x))
-  /* timer 0 mode selection 2 */
-  BI h_timer0bit2;
-#define GET_H_TIMER0BIT2() CPU (h_timer0bit2)
-#define SET_H_TIMER0BIT2(x) (CPU (h_timer0bit2) = (x))
-  /* timer 0 mode selection 3 */
-  BI h_timer0bit3;
-#define GET_H_TIMER0BIT3() CPU (h_timer0bit3)
-#define SET_H_TIMER0BIT3(x) (CPU (h_timer0bit3) = (x))
-  /* timer 1 mode selection 0 */
-  BI h_timer1bit0;
-#define GET_H_TIMER1BIT0() CPU (h_timer1bit0)
-#define SET_H_TIMER1BIT0(x) (CPU (h_timer1bit0) = (x))
-  /* timer 1 mode selection 1 */
-  BI h_timer1bit1;
-#define GET_H_TIMER1BIT1() CPU (h_timer1bit1)
-#define SET_H_TIMER1BIT1(x) (CPU (h_timer1bit1) = (x))
-  /* timer 1 mode selection 2 */
-  BI h_timer1bit2;
-#define GET_H_TIMER1BIT2() CPU (h_timer1bit2)
-#define SET_H_TIMER1BIT2(x) (CPU (h_timer1bit2) = (x))
-  /* timer 1 mode selection 3 */
-  BI h_timer1bit3;
-#define GET_H_TIMER1BIT3() CPU (h_timer1bit3)
-#define SET_H_TIMER1BIT3(x) (CPU (h_timer1bit3) = (x))
-  /* multicore bkpt enable */
-  BI h_mbkptEnbit;
-#define GET_H_MBKPTENBIT() CPU (h_mbkptEnbit)
-#define SET_H_MBKPTENBIT(x) (CPU (h_mbkptEnbit) = (x))
-  /* clock gating enable bkpt enable */
-  BI h_clockGateEnbit;
-#define GET_H_CLOCKGATEENBIT() CPU (h_clockGateEnbit)
-#define SET_H_CLOCKGATEENBIT(x) (CPU (h_clockGateEnbit) = (x))
-  /* core config bit 12 */
-  BI h_coreCfgResBit12;
-#define GET_H_CORECFGRESBIT12() CPU (h_coreCfgResBit12)
-#define SET_H_CORECFGRESBIT12(x) (CPU (h_coreCfgResBit12) = (x))
-  /* core config bit 13 */
-  BI h_coreCfgResBit13;
-#define GET_H_CORECFGRESBIT13() CPU (h_coreCfgResBit13)
-#define SET_H_CORECFGRESBIT13(x) (CPU (h_coreCfgResBit13) = (x))
-  /* core config bit 14 */
-  BI h_coreCfgResBit14;
-#define GET_H_CORECFGRESBIT14() CPU (h_coreCfgResBit14)
-#define SET_H_CORECFGRESBIT14(x) (CPU (h_coreCfgResBit14) = (x))
-  /* core config bit 15 */
-  BI h_coreCfgResBit15;
-#define GET_H_CORECFGRESBIT15() CPU (h_coreCfgResBit15)
-#define SET_H_CORECFGRESBIT15(x) (CPU (h_coreCfgResBit15) = (x))
-  /* core config bit 16 */
-  BI h_coreCfgResBit16;
-#define GET_H_CORECFGRESBIT16() CPU (h_coreCfgResBit16)
-#define SET_H_CORECFGRESBIT16(x) (CPU (h_coreCfgResBit16) = (x))
-  /* core config bit 20 */
-  BI h_coreCfgResBit20;
-#define GET_H_CORECFGRESBIT20() CPU (h_coreCfgResBit20)
-#define SET_H_CORECFGRESBIT20(x) (CPU (h_coreCfgResBit20) = (x))
-  /* core config bit 21 */
-  BI h_coreCfgResBit21;
-#define GET_H_CORECFGRESBIT21() CPU (h_coreCfgResBit21)
-#define SET_H_CORECFGRESBIT21(x) (CPU (h_coreCfgResBit21) = (x))
-  /* core config bit 24 */
-  BI h_coreCfgResBit24;
-#define GET_H_CORECFGRESBIT24() CPU (h_coreCfgResBit24)
-#define SET_H_CORECFGRESBIT24(x) (CPU (h_coreCfgResBit24) = (x))
-  /* core config bit 25 */
-  BI h_coreCfgResBit25;
-#define GET_H_CORECFGRESBIT25() CPU (h_coreCfgResBit25)
-#define SET_H_CORECFGRESBIT25(x) (CPU (h_coreCfgResBit25) = (x))
-  /* core config bit 26 */
-  BI h_coreCfgResBit26;
-#define GET_H_CORECFGRESBIT26() CPU (h_coreCfgResBit26)
-#define SET_H_CORECFGRESBIT26(x) (CPU (h_coreCfgResBit26) = (x))
-  /* core config bit 27 */
-  BI h_coreCfgResBit27;
-#define GET_H_CORECFGRESBIT27() CPU (h_coreCfgResBit27)
-#define SET_H_CORECFGRESBIT27(x) (CPU (h_coreCfgResBit27) = (x))
-  /* core config bit 28 */
-  BI h_coreCfgResBit28;
-#define GET_H_CORECFGRESBIT28() CPU (h_coreCfgResBit28)
-#define SET_H_CORECFGRESBIT28(x) (CPU (h_coreCfgResBit28) = (x))
-  /* core config bit 29 */
-  BI h_coreCfgResBit29;
-#define GET_H_CORECFGRESBIT29() CPU (h_coreCfgResBit29)
-#define SET_H_CORECFGRESBIT29(x) (CPU (h_coreCfgResBit29) = (x))
-  /* core config bit 30 */
-  BI h_coreCfgResBit30;
-#define GET_H_CORECFGRESBIT30() CPU (h_coreCfgResBit30)
-#define SET_H_CORECFGRESBIT30(x) (CPU (h_coreCfgResBit30) = (x))
-  /* core config bit 31 */
-  BI h_coreCfgResBit31;
-#define GET_H_CORECFGRESBIT31() CPU (h_coreCfgResBit31)
-#define SET_H_CORECFGRESBIT31(x) (CPU (h_coreCfgResBit31) = (x))
-  /* arithmetic mode bit0 */
-  BI h_arithmetic_modebit0;
-#define GET_H_ARITHMETIC_MODEBIT0() CPU (h_arithmetic_modebit0)
-#define SET_H_ARITHMETIC_MODEBIT0(x) (CPU (h_arithmetic_modebit0) = (x))
-  /* arithmetic mode bit1 */
-  BI h_arithmetic_modebit1;
-#define GET_H_ARITHMETIC_MODEBIT1() CPU (h_arithmetic_modebit1)
-#define SET_H_ARITHMETIC_MODEBIT1(x) (CPU (h_arithmetic_modebit1) = (x))
-  /* arithmetic mode bit2 */
-  BI h_arithmetic_modebit2;
-#define GET_H_ARITHMETIC_MODEBIT2() CPU (h_arithmetic_modebit2)
-#define SET_H_ARITHMETIC_MODEBIT2(x) (CPU (h_arithmetic_modebit2) = (x))
-  /* global interrupt disable bit */
-  BI h_gidisablebit;
-#define GET_H_GIDISABLEBIT() CPU (h_gidisablebit)
-#define SET_H_GIDISABLEBIT(x) (CPU (h_gidisablebit) = (x))
-  /* kernel mode bit */
-  BI h_kmbit;
-#define GET_H_KMBIT() CPU (h_kmbit)
-#define SET_H_KMBIT(x) (CPU (h_kmbit) = (x))
-  /* core active indicator mode bit */
-  BI h_caibit;
-#define GET_H_CAIBIT() CPU (h_caibit)
-#define SET_H_CAIBIT(x) (CPU (h_caibit) = (x))
-  /* sflag bit */
-  BI h_sflagbit;
-#define GET_H_SFLAGBIT() CPU (h_sflagbit)
-#define SET_H_SFLAGBIT(x) (CPU (h_sflagbit) = (x))
-  /* program counter */
-  USI h_pc;
-#define GET_H_PC() CPU (h_pc)
-#define SET_H_PC(x) (CPU (h_pc) = (x))
+  SI h_all_registers[512];
+#define GET_H_ALL_REGISTERS(a1) CPU (h_all_registers)[a1]
+#define SET_H_ALL_REGISTERS(index, x) \
+do { \
+{\
+if ((((index)) == (H_REG_SCR_CONFIG))) {\
+CPU (h_all_registers[(index)]) = (x);\
+epiphany_set_rounding_mode (current_cpu, (x));\
+}\
+ else if ((((index)) == (H_REG_SCR_STATUS))) {\
+{\
+  USI tmp_newval;\
+  tmp_newval = ANDSI ((x), 65522);\
+CPU (h_all_registers[(index)]) = tmp_newval;\
+}\
+}\
+ else {\
+CPU (h_all_registers[(index)]) = (x);\
+}\
+}\
+;} while (0)
   /* memory effective address */
   SI h_memaddr;
 #define GET_H_MEMADDR() CPU (h_memaddr)
 #define SET_H_MEMADDR(x) (CPU (h_memaddr) = (x))
-  /* Special Core Registers */
-  USI h_core_registers[17];
-#define GET_H_CORE_REGISTERS(index) (((index) == (1))) ? (ORSI (ORSI (ORSI (ORSI (SLLSI (CPU (h_kmbit), 2), SLLSI (CPU (h_gidisablebit), 1)), ORSI (ORSI (SLLSI (CPU (h_expcause1bit), 17), SLLSI (CPU (h_expcause0bit), 16)), ORSI (SLLSI (CPU (h_expcause2bit), 18), SLLSI (CPU (h_extFstallbit), 19)))), ORSI (ORSI (ORSI (SLLSI (CPU (h_busbit), 15), SLLSI (CPU (h_bisbit), 13)), ORSI (SLLSI (CPU (h_bvsbit), 14), SLLSI (CPU (h_vsbit), 12))), ORSI (ORSI (SLLSI (CPU (h_bvbit), 10), SLLSI (CPU (h_bcbit), 11)), ORSI (SLLSI (CPU (h_bnbit), 9), SLLSI (CPU (h_bzbit), 8))))), ORSI (ORSI (ORSI (SLLSI (CPU (h_vbit), 7), SLLSI (CPU (h_cbit), 6)), ORSI (SLLSI (CPU (h_nbit), 5), SLLSI (CPU (h_zbit), 4))), ORSI (SLLSI (CPU (h_sflagbit), 3), SLLSI (1, 0))))) : (((index) == (0))) ? (ORSI (ORSI (ORSI (ORSI (ORSI (ORSI (SLLSI (CPU (h_timer0bit2), 6), SLLSI (CPU (h_timer0bit3), 7)), ORSI (ORSI (SLLSI (CPU (h_coreCfgResBit28), 28), SLLSI (CPU (h_coreCfgResBit29), 29)), ORSI (SLLSI (CPU (h_coreCfgResBit30), 30), SLLSI (CPU (h_coreCfgResBit31), 31)))), ORSI (ORSI (SLLSI (CPU (h_coreCfgResBit24), 24), SLLSI (CPU (h_coreCfgResBit25), 25)), ORSI (SLLSI (CPU (h_coreCfgResBit26), 26), SLLSI (CPU (h_coreCfgResBit27), 27)))), ORSI (ORSI (SLLSI (CPU (h_timer0bit0), 4), SLLSI (CPU (h_timer0bit1), 5)), ORSI (SLLSI (CPU (h_coreCfgResBit14), 14), SLLSI (CPU (h_coreCfgResBit15), 15)))), ORSI (ORSI (ORSI (ORSI (SLLSI (CPU (h_timer1bit2), 10), SLLSI (CPU (h_timer1bit3), 11)), ORSI (SLLSI (CPU (h_coreCfgResBit12), 12), SLLSI (CPU (h_coreCfgResBit13), 13))), ORSI (SLLSI (CPU (h_clockGateEnbit), 22), SLLSI (CPU (h_mbkptEnbit), 23))), ORSI (ORSI (SLLSI (CPU (h_timer1bit0), 8), SLLSI (CPU (h_timer1bit1), 9)), ORSI (SLLSI (CPU (h_coreCfgResBit20), 20), SLLSI (CPU (h_coreCfgResBit21), 21))))), ORSI (ORSI (SLLSI (CPU (h_invExcEnbit), 1), SLLSI (CPU (h_ovfExcEnbit), 2)), ORSI (ORSI (SLLSI (CPU (h_trmbit), 0), SLLSI (CPU (h_unExcEnbit), 3)), ORSI (ORSI (SLLSI (CPU (h_arithmetic_modebit0), 17), SLLSI (CPU (h_arithmetic_modebit1), 18)), ORSI (SLLSI (CPU (h_arithmetic_modebit2), 19), SLLSI (CPU (h_coreCfgResBit16), 16))))))) : (((index) == (2))) ? (CPU (h_pc)) : (CPU (h_core_registers[index]))
-#define SET_H_CORE_REGISTERS(index, x) \
-do { \
-if ((((index)) == (0))) {\
-{\
-CPU (h_trmbit) = ANDBI (1, SRLSI ((x), 0));\
-CPU (h_invExcEnbit) = ANDBI (1, SRLSI ((x), 1));\
-CPU (h_ovfExcEnbit) = ANDBI (1, SRLSI ((x), 2));\
-CPU (h_unExcEnbit) = ANDBI (1, SRLSI ((x), 3));\
-CPU (h_timer0bit0) = ANDBI (1, SRLSI ((x), 4));\
-CPU (h_timer0bit1) = ANDBI (1, SRLSI ((x), 5));\
-CPU (h_timer0bit2) = ANDBI (1, SRLSI ((x), 6));\
-CPU (h_timer0bit3) = ANDBI (1, SRLSI ((x), 7));\
-CPU (h_timer1bit0) = ANDBI (1, SRLSI ((x), 8));\
-CPU (h_timer1bit1) = ANDBI (1, SRLSI ((x), 9));\
-CPU (h_timer1bit2) = ANDBI (1, SRLSI ((x), 10));\
-CPU (h_timer1bit3) = ANDBI (1, SRLSI ((x), 11));\
-CPU (h_coreCfgResBit12) = ANDBI (1, SRLSI ((x), 12));\
-CPU (h_coreCfgResBit13) = ANDBI (1, SRLSI ((x), 13));\
-CPU (h_coreCfgResBit14) = ANDBI (1, SRLSI ((x), 14));\
-CPU (h_coreCfgResBit15) = ANDBI (1, SRLSI ((x), 15));\
-CPU (h_coreCfgResBit16) = ANDBI (1, SRLSI ((x), 16));\
-CPU (h_arithmetic_modebit0) = ANDBI (1, SRLSI ((x), 17));\
-CPU (h_arithmetic_modebit1) = ANDBI (1, SRLSI ((x), 18));\
-CPU (h_arithmetic_modebit2) = ANDBI (1, SRLSI ((x), 19));\
-CPU (h_coreCfgResBit20) = ANDBI (1, SRLSI ((x), 20));\
-CPU (h_coreCfgResBit21) = ANDBI (1, SRLSI ((x), 21));\
-CPU (h_clockGateEnbit) = ANDBI (1, SRLSI ((x), 22));\
-CPU (h_mbkptEnbit) = ANDBI (1, SRLSI ((x), 23));\
-CPU (h_coreCfgResBit24) = ANDBI (1, SRLSI ((x), 24));\
-CPU (h_coreCfgResBit25) = ANDBI (1, SRLSI ((x), 25));\
-CPU (h_coreCfgResBit26) = ANDBI (1, SRLSI ((x), 26));\
-CPU (h_coreCfgResBit27) = ANDBI (1, SRLSI ((x), 27));\
-CPU (h_coreCfgResBit28) = ANDBI (1, SRLSI ((x), 28));\
-CPU (h_coreCfgResBit29) = ANDBI (1, SRLSI ((x), 29));\
-CPU (h_coreCfgResBit30) = ANDBI (1, SRLSI ((x), 30));\
-CPU (h_coreCfgResBit31) = ANDBI (1, SRLSI ((x), 31));\
-CPU (h_core_registers[(index)]) = (x);\
-epiphany_set_rounding_mode (current_cpu, (x));\
-}\
-}\
- else if ((((index)) == (1))) {\
-{\
-  USI tmp_newval;\
-  tmp_newval = ANDSI ((x), 65522);\
-CPU (h_extFstallbit) = ANDBI (1, SRLSI (tmp_newval, 19));\
-CPU (h_expcause2bit) = ANDBI (1, SRLSI (tmp_newval, 18));\
-CPU (h_expcause1bit) = ANDBI (1, SRLSI (tmp_newval, 17));\
-CPU (h_expcause0bit) = ANDBI (1, SRLSI (tmp_newval, 16));\
-CPU (h_busbit) = ANDBI (1, SRLSI (tmp_newval, 15));\
-CPU (h_bisbit) = ANDBI (1, SRLSI (tmp_newval, 13));\
-CPU (h_bvsbit) = ANDBI (1, SRLSI (tmp_newval, 14));\
-CPU (h_vsbit) = ANDBI (1, SRLSI (tmp_newval, 12));\
-CPU (h_bvbit) = ANDBI (1, SRLSI (tmp_newval, 10));\
-CPU (h_bcbit) = ANDBI (1, SRLSI (tmp_newval, 11));\
-CPU (h_bnbit) = ANDBI (1, SRLSI (tmp_newval, 9));\
-CPU (h_bzbit) = ANDBI (1, SRLSI (tmp_newval, 8));\
-CPU (h_vbit) = ANDBI (1, SRLSI (tmp_newval, 7));\
-CPU (h_cbit) = ANDBI (1, SRLSI (tmp_newval, 6));\
-CPU (h_nbit) = ANDBI (1, SRLSI (tmp_newval, 5));\
-CPU (h_zbit) = ANDBI (1, SRLSI (tmp_newval, 4));\
-CPU (h_sflagbit) = ANDBI (1, SRLSI (tmp_newval, 3));\
-CPU (h_kmbit) = ANDBI (1, SRLSI (tmp_newval, 2));\
-CPU (h_core_registers[((UINT) 1)]) = tmp_newval;\
-}\
-}\
- else {\
-CPU (h_core_registers[(index)]) = (x);\
-}\
-;} while (0)
-  /* DMA registers in MMR space */
-  USI h_coredma_registers[16];
-#define GET_H_COREDMA_REGISTERS(a1) CPU (h_coredma_registers)[a1]
-#define SET_H_COREDMA_REGISTERS(a1, x) (CPU (h_coredma_registers)[a1] = (x))
-  /* MEM registers in MMR space */
-  USI h_coremem_registers[4];
-#define GET_H_COREMEM_REGISTERS(a1) CPU (h_coremem_registers)[a1]
-#define SET_H_COREMEM_REGISTERS(a1, x) (CPU (h_coremem_registers)[a1] = (x))
-  /* MESH registers in MMR space */
-  USI h_coremesh_registers[4];
-#define GET_H_COREMESH_REGISTERS(a1) CPU (h_coremesh_registers)[a1]
-#define SET_H_COREMESH_REGISTERS(a1, x) (CPU (h_coremesh_registers)[a1] = (x))
   } hardware;
 #define CPU_CGEN_HW(cpu) (& (cpu)->cpu_data.hardware)
 } EPIPHANYBF_CPU_DATA;
 
 /* Virtual regs.  */
 
-#define GET_H_FPREGISTERS(index) SUBWORDSISF (CPU (h_registers[index]))
+#define GET_H_REGISTERS(index) CPU (h_all_registers[index])
+#define SET_H_REGISTERS(index, x) \
+do { \
+SET_H_ALL_REGISTERS ((index), (x));\
+;} while (0)
+#define GET_H_FPREGISTERS(index) SUBWORDSISF (CPU (h_all_registers[index]))
 #define SET_H_FPREGISTERS(index, x) \
 do { \
-CPU (h_registers[(index)]) = SUBWORDSFSI ((x));\
+SET_H_ALL_REGISTERS ((index), SUBWORDSFSI ((x)));\
+;} while (0)
+#define GET_H_PC() CPU (h_all_registers[H_REG_SCR_PC])
+#define SET_H_PC(x) \
+do { \
+SET_H_ALL_REGISTERS (H_REG_SCR_PC, (x));\
+;} while (0)
+#define GET_H_CORE_REGISTERS(index) CPU (h_all_registers[ADDSI (H_REG_GRP_SCR_OFFSET, index)])
+#define SET_H_CORE_REGISTERS(index, x) \
+do { \
+SET_H_ALL_REGISTERS (ADDSI (H_REG_GRP_SCR_OFFSET, (index)), (x));\
+;} while (0)
+#define GET_H_CAIBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_CAIBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_CAIBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_CAIBIT, (x));\
+;} while (0)
+#define GET_H_GIDISABLEBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_GIDISABLEBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_GIDISABLEBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_GIDISABLEBIT, (x));\
+;} while (0)
+#define GET_H_KMBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_KMBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_KMBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_KMBIT, (x));\
+;} while (0)
+#define GET_H_SFLAGBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_SFLAGBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_SFLAGBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_SFLAGBIT, (x));\
+;} while (0)
+#define GET_H_ZBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_ZBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_ZBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_ZBIT, (x));\
+;} while (0)
+#define GET_H_NBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_NBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_NBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_NBIT, (x));\
+;} while (0)
+#define GET_H_CBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_CBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_CBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_CBIT, (x));\
+;} while (0)
+#define GET_H_VBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_VBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_VBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_VBIT, (x));\
+;} while (0)
+#define GET_H_BZBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_BZBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_BZBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BZBIT, (x));\
+;} while (0)
+#define GET_H_BNBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_BNBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_BNBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BNBIT, (x));\
+;} while (0)
+#define GET_H_BVBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_BVBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_BVBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BVBIT, (x));\
+;} while (0)
+#define GET_H_BCBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_BCBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_BCBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BCBIT, (x));\
+;} while (0)
+#define GET_H_VSBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_VSBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_VSBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_VSBIT, (x));\
+;} while (0)
+#define GET_H_BISBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_BISBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_BISBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BISBIT, (x));\
+;} while (0)
+#define GET_H_BVSBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_BVSBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_BVSBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BVSBIT, (x));\
+;} while (0)
+#define GET_H_BUSBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_BUSBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_BUSBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BUSBIT, (x));\
+;} while (0)
+#define GET_H_EXPCAUSE0BIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXPCAUSE0BIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_EXPCAUSE0BIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXPCAUSE0BIT, (x));\
+;} while (0)
+#define GET_H_EXPCAUSE1BIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXPCAUSE1BIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_EXPCAUSE1BIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXPCAUSE1BIT, (x));\
+;} while (0)
+#define GET_H_EXPCAUSE2BIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXPCAUSE2BIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_EXPCAUSE2BIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXPCAUSE2BIT, (x));\
+;} while (0)
+#define GET_H_EXTFSTALLBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXTFSTALLBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_EXTFSTALLBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXTFSTALLBIT, (x));\
+;} while (0)
+#define GET_H_TRMBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TRMBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TRMBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TRMBIT, (x));\
+;} while (0)
+#define GET_H_INVEXCENBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_INVEXCENBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_INVEXCENBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_INVEXCENBIT, (x));\
+;} while (0)
+#define GET_H_OVFEXCENBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_OVFEXCENBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_OVFEXCENBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_OVFEXCENBIT, (x));\
+;} while (0)
+#define GET_H_UNEXCENBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_UNEXCENBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_UNEXCENBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_UNEXCENBIT, (x));\
+;} while (0)
+#define GET_H_TIMER0BIT0() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER0BIT0), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER0BIT0(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER0BIT0, (x));\
+;} while (0)
+#define GET_H_TIMER0BIT1() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER0BIT1), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER0BIT1(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER0BIT1, (x));\
+;} while (0)
+#define GET_H_TIMER0BIT2() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER0BIT2), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER0BIT2(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER0BIT2, (x));\
+;} while (0)
+#define GET_H_TIMER0BIT3() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER0BIT3), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER0BIT3(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER0BIT3, (x));\
+;} while (0)
+#define GET_H_TIMER1BIT0() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER1BIT0), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER1BIT0(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER1BIT0, (x));\
+;} while (0)
+#define GET_H_TIMER1BIT1() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER1BIT1), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER1BIT1(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER1BIT1, (x));\
+;} while (0)
+#define GET_H_TIMER1BIT2() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER1BIT2), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER1BIT2(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER1BIT2, (x));\
+;} while (0)
+#define GET_H_TIMER1BIT3() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_TIMER1BIT3), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_TIMER1BIT3(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_TIMER1BIT3, (x));\
+;} while (0)
+#define GET_H_ARITHMETIC_MODEBIT0() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_ARITHMETIC_MODEBIT0), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_ARITHMETIC_MODEBIT0(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_ARITHMETIC_MODEBIT0, (x));\
+;} while (0)
+#define GET_H_ARITHMETIC_MODEBIT1() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_ARITHMETIC_MODEBIT1), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_ARITHMETIC_MODEBIT1(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_ARITHMETIC_MODEBIT1, (x));\
+;} while (0)
+#define GET_H_ARITHMETIC_MODEBIT2() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_ARITHMETIC_MODEBIT2), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_ARITHMETIC_MODEBIT2(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_ARITHMETIC_MODEBIT2, (x));\
+;} while (0)
+#define GET_H_CLOCKGATEENBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_CLOCKGATEENBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_CLOCKGATEENBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_CLOCKGATEENBIT, (x));\
+;} while (0)
+#define GET_H_MBKPTENBIT() ({   USI tmp_regval;\
+  USI tmp_bitval;\
+  tmp_regval = CPU (h_all_registers[H_REG_SCR_CONFIG]);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_CONFIG_MBKPTENBIT), 1);\
+; TRUNCSIBI (tmp_bitval); })
+#define SET_H_MBKPTENBIT(x) \
+do { \
+SET_REG_BIT_ATOMIC (H_REG_SCR_CONFIG, H_SCR_CONFIG_MBKPTENBIT, (x));\
+;} while (0)
+#define GET_H_COREDMA_REGISTERS(index) CPU (h_all_registers[ADDSI (H_REG_GRP_DMA_OFFSET, index)])
+#define SET_H_COREDMA_REGISTERS(index, x) \
+do { \
+SET_H_ALL_REGISTERS (ADDSI (H_REG_GRP_DMA_OFFSET, (index)), (x));\
+;} while (0)
+#define GET_H_COREMEM_REGISTERS(index) CPU (h_all_registers[ADDSI (H_REG_GRP_MEM_OFFSET, index)])
+#define SET_H_COREMEM_REGISTERS(index, x) \
+do { \
+SET_H_ALL_REGISTERS (ADDSI (H_REG_GRP_MEM_OFFSET, (index)), (x));\
+;} while (0)
+#define GET_H_COREMESH_REGISTERS(index) CPU (h_all_registers[ADDSI (H_REG_GRP_MESH_OFFSET, index)])
+#define SET_H_COREMESH_REGISTERS(index, x) \
+do { \
+SET_H_ALL_REGISTERS (ADDSI (H_REG_GRP_MESH_OFFSET, (index)), (x));\
 ;} while (0)
 
 /* Cover fns for register access.  */
+SI epiphanybf_h_all_registers_get (SIM_CPU *, UINT);
+void epiphanybf_h_all_registers_set (SIM_CPU *, UINT, SI);
 SI epiphanybf_h_registers_get (SIM_CPU *, UINT);
 void epiphanybf_h_registers_set (SIM_CPU *, UINT, SI);
 SF epiphanybf_h_fpregisters_get (SIM_CPU *, UINT);
 void epiphanybf_h_fpregisters_set (SIM_CPU *, UINT, SF);
+USI epiphanybf_h_pc_get (SIM_CPU *);
+void epiphanybf_h_pc_set (SIM_CPU *, USI);
+SI epiphanybf_h_memaddr_get (SIM_CPU *);
+void epiphanybf_h_memaddr_set (SIM_CPU *, SI);
+USI epiphanybf_h_core_registers_get (SIM_CPU *, UINT);
+void epiphanybf_h_core_registers_set (SIM_CPU *, UINT, USI);
+BI epiphanybf_h_caibit_get (SIM_CPU *);
+void epiphanybf_h_caibit_set (SIM_CPU *, BI);
+BI epiphanybf_h_gidisablebit_get (SIM_CPU *);
+void epiphanybf_h_gidisablebit_set (SIM_CPU *, BI);
+BI epiphanybf_h_kmbit_get (SIM_CPU *);
+void epiphanybf_h_kmbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_sflagbit_get (SIM_CPU *);
+void epiphanybf_h_sflagbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_zbit_get (SIM_CPU *);
 void epiphanybf_h_zbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_nbit_get (SIM_CPU *);
@@ -379,24 +472,20 @@ BI epiphanybf_h_cbit_get (SIM_CPU *);
 void epiphanybf_h_cbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_vbit_get (SIM_CPU *);
 void epiphanybf_h_vbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_vsbit_get (SIM_CPU *);
-void epiphanybf_h_vsbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_bzbit_get (SIM_CPU *);
 void epiphanybf_h_bzbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_bnbit_get (SIM_CPU *);
 void epiphanybf_h_bnbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_bvbit_get (SIM_CPU *);
 void epiphanybf_h_bvbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_bubit_get (SIM_CPU *);
-void epiphanybf_h_bubit_set (SIM_CPU *, BI);
-BI epiphanybf_h_bibit_get (SIM_CPU *);
-void epiphanybf_h_bibit_set (SIM_CPU *, BI);
 BI epiphanybf_h_bcbit_get (SIM_CPU *);
 void epiphanybf_h_bcbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_bvsbit_get (SIM_CPU *);
-void epiphanybf_h_bvsbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_vsbit_get (SIM_CPU *);
+void epiphanybf_h_vsbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_bisbit_get (SIM_CPU *);
 void epiphanybf_h_bisbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_bvsbit_get (SIM_CPU *);
+void epiphanybf_h_bvsbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_busbit_get (SIM_CPU *);
 void epiphanybf_h_busbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_expcause0bit_get (SIM_CPU *);
@@ -409,12 +498,12 @@ BI epiphanybf_h_extFstallbit_get (SIM_CPU *);
 void epiphanybf_h_extFstallbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_trmbit_get (SIM_CPU *);
 void epiphanybf_h_trmbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_invExcEnbit_get (SIM_CPU *);
-void epiphanybf_h_invExcEnbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_ovfExcEnbit_get (SIM_CPU *);
-void epiphanybf_h_ovfExcEnbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_unExcEnbit_get (SIM_CPU *);
-void epiphanybf_h_unExcEnbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_invexcenbit_get (SIM_CPU *);
+void epiphanybf_h_invexcenbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_ovfexcenbit_get (SIM_CPU *);
+void epiphanybf_h_ovfexcenbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_unexcenbit_get (SIM_CPU *);
+void epiphanybf_h_unexcenbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_timer0bit0_get (SIM_CPU *);
 void epiphanybf_h_timer0bit0_set (SIM_CPU *, BI);
 BI epiphanybf_h_timer0bit1_get (SIM_CPU *);
@@ -431,60 +520,16 @@ BI epiphanybf_h_timer1bit2_get (SIM_CPU *);
 void epiphanybf_h_timer1bit2_set (SIM_CPU *, BI);
 BI epiphanybf_h_timer1bit3_get (SIM_CPU *);
 void epiphanybf_h_timer1bit3_set (SIM_CPU *, BI);
-BI epiphanybf_h_mbkptEnbit_get (SIM_CPU *);
-void epiphanybf_h_mbkptEnbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_clockGateEnbit_get (SIM_CPU *);
-void epiphanybf_h_clockGateEnbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit12_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit12_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit13_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit13_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit14_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit14_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit15_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit15_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit16_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit16_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit20_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit20_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit21_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit21_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit24_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit24_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit25_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit25_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit26_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit26_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit27_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit27_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit28_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit28_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit29_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit29_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit30_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit30_set (SIM_CPU *, BI);
-BI epiphanybf_h_coreCfgResBit31_get (SIM_CPU *);
-void epiphanybf_h_coreCfgResBit31_set (SIM_CPU *, BI);
 BI epiphanybf_h_arithmetic_modebit0_get (SIM_CPU *);
 void epiphanybf_h_arithmetic_modebit0_set (SIM_CPU *, BI);
 BI epiphanybf_h_arithmetic_modebit1_get (SIM_CPU *);
 void epiphanybf_h_arithmetic_modebit1_set (SIM_CPU *, BI);
 BI epiphanybf_h_arithmetic_modebit2_get (SIM_CPU *);
 void epiphanybf_h_arithmetic_modebit2_set (SIM_CPU *, BI);
-BI epiphanybf_h_gidisablebit_get (SIM_CPU *);
-void epiphanybf_h_gidisablebit_set (SIM_CPU *, BI);
-BI epiphanybf_h_kmbit_get (SIM_CPU *);
-void epiphanybf_h_kmbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_caibit_get (SIM_CPU *);
-void epiphanybf_h_caibit_set (SIM_CPU *, BI);
-BI epiphanybf_h_sflagbit_get (SIM_CPU *);
-void epiphanybf_h_sflagbit_set (SIM_CPU *, BI);
-USI epiphanybf_h_pc_get (SIM_CPU *);
-void epiphanybf_h_pc_set (SIM_CPU *, USI);
-SI epiphanybf_h_memaddr_get (SIM_CPU *);
-void epiphanybf_h_memaddr_set (SIM_CPU *, SI);
-USI epiphanybf_h_core_registers_get (SIM_CPU *, UINT);
-void epiphanybf_h_core_registers_set (SIM_CPU *, UINT, USI);
+BI epiphanybf_h_clockgateenbit_get (SIM_CPU *);
+void epiphanybf_h_clockgateenbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_mbkptenbit_get (SIM_CPU *);
+void epiphanybf_h_mbkptenbit_set (SIM_CPU *, BI);
 USI epiphanybf_h_coredma_registers_get (SIM_CPU *, UINT);
 void epiphanybf_h_coredma_registers_set (SIM_CPU *, UINT, USI);
 USI epiphanybf_h_coremem_registers_get (SIM_CPU *, UINT);
@@ -519,63 +564,53 @@ union sem_fields {
     unsigned char out_h_registers_SI_14;
   } sfmt_bl16;
   struct { /*  */
+    ADDR i_imm8;
+    UINT f_rd;
+    unsigned char out_rd;
+  } sfmt_mov8;
+  struct { /*  */
+    UINT f_rd6;
+    UINT f_sn6;
+    unsigned char out_rd6;
+  } sfmt_movfs6;
+  struct { /*  */
+    UINT f_rd;
+    UINT f_sn;
+    unsigned char out_rd;
+  } sfmt_movfs16;
+  struct { /*  */
+    UINT f_rd6;
+    UINT f_sn6;
+    unsigned char in_rd6;
+  } sfmt_movts6;
+  struct { /*  */
+    UINT f_rd;
+    UINT f_sn;
+    unsigned char in_rd;
+  } sfmt_movts16;
+  struct { /*  */
+    UINT f_rn6;
+    unsigned char in_rn6;
+    unsigned char out_h_registers_SI_14;
+  } sfmt_jalr;
+  struct { /*  */
+    UINT f_rn;
+    unsigned char in_rn;
+    unsigned char out_h_registers_SI_14;
+  } sfmt_jalr16;
+  struct { /*  */
     UINT f_rd6;
     UINT f_rn6;
     unsigned char in_frn6;
     unsigned char out_frd6;
   } sfmt_f_recipf32;
   struct { /*  */
-    ADDR i_imm8;
-    SI* i_rd;
-    UINT f_rd;
-    unsigned char out_rd;
-  } sfmt_mov8;
-  struct { /*  */
-    SI* i_rd6;
-    UINT f_rd6;
-    UINT f_sn6;
-    unsigned char out_rd6;
-  } sfmt_movfs6;
-  struct { /*  */
-    SI* i_rd;
-    UINT f_rd;
-    UINT f_sn;
-    unsigned char out_rd;
-  } sfmt_movfs16;
-  struct { /*  */
-    SI* i_rd6;
-    UINT f_rd6;
-    UINT f_sn6;
-    unsigned char in_rd6;
-  } sfmt_movts6;
-  struct { /*  */
-    SI* i_rd;
-    UINT f_rd;
-    UINT f_sn;
-    unsigned char in_rd;
-  } sfmt_movts16;
-  struct { /*  */
-    SI* i_rn6;
-    UINT f_rn6;
-    unsigned char in_rn6;
-    unsigned char out_h_registers_SI_14;
-  } sfmt_jalr;
-  struct { /*  */
-    SI* i_rn;
-    UINT f_rn;
-    unsigned char in_rn;
-    unsigned char out_h_registers_SI_14;
-  } sfmt_jalr16;
-  struct { /*  */
     ADDR i_imm16;
-    SI* i_rd6;
     UINT f_rd6;
     unsigned char in_rd6;
     unsigned char out_rd6;
   } sfmt_movt;
   struct { /*  */
-    SI* i_rd6;
-    SI* i_rn6;
     UINT f_rd6;
     UINT f_rn6;
     UINT f_shift;
@@ -584,8 +619,6 @@ union sem_fields {
     unsigned char out_rd6;
   } sfmt_lsri32;
   struct { /*  */
-    SI* i_rd;
-    SI* i_rn;
     UINT f_rd;
     UINT f_rn;
     UINT f_shift;
@@ -594,8 +627,6 @@ union sem_fields {
     unsigned char out_rd;
   } sfmt_lsri16;
   struct { /*  */
-    SI* i_rd6;
-    SI* i_rn6;
     INT f_sdisp11;
     UINT f_rd6;
     UINT f_rn6;
@@ -604,8 +635,6 @@ union sem_fields {
     unsigned char out_rd6;
   } sfmt_addi;
   struct { /*  */
-    SI* i_rd;
-    SI* i_rn;
     INT f_sdisp3;
     UINT f_rd;
     UINT f_rn;
@@ -614,8 +643,6 @@ union sem_fields {
     unsigned char out_rd;
   } sfmt_addi16;
   struct { /*  */
-    SI* i_rd;
-    SI* i_rn;
     UINT f_disp3;
     UINT f_rd;
     UINT f_rn;
@@ -624,8 +651,6 @@ union sem_fields {
     unsigned char in_rn;
   } sfmt_strdd16;
   struct { /*  */
-    SI* i_rd;
-    SI* i_rn;
     UINT f_disp3;
     UINT f_rd;
     UINT f_rn;
@@ -634,9 +659,6 @@ union sem_fields {
     unsigned char out_rd;
   } sfmt_ldrdd16_s;
   struct { /*  */
-    SI* i_rd;
-    SI* i_rd6;
-    SI* i_rn;
     UINT f_rd;
     UINT f_rd6;
     UINT f_rn;
@@ -646,9 +668,6 @@ union sem_fields {
     unsigned char out_rd6;
   } sfmt_f_ixf16;
   struct { /*  */
-    SI* i_rd;
-    SI* i_rm;
-    SI* i_rn;
     UINT f_rd;
     UINT f_rm;
     UINT f_rn;
@@ -658,8 +677,6 @@ union sem_fields {
     unsigned char out_rd;
   } sfmt_add16;
   struct { /*  */
-    SI* i_rd6;
-    SI* i_rn6;
     UINT f_disp11;
     UINT f_rd6;
     UINT f_rn6;
@@ -670,21 +687,6 @@ union sem_fields {
     unsigned char out_rn6;
   } sfmt_strddpm;
   struct { /*  */
-    SI* i_rd6;
-    SI* i_rn6;
-    UINT f_disp11;
-    UINT f_rd6;
-    UINT f_rn6;
-    UINT f_subd;
-    unsigned char in_rn6;
-    unsigned char out_h_registers_SI_add__INT_index_of__INT_rd6_1;
-    unsigned char out_rd6;
-    unsigned char out_rn6;
-  } sfmt_ldrddpm_l;
-  struct { /*  */
-    SI* i_rd;
-    SI* i_rm;
-    SI* i_rn;
     UINT f_rd;
     UINT f_rm;
     UINT f_rn;
@@ -695,9 +697,6 @@ union sem_fields {
     unsigned char out_rn;
   } sfmt_strdp16;
   struct { /*  */
-    SI* i_rd6;
-    SI* i_rm6;
-    SI* i_rn6;
     UINT f_addsubx;
     UINT f_rd6;
     UINT f_rm6;
@@ -708,9 +707,16 @@ union sem_fields {
     unsigned char out_rd6;
   } sfmt_testsetbt;
   struct { /*  */
-    SI* i_rd;
-    SI* i_rm;
-    SI* i_rn;
+    UINT f_disp11;
+    UINT f_rd6;
+    UINT f_rn6;
+    UINT f_subd;
+    unsigned char in_rn6;
+    unsigned char out_h_registers_SI_add__INT_index_of__INT_rd6_1;
+    unsigned char out_rd6;
+    unsigned char out_rn6;
+  } sfmt_ldrddpm_l;
+  struct { /*  */
     UINT f_rd;
     UINT f_rm;
     UINT f_rn;
@@ -721,9 +727,6 @@ union sem_fields {
     unsigned char out_rn;
   } sfmt_ldrdp16_s;
   struct { /*  */
-    SI* i_rd6;
-    SI* i_rm6;
-    SI* i_rn6;
     UINT f_addsubx;
     UINT f_rd6;
     UINT f_rm6;
@@ -735,9 +738,6 @@ union sem_fields {
     unsigned char out_rn6;
   } sfmt_strdp;
   struct { /*  */
-    SI* i_rd6;
-    SI* i_rm6;
-    SI* i_rn6;
     UINT f_addsubx;
     UINT f_rd6;
     UINT f_rm6;

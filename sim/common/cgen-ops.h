@@ -332,6 +332,14 @@ SUBWORDSIUQI (SI in, int byte)
   return (UQI) (in >> (8 * (3 - byte))) & 0xFF;
 }
 
+SEMOPS_INLINE BI
+SUBWORDSIBI (SI in, int bit)
+{
+  assert (bit >= 0 && bit <= 31);
+  return (BI) ((in >> bit) & 1);
+}
+
+
 SEMOPS_INLINE QI
 SUBWORDDIQI (DI in, int byte)
 {
