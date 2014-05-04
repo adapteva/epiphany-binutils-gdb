@@ -62,6 +62,7 @@ extern void epiphanybf_h_accum_set_handler (SIM_CPU *, DI);
 #endif
 
 /* Custom reg getters/setters */
+void epiphanybf_set_config(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_status(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);

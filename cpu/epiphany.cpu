@@ -502,11 +502,8 @@
   (set (index val)
 	(sequence ()
 	  (cond VOID
-		((eq index (enum USI H-REG-SCR-CONFIG)) ; CONFIG reg
-		  (set (raw-reg h-all-registers index) val)
-		  ;; TODO: This should be in mloop.in:full-exec-scache after execute
-		  ;; check LSB of CONFIG for rounding mode
-		  (c-call "epiphany_set_rounding_mode" val)
+		((eq index (enum USI H-REG-SCR-CONFIG))
+		  (c-call "epiphanybf_set_config" val)
 		)
 		((eq index (enum USI H-REG-SCR-STATUS))
 		  (c-call "epiphanybf_set_status" val)

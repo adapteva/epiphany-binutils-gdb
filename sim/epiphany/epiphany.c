@@ -213,6 +213,14 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 
 /* Custom register setters */
 void
+epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
+{
+  /* TODO: Any sticky bits? */
+  CPU(h_all_registers[H_REG_SCR_CONFIG]) = val;
+  /* Rounding mode might have changed */
+  __sync_fetch_and_add(&current_cpu->oob_events.rounding_mode, 1);
+}
+
 void
 epiphanybf_set_status(SIM_CPU *current_cpu, USI val)
 {
