@@ -163,10 +163,10 @@ ES_ATOMIC_INCR_DEF(64)
 
 
 typedef enum es_loc_t_ {
-  /* TODO: might need *MMR_GPR & *MMR_SPR*/
+  /* TODO: might need ES_LOC_UNALIGNED */
   ES_LOC_INVALID=0,
   ES_LOC_SHM,
-  ES_LOC_SHM_MMR, /* Maybe we don't need this */
+  ES_LOC_SHM_MMR,
   ES_LOC_RAM,     /* External RAM */
   ES_LOC_NET,
   ES_LOC_NET_MMR, /* Maybe we don't need this */
@@ -181,14 +181,14 @@ typedef enum es_req_t {
 
 /* Internal */
 typedef struct es_transl_ {
-  es_loc_t	location;
-  uint32_t	addr;
+  es_loc_t	location;  /* Location (local shm or network) and type */
+  uint32_t	addr;      /* Epiphany address */
   size_t	in_region; /* Num of bytes left in region, need better name */
-  unsigned	coreid;
-  unsigned	node;
-  uint8_t	*mem; /* Native pointer into shm region */
-  sim_cpu       *cpu; /* Pointer to 'remote' sim cpu    */
-  unsigned      reg;  /* If memory mapped register      */
+  unsigned	coreid;    /* Core (if any) address belongs to */
+  unsigned	node;      /* Node address belongs to */
+  uint8_t	*mem;      /* Native pointer into shm region */
+  sim_cpu       *cpu;      /* Pointer to 'remote' sim cpu    */
+  unsigned      reg;       /* If memory mapped register      */
 #if 0
 #ifdef HAVE_MPI2
   MPI_AInt  mpi_offset;
