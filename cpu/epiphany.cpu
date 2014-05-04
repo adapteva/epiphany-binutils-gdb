@@ -501,7 +501,6 @@
   ;; Might want add mem barriers for set/get here.
   (set (index val)
 	(sequence ()
-	  ;; Calculate index
 	  (cond VOID
 		((eq index (enum USI H-REG-SCR-CONFIG)) ; CONFIG reg
 		  (set (raw-reg h-all-registers index) val)
@@ -509,10 +508,14 @@
 		  ;; check LSB of CONFIG for rounding mode
 		  (c-call "epiphany_set_rounding_mode" val)
 		)
-		((eq index (enum USI H-REG-SCR-STATUS)) (sequence ((USI newval))
-		  ;STATUS reg ; TODO check which bits can be set or cleared
-		  (set newval (and val (const #xfff2)))
-		  (set (raw-reg h-all-registers index) newval))
+		((eq index (enum USI H-REG-SCR-STATUS))
+		  (c-call "epiphanybf_set_status" val)
+		)
+		((eq index (enum USI H-REG-SCR-ILATST))
+		  (c-call "epiphanybf_set_ilatst" val)
+		)
+		((eq index (enum USI H-REG-SCR-ILATCL))
+		  (c-call "epiphanybf_set_ilatcl" val)
 		)
 		(else (set (raw-reg h-all-registers index) val))
 	  )
@@ -1132,22 +1135,12 @@
 
 
 ;; call exception macro - no check for imask
-(define-pmacro (call-exception vaddr bit-in-ilat)
-  (if (eq gidisablebit 0)
-      (if (eq (and (hcr-imask) bit-in-ilat) 0)
-	  (sequence ()
-		    (set kmbit 1)
-		    (set gidisablebit 1)
-		    (set (hcr-iret) (add pc (const 2)))
-		    (set (hcr-ipend) (or (hcr-ipend) (const bit-in-ilat)))
-		    (set pc (const vaddr))
-
-		    )
-	  ;; schedule interrupt
-	  (set (hcr-ilat) (or (hcr-ilat) (const  bit-in-ilat)))
-	  )
-      )
+(define-pmacro (schedule-interrupt num)
+  (sequence ((USI mask))
+	(set mask (sll 1 num))
+	(set (hcr-ilatst) mask) ;; Ok, since reg. is OR-ed in setter function.
   )
+)
 
 
 ;;      (lc             5);loop counter            Not impemented
@@ -1398,7 +1391,7 @@
 	   ((OPW_WORD)	(eq (and addr #x3) #x0))
 	   (else	(eq (and addr #x7) #x0))))
     (if (not BI isAligmentAccess)
-	(call-exception #x4 #x2))
+	(schedule-interrupt #x1))
   )
 )
 
@@ -2102,23 +2095,18 @@
 ;;;;;;;;;;;;;;;;
 
 (dni rti "return from interrupt" (SHORT-INSN UNCOND-CTI)
-     "rti"
-     (+ OP4_FLOW16 (f-opc-8-5 #x1d) (f-dc-15-7 #x0))
-     (sequence ()
-	       ;; 	(set (hcr-ipend)
-	       ;; 	     (xor (hcr-ipend)
-	       ;; 		  (sll (const 1)
-	       ;; 		       (sub (c-raw-call SI "ffs" (and (hcr-ipend) (not (hcr-imask))))
-	       ;; 			    (const 1)))))
-
-	       (set (hcr-ipend)
-		    (c-call SI "epiphany_rti" (hcr-ipend) (hcr-imask)))
-	       (set gidisablebit 0)
-	       (set kmbit 0)
-					;(set caibit 1)
-	       (set pc (hcr-iret)))
-     ()
-     )
+  "rti"
+  (+ OP4_FLOW16 (f-opc-8-5 #x1d) (f-dc-15-7 #x0))
+  (sequence ()
+	(set (hcr-ipend)
+	  (c-call SI "epiphany_rti" (hcr-ipend) (hcr-imask)))
+	(set gidisablebit 0)
+	(set kmbit 0)
+	;(set caibit 1)
+	(set pc (hcr-iret))
+  )
+  ()
+)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WAND is a wired flag that runs around the chip
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2173,25 +2161,13 @@
 (dni swi_num "software interrupt" (SHORT-INSN UNCOND-CTI)
      "swi $swi_num"
      (+ OP4_FLOW16 (f-opc-8-5 #x1e) (f-trap-swi-9-1 #x0)  swi_num)
-     (sequence ()  (call-exception #x24  #x80))
-     ;;      (if (eq gie 1)
-     ;; 	 (sequence ()
-     ;; 		   (set kmbit 1)
-     ;; 		   (set gie 0)
-     ;; 		   (set (hcr-iret) (add pc (const 2)))
-     ;; 		   (set (hcr-ipend) (or (hcr-ipend) (const #x80)))
-     ;; 		   (set pc (const #x1c))
-
-     ;; 			   )
-     ;; 	 ;; schedule interrupt
-     ;; 	 (set (hcr-ilat) (or (hcr-ilat) (const #x80)))
-     ;; 	 )
+     (sequence ()  (schedule-interrupt 9))
      ()
      )
 (dni swi "software interrupt" (ALIAS SHORT-INSN UNCOND-CTI)
      "swi"
      (+ OP4_FLOW16 (f-opc-8-5 #x1e) (f-trap-swi-9-1 #x0) (f-dc-15-6 #x0))
-     (sequence ()  (call-exception #x24  #x80))
+     (sequence ()  (schedule-interrupt 9))
      ()
      )
 
@@ -2627,7 +2603,7 @@
 		(sequence ()
 		  (set expcause0bit (const 1))
 		  (set expcause1bit (const 1))
-		  (call-exception #x4 #x2)))
+		  (schedule-interrupt 1)))
 	    ))
 	(if (eq arithmetic-modebit2 1)
 	    (sequence ((SI sdtmp))
@@ -2677,7 +2653,7 @@
 		(sequence ()	
 		  (set expcause0bit (const 1))
 		  (set expcause1bit (const 1))
-		  (call-exception #x4 #x2)))
+		  (schedule-interrupt 1)))
 	    )
 	  )
 	(if (eq arithmetic-modebit2 1)
@@ -2878,7 +2854,7 @@
 		       (sequence ()
 			 (set expcause0bit (const 1))
 			 (set expcause1bit (const 1))
-			 (call-exception #x4 #x2)))
+			 (schedule-interrupt 1)))
 		   (set rd sdtmp)
 		   )
 		 ()
@@ -2914,7 +2890,7 @@
 		       (sequence ()
 			 (set expcause0bit (const 1))
 			 (set expcause1bit (const 1))
-			 (call-exception #x4 #x2))
+			 (schedule-interrupt 1))
 		       )
 
 		   )

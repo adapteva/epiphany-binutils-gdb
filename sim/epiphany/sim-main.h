@@ -23,6 +23,7 @@
 #if WITH_EMESH_SIM
 #include "emesh.h"
 #endif
+#include "oob-events.h"
 
 /* These must be defined before sim-base.h.  */
 typedef USI sim_cia;
@@ -46,6 +47,19 @@ do { \
 /*#include "cpu.h"*/
 
 
+/* Out of band events */
+typedef struct oob_state_ {
+#if WITH_EMESH_SIM
+  unsigned external_write; /* Other agent wrote to cores mem */
+#endif
+  /* Lock for ALL SCR regs (all non-GPR regs) */
+  /* TODO: Might want to implement more fine-grained locking later */
+  unsigned scr_lock;
+  unsigned rounding_mode;
+  /* DMA */
+  /* ... ??? */
+} oob_state;
+
 /* The _sim_cpu struct.  */
 
 struct _sim_cpu {
@@ -55,11 +69,11 @@ struct _sim_cpu {
   sim_fpu_round round;          /* Current rounding mode of processor.  */
   /* Static parts of cgen.  */
   CGEN_CPU cgen_cpu;
+
+  oob_state oob_events; /* Out of band event hints */
+
   EPIPHANY_MISC_PROFILE epiphany_misc_profile;
 #define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
-#if WITH_EMESH_SIM
-  uint32_t write_from_other;
-#endif
 
   /* CPU specific parts go here.
      Note that in files that don't need to access these pieces WANT_CPU_FOO

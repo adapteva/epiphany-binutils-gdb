@@ -18,7 +18,8 @@
 
 ## COMMON_PRE_CONFIG_FRAG
 
-EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o
+EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o \
+                oob-events.o
 
 SIM_EXTRA_LIBS = -lm @epiphany_extra_libs@
 

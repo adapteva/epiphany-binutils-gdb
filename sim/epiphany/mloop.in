@@ -226,17 +226,55 @@ xfull-exec-* | xfast-exec-*)
 
 cat <<EOF
 {
+  SEM_PC old_vpc;
 #if WITH_EMESH_SIM
+
+#define INVALIDATE_IF_NOT_LOCAL(xpc)\
+do\
+  {\
+    if (xpc >= es_get_core_mem_region_size(STATE_ESIM(current_state)) &&\
+	  !(core_glob_addr_start <= xpc &&\
+	    xpc < core_glob_addr_start + core_mem_region_size))\
+      epiphanybf_scache_invalidate(current_cpu, xpc);\
+  }\
+while (0)
+
   static int initialized = 0;
+  static size_t core_mem_region_size = 0;
+  static size_t core_glob_addr_start = 0;
+
   if (!initialized)
     {
       sim_io_eprintf(current_state, "ESIM: Waiting for other cores...");
       /* TODO: Would be nice to support Ctrl-C here */
       es_wait_run(STATE_ESIM(current_state));
       sim_io_eprintf(current_state, " done.\n");
+
+      core_mem_region_size =
+        es_get_core_mem_region_size(STATE_ESIM(current_state));
+      core_glob_addr_start =
+        es_get_coreid(STATE_ESIM(current_state)) * core_mem_region_size;
+
       initialized = 1;
     }
+#endif /* WITH_EMESH_SIM */
+
+  /* Handle out of band events.
+   * (All except external_write which we do after execute (too many arguments
+   * to pass to epiphany_handle_oob_events otherwise). This is ok because
+   * every time before we are called from sim_resume via engine_run_1
+   *  (see ../common/cgen-run.c) the scache is flushed.
+   */
+  old_vpc = vpc;
+  vpc = epiphany_handle_oob_events(current_cpu, vpc);
+  if (old_vpc != vpc)
+    {
+#if WITH_EMESH_SIM
+      INVALIDATE_IF_NOT_LOCAL(old_vpc);
 #endif
+      sc = epiphanybf_scache_lookup (current_cpu, vpc, scache, hash_mask,
+				     FAST_P);
+    }
 
 #if (! FAST_P && WITH_SEM_SWITCH_FULL) || (FAST_P && WITH_SEM_SWITCH_FAST)
 #define DEFINE_SWITCH
@@ -245,9 +283,6 @@ cat <<EOF
   vpc = execute (current_cpu, vpc, FAST_P);
 #else
 #if WITH_EMESH_SIM
-  static size_t core_mem_region_size = 0;
-  static size_t core_glob_addr_start = 0;
-  SEM_PC old_vpc;
   old_vpc = vpc;
 #endif
   vpc = execute (current_cpu, sc, FAST_P);
@@ -261,20 +296,11 @@ cat <<EOF
    * would have to be followed by an invalidate request to all cores in the
    * system.
    */
-  if (!core_mem_region_size)
-    {
-      core_mem_region_size =
-        es_get_core_mem_region_size(STATE_ESIM(current_state));
-      core_glob_addr_start =
-        es_get_coreid(STATE_ESIM(current_state)) * core_mem_region_size;
-    }
+
   /* Allow addresses inside both core-local and the cores global address
    * space.
    */
-  if (old_vpc >= es_get_core_mem_region_size(STATE_ESIM(current_state)) &&
-        !(core_glob_addr_start <= old_vpc &&
-	  old_vpc < core_glob_addr_start + core_mem_region_size))
-    epiphanybf_scache_invalidate(current_cpu, old_vpc);
+  INVALIDATE_IF_NOT_LOCAL(old_vpc);
 
   /* If another core (or the host CPU) wrote to local memory we need to make
    * sure that cached instructions are flushed.
@@ -284,11 +310,12 @@ cat <<EOF
    * When flushing we need to take into account local/global addresses, and
    * partly overwritten instructions.
    */
-  if (current_cpu->write_from_other)
+  if (current_cpu->oob_events.external_write)
     {
+      current_cpu->oob_events.external_write = 0;
       scache_flush_cpu(current_cpu);
-      current_cpu->write_from_other = 0;
     }
+
    /* TODO: We might need to check if the PC was changed externally before it
     * is overwritten. (PC will be set to vpc after this code block)
     * Need real hardware to verify behaviour.
