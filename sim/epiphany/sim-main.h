@@ -63,6 +63,9 @@ typedef struct oob_state_ {
   unsigned rounding_mode;
   /* DMA */
   /* ... ??? */
+
+  /* These are local core private */
+  unsigned last_rounding_mode;
 } oob_state;
 
 /* The _sim_cpu struct.  */

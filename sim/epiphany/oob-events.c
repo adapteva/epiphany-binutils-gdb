@@ -103,10 +103,12 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
    */
   SIM_DESC current_state;
   oob_state *oob;
+  unsigned rounding_mode;
   USI config, ilat, ilatcl;
 
   current_state = CPU_STATE (current_cpu);
   oob = &current_cpu->oob_events;
+  rounding_mode = oob->rounding_mode;
 
   config = GET_H_ALL_REGISTERS(H_REG_SCR_CONFIG);
   ilat   = GET_H_ALL_REGISTERS(H_REG_SCR_ILAT);
@@ -114,6 +116,11 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
 
   MEM_BARRIER();
 
+  if (rounding_mode != oob->last_rounding_mode)
+    {
+      oob->last_rounding_mode = rounding_mode;
+      epiphany_set_rounding_mode(current_cpu, config);
+    }
   /* TODO: Might get improved performance by having a special interrupt event.
    * This must be set every time we write to any register that *might* trigger
    * an interrupt.
