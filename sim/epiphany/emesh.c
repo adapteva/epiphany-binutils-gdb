@@ -222,7 +222,7 @@ es_shm_core_offset(const es_state *esim, unsigned coreid)
 }
 
 /* Get pointer to core mem */
-static uint8_t *
+volatile static uint8_t *
 es_shm_core_base(const es_state *esim, unsigned coreid)
 {
   signed offset = es_shm_core_offset(esim, coreid);
@@ -805,10 +805,12 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 
       pthread_barrierattr_init(&attr);
       pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-      pthread_barrier_init(&esim->shm->run_barrier, &attr,
-			   ES_CLUSTER_CFG.cores_per_node);
-      pthread_barrier_init(&esim->shm->exit_barrier, &attr,
-			   ES_CLUSTER_CFG.cores_per_node);
+      pthread_barrier_init(
+	  (pthread_barrier_t *) &esim->shm->run_barrier, &attr,
+	  ES_CLUSTER_CFG.cores_per_node);
+      pthread_barrier_init(
+	  (pthread_barrier_t *) &esim->shm->exit_barrier, &attr,
+	  ES_CLUSTER_CFG.cores_per_node);
       pthread_barrierattr_destroy(&attr);
       shm->initialized = 1;
     }
@@ -853,7 +855,7 @@ es_cleanup(es_state *esim)
   if (!esim->shm)
     return;
 
-  munmap(esim->shm, esim->shm_size);
+  munmap((void *) esim->shm, esim->shm_size);
   esim->shm = NULL;
   esim->shm_size = 0;
   close(esim->fd);
@@ -871,28 +873,28 @@ es_set_ready(es_state *esim)
       return;
     }
   esim->ready = 1;
-  es_atomic_incr32(&esim->shm->node_core_sims_ready);
+  es_atomic_incr32((uint32_t *) &esim->shm->node_core_sims_ready);
 }
 
 void
-es_wait_run(const es_state *esim)
+es_wait_run(es_state *esim)
 {
   /* TODO: Before this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
    */
 
   /* TODO: Would be nice to support Ctrl-C here */
-  pthread_barrier_wait(&esim->shm->run_barrier);
+  pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
   es_set_ready(esim);
 }
 
 void
-es_wait_exit(const es_state *esim)
+es_wait_exit(es_state *esim)
 {
   /* TODO: Would be nice to support Ctrl-C here */
   if (esim->ready)
     {
-      pthread_barrier_wait(&esim->shm->exit_barrier);
+      pthread_barrier_wait((pthread_barrier_t *) &esim->shm->exit_barrier);
     }
   /* TODO: After this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
@@ -916,7 +918,7 @@ es_valid_coreid(const es_state *esim, unsigned coreid)
 int
 es_set_coreid(es_state *esim, unsigned coreid)
 {
-  uint8_t *new_cpu_state;
+  volatile uint8_t *new_cpu_state;
   es_shm_core_state_header *new_hdr, *old_hdr;
 
 
@@ -951,7 +953,7 @@ es_set_coreid(es_state *esim, unsigned coreid)
 }
 
 /* Return pointer on success */
-void *
+volatile void *
 es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 {
 
