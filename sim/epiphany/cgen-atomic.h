@@ -2,11 +2,69 @@
 #define CGEN_ATOMIC_H
 #include <assert.h>
 
-#define SET_STICKY_REG(regno, falsemask, truemask, val)\
+#define SPIN_LOCK(ptr) \
+while (__sync_lock_test_and_set(ptr, 1)) while (ptr)
+
+#define SPIN_RELEASE(ptr) \
+__sync_lock_release(ptr);
+
+#define DECR_REG_ATOMIC(regno, val)\
 do\
   {\
     volatile USI *ptr;\
-    USI old, reg, newval;\
+\
+    assert (0 <= regno && regno < H_REG_NUM_REGS);\
+\
+    ptr = &(CPU (h_all_registers)[regno]);\
+    __sync_fetch_and_sub(ptr, val);\
+  }\
+while (0)
+
+#define INCR_REG_ATOMIC(regno, val)\
+do\
+  {\
+    volatile USI *ptr;\
+\
+    assert (0 <= regno && regno < H_REG_NUM_REGS);\
+\
+    ptr = &(CPU (h_all_registers)[regno]);\
+    __sync_fetch_and_add(ptr, val);\
+  }\
+while (0)
+
+#define XOR_REG_ATOMIC(regno, val)\
+do\
+  {\
+    volatile USI *ptr;\
+\
+    assert (0 <= regno && regno < H_REG_NUM_REGS);\
+\
+    ptr = &(CPU (h_all_registers)[regno]);\
+    __sync_fetch_and_xor(ptr, val);\
+  }\
+while (0)
+
+#define OR_REG_ATOMIC(regno, val)\
+do\
+  {\
+    volatile USI *ptr;\
+\
+    assert (0 <= regno && regno < H_REG_NUM_REGS);\
+\
+    ptr = &(CPU (h_all_registers)[regno]);\
+    __sync_fetch_and_or(ptr, val);\
+  }\
+while (0)
+
+#define AND_REG_ATOMIC(regno, val)\
+do\
+  {\
+    volatile USI *ptr;\
+\
+    assert (0 <= regno && regno < H_REG_NUM_REGS);\
+\
+    ptr = &(CPU (h_all_registers)[regno]);\
+    __sync_fetch_and_and(ptr, val);\
   }\
 while (0)
 

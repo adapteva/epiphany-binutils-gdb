@@ -52,6 +52,7 @@
 
 #include "emesh.h"
 #include "sim-main.h"
+#include "mem-barrier.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -401,7 +402,8 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
       /* Signal other CPU simulator a write from another core did occur so that
        * it can flush its scache.
        */
-      tx->sim_addr.cpu->write_from_other = 1;
+      MEM_BARRIER();
+      tx->sim_addr.cpu->oob_events.external_write = 1;
     }
 
   return 0;
@@ -428,7 +430,10 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
        */
       if (tx->sim_addr.location != ES_LOC_RAM
 	  && tx->sim_addr.coreid != esim->coreid)
-	tx->sim_addr.cpu->write_from_other = 1;
+	{
+	  MEM_BARRIER();
+	  tx->sim_addr.cpu->oob_events.external_write = 1;
+	}
       return 0;
     default:
       return -EINVAL;

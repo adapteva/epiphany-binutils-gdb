@@ -81,10 +81,13 @@ syscall_write_mem (host_callback *cb, struct cb_syscall *sc,
 
 USI epiphany_rti(SIM_CPU *current_cpu, USI ipend, USI imask)
 {
-  unsigned long ffs_index = ffs ((~imask) & ipend);
+  /* Get which interrupt routine we're returning from
+   * (interrupt with highest prio).
+   */
+  unsigned long interrupt = ffs ((~imask) & ipend) - 1;
 
-
-  return ( ipend & (~( 1 << (ffs_index-1))) );
+  /* Clear interrupt from ipend */
+  return ( ipend & (~( 1 << interrupt)) );
 }
 
 void

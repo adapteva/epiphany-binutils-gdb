@@ -29,6 +29,8 @@
 
 #include "cpu.h"
 
+#include "mem-barrier.h"
+
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -209,6 +211,41 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
   return 4;
 }
 
+/* Custom register setters */
+void
+void
+epiphanybf_set_status(SIM_CPU *current_cpu, USI val)
+{
+  USI old;
+  SPIN_LOCK(&current_cpu->oob_events.scr_lock);
+  /* First 3 bits are sticky */
+  old = CPU(h_all_registers[H_REG_SCR_STATUS]);
+  CPU(h_all_registers[H_REG_SCR_STATUS]) = (old & 7) | (val & (~7));
+
+  SPIN_RELEASE(&current_cpu->oob_events.scr_lock);
+}
+
+void
+epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val)
+{
+  /* Write directly to ILAT
+   * This is ok since we have mutual exclusion.
+   */
+  SPIN_LOCK(&current_cpu->oob_events.scr_lock);
+  OR_REG_ATOMIC(H_REG_SCR_ILAT, val);
+  SPIN_RELEASE(&current_cpu->oob_events.scr_lock);
+}
+
+void
+epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val)
+{
+  /* Don't write directly to ILAT. Interrupts are positive edge triggered,
+   * so the target sim process should be able to see one before it's cleared.
+   */
+  SPIN_LOCK(&current_cpu->oob_events.scr_lock);
+  OR_REG_ATOMIC(H_REG_SCR_ILATCL, val);
+  SPIN_RELEASE(&current_cpu->oob_events.scr_lock);
+}
 
 /* Backdoor access for e.g read-only register */
 void
