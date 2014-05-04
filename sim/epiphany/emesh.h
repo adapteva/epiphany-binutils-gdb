@@ -114,12 +114,12 @@ int es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
 int es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster);
 void es_cleanup(es_state *esim);
 void es_set_ready(es_state *esim);
-void es_wait_run(const es_state *esim);
-void es_wait_exit(const es_state *esim);
+void es_wait_run(es_state *esim);
+void es_wait_exit(es_state *esim);
 void es_dump_config(const es_state *esim);
 int es_valid_coreid(const es_state *esim, unsigned coreid);
 int es_set_coreid(es_state *esim, unsigned coreid);
-void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
+volatile void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
 
 size_t es_get_core_mem_region_size(const es_state *esim);
 unsigned es_get_coreid(const es_state *esim);
