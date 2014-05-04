@@ -5233,12 +5233,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_swi_num", (char *) 0));
 
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-    }
-#endif
 #undef FLD
     return idesc;
   }

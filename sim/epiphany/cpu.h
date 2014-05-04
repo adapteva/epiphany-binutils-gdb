@@ -49,15 +49,16 @@ typedef struct {
 do { \
 {\
 if ((((index)) == (H_REG_SCR_CONFIG))) {\
-CPU (h_all_registers[(index)]) = (x);\
-epiphany_set_rounding_mode (current_cpu, (x));\
+epiphanybf_set_config (current_cpu, (x));\
 }\
  else if ((((index)) == (H_REG_SCR_STATUS))) {\
-{\
-  USI tmp_newval;\
-  tmp_newval = ANDSI ((x), 65522);\
-CPU (h_all_registers[(index)]) = tmp_newval;\
+epiphanybf_set_status (current_cpu, (x));\
 }\
+ else if ((((index)) == (H_REG_SCR_ILATST))) {\
+epiphanybf_set_ilatst (current_cpu, (x));\
+}\
+ else if ((((index)) == (H_REG_SCR_ILATCL))) {\
+epiphanybf_set_ilatcl (current_cpu, (x));\
 }\
  else {\
 CPU (h_all_registers[(index)]) = (x);\

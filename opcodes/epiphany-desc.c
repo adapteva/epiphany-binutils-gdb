@@ -1710,12 +1710,12 @@ static const CGEN_IBASE epiphany_cgen_insn_table[MAX_INSNS] =
 /* swi $swi_num */
   {
     EPIPHANY_INSN_SWI_NUM, "swi_num", "swi", 16,
-    { 0|A(UNCOND_CTI)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(UNCOND_CTI)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* swi */
   {
     -1, "swi", "swi", 16,
-    { 0|A(UNCOND_CTI)|A(SHORT_INSN)|A(ALIAS)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(UNCOND_CTI)|A(SHORT_INSN)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* trap $trapnum6 */
   {
