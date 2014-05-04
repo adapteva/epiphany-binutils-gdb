@@ -445,22 +445,19 @@ static int
 es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 {
   int reg, n;
-  sim_cpu *cpu = tx->sim_addr.cpu;
+  uint32_t *target;
+  sim_cpu *current_cpu;
 
-  /* TODO: Revisit when epiphanybf_*_register have support for
-     more register types (e.g. coreid)
-     TODO: Writes are racy by design. We need to verify that this is the
-     correct behavior when we get access to the real hardware.
+  current_cpu = tx->sim_addr.cpu;
+
+  target = (uint32_t *) tx->target;
+
+  /*
+   * TODO: Writes are racy by design. We need to verify that this is the
+   * correct behavior when we get access to the real hardware.
   */
 
-  /* TODO: Don't use epiphanybf_{fetch,store}_register */
-  /* Adjust reg for epiphanybf_*_register */
   reg = tx->sim_addr.reg;
-  if (reg >= ES_EPIPHANY_NUM_GPRS)
-    {
-      reg -= ( ( (ES_CORE_MMR_SCRS_BASE-ES_CORE_MMR_BASE) >> 2) -
-	      ES_EPIPHANY_NUM_GPRS);
-    }
 
   switch (tx->type)
     {
@@ -477,11 +474,13 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 	}
       else
 	{
-	  n = epiphanybf_fetch_register(cpu, reg, tx->target, 4);
+	  *target = epiphanybf_h_all_registers_get(current_cpu, reg);
+	  n = 4;
 	}
       break;
     case ES_REQ_STORE:
-      n = epiphanybf_store_register(cpu, reg, tx->target, 4);
+      epiphanybf_h_all_registers_set(current_cpu, reg, *target);
+      n = 4;
       break;
     default:
       n = -EINVAL;
