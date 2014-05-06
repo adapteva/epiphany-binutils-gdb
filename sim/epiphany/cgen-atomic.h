@@ -3,10 +3,20 @@
 #include <assert.h>
 
 #define SPIN_LOCK(ptr) \
-while (__sync_lock_test_and_set(ptr, 1)) while (ptr)
+  do\
+    {\
+      volatile typeof(ptr) vol_ptr = ptr; \
+      while (__sync_lock_test_and_set(vol_ptr, 1)) while (*vol_ptr); \
+    } \
+  while (0)
 
 #define SPIN_RELEASE(ptr) \
-__sync_lock_release(ptr);
+  do \
+    { \
+      volatile typeof(ptr) vol_ptr = ptr; \
+      __sync_lock_release(vol_ptr); \
+    } \
+  while (0)
 
 #define DECR_REG_ATOMIC(regno, val)\
 do\
