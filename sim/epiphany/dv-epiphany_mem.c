@@ -187,6 +187,37 @@ epiphany_mem_port_event (struct hw *me,
 }
 
 #if WITH_EMESH_SIM
+
+static void epiphany_mem_signal(struct hw *me, unsigned_word addr,
+			   unsigned nr_bytes, char *transfer, int sigrc)
+{
+  address_word ip = CIA_ADDR (CIA_GET(hw_system_cpu(me)));
+
+  switch (sigrc)
+    {
+    case SIM_SIGSEGV:
+      sim_io_eprintf(hw_system(me),
+		     "%s: %d byte %s at unmapped address 0x%lx at 0x%lx\n",
+		     hw_path(me), (int) nr_bytes, transfer,
+		     (unsigned long) addr, (unsigned long) ip);
+      break;
+    case SIM_SIGBUS:
+      sim_io_eprintf(hw_system(me),
+		     "%s: %d byte misaligned %s at unmapped address 0x%lx at 0x%lx\n",
+		     hw_path(me), (int) nr_bytes, transfer,
+		     (unsigned long) addr, (unsigned long) ip);
+      break;
+    default:
+      sim_io_eprintf(hw_system(me),
+		     "%s: %d byte %s at address 0x%lx at 0x%lx\n",
+		     hw_path(me), (int) nr_bytes, transfer,
+		     (unsigned long) addr, (unsigned long) ip);
+      break;
+    }
+
+    hw_halt(me, sim_stopped, sigrc);
+}
+
 static unsigned
 epiphany_mem_io_read_buffer (struct hw *me,
 			 void *dest,
@@ -196,8 +227,12 @@ epiphany_mem_io_read_buffer (struct hw *me,
 {
   struct epiphany_mem *controller = hw_data (me);
   HW_TRACE ((me, "read 0x%08lx %d", (long) base, (int) nr_bytes));
-  if ( es_mem_load(&hw_system(me)->esim, base, nr_bytes, dest))
-    hw_abort (me, "Read failed");
+  if (es_mem_load(&hw_system(me)->esim, base, nr_bytes, dest))
+    {
+      /* TODO: What about SIGBUS (unaligned access) */
+      epiphany_mem_signal(me, base, nr_bytes, "read", SIM_SIGSEGV);
+      hw_halt(me, sim_stopped, SIM_SIGSEGV);
+    }
   else
     return nr_bytes;
 }
@@ -212,7 +247,11 @@ epiphany_mem_io_write_buffer (struct hw *me,
   struct epiphany_mem *controller = hw_data (me);
   HW_TRACE ((me, "write 0x%08lx %d", (long) base, (int) nr_bytes));
   if (es_mem_store(&hw_system(me)->esim, base, nr_bytes, source))
-    hw_abort (me, "Write failed");
+    {
+      /* TODO: What about SIGBUS (unaligned access) */
+      epiphany_mem_signal(me, base, nr_bytes, "write", SIM_SIGSEGV);
+      hw_halt(me, sim_stopped, SIM_SIGSEGV);
+    }
   else
     return nr_bytes;
 
