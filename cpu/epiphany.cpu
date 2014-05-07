@@ -2157,7 +2157,7 @@
   (+ OP4_FLOW16 (f-opc-8-5 #x1d) (f-dc-15-7 #x0))
   (sequence ()
 	(set (hcr-ipend)
-	  (c-call SI "epiphany_rti" (hcr-ipend) (hcr-imask)))
+	  (c-call SI "epiphany_rti" (hcr-ipend) ))
 	(set gidisablebit 0)
 	(set kmbit 0)
 	;(set caibit 1)

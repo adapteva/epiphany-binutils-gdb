@@ -156,7 +156,7 @@ extern void epiphany_break( SIM_CPU *,PCADDR );
 extern void epiphany_fpu_error (CGEN_FPU *, int);
 
 /* Handle ipend on rti call.  */
-extern USI epiphany_rti (SIM_CPU *, USI ipend, USI imask);
+extern USI epiphany_rti (SIM_CPU *, USI ipend);
 
 /* Call back after every instruction.  */
 extern USI epiphany_post_isn_callback (SIM_CPU *cpu , USI pc) ;
