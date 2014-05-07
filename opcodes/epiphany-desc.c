@@ -1671,7 +1671,7 @@ static const CGEN_IBASE epiphany_cgen_insn_table[MAX_INSNS] =
 /* idle */
   {
     EPIPHANY_INSN_IDLE, "idle", "idle", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN)|A(UNCOND_CTI), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* bkpt */
   {
