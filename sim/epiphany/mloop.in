@@ -281,12 +281,23 @@ while (0)
 #include "sem-switch.c"
 #elif WITH_SCACHE_PBB
   vpc = execute (current_cpu, vpc, FAST_P);
-#else
-#if WITH_EMESH_SIM
-  old_vpc = vpc;
-#endif
+#elif !WITH_EMESH_SIM
   vpc = execute (current_cpu, sc, FAST_P);
-#if WITH_EMESH_SIM
+#else
+  old_vpc = vpc;
+  if (GET_H_CAIBIT())
+    vpc = execute (current_cpu, sc, FAST_P);
+  else
+    {
+      /* Don't do anything if core is not active */
+
+      /* Instruction count is later increased in the generated file but
+       * so we need to cancel it out.
+       */
+      -- CPU_INSN_COUNT (current_cpu);
+      /* TODO: Would be nicer if we did a timed wait on a pthread cond var */
+      usleep(100000);
+    }
   /*
    * Invalidate vpc in scache if not core-local memory.
    * Ideally, we would like to never consult scache for non core-local
@@ -320,7 +331,6 @@ while (0)
     * is overwritten. (PC will be set to vpc after this code block)
     * Need real hardware to verify behaviour.
     */
-#endif
 
 #endif
 }
