@@ -2108,13 +2108,16 @@
 ;; IDLE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(dni_wrapper idle
+(dni idle
   "idle until interrupt"
   (SHORT-INSN)
   "idle"
   (+ OP4_FLOW16 (f-opc-8-5 #x1b) (f-dc-15-7 #x0))
-  ;; We cheat a little bit here. PC will not point to IDLE but IDLE+2.
-  (set caibit 0)
+  (sequence ((USI tmpPC))
+	(set caibit 0)
+	(set tmpPC pc)
+	(set pc tmpPC)
+  )
   ()
 )
 
