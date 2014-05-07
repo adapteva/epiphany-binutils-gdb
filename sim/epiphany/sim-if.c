@@ -443,6 +443,12 @@ sim_create_inferior (sd, abfd, argv, envp)
   epiphanybf_h_all_registers_set_raw(STATE_CPU(sd, 0), H_REG_MESH_COREID,
 				 STATE_ESIM(sd)->coreid);
 
+  /* Start by triggering SYNC interrupt*/
+  /* TODO: There should be a command-line option for disabling this so we can
+   * mimic hardware.
+   */
+  epiphanybf_h_all_registers_set(STATE_CPU(sd, 0), H_REG_SCR_ILATST, 1);
+
 #endif
 
   return SIM_RC_OK;
