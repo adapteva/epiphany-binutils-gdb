@@ -8998,6 +8998,7 @@ SEM_FN_NAME (epiphanybf,idle) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   ARGBUF *abuf = SEM_ARGBUF (sem_arg);
   int UNUSED written = 0;
   IADDR UNUSED pc = abuf->addr;
+  SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
@@ -9006,8 +9007,29 @@ SEM_FN_NAME (epiphanybf,idle) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
     SET_H_CAIBIT (opval);
     TRACE_RESULT (current_cpu, abuf, "caibit", 'x', opval);
   }
-sim_engine_halt (CPU_STATE (current_cpu), current_cpu, NULL, 		pc, sim_exited, 0);}
+{
+  USI tmp_tmpPC;
+if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
+  {
+    USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
+    SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 5);
+    TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
+  }
+}
+if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE_REGISTERS (((UINT) 5)), 0)))) {
+  {
+    USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 6);
+    TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
+}
+}
 
+  abuf->written = written;
+  SEM_BRANCH_FINI (vpc);
   return vpc;
 #undef FLD
 }
@@ -9069,7 +9091,7 @@ SEM_FN_NAME (epiphanybf,rti) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = epiphany_rti (current_cpu, GET_H_CORE_REGISTERS (((UINT) 13)), GET_H_CORE_REGISTERS (((UINT) 9)));
+    USI opval = epiphany_rti (current_cpu, GET_H_CORE_REGISTERS (((UINT) 13)));
     SET_H_CORE_REGISTERS (((UINT) 13), opval);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
