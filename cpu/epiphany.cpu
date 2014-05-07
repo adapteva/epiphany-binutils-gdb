@@ -422,9 +422,9 @@
 	(MESH-COREID         #x1c1) ;; mesh status and ID register           MESH   RD
 	(MESH-MULTICAST      #x1c2) ;; multicast address                     MESH   RD/WR
 	(MESH-SWRESET        #x1c3) ;; core specific software reset                 WR
-	(MESH-CMESHROUTE     #x1c4)
-	(MESH-XMESHROUTE     #x1c5)
-	(MESH-RMESHROUTE     #x1c6)
+	(MESH-CMESHROUTE     #x1c4) ;; Not available on Epiphany-III
+	(MESH-XMESHROUTE     #x1c5) ;; Not available on Epiphany-III
+	(MESH-RMESHROUTE     #x1c6) ;; Not available on Epiphany-III
   )
 )
 
