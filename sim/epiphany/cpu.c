@@ -380,68 +380,84 @@ epiphanybf_h_busbit_set (SIM_CPU *current_cpu, BI newval)
   SET_H_BUSBIT (newval);
 }
 
-/* Get the value of h-expcause0bit.  */
+/* Get the value of h-excause0bit.  */
 
 BI
-epiphanybf_h_expcause0bit_get (SIM_CPU *current_cpu)
+epiphanybf_h_excause0bit_get (SIM_CPU *current_cpu)
 {
-  return GET_H_EXPCAUSE0BIT ();
+  return GET_H_EXCAUSE0BIT ();
 }
 
-/* Set a value for h-expcause0bit.  */
+/* Set a value for h-excause0bit.  */
 
 void
-epiphanybf_h_expcause0bit_set (SIM_CPU *current_cpu, BI newval)
+epiphanybf_h_excause0bit_set (SIM_CPU *current_cpu, BI newval)
 {
-  SET_H_EXPCAUSE0BIT (newval);
+  SET_H_EXCAUSE0BIT (newval);
 }
 
-/* Get the value of h-expcause1bit.  */
+/* Get the value of h-excause1bit.  */
 
 BI
-epiphanybf_h_expcause1bit_get (SIM_CPU *current_cpu)
+epiphanybf_h_excause1bit_get (SIM_CPU *current_cpu)
 {
-  return GET_H_EXPCAUSE1BIT ();
+  return GET_H_EXCAUSE1BIT ();
 }
 
-/* Set a value for h-expcause1bit.  */
+/* Set a value for h-excause1bit.  */
 
 void
-epiphanybf_h_expcause1bit_set (SIM_CPU *current_cpu, BI newval)
+epiphanybf_h_excause1bit_set (SIM_CPU *current_cpu, BI newval)
 {
-  SET_H_EXPCAUSE1BIT (newval);
+  SET_H_EXCAUSE1BIT (newval);
 }
 
-/* Get the value of h-expcause2bit.  */
+/* Get the value of h-excause2bit.  */
 
 BI
-epiphanybf_h_expcause2bit_get (SIM_CPU *current_cpu)
+epiphanybf_h_excause2bit_get (SIM_CPU *current_cpu)
 {
-  return GET_H_EXPCAUSE2BIT ();
+  return GET_H_EXCAUSE2BIT ();
 }
 
-/* Set a value for h-expcause2bit.  */
+/* Set a value for h-excause2bit.  */
 
 void
-epiphanybf_h_expcause2bit_set (SIM_CPU *current_cpu, BI newval)
+epiphanybf_h_excause2bit_set (SIM_CPU *current_cpu, BI newval)
 {
-  SET_H_EXPCAUSE2BIT (newval);
+  SET_H_EXCAUSE2BIT (newval);
 }
 
-/* Get the value of h-extFstallbit.  */
+/* Get the value of h-excause3bit.  */
 
 BI
-epiphanybf_h_extFstallbit_get (SIM_CPU *current_cpu)
+epiphanybf_h_excause3bit_get (SIM_CPU *current_cpu)
 {
-  return GET_H_EXTFSTALLBIT ();
+  return GET_H_EXCAUSE3BIT ();
 }
 
-/* Set a value for h-extFstallbit.  */
+/* Set a value for h-excause3bit.  */
 
 void
-epiphanybf_h_extFstallbit_set (SIM_CPU *current_cpu, BI newval)
+epiphanybf_h_excause3bit_set (SIM_CPU *current_cpu, BI newval)
 {
-  SET_H_EXTFSTALLBIT (newval);
+  SET_H_EXCAUSE3BIT (newval);
+}
+
+/* Get the value of h-scr-status-excause.  */
+
+UQI
+epiphanybf_h_scr_status_excause_get (SIM_CPU *current_cpu)
+{
+  return GET_H_SCR_STATUS_EXCAUSE ();
+}
+
+/* Set a value for h-scr-status-excause.  */
+
+void
+epiphanybf_h_scr_status_excause_set (SIM_CPU *current_cpu, UQI newval)
+{
+  SET_H_SCR_STATUS_EXCAUSE (newval);
 }
 
 /* Get the value of h-trmbit.  */

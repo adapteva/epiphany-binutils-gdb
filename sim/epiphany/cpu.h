@@ -239,41 +239,55 @@ SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BVSBIT, (x));\
 do { \
 SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_BUSBIT, (x));\
 ;} while (0)
-#define GET_H_EXPCAUSE0BIT() ({   USI tmp_regval;\
+#define GET_H_EXCAUSE0BIT() ({   USI tmp_regval;\
   USI tmp_bitval;\
   tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
-;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXPCAUSE0BIT), 1);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXCAUSE0BIT), 1);\
 ; TRUNCSIBI (tmp_bitval); })
-#define SET_H_EXPCAUSE0BIT(x) \
+#define SET_H_EXCAUSE0BIT(x) \
 do { \
-SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXPCAUSE0BIT, (x));\
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXCAUSE0BIT, (x));\
 ;} while (0)
-#define GET_H_EXPCAUSE1BIT() ({   USI tmp_regval;\
+#define GET_H_EXCAUSE1BIT() ({   USI tmp_regval;\
   USI tmp_bitval;\
   tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
-;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXPCAUSE1BIT), 1);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXCAUSE1BIT), 1);\
 ; TRUNCSIBI (tmp_bitval); })
-#define SET_H_EXPCAUSE1BIT(x) \
+#define SET_H_EXCAUSE1BIT(x) \
 do { \
-SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXPCAUSE1BIT, (x));\
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXCAUSE1BIT, (x));\
 ;} while (0)
-#define GET_H_EXPCAUSE2BIT() ({   USI tmp_regval;\
+#define GET_H_EXCAUSE2BIT() ({   USI tmp_regval;\
   USI tmp_bitval;\
   tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
-;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXPCAUSE2BIT), 1);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXCAUSE2BIT), 1);\
 ; TRUNCSIBI (tmp_bitval); })
-#define SET_H_EXPCAUSE2BIT(x) \
+#define SET_H_EXCAUSE2BIT(x) \
 do { \
-SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXPCAUSE2BIT, (x));\
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXCAUSE2BIT, (x));\
 ;} while (0)
-#define GET_H_EXTFSTALLBIT() ({   USI tmp_regval;\
+#define GET_H_EXCAUSE3BIT() ({   USI tmp_regval;\
   USI tmp_bitval;\
   tmp_regval = CPU (h_all_registers[H_REG_SCR_STATUS]);\
-;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXTFSTALLBIT), 1);\
+;   tmp_bitval = ANDSI (SRLSI (tmp_regval, H_SCR_STATUS_EXCAUSE3BIT), 1);\
 ; TRUNCSIBI (tmp_bitval); })
-#define SET_H_EXTFSTALLBIT(x) \
+#define SET_H_EXCAUSE3BIT(x) \
 do { \
-SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXTFSTALLBIT, (x));\
+SET_REG_BIT_ATOMIC (H_REG_SCR_STATUS, H_SCR_STATUS_EXCAUSE3BIT, (x));\
+;} while (0)
+#define GET_H_SCR_STATUS_EXCAUSE() ({   USI tmp_status;\
+  tmp_status = CPU (h_all_registers[H_REG_SCR_STATUS]);\
+; ANDSI (SRLSI (tmp_status, H_SCR_STATUS_EXCAUSE0BIT), 15); })
+#define SET_H_SCR_STATUS_EXCAUSE(x) \
+do { \
+{\
+  USI tmp_mask;\
+  USI tmp_shifted;\
+  tmp_mask = 0xfff0ffff;\
+  tmp_shifted = SLLQI (ANDQI ((x), 15), H_SCR_STATUS_EXCAUSE0BIT);\
+AND_REG_ATOMIC (H_REG_SCR_STATUS, tmp_mask);\
+OR_REG_ATOMIC (H_REG_SCR_STATUS, tmp_shifted);\
+}\
 ;} while (0)
 #define GET_H_TRMBIT() ({   USI tmp_regval;\
   USI tmp_bitval;\
@@ -489,14 +503,16 @@ BI epiphanybf_h_bvsbit_get (SIM_CPU *);
 void epiphanybf_h_bvsbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_busbit_get (SIM_CPU *);
 void epiphanybf_h_busbit_set (SIM_CPU *, BI);
-BI epiphanybf_h_expcause0bit_get (SIM_CPU *);
-void epiphanybf_h_expcause0bit_set (SIM_CPU *, BI);
-BI epiphanybf_h_expcause1bit_get (SIM_CPU *);
-void epiphanybf_h_expcause1bit_set (SIM_CPU *, BI);
-BI epiphanybf_h_expcause2bit_get (SIM_CPU *);
-void epiphanybf_h_expcause2bit_set (SIM_CPU *, BI);
-BI epiphanybf_h_extFstallbit_get (SIM_CPU *);
-void epiphanybf_h_extFstallbit_set (SIM_CPU *, BI);
+BI epiphanybf_h_excause0bit_get (SIM_CPU *);
+void epiphanybf_h_excause0bit_set (SIM_CPU *, BI);
+BI epiphanybf_h_excause1bit_get (SIM_CPU *);
+void epiphanybf_h_excause1bit_set (SIM_CPU *, BI);
+BI epiphanybf_h_excause2bit_get (SIM_CPU *);
+void epiphanybf_h_excause2bit_set (SIM_CPU *, BI);
+BI epiphanybf_h_excause3bit_get (SIM_CPU *);
+void epiphanybf_h_excause3bit_set (SIM_CPU *, BI);
+UQI epiphanybf_h_scr_status_excause_get (SIM_CPU *);
+void epiphanybf_h_scr_status_excause_set (SIM_CPU *, UQI);
 BI epiphanybf_h_trmbit_get (SIM_CPU *);
 void epiphanybf_h_trmbit_set (SIM_CPU *, BI);
 BI epiphanybf_h_invexcenbit_get (SIM_CPU *);

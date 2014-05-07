@@ -481,10 +481,11 @@ const CGEN_HW_ENTRY epiphany_cgen_hw_table[] =
   { "h-bisbit", HW_H_BISBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-bvsbit", HW_H_BVSBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-busbit", HW_H_BUSBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-expcause0bit", HW_H_EXPCAUSE0BIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-expcause1bit", HW_H_EXPCAUSE1BIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-expcause2bit", HW_H_EXPCAUSE2BIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-extFstallbit", HW_H_EXTFSTALLBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-excause0bit", HW_H_EXCAUSE0BIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-excause1bit", HW_H_EXCAUSE1BIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-excause2bit", HW_H_EXCAUSE2BIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-excause3bit", HW_H_EXCAUSE3BIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-scr-status-excause", HW_H_SCR_STATUS_EXCAUSE, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-trmbit", HW_H_TRMBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-invexcenbit", HW_H_INVEXCENBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-ovfexcenbit", HW_H_OVFEXCENBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
@@ -728,20 +729,20 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
   { "busbit", EPIPHANY_OPERAND_BUSBIT, HW_H_BUSBIT, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* expcause0bit: cmt */
-  { "expcause0bit", EPIPHANY_OPERAND_EXPCAUSE0BIT, HW_H_EXPCAUSE0BIT, 0, 0,
+/* excause0bit: cmt */
+  { "excause0bit", EPIPHANY_OPERAND_EXCAUSE0BIT, HW_H_EXCAUSE0BIT, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* expcause1bit: cmt */
-  { "expcause1bit", EPIPHANY_OPERAND_EXPCAUSE1BIT, HW_H_EXPCAUSE1BIT, 0, 0,
+/* excause1bit: cmt */
+  { "excause1bit", EPIPHANY_OPERAND_EXCAUSE1BIT, HW_H_EXCAUSE1BIT, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* expcause2bit: cmt */
-  { "expcause2bit", EPIPHANY_OPERAND_EXPCAUSE2BIT, HW_H_EXPCAUSE2BIT, 0, 0,
+/* excause2bit: cmt */
+  { "excause2bit", EPIPHANY_OPERAND_EXCAUSE2BIT, HW_H_EXCAUSE2BIT, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* extFstallbit: cmt */
-  { "extFstallbit", EPIPHANY_OPERAND_EXTFSTALLBIT, HW_H_EXTFSTALLBIT, 0, 0,
+/* excause3bit: cmt */
+  { "excause3bit", EPIPHANY_OPERAND_EXCAUSE3BIT, HW_H_EXCAUSE3BIT, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
 /* trmbit: cmt */
