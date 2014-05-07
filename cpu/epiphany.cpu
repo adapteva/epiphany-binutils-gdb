@@ -571,10 +571,10 @@
 	  ("BISBIT"        13)
 	  ("BVSBIT"        14)
 	  ("BUSBIT"        15)
-	  ("EXPCAUSE0BIT"  16)
-	  ("EXPCAUSE1BIT"  17)
-	  ("EXPCAUSE2BIT"  18)
-	  ("EXTFSTALLBIT"  19) ;; UNDOCUMENTED/RESERVED
+	  ("EXCAUSE0BIT"   16)
+	  ("EXCAUSE1BIT"   17)
+	  ("EXCAUSE2BIT"   18)
+	  ("EXCAUSE3BIT"   19) ;; UNDOCUMENTED/RESERVED
 	  ("BIT20"         20) ;; UNDOCUMENTED/RESERVED
 	  ("BIT21"         21) ;; UNDOCUMENTED/RESERVED
 	  ("BIT22"         22) ;; UNDOCUMENTED/RESERVED
@@ -590,6 +590,42 @@
 	)
   )
 )
+
+;; Exception cause bits, different for Epiphany-III and Epiphany-IV
+;; Use the Epiphany-III values for now.
+;; TODO: Have separate machs for Epiphany-III and Epiphany-IV
+(define-enum
+  (name e-excause)
+  (comment "Epiphany-III exception cause")
+  (prefix H-SCR-STATUS-EXCAUSE-)
+  ;;(attrs (MACH epiphanymf-3))
+  (values
+	(
+	  ("UNIMPLEMENTED" 4)
+	  ("SWI"           1)
+	  ("UNALIGNED"     2)
+	  ("ILLEGAL"       5)
+	  ("FPU"           3)
+	)
+  )
+)
+
+;; Epiphany-IV exception causes
+;;(define-enum
+;;  (name e-excause)
+;;  (comment "Epiphany-IV exception cause")
+;;  (prefix H-SCR-STATUS-EXCAUSE)
+;;  ;;(attrs (MACH epiphanymf-4))
+;;  (values
+;;	(
+;;	  ("UNIMPLEMENTED" 15)
+;;	  ("SWI"           14)
+;;	  ("UNALIGNED"     13)
+;;	  ("ILLEGAL"       12)
+;;	  ("FPU"            7)
+;;	)
+;;  )
+;;)
 
 (define-enum
   (name e-scr-config-bits)
@@ -808,10 +844,10 @@
 ;; [15]=fpu underflow flag(sticky)         busbit
 
 ;; [17:16]=exception cause 00=no exception 01=load-store exception 10=fpu exception 11=unimplemented instruction
-;;                                         expcause1bit
-;;                                         expcause0bit
+;;                                         excause1bit
+;;                                         excause0bit
 
-;; [18]=external load stalled              expcause2bit
+;; [18]=external load stalled              excause2bit
 ;; [19]=external fetch stalled             extFstallbit
 
 ;; [31:20]=RESERVED
@@ -924,10 +960,34 @@
 (psw-bit-cr-status bisbit       "floating point invalid sticky"  ) ;; 13
 (psw-bit-cr-status bvsbit       "floating point overflow sticky" ) ;; 14
 (psw-bit-cr-status busbit       "floating point underflow sticky") ;; 15
-(psw-bit-cr-status expcause0bit "exception cause bit0"           ) ;; 16
-(psw-bit-cr-status expcause1bit "exception cause bit1"           ) ;; 17
-(psw-bit-cr-status expcause2bit "external load stalled bit"      ) ;; 18
-(psw-bit-cr-status extFstallbit "external fetch stalled bit"     ) ;; 19
+(psw-bit-cr-status excause0bit  "exception cause bit0"           ) ;; 16
+(psw-bit-cr-status excause1bit  "exception cause bit1"           ) ;; 17
+(psw-bit-cr-status excause2bit  "exception cause bit2"           ) ;; 18
+(psw-bit-cr-status excause3bit  "exception cause bit3"           ) ;; 19
+
+;; Excause operand
+(define-hardware
+  (name h-scr-status-excause)
+  (comment "Exception cause bits in status register")
+  (type register UQI) ;; Not really, just 4 bits
+  (attrs VIRTUAL)
+  ;; Forward get/set to h-all-registers handlers
+  (get ()
+	(sequence ((USI status))
+	   (set status (reg h-all-registers (enum USI H-REG-SCR-STATUS)))
+	   (and (srl status H-SCR-STATUS-EXCAUSE0BIT) #xf)
+	)
+  )
+  ;; Two steps: clear bits, then set value
+  (set (newval)
+	(sequence ((USI mask) (USI shifted))
+	  (set mask #xfff0ffff)  ;; bit 16-19
+	  (set shifted (sll (and newval #xf) (enum USI H-SCR-STATUS-EXCAUSE0BIT)))
+	  (c-raw-call VOID "AND_REG_ATOMIC"  (enum USI H-REG-SCR-STATUS) mask)
+	  (c-raw-call VOID "OR_REG_ATOMIC"   (enum USI H-REG-SCR-STATUS) shifted)
+	)
+  )
+)
 
 ;; Operands for config bits
 (psw-bit-cr-config trmbit              "0=round to nearest, 1=truncate select bit")
@@ -1132,10 +1192,10 @@
 
 
 ;; call exception macro - no check for imask
-(define-pmacro (schedule-interrupt num)
-  (sequence ((USI mask))
-	(set mask (sll 1 num))
-	(set (hcr-ilatst) mask) ;; Ok, since reg. is OR-ed in setter function.
+(define-pmacro (schedule-exception reason)
+  (sequence ()
+	(set (reg h-scr-status-excause) reason) ;; STATUS bits alias.
+	(set (hcr-ilatst) 2) ;; Exception interrupt bit
   )
 )
 
@@ -1388,7 +1448,8 @@
 	   ((OPW_WORD)	(eq (and addr #x3) #x0))
 	   (else	(eq (and addr #x7) #x0))))
     (if (not BI isAligmentAccess)
-	(schedule-interrupt #x1))
+	  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-UNALIGNED))
+	)
   )
 )
 
@@ -2155,16 +2216,17 @@
 ;;;;;;;;;;;;;;;;
 
 ;; Model only immediate 'fire' exception, if gien cleared or masked don't fire and don't check later - no ilat like behavior
+;; TODO: Parameter version seems unsupported by assembler. Remove ?
 (dni swi_num "software interrupt" (SHORT-INSN UNCOND-CTI)
      "swi $swi_num"
-     (+ OP4_FLOW16 (f-opc-8-5 #x1e) (f-trap-swi-9-1 #x0)  swi_num)
-     (sequence ()  (schedule-interrupt 9))
+     (+ OP4_FLOW16 (f-opc-8-5 #x1e) (f-trap-swi-9-1 #x0)  swi_num) ;; What do we do with swi_num?
+     (sequence ()  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-SWI)))
      ()
      )
 (dni swi "software interrupt" (ALIAS SHORT-INSN UNCOND-CTI)
      "swi"
      (+ OP4_FLOW16 (f-opc-8-5 #x1e) (f-trap-swi-9-1 #x0) (f-dc-15-6 #x0))
-     (sequence ()  (schedule-interrupt 9))
+     (sequence ()  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-SWI)))
      ()
      )
 
@@ -2597,11 +2659,10 @@
 	    (set rd sdtmp)
 	    (if (or (and invexcenbit bisbit)
 		    (or (and ovfexcenbit bvsbit) (and unexcenbit busbit)))
-		(sequence ()
-		  (set expcause0bit (const 1))
-		  (set expcause1bit (const 1))
-		  (schedule-interrupt 1)))
-	    ))
+		  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
+		)
+	  )
+	)
 	(if (eq arithmetic-modebit2 1)
 	    (sequence ((SI sdtmp))
 	      (set sdtmp  (c-call SI (%str "epiphany_i" name) rd rn rm))
@@ -2647,12 +2708,10 @@
 
 	    (if (or (and invexcenbit bisbit)
 		    (or (and ovfexcenbit bvsbit) (and unexcenbit busbit)))
-		(sequence ()	
-		  (set expcause0bit (const 1))
-		  (set expcause1bit (const 1))
-		  (schedule-interrupt 1)))
-	    )
+		  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
+		)
 	  )
+	)
 	(if (eq arithmetic-modebit2 1)
 	    (sequence ((SI sdtmp))
 	      (set sdtmp (c-call SI (%str "epiphany_i" name) rd6 rn6 rm6))
@@ -2848,10 +2907,8 @@
 		   (if (or (and invexcenbit bisbit)
 			   (or (and ovfexcenbit busbit)
 			       (and unexcenbit bvsbit)))
-		       (sequence ()
-			 (set expcause0bit (const 1))
-			 (set expcause1bit (const 1))
-			 (schedule-interrupt 1)))
+			 (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
+		   )
 		   (set rd sdtmp)
 		   )
 		 ()
@@ -2884,15 +2941,11 @@
 		   (if (or (and invexcenbit bisbit)
 			   (or (and ovfexcenbit busbit)
 			       (and unexcenbit bvsbit)))
-		       (sequence ()
-			 (set expcause0bit (const 1))
-			 (set expcause1bit (const 1))
-			 (schedule-interrupt 1))
-		       )
-
+			 (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
 		   )
-		 ()
 		 )
+		 ()
+	)
 
     (dnmi (%sym "f_" name "f32.l")
 	  (%str "f_" name)
