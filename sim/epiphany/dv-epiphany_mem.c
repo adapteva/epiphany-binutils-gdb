@@ -231,7 +231,6 @@ epiphany_mem_io_read_buffer (struct hw *me,
     {
       /* TODO: What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "read", SIM_SIGSEGV);
-      hw_halt(me, sim_stopped, SIM_SIGSEGV);
     }
   else
     return nr_bytes;
@@ -250,7 +249,6 @@ epiphany_mem_io_write_buffer (struct hw *me,
     {
       /* TODO: What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "write", SIM_SIGSEGV);
-      hw_halt(me, sim_stopped, SIM_SIGSEGV);
     }
   else
     return nr_bytes;
