@@ -48,17 +48,69 @@
 #include "emesh.h"
 #endif
 
-static void free_state (SIM_DESC);
-static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
-
-SIM_RC sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes);
-
 /* Records simulator descriptor so utilities like epiphany_dump_regs can be
    called from gdb.  */
 SIM_DESC current_state=0;
 int is_sim_opened=0;
 
 /* Cover function of sim_state_free to free the cpu buffers as well.  */
+
+static unsigned epiphany_add_ext_mem = 1;
+
+typedef enum {
+  E_OPTION_EXT_MEM = OPTION_START,
+  E_OPTION_COREID,
+  E_OPTION_NUM_COLS,
+  E_OPTION_NUM_ROWS,
+  E_OPTION_FIRST_CORE,
+  /* TODO: Add more options:
+   * Check es_cluster_cfg and es_node_cfg in emesh.h
+   */
+} EPIPHANY_OPTIONS;
+
+struct emesh_params {
+  unsigned coreid;
+  unsigned num_cols;
+  unsigned num_rows;
+  unsigned first_coreid;
+
+  unsigned initialized;
+};
+
+static void free_state (SIM_DESC);
+static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
+static SIM_RC sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes,
+				     unsigned new_coreid);
+static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu,
+				   EPIPHANY_OPTIONS last_opt);
+static SIM_RC sim_esim_init(SIM_DESC sd);
+static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
+
+
+static struct emesh_params emesh_params = {0, 0, 0, 0, 0};
+
+static const OPTION options_epiphany[] =
+{
+
+  { {"e-external-memory", optional_argument, NULL, E_OPTION_EXT_MEM},
+      'e', "off|on", "Turn off/on the external memory region",
+      epiphany_option_handler },
+#if EMESH_SIM
+  { {"e-coreid", required_argument, NULL, E_OPTION_COREID},
+      '\0', "COREID", "Set coreid",
+      epiphany_option_handler  },
+  { {"e-cols", required_argument, NULL, E_OPTION_NUM_COLS},
+      '\0', "n", "Number of core columns",
+      epiphany_option_handler  },
+  { {"e-rows", required_argument, NULL, E_OPTION_NUM_ROWS},
+      '\0', "n", "Number of core rows",
+      epiphany_option_handler  },
+  { {"e-first-core", required_argument, NULL, E_OPTION_FIRST_CORE},
+      '\0', "COREID", "Coreid of upper leftmost core",
+      epiphany_option_handler  },
+#endif
+  { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL, NULL }
+};
 
 static void
 free_state (SIM_DESC sd)
@@ -73,86 +125,105 @@ free_state (SIM_DESC sd)
   sim_state_free (sd);
 }
 
-static unsigned epiphany_add_ext_mem = 1;
-
 static SIM_RC
-epiphany_extenal_memory_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg, int is_command) {
-
-	if(strcmp(arg,"off") == 0 ) {
-		epiphany_add_ext_mem = 0;
-	}
-	if(strcmp(arg,"on") == 0 ) {
-		epiphany_add_ext_mem = 1;
-	}
-	return SIM_RC_OK;
-}
-#if WITH_EMESH_SIM
-static SIM_RC
-epiphany_coreid_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg, int is_command) {
-  char * endp;
-  unsigned long ul = strtoul (arg, &endp, 0);
-  unsigned old, new;
-
-  if (! isdigit (arg[0]) || ul == 0 || ul >= 4096)
-    {
-      sim_io_eprintf (sd, "Invalid coreid `%s'. Valid range [1-4095]"
-		      " ([0x001-0xFFF])\n", arg);
-      return SIM_RC_FAIL;
-    }
-  new = (unsigned) ul;
-
-  if (!es_valid_coreid(STATE_ESIM(sd), new))
-    {
-      sim_io_eprintf (sd, "coreid `%s' is not valid since it does not belong "
-		      "to this node.\n", arg);
-      return SIM_RC_FAIL;
-    }
-
-  if (STATE_ESIM(sd)->coreid == new)
-    return SIM_RC_OK;
-
-  if (!es_set_coreid(STATE_ESIM(sd), new))
-    {
-      sim_io_eprintf (sd, "Could not set coreid to `%s'. Maybe it was already "
-		      "reserved by another sim process.\n", arg);
-      return SIM_RC_FAIL;
-    }
-
-  if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes ()) != SIM_RC_OK)
-    {
-      return SIM_RC_FAIL;
-    }
-  return SIM_RC_OK;
-}
-#endif
-
-static const OPTION options_epiphany[] =
+epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
+			 int is_command)
 {
+  char * endp;
+  unsigned long ul;
+  unsigned value;
+  int valid;
 
-  { {"epiphany-extenal-memory", optional_argument, NULL, 'e'},
-      'e', "off|on", "Turn off/on the external memory region",
-      epiphany_extenal_memory_option_handler  },
-#if EMESH_SIM
-  { {"coreid", required_argument, NULL, 0},
-      '\0', "COREID", "Set coreid",
-      epiphany_coreid_option_handler  },
+  ul = strtoul (arg, &endp, 0);
+  valid = ((isdigit (arg[0]) && ul != 0));
+
+  switch ((EPIPHANY_OPTIONS) opt)
+    {
+    case E_OPTION_EXT_MEM:
+      if(strcmp(arg,"off") == 0 ) {
+	      epiphany_add_ext_mem = 0;
+      }
+      if(strcmp(arg,"on") == 0 ) {
+	      epiphany_add_ext_mem = 1;
+      }
+      return SIM_RC_OK;
+      break;
+#if WITH_EMESH_SIM
+
+#define SET_OR_FAIL(Param, Name)\
+  do \
+    {\
+      if (valid)\
+	{\
+	  emesh_params.Param = (unsigned) ul;\
+	}\
+      else\
+	{\
+	  sim_io_eprintf(sd, "%s: Invalid parameter `%s'\n", Name, arg);\
+	  return SIM_RC_FAIL;\
+	}\
+    }\
+  while (0)
+
+    case E_OPTION_COREID:
+      SET_OR_FAIL(coreid, "e-coreid");
+      break;
+    case E_OPTION_NUM_COLS:
+      SET_OR_FAIL(num_cols, "e-cols");
+      break;
+    case E_OPTION_NUM_ROWS:
+      SET_OR_FAIL(num_rows, "e-rows");
+      break;
+    case E_OPTION_FIRST_CORE:
+      SET_OR_FAIL(first_coreid, "e-first-core");
+      break;
+#undef SET_OR_FAIL
+#endif
+    default:
+      sim_io_eprintf (sd, "Unknown option %d `%s'\n", opt, arg);
+      return SIM_RC_FAIL;
+    }
+#ifdef WITH_EMESH_SIM
+  /* Update options */
+  return sim_esim_set_options(sd, cpu, (EPIPHANY_OPTIONS) opt);
 #endif
 
-  { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL }
-};
+}
 
 
 
 #if WITH_EMESH_SIM
 /* Custom sim cpu alloc for emesh sim */
 SIM_RC
-sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes)
+sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
 {
-  static unsigned freed = 0;
+  static unsigned freed = 0; /* Original sim_cpu struct is malloced */
   sim_cpu *new_cpu;
+
+  if (!es_valid_coreid(STATE_ESIM(sd), new_coreid))
+    {
+      sim_io_eprintf(sd, "Invalid coreid `0x%x'.\n", new_coreid);
+      return SIM_RC_FAIL;
+    }
+
+  if (es_get_coreid(STATE_ESIM(sd)) == new_coreid)
+    return SIM_RC_OK;
+
+  if (!es_set_coreid(STATE_ESIM(sd), new_coreid))
+    {
+      sim_io_eprintf (sd, "Could not set coreid to `0x%x'. Perhaps it was "
+		      "already reserved by another sim process.\n",
+		      new_coreid);
+      return SIM_RC_FAIL;
+    }
+
+
   if (! (new_cpu = es_set_cpu_state(STATE_ESIM(sd), STATE_CPU(sd, 0),
 			sizeof(sim_cpu) + extra_bytes)))
-    return SIM_RC_FAIL;
+    {
+      sim_io_eprintf (sd, "Could not set cpu state.\n");
+      return SIM_RC_FAIL;
+    }
 
   if (!freed)
     {
@@ -163,7 +234,46 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes)
   return SIM_RC_OK;
 }
 
-SIM_RC sim_esim_init(SIM_DESC sd)
+static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu,
+				   EPIPHANY_OPTIONS last_opt)
+{
+  if (emesh_params.initialized && last_opt != E_OPTION_COREID)
+    {
+      sim_io_eprintf(sd, "This option cannot be changed after esim is "
+		         "initialized\n");
+      return SIM_RC_FAIL;
+    }
+  if (emesh_params.initialized && last_opt == E_OPTION_COREID)
+    {
+      if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes (),
+				 emesh_params.coreid) != SIM_RC_OK)
+	{
+	  return SIM_RC_FAIL;
+	}
+
+      return SIM_RC_OK;
+    }
+
+  /* All options not set yet, so do nothing */
+  if (   !emesh_params.coreid   || !emesh_params.num_cols
+      || !emesh_params.num_rows || !emesh_params.first_coreid)
+    return SIM_RC_OK;
+
+  if (sim_esim_init(sd) != SIM_RC_OK)
+    return SIM_RC_FAIL;
+
+
+  if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes (),
+			     emesh_params.coreid) != SIM_RC_OK)
+    {
+      return SIM_RC_FAIL;
+    }
+
+  emesh_params.initialized = 1;
+  return SIM_RC_OK;
+}
+
+static SIM_RC sim_esim_init(SIM_DESC sd)
 {
   /* TODO: Of course this shouldn't be hard coded */
   es_cluster_cfg cluster;
@@ -175,10 +285,10 @@ SIM_RC sim_esim_init(SIM_DESC sd)
 
   node.rank = 0;
   cluster.nodes = 1;
-  cluster.row_base = 32;
-  cluster.col_base = 8;
-  cluster.rows = 2;
-  cluster.cols = 2;
+  cluster.col_base = emesh_params.first_coreid & ((1 << 6) -1);
+  cluster.row_base = emesh_params.first_coreid >> 6;
+  cluster.cols = emesh_params.num_cols;
+  cluster.rows = emesh_params.num_rows;
   cluster.core_mem_region = 1024*1024;
   cluster.ext_ram_size = 32*1024*1024;
   cluster.ext_ram_node = 0;
@@ -211,16 +321,6 @@ sim_open (kind, callback, abfd, argv)
       free_state (sd);
       return 0;
     }
-
-#if WITH_EMESH_SIM
-  if (sim_esim_init(sd) != SIM_RC_OK)
-    {
-      sim_io_eprintf(sd, "Failed to initialize esim\n");
-      free_state (sd);
-      return 0;
-    }
-#endif
-
 
 #if 0 /* FIXME: pc is in mach-specific struct */
   /* FIXME: watchpoints code shouldn't need this */
@@ -264,19 +364,6 @@ sim_open (kind, callback, abfd, argv)
       free_state (sd);
       return 0;
     }
-
-#if WITH_EMESH_SIM
-  /* Coreid must be set on command-line when running in stand-alone */
-  if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
-    {
-      if (!es_valid_coreid(STATE_ESIM(sd), STATE_ESIM(sd)->coreid))
-	{
-	  sim_io_eprintf(sd, "Coreid must be set. Set with --coreid\n");
-	  free_state (sd);
-	  return 0;
-	}
-    }
-#endif
 
 #if 0
   /* Allocate a handler for the control registers and other devices
@@ -409,6 +496,19 @@ sim_create_inferior (sd, abfd, argv, envp)
   SIM_CPU *current_cpu = STATE_CPU (sd, 0);
   SIM_ADDR addr;
 
+#if WITH_EMESH_SIM
+  if (!emesh_params.initialized || !es_get_coreid(STATE_ESIM(sd)))
+    {
+      if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
+	sim_io_eprintf(sd,
+		       "ESIM: Missing parameters. Call gdb with \"--help\"\n");
+      else
+	sim_io_eprintf(sd, "ESIM: Missing parameters. Say \"sim help\"\n");
+      return SIM_RC_FAIL;
+    }
+#endif
+
+
   if (abfd != NULL)
     addr = bfd_get_start_address (abfd);
   else
@@ -428,20 +528,11 @@ sim_create_inferior (sd, abfd, argv, envp)
 #endif
 
 #if WITH_EMESH_SIM
-  if (!es_valid_coreid(STATE_ESIM(sd), STATE_ESIM(sd)->coreid))
-    {
-      if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
-	sim_io_eprintf(sd, "Invalid coreid. Set with --coreid");
-      else
-	sim_io_eprintf(sd, "Invalid coreid. Set with \"sim coreid\"");
-      return SIM_RC_FAIL;
-    }
-
   /* Set coreid in cpu register. Do it via backdoor since it is (should be)
    * read only.
    */
   epiphanybf_h_all_registers_set_raw(STATE_CPU(sd, 0), H_REG_MESH_COREID,
-				 STATE_ESIM(sd)->coreid);
+				 es_get_coreid(STATE_ESIM(sd)));
 
   /* Start by triggering SYNC interrupt*/
   /* TODO: There should be a command-line option for disabling this so we can
