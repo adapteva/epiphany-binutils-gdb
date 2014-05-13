@@ -51,7 +51,7 @@ typedef struct es_cluster_cfg_ {
     unsigned col_base;
     unsigned rows;
     unsigned cols;
-    size_t   core_mem_region;
+    size_t   core_mem_region;         /* Core memory region size */
     /* signed   core_phys_mem; */     /* Allocate entire region for now */
     unsigned ext_ram_node;            /* Let this be rank '0' for now   */
     uint32_t ext_ram_base;            /* core_mem_region must be divisor*/
