@@ -72,13 +72,6 @@
 
 #include <stdio.h>
 
-int
-epiphanybf_fetch_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
-			   int len);
-int
-epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
-			   int len);
-
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
