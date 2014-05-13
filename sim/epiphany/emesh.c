@@ -620,9 +620,60 @@ unsigned isqrt(unsigned n)
   return low;
 }
 
-
+/* Return 0 on success */
+static int
+es_validate_cluster_cfg(const es_cluster_cfg *c)
 {
+  unsigned cores, nodes;
+  cores = c->rows * c->cols;
+
+#define FAIL_IF(Expr, Error_string)\
+  if ((Expr))\
+    {\
+      fprintf(stderr, "ESIM: Invalid config: %s\n", (Error_string));\
+      return 1;\
+    }
+
+  FAIL_IF(!c->rows,         "Rows cannot be zero");
+  FAIL_IF(!c->cols,         "Cols cannot be zero");
+  FAIL_IF((cores != 1) && cores & 1,
+			    "Number of cores must be even (or exactly 1)");
+  FAIL_IF(cores % c->nodes, "Number of cores is not a multiple of nodes");
+  FAIL_IF(!c->row_base,     "Row base must be greater than zero");
+  FAIL_IF(!c->col_base,     "Col base must be greater than zero");
+  FAIL_IF((ES_COREID(c->row_base+c->rows-1, c->col_base+c->col_base-1)) > 4095,
+			    "At least one of core in mesh has coreid > 4095");
+  /* TODO: Only support 1M for now */
+  FAIL_IF(c->core_mem_region != (1<<20),
+			    "Currently only 1M core region is supported");
+  FAIL_IF(!c->core_mem_region,
+			    "Core memory region size is zero");
+  FAIL_IF(c->core_mem_region & (c->core_mem_region-1),
+			    "Core memory region size must be power of two");
+  /* Ignore ext ram node if we don't have external ram */
+  FAIL_IF(c->ext_ram_size && c->ext_ram_node >= c->nodes,
+			    "Specified external ram node does not exist");
+
+  FAIL_IF(c->ext_ram_size && (c->ext_ram_size & (c->ext_ram_size-1)),
+			    "External ram size must be power of two.");
+
+  /* TODO: Check if external ram shadows any core mem region */
+
+#undef FAIL_IF
+  return 0;
+}
+
+/* Return 0 on success */
+static int
+es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
+{
+  /* TODO: Revisit when we have network/MPI support.
+   * We might have to also validate node config 
    */
+  return es_validate_cluster_cfg(cluster);
+}
+
+/* This must be called *after* es_validate_config */
 static void
 es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
 			       es_cluster_cfg *c)
@@ -798,7 +849,10 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   /* If this process created the file, set its size */
   if (esim->creator)
     {
+      if ((error = es_validate_config(esim, &node, &cluster)))
 	{
+	  es_cleanup(esim);
+	  return error;
 	}
 
       es_fill_in_internal_cfg_values(esim, &node, &cluster);
