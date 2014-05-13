@@ -848,17 +848,30 @@ es_cleanup(es_state *esim)
 #ifdef ES_DEBUG
   fprintf(stderr, "es_cleanup\n");
 #endif
-  if (!esim->shm)
-    return;
 
-  munmap((void *) esim->shm, esim->shm_size);
-  esim->shm = NULL;
-  esim->shm_size = 0;
-  close(esim->fd);
-  esim->fd = -1;
+  if (esim->shm)
+    {
+      munmap((void *) esim->shm, esim->shm_size);
+      esim->shm = NULL;
+      esim->shm_size = 0;
+    }
+  if (esim->fd >= 0)
+    {
+      close(esim->fd);
+      esim->fd = -1;
+    }
   if (esim->creator)
     shm_unlink(esim->shm_name);
-  esim->shm_name[0] = '\0';
+
+  *esim->shm_name = '\0';
+
+  esim->cores_mem = NULL;
+  esim->this_core_mem = NULL;
+  esim->this_core_state_header = NULL;
+  esim->this_core_cpu_state = NULL;
+  esim->ext_ram = NULL;
+  esim->coreid = 0;
+  esim->creator = 0;
 }
 
 void
