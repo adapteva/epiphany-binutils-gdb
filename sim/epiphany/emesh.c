@@ -640,8 +640,12 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   FAIL_IF((cores != 1) && cores & 1,
 			    "Number of cores must be even (or exactly 1)");
   FAIL_IF(cores % c->nodes, "Number of cores is not a multiple of nodes");
-  FAIL_IF(!c->row_base,     "Row base must be greater than zero");
-  FAIL_IF(!c->col_base,     "Col base must be greater than zero");
+
+  FAIL_IF(!c->row_base && !c->col_base,
+			    "Row base and col base cannot both be zero.");
+  FAIL_IF(c->row_base & 1,  "Row base must be even");
+  FAIL_IF(c->col_base & 1,  "Col base must be even");
+
   FAIL_IF((ES_COREID(c->row_base+c->rows-1, c->col_base+c->col_base-1)) > 4095,
 			    "At least one of core in mesh has coreid > 4095");
   /* TODO: Only support 1M for now */
