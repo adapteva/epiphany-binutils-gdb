@@ -56,6 +56,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 /* TODO: Standard errnos should be sufficient for now */
 /* Errors are returned as negative numbers. */
@@ -818,6 +819,49 @@ es_state_init(es_state *esim)
 }
 
 
+/* Return 0 on success, that is: either the file did not exist, it was not an
+   orphan or it was stale but successfully removed */
+static int
+es_remove_stale_shm_file(char *name)
+{
+  char path[256];
+  char cmd[256];
+  int res;
+
+#ifdef __linux__
+  /* Idea from stack overflow:
+   * https://stackoverflow.com/questions/13377982/remove-posix-shared-memory-when-not-in-use
+   */
+  /* This is racy, but better than nothing */
+
+  snprintf(path, sizeof(path)/sizeof(char)-1, "/dev/shm%s", name);
+  snprintf(cmd, sizeof(cmd)/sizeof(char),
+    "if [ -f %s ] ; then "
+      "if ! fuser -s %s ; then "
+	"rm -f %s ; "
+      "else exit 2 ; "
+      "fi "
+    "else exit 3 ; "
+    "fi", path, path, path);
+
+  res = system(cmd);
+  switch (WEXITSTATUS(res))
+    {
+    case 0:  fprintf(stderr, "ESIM: removed stale shm file `%s'\n", path);
+	     return 0;        /* Orphan and deleted */
+    case 1:  return -EACCES;  /* Orphan but could not be deleted */
+    case 2:  return 0;        /* Linked to alive processes */
+    case 3:  return 0;        /* File not found */
+    default: return -EINVAL;
+    }
+#else
+#warn "You should implement es_remove_stale_shm_file for this platform"
+  fprintf(stderr, "ESIM: Warning: Could not check for stale shm file. "
+	          "Platform not fully supported\n");
+#endif
+  return 0;
+}
+
 /* Returns 0 on success */
 int
 es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
@@ -839,6 +883,13 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 
   snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
 
+  /* Check for and remove stale esim shm file */
+  if ((error = es_remove_stale_shm_file(shm_name)))
+    {
+      fprintf(stderr, "ESIM: Could not remove stale esim file `/dev/shm%s'\n",
+	      shm_name);
+      return error;
+    }
 
   if ((error = es_open_shm_file(esim, shm_name)))
     {
