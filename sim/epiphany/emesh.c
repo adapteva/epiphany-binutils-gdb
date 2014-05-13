@@ -621,32 +621,52 @@ unsigned isqrt(unsigned n)
 }
 
 
-/* Returns 0 on success */
-int
-es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 {
-  /* TODO: Revisit once we have MPI support
-   * Cluster cfg should be set in leader (rank0) and then passed to all other
-   * processes.
    */
+static void
+es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
+			       es_cluster_cfg *c)
+{
+  /* Cluster settings */
+  c->cores = c->rows * c->cols;
+  c->cores_per_node = c->cores / c->nodes;
+
+  /* Calculate most square-like per node cluster layout as possible */
+  /* TODO: User might want to specify different strategies, e.g., sequential.
+   * When we add MPI support this should be set in leader
+   * and then passed on to all other processses.
+   */
+  c->rows_per_node = isqrt(c->cores_per_node);
+  if (c->rows_per_node > c->rows)
+    c->rows_per_node = c->rows;
+  while (c->cores_per_node % c->rows_per_node)
+    c->rows_per_node--;
+
+  c->cols_per_node = c->cores_per_node / c->rows_per_node;
+
+
+  /* Node settings */
+  n->row_base = c->row_base + (c->cores_per_node * n->rank) / c->cols;
+  n->col_base = c->col_base + (c->cols_per_node  * n->rank) % c->cols;
+
+  n->mem_base =
+   ES_COREID(n->row_base, n->col_base) *
+   c->core_mem_region;
+}
+
+/* Returns 0 on success */
+static int
+es_open_shm_file(es_state *esim, char *name)
+{
   unsigned creator = 1;
-  char shm_name[] = "/esim";
-  size_t size = 0;
-  es_shm_header *shm;
   int fd;
-  struct stat st;
-  unsigned msecs_wait = 0;
-  pthread_barrierattr_t attr;
-
-  /* TODO: Find out reliable way to remove any stale esim shm file here. */
-
-  fd = shm_open(shm_name, O_RDWR|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR);
+  fd = shm_open(name, O_RDWR|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR);
   if (fd == -1)
     {
       if (errno == EEXIST)
         {
           creator = 0;
-          fd = shm_open(shm_name, O_RDWR, S_IRUSR|S_IWUSR);
+          fd = shm_open(name, O_RDWR, S_IRUSR|S_IWUSR);
 	  if (fd == -1)
 	    {
 	      return -errno;
@@ -661,144 +681,173 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
         }
     }
 
-  if (creator)
+  strncpy(esim->shm_name, name, sizeof(esim->shm_name)-1);
+  esim->fd = fd;
+  esim->creator = creator;
+  return 0;
+}
+
+/* Return 0 on succes, sets out_size to size of new file */
+static int
+es_truncate_shm_file(es_state *esim, es_node_cfg *n, es_cluster_cfg *c)
+{
+  size_t size;
+  /* MMAP size */
+  size = ES_SHM_CONFIG_SIZE +
+   (c->rows_per_node*c->cols_per_node) *
+   (c->core_mem_region+ES_SHM_CORE_STATE_SIZE);
+
+  /* Should we also allocate space for external ram? */
+  if (c->ext_ram_node == n->rank)
     {
+      size += c->ext_ram_size;
+    }
 
-      /* Calculate cluster layout */
-      /* TODO: Now we create a quadratic-like mesh partition for every node.
-       * User might want to specify different strategies, e.g., sequential.
-       * When we add MPI support this should be set in leader
-       * and then passed on to all other processses.
-       * TODO: Sanity check ext_ram_base
-       */
-
-      if (!cluster.nodes)
-	cluster.nodes = 1;
-
-      cluster.cores = cluster.rows * cluster.cols;
+  if (ftruncate(esim->fd, size) == -1)
+    {
 #ifdef ES_DEBUG
-      if (cluster.cores % cluster.nodes)
-	{
-	  fprintf(stderr, "es_init: decreasing number of nodes so that cores"
-		  " can be evenly distributed over nodes\n");
-	}
+      fprintf(stderr, "es_init:ftruncate: errno=%d\n", errno);
 #endif
-      while (cluster.cores % cluster.nodes)
-	cluster.nodes--;
+      return -errno;
+    }
+  esim->shm_size = size;
 
-      cluster.cores_per_node =
-	cluster.cores / cluster.nodes;
+  return 0;
+}
 
-      cluster.rows_per_node = isqrt(cluster.cores_per_node);
-      if (cluster.rows_per_node > cluster.rows)
-	cluster.rows_per_node = cluster.rows;
-      while (cluster.cores_per_node % cluster.rows_per_node)
-	cluster.rows_per_node--;
+/* Returns 0 on success, timeout in msecs */
+static int
+es_wait_truncate_shm_file(es_state *esim, int timeout)
+{
+  struct stat st;
+  size_t size;
+  unsigned msecs_wait;
 
-      cluster.cols_per_node =
-	cluster.cores_per_node / cluster.rows_per_node;
+  msecs_wait=0;
+  size = 0;
 
-      /* Node settings */
-
-      node.row_base = cluster.row_base +
-       (cluster.cores_per_node * node.rank) / cluster.cols;
-      node.col_base = cluster.col_base +
-       (cluster.cols_per_node * node.rank) % cluster.cols;
-
-      node.mem_base =
-       ES_COREID(node.row_base, node.col_base) *
-       cluster.core_mem_region;
-
-      size = ES_SHM_CONFIG_SIZE +
-       (cluster.rows_per_node*cluster.cols_per_node) *
-       (cluster.core_mem_region+ES_SHM_CORE_STATE_SIZE);
-
-      if (cluster.ext_ram_node == node.rank)
+  while (msecs_wait <= timeout)
+    {
+      if (fstat(esim->fd, &st) == -1)
 	{
 #ifdef ES_DEBUG
-	  fprintf(stderr, "es_init: will allocate memory for external ram\n");
+	  fprintf(stderr, "es_init:stat: errno=%d\n", errno);
 #endif
-	  size += cluster.ext_ram_size;
-	}
-#ifdef ES_DEBUG
-      else
-	{
-	  fprintf(stderr, "es_init: will not allocate memory for external ram\n");
-	}
-#endif
-
-      if (ftruncate(fd, size) == -1)
-	{
-#ifdef ES_DEBUG
-	  fprintf(stderr, "es_init:ftruncate: errno=%d\n", errno);
-#endif
-	  close(fd);
-	  shm_unlink(shm_name);
 	  return -errno;
 	}
+      else
+	{
+	  if (st.st_size)
+	    {
+	      size = st.st_size;
+	      break;
+	    }
+	}
+      msecs_wait += 5;
+      usleep(5000);
+    }
+  if (!size)
+    {
+#ifdef ES_DEBUG
+      fprintf(stderr, "es_init: Timed out waiting.\n");
+#endif
+      return -ETIME;
+    }
+
+  esim->shm_size = size;
+  return 0;
+
+}
+
+inline static void
+es_state_init(es_state *esim)
+{
+  memset((void*) esim, 0, sizeof(es_state));
+  esim->fd = -1;
+}
+
+
+/* Returns 0 on success */
+int
+es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
+{
+  /* TODO: Revisit once we have MPI support
+   * Cluster cfg should be set in leader (rank0) and then passed to all other
+   * processes.
+   */
+  int error;
+  char shm_name[256];
+  volatile es_shm_header *shm;
+  unsigned msecs_wait;
+  pthread_barrierattr_t attr;
+
+  error = 0;
+  msecs_wait = 0;
+
+  es_state_init(esim);
+
+  snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
+
+
+  if ((error = es_open_shm_file(esim, shm_name)))
+    {
+      fprintf(stderr, "ESIM: Could not open esim file `/dev/shm%s'\n", shm_name);
+      return error;
+    }
+
+  /* If this process created the file, set its size */
+  if (esim->creator)
+    {
+	{
+	}
+
+      es_fill_in_internal_cfg_values(esim, &node, &cluster);
+
+      if ((error = es_truncate_shm_file(esim, &node, &cluster)))
+	{
+	  fprintf(stderr, "ESIM: Could not truncate  esim file `/dev/shm%s'\n",
+		  shm_name);
+	  es_cleanup(esim);
+	  return error;
+	}
+
     }
   else /* if (!creator) */
     {
-      msecs_wait=0;
-      while (msecs_wait <= 3000)
+      /* Busy wait until creating process has truncated shm file */
+      if ((error = es_wait_truncate_shm_file(esim, 3000)))
 	{
-	  if (fstat(fd, &st) == -1)
-	    {
-#ifdef ES_DEBUG
-	      fprintf(stderr, "es_init:stat: errno=%d\n", errno);
-#endif
-	      close(fd);
-	      return -errno;
-	    }
-	  else
-	    {
-	      if (st.st_size)
-		{
-		  size = st.st_size;
-		  break;
-		}
-	    }
-	  msecs_wait += 5;
-	  usleep(5000);
+	  fprintf(stderr, "ESIM: Timed out waiting for creating process\n");
+	  es_cleanup(esim);
+	  return error;
 	}
-      if (!size)
-	{
-#ifdef ES_DEBUG
-	  fprintf(stderr, "es_init: Timed out waiting.\n");
-#endif
-	  close(fd);
-	  return -ETIME;
-	}
-
     }
 
-  shm = (es_shm_header*) mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
-				fd, (off_t) 0);
+  shm = (es_shm_header*) mmap(NULL,
+			      esim->shm_size,
+			      PROT_READ|PROT_WRITE, MAP_SHARED,
+			      esim->fd,
+			      (off_t) 0);
   if (shm == MAP_FAILED)
     {
-      close(fd);
-      if (creator)
-	shm_unlink(shm_name);
-#ifdef ES_DEBUG
-      fprintf(stderr, "es_init:mmap: failed\n");
-#endif
+      es_cleanup(esim);
+      fprintf(stderr, "ESIM: mmap failed\n");
       return -EINVAL;
     }
 
   esim->shm = shm;
-  esim->shm_size = size;
-  esim->fd  = fd;
   esim->coreid = 0;
   esim->cores_mem = ((uint8_t *) shm) + ES_SHM_CONFIG_SIZE;
-  esim->creator = creator ? 1 : 0;
-  strncpy(esim->shm_name, shm_name, sizeof(esim->shm_name)-1);
-  if (creator)
+
+  if (esim->creator)
     {
+      /* Copy over cluster and node config structs to shared memory */
       memcpy((void *) &ES_CLUSTER_CFG, (void *) &cluster,
 	     sizeof(es_cluster_cfg));
       memcpy((void *) &ES_NODE_CFG, (void *) &node,
 	     sizeof(es_node_cfg));
 
+      /* Initialize pthread barriers */
       pthread_barrierattr_init(&attr);
       pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
       pthread_barrier_init(
@@ -808,10 +857,13 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	  (pthread_barrier_t *) &esim->shm->exit_barrier, &attr,
 	  ES_CLUSTER_CFG.cores_per_node);
       pthread_barrierattr_destroy(&attr);
+
+      /* Signal waiting processes creating (this) process is done */
       shm->initialized = 1;
     }
   else /* if (!creator) */
     {
+      /* Busy wait for creating process */
       while (!shm->initialized && msecs_wait <= 3000)
 	{
 	  usleep(5000);
@@ -819,19 +871,20 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	}
       if (!shm->initialized)
 	{
-#ifdef ES_DEBUG
-	  fprintf(stderr, "es_init: Timed out waiting.\n");
-#endif
-	  close(fd);
+	  es_cleanup(esim);
+	  fprintf(stderr, "ESIM: Timed out waiting.\n");
 	  return -ETIME;
 	}
+
     }
-    if (ES_CLUSTER_CFG.ext_ram_node == ES_NODE_CFG.rank)
-      {
-	esim->ext_ram = ((uint8_t *) shm) + ES_SHM_CONFIG_SIZE +
-	  ES_CLUSTER_CFG.cores_per_node *
-	    (ES_CLUSTER_CFG.core_mem_region + ES_SHM_CORE_STATE_SIZE);
-      }
+
+  /* If external RAM is on this node, set up pointer */
+  if (ES_CLUSTER_CFG.ext_ram_node == ES_NODE_CFG.rank)
+    {
+      esim->ext_ram = ((uint8_t *) shm) + ES_SHM_CONFIG_SIZE +
+	ES_CLUSTER_CFG.cores_per_node *
+	  (ES_CLUSTER_CFG.core_mem_region + ES_SHM_CORE_STATE_SIZE);
+    }
 
 #ifdef ES_DEBUG
   fprintf(stderr,
