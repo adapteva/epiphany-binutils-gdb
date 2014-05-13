@@ -132,27 +132,30 @@ ES_ATOMIC_INCR_DEF(64)
 /* TODO: These needs to be more general if we want allow larger than 1MB per-core
  * address space
  */
-#define ES_CORE_ROW(coreid) (coreid>>6)
-#define ES_CORE_COL(coreid) (coreid & ((1<<6)-1))
 
-#define ES_COREID(row, col) ((row<<6)+col)
+#define ES_CORES_PER_ROW (1<<6)
 
-#define ES_ADDR_TO_CORE(addr) (addr / ES_CLUSTER_CFG.core_mem_region)
+#define ES_CORE_ROW(coreid) ((coreid)>>6)
+#define ES_CORE_COL(coreid) ((coreid) & ((1<<6)-1))
 
-#define ES_ADDR_CORE_OFFSET(addr) (addr % ES_CLUSTER_CFG.core_mem_region)
+#define ES_COREID(row, col) (((row)<<6)+(col))
+
+#define ES_ADDR_TO_CORE(addr) ((addr) / ES_CLUSTER_CFG.core_mem_region)
+
+#define ES_ADDR_CORE_OFFSET(addr) ((addr) % ES_CLUSTER_CFG.core_mem_region)
 
 #define ES_ADDR_TO_GLOBAL(addr) \
- ((addr >= ES_CLUSTER_CFG.core_mem_region) ? addr : \
-  (addr + esim->coreid * ES_CLUSTER_CFG.core_mem_region))
+ (((addr) >= ES_CLUSTER_CFG.core_mem_region) ? (addr) : \
+  ((addr) + esim->coreid * ES_CLUSTER_CFG.core_mem_region))
 
 #define ES_ADDR_IS_EXT_RAM(addr) \
- ((ES_CLUSTER_CFG.ext_ram_base <= addr && \
-   addr < ES_CLUSTER_CFG.ext_ram_base + ES_CLUSTER_CFG.ext_ram_size))
+ ((ES_CLUSTER_CFG.ext_ram_base <= (addr) && \
+   (addr) < ES_CLUSTER_CFG.ext_ram_base + ES_CLUSTER_CFG.ext_ram_size))
 
 #define ES_ADDR_IS_MMR(addr) \
- (!(ES_ADDR_IS_EXT_RAM(addr)) && \
-  (ES_CORE_MMR_BASE <= ES_ADDR_CORE_OFFSET(addr) && \
-   ES_ADDR_CORE_OFFSET(addr) < ES_CORE_MMR_BASE+ES_CORE_MMR_SIZE))
+ (!(ES_ADDR_IS_EXT_RAM((addr))) && \
+  (ES_CORE_MMR_BASE <= ES_ADDR_CORE_OFFSET((addr)) && \
+   ES_ADDR_CORE_OFFSET((addr)) < ES_CORE_MMR_BASE+ES_CORE_MMR_SIZE))
 
 
 typedef enum es_loc_t_ {
