@@ -483,6 +483,12 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
    * correct behavior when we get access to the real hardware.
   */
 
+  /* Alignment was checked in es_addr_translate.
+   * Hardware doesn't seem to support reading partial regs so neither do we.
+   */
+  if (tx->remaining < 4)
+    return -EINVAL;
+
   reg = tx->sim_addr.reg;
 
   switch (tx->type)
