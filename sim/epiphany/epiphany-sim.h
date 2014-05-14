@@ -169,4 +169,10 @@ void
 epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
 				    SI newval);
 
+SI epiphany_testset(SIM_CPU *, USI, SI, int);
+SI epiphany_testset_SI(SIM_CPU *, USI, SI);
+SI epiphany_testset_HI(SIM_CPU *, USI, HI);
+SI epiphany_testset_QI(SIM_CPU *, USI, QI);
+
+
 #endif /* EPIPHANY_SIM_H */

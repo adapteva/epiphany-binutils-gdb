@@ -145,8 +145,11 @@ ES_ATOMIC_INCR_DEF(64)
 
 #define ES_ADDR_CORE_OFFSET(addr) ((addr) % ES_CLUSTER_CFG.core_mem_region)
 
+#define ES_ADDR_IS_GLOBAL(addr) \
+ ((addr) >= ES_CLUSTER_CFG.core_mem_region)
+
 #define ES_ADDR_TO_GLOBAL(addr) \
- (((addr) >= ES_CLUSTER_CFG.core_mem_region) ? (addr) : \
+ (ES_ADDR_IS_GLOBAL((addr)) ? (addr) : \
   ((addr) + esim->coreid * ES_CLUSTER_CFG.core_mem_region))
 
 #define ES_ADDR_IS_EXT_RAM(addr) \
@@ -186,6 +189,9 @@ typedef struct es_transl_ {
   uint8_t	*mem;      /* Native pointer into shm region */
   sim_cpu       *cpu;      /* Pointer to 'remote' sim cpu    */
   unsigned      reg;       /* If memory mapped register      */
+
+  /* If requested address was global before translation, needed by TESTSET */
+  unsigned      addr_was_global;
 #if 0
 #ifdef HAVE_MPI2
   MPI_AInt  mpi_offset;
@@ -276,6 +282,9 @@ static void
 es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 {
   uint8_t *tmp_ptr;
+
+  /* TESTSET instruction requires requested address to be global */
+  transl->addr_was_global = ES_ADDR_IS_GLOBAL(addr);
 
   addr = ES_ADDR_TO_GLOBAL(addr);
   transl->addr = addr;
@@ -413,28 +422,48 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
    */
   unsigned old;
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
+
+  /* Return addr must be 4 bytes */
+  uint32_t *target = (uint32_t *) tx->target;
+
+  /* TESTSET requires that requested addr is global */
+  if (!tx->sim_addr.addr_was_global)
+    {
+      return -EINVAL;
+    }
+
+  /* addr cannot reside in RAM, must be in on-chip memory  */
+  if (tx->sim_addr.location != ES_LOC_SHM)
+    {
+      return -EINVAL;
+    }
+
   switch (n)
     {
     case 1:
+      old = es_cas8((uint8_t *) tx->sim_addr.mem, 0, *tx->target);
+      break;
     case 2:
+      old = es_cas16((uint16_t *) tx->sim_addr.mem, 0, *tx->target);
+      break;
     case 4:
-      old = es_cas32((uint32_t *) tx->target, 0, 1);
-      *tx->target = old;
-      tx->target += n;
-      tx->remaining -= n;
-      /* Signal other CPU simulator a write from another core did occur so that
-       * it can invalidate its scache.
-       */
-      if (tx->sim_addr.location != ES_LOC_RAM
-	  && tx->sim_addr.coreid != esim->coreid)
-	{
-	  MEM_BARRIER();
-	  tx->sim_addr.cpu->oob_events.external_write = 1;
-	}
-      return 0;
+      old = es_cas32((uint32_t *) tx->sim_addr.mem, 0, *tx->target);
+      break;
     default:
       return -EINVAL;
     }
+    *target = old;
+    tx->target += n;
+    tx->remaining -= n;
+    /* Signal other CPU simulator a write from another core did occur so that
+     * it can invalidate its scache.
+     */
+    if (tx->sim_addr.coreid != esim->coreid)
+      {
+	MEM_BARRIER();
+	tx->sim_addr.cpu->oob_events.external_write = 1;
+      }
+
   return 0;
 }
 

@@ -431,6 +431,38 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
   return result;
 }
 
+
+SI epiphany_testset(SIM_CPU *current_cpu, USI addr, SI newval, int bytes)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  USI tmpval = newval;
+
+  if (es_mem_testset(STATE_ESIM(sd), addr, bytes, &tmpval))
+    {
+      /* SIM framework has no concept of test and set so this is the closest
+	 we can get */
+      epiphany_core_signal(sd, current_cpu, CIA_GET(current_cpu), read_map,
+			   bytes, addr, read_transfer,
+			   sim_core_unmapped_signal);
+    }
+  return tmpval;
+}
+
+SI epiphany_testset_SI(SIM_CPU* current_cpu, USI addr, SI newval)
+{
+  return epiphany_testset(current_cpu, addr, newval, 4);
+}
+
+SI epiphany_testset_HI(SIM_CPU* current_cpu, USI addr, HI newval)
+{
+  return epiphany_testset(current_cpu, addr, newval, 2);
+}
+
+SI epiphany_testset_QI(SIM_CPU* current_cpu, USI addr, QI newval)
+{
+  return epiphany_testset(current_cpu, addr, newval, 1);
+}
+
 void
 epiphanybf_model_insn_before (SIM_CPU * cpu ATTRIBUTE_UNUSED,
 			      int first_p ATTRIBUTE_UNUSED)
