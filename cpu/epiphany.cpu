@@ -1705,47 +1705,37 @@
 
 
 (define-pmacro (testset-insn name mode sel)
-  (begin
+  (%let
+	( (c-fun (%str "epiphany_testset_" mode) ) )
+	(begin
+	  (dni_wrapper (%sym name "t")
+		(%str "testset " mode " indexed")
+		()
+		(%str name " $rd6,[$rn6,$direction$rm6]")
+		(+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x1)
+		   rd6 rn6 direction rm6)
+		(sequence ((SI eff-addr) (BI isAlignmentAccess))
+		  (if (ifield f-addsubx)
+			(set  eff-addr  (sub rn6 rm6))
+			(set  eff-addr  (add rn6 rm6))
+		  )
+		  (callMisalignmentExceptionIfNeeded sel eff-addr isAlignmentAccess)
+		  (if (not (not BI isAlignmentAccess))
+			(set rd6 (c-call SI c-fun eff-addr rd6))
+		  )
+		)
+		()
+	  )
 
-
-    (dni_wrapper (%sym name "t")
-		 (%str "testset " mode " indexed")
-		 ()
-		 (%str name " $rd6,[$rn6,$direction$rm6]")
-		 (+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x1)
-		    rd6 rn6 direction rm6)
-		 (sequence ((SI tmemaddr) (SI tmpValReg))
-
-			   ;;back up register
-			   (set tmpValReg rd6)
-
-			   (if (ifield f-addsubx)
-			       (set  tmemaddr  (sub rn6 rm6))
-			       (set  tmemaddr  (add rn6 rm6))
-			       )
-			   ;;always update rd
-			   (load-from-ea rd6 tmemaddr  mode sel)
-			   ;;if zero
-			   (if  rd6
-				(nop)
-				(set (mem mode tmemaddr) tmpValReg)
-				)
-
-			   )
-		 ()
-		 )
-
-
-    (dnmi  (%sym name "t.l")
-	   (%str "testset " mode ".l indexed")
-	   (NO-DIS)
-	   (%str name ".l $rd6,[$rn6,$direction$rm6]")
-	   (emit (%sym name "t") rd6 rn6 direction rm6)
-	   )
-
-
-    )
+	  (dnmi  (%sym name "t.l")
+		(%str "testset " mode ".l indexed")
+		(NO-DIS)
+		(%str name ".l $rd6,[$rn6,$direction$rm6]")
+		(emit (%sym name "t") rd6 rn6 direction rm6)
+	  )
+	)
   )
+)
 
 (testset-insn testsetb QI OPW_BYTE)
 (testset-insn testseth HI OPW_SHORT)
