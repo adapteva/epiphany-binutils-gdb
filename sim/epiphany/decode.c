@@ -111,8 +111,8 @@ static const struct insn_sem epiphanybf_insn_sem[] =
   { EPIPHANY_INSN_LDRDD_L, EPIPHANYBF_INSN_LDRDD_L, EPIPHANYBF_SFMT_LDRDD_L },
   { EPIPHANY_INSN_LDRDDPM_L, EPIPHANYBF_INSN_LDRDDPM_L, EPIPHANYBF_SFMT_LDRDDPM_L },
   { EPIPHANY_INSN_TESTSETBT, EPIPHANYBF_INSN_TESTSETBT, EPIPHANYBF_SFMT_TESTSETBT },
-  { EPIPHANY_INSN_TESTSETHT, EPIPHANYBF_INSN_TESTSETHT, EPIPHANYBF_SFMT_TESTSETHT },
-  { EPIPHANY_INSN_TESTSETT, EPIPHANYBF_INSN_TESTSETT, EPIPHANYBF_SFMT_TESTSETT },
+  { EPIPHANY_INSN_TESTSETHT, EPIPHANYBF_INSN_TESTSETHT, EPIPHANYBF_SFMT_TESTSETBT },
+  { EPIPHANY_INSN_TESTSETT, EPIPHANYBF_INSN_TESTSETT, EPIPHANYBF_SFMT_TESTSETBT },
   { EPIPHANY_INSN_STRBX16, EPIPHANYBF_INSN_STRBX16, EPIPHANYBF_SFMT_STRBX16 },
   { EPIPHANY_INSN_STRBX, EPIPHANYBF_INSN_STRBX, EPIPHANYBF_SFMT_STRBX },
   { EPIPHANY_INSN_STRBP16, EPIPHANYBF_INSN_STRBP16, EPIPHANYBF_SFMT_STRBP16 },
@@ -584,11 +584,11 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 10 :
             if ((entire_insn & 0x6f007f) == 0x200029)
-              { itype = EPIPHANYBF_INSN_TESTSETHT; goto extract_sfmt_testsetht; }
+              { itype = EPIPHANYBF_INSN_TESTSETHT; goto extract_sfmt_testsetbt; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 12 :
             if ((entire_insn & 0x6f007f) == 0x200049)
-              { itype = EPIPHANYBF_INSN_TESTSETT; goto extract_sfmt_testsett; }
+              { itype = EPIPHANYBF_INSN_TESTSETT; goto extract_sfmt_testsetbt; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           default : itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           }
@@ -2831,114 +2831,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
   TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_testsetbt", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rd6) = f_rd6;
-      FLD (in_rm6) = f_rm6;
-      FLD (in_rn6) = f_rn6;
-      FLD (out_rd6) = f_rd6;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_testsetht:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
-    UINT f_rd_x;
-    UINT f_rn_x;
-    UINT f_rm_x;
-    UINT f_addsubx;
-    UINT f_rd;
-    UINT f_rn;
-    UINT f_rm;
-    UINT f_rd6;
-    UINT f_rn6;
-    UINT f_rm6;
-
-    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
-    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
-    f_rm_x = EXTRACT_LSB0_UINT (insn, 32, 25, 3);
-    f_addsubx = EXTRACT_LSB0_UINT (insn, 32, 20, 1);
-    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
-    f_rm = EXTRACT_LSB0_UINT (insn, 32, 9, 3);
-{
-  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
-}
-{
-  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
-}
-{
-  f_rm6 = ((((f_rm_x) << (3))) | (f_rm));
-}
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
-  FLD (f_rm6) = f_rm6;
-  FLD (f_rn6) = f_rn6;
-  TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_testsetht", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rd6) = f_rd6;
-      FLD (in_rm6) = f_rm6;
-      FLD (in_rn6) = f_rn6;
-      FLD (out_rd6) = f_rd6;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_testsett:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
-    UINT f_rd_x;
-    UINT f_rn_x;
-    UINT f_rm_x;
-    UINT f_addsubx;
-    UINT f_rd;
-    UINT f_rn;
-    UINT f_rm;
-    UINT f_rd6;
-    UINT f_rn6;
-    UINT f_rm6;
-
-    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
-    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
-    f_rm_x = EXTRACT_LSB0_UINT (insn, 32, 25, 3);
-    f_addsubx = EXTRACT_LSB0_UINT (insn, 32, 20, 1);
-    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
-    f_rm = EXTRACT_LSB0_UINT (insn, 32, 9, 3);
-{
-  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
-}
-{
-  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
-}
-{
-  f_rm6 = ((((f_rm_x) << (3))) | (f_rm));
-}
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
-  FLD (f_rm6) = f_rm6;
-  FLD (f_rn6) = f_rn6;
-  TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_testsett", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */

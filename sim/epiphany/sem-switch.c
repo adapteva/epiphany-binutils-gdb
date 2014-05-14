@@ -1346,11 +1346,11 @@ if (ORBI (GET_H_BNBIT (), GET_H_BZBIT ())) {
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1367,7 +1367,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
@@ -1427,11 +1427,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_tmprm;
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1448,7 +1448,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn));
@@ -1512,11 +1512,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1533,7 +1533,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -1552,11 +1552,11 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1573,7 +1573,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -1634,11 +1634,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_tmprm;
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1655,7 +1655,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -1732,11 +1732,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1753,7 +1753,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -1819,11 +1819,11 @@ if (FLD (f_subd)) {
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1840,7 +1840,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -1900,11 +1900,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -1921,7 +1921,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -1994,11 +1994,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2015,7 +2015,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
@@ -2075,11 +2075,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_tmprm;
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2096,7 +2096,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn));
@@ -2160,11 +2160,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2181,7 +2181,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -2200,11 +2200,11 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2221,7 +2221,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -2282,11 +2282,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_tmprm;
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2303,7 +2303,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -2380,11 +2380,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2401,7 +2401,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -2467,11 +2467,11 @@ if (FLD (f_subd)) {
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2488,7 +2488,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -2548,11 +2548,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2569,7 +2569,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -2642,11 +2642,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2663,7 +2663,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
@@ -2723,11 +2723,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_tmprm;
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2744,7 +2744,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn));
@@ -2808,11 +2808,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2829,7 +2829,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -2848,11 +2848,11 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2869,7 +2869,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -2930,11 +2930,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_tmprm;
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -2951,7 +2951,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -3028,11 +3028,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3049,7 +3049,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -3115,11 +3115,11 @@ if (FLD (f_subd)) {
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3136,7 +3136,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -3196,11 +3196,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3217,7 +3217,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -3291,12 +3291,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3313,7 +3313,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -3387,12 +3387,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = GET_H_REGISTERS (FLD (f_rn));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3409,7 +3409,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -3487,12 +3487,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 if (FLD (f_addsubx)) {
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3509,7 +3509,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -3542,12 +3542,12 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 } else {
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3564,7 +3564,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -3639,12 +3639,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3661,7 +3661,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -3752,12 +3752,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3774,7 +3774,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -3854,12 +3854,12 @@ if (FLD (f_subd)) {
 }
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3876,7 +3876,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -3950,12 +3950,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -3972,7 +3972,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
@@ -4057,61 +4057,39 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 
 {
 {
-  SI tmp_tmemaddr;
-  SI tmp_tmpValReg;
-  tmp_tmpValReg = GET_H_REGISTERS (FLD (f_rd6));
+  SI tmp_eff_addr;
+  BI tmp_isAlignmentAccess;
 if (FLD (f_addsubx)) {
-  tmp_tmemaddr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+  tmp_eff_addr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 } else {
-  tmp_tmemaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+  tmp_eff_addr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 }
 {
-  BI tmp_isAligmentAccess;
-{
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_tmemaddr, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_tmemaddr, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_tmemaddr, 3), 0)) : (EQSI (ANDSI (tmp_tmemaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_eff_addr, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_eff_addr, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_eff_addr, 3), 0)) : (EQSI (ANDSI (tmp_eff_addr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
     SET_H_SCR_STATUS_EXCAUSE (opval);
-    written |= (1 << 12);
+    written |= (1 << 10);
     TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
     USI opval = 2;
     SET_H_CORE_REGISTERS (((UINT) 11), opval);
-    written |= (1 << 9);
+    written |= (1 << 8);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
-{
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
   {
-    SI opval = tmp_tmemaddr;
-    CPU (h_memaddr) = opval;
-    written |= (1 << 13);
-    TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
-  }
-  {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, tmp_tmemaddr));
+    SI opval = epiphany_testset_QI (current_cpu, tmp_eff_addr, GET_H_REGISTERS (FLD (f_rd6)));
     SET_H_REGISTERS (FLD (f_rd6), opval);
-    written |= (1 << 15);
+    written |= (1 << 12);
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-}
-}
-}
-if (GET_H_REGISTERS (FLD (f_rd6))) {
-((void) 0); /*nop*/
-} else {
-  {
-    QI opval = tmp_tmpValReg;
-    SETMEMQI (current_cpu, pc, tmp_tmemaddr, opval);
-    written |= (1 << 11);
-    TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
@@ -4121,7 +4099,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 10);
+    written |= (1 << 9);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4129,7 +4107,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 14);
+    written |= (1 << 11);
     TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4154,61 +4132,39 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 
 {
 {
-  SI tmp_tmemaddr;
-  SI tmp_tmpValReg;
-  tmp_tmpValReg = GET_H_REGISTERS (FLD (f_rd6));
+  SI tmp_eff_addr;
+  BI tmp_isAlignmentAccess;
 if (FLD (f_addsubx)) {
-  tmp_tmemaddr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+  tmp_eff_addr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 } else {
-  tmp_tmemaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+  tmp_eff_addr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 }
 {
-  BI tmp_isAligmentAccess;
-{
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_tmemaddr, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_tmemaddr, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_tmemaddr, 3), 0)) : (EQSI (ANDSI (tmp_tmemaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_eff_addr, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_eff_addr, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_eff_addr, 3), 0)) : (EQSI (ANDSI (tmp_eff_addr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
     SET_H_SCR_STATUS_EXCAUSE (opval);
-    written |= (1 << 12);
+    written |= (1 << 10);
     TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
     USI opval = 2;
     SET_H_CORE_REGISTERS (((UINT) 11), opval);
-    written |= (1 << 9);
+    written |= (1 << 8);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
-{
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
   {
-    SI opval = tmp_tmemaddr;
-    CPU (h_memaddr) = opval;
-    written |= (1 << 13);
-    TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
-  }
-  {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, tmp_tmemaddr));
+    SI opval = epiphany_testset_HI (current_cpu, tmp_eff_addr, GET_H_REGISTERS (FLD (f_rd6)));
     SET_H_REGISTERS (FLD (f_rd6), opval);
-    written |= (1 << 15);
+    written |= (1 << 12);
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-}
-}
-}
-if (GET_H_REGISTERS (FLD (f_rd6))) {
-((void) 0); /*nop*/
-} else {
-  {
-    HI opval = tmp_tmpValReg;
-    SETMEMHI (current_cpu, pc, tmp_tmemaddr, opval);
-    written |= (1 << 11);
-    TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
@@ -4218,7 +4174,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 10);
+    written |= (1 << 9);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4226,7 +4182,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 14);
+    written |= (1 << 11);
     TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4251,61 +4207,39 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 
 {
 {
-  SI tmp_tmemaddr;
-  SI tmp_tmpValReg;
-  tmp_tmpValReg = GET_H_REGISTERS (FLD (f_rd6));
+  SI tmp_eff_addr;
+  BI tmp_isAlignmentAccess;
 if (FLD (f_addsubx)) {
-  tmp_tmemaddr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+  tmp_eff_addr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 } else {
-  tmp_tmemaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+  tmp_eff_addr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 }
 {
-  BI tmp_isAligmentAccess;
-{
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_tmemaddr, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_tmemaddr, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_tmemaddr, 3), 0)) : (EQSI (ANDSI (tmp_tmemaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_eff_addr, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_eff_addr, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_eff_addr, 3), 0)) : (EQSI (ANDSI (tmp_eff_addr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
     SET_H_SCR_STATUS_EXCAUSE (opval);
-    written |= (1 << 12);
+    written |= (1 << 10);
     TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
     USI opval = 2;
     SET_H_CORE_REGISTERS (((UINT) 11), opval);
-    written |= (1 << 9);
+    written |= (1 << 8);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
-{
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
   {
-    SI opval = tmp_tmemaddr;
-    CPU (h_memaddr) = opval;
-    written |= (1 << 13);
-    TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
-  }
-  {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, tmp_tmemaddr));
+    SI opval = epiphany_testset_SI (current_cpu, tmp_eff_addr, GET_H_REGISTERS (FLD (f_rd6)));
     SET_H_REGISTERS (FLD (f_rd6), opval);
-    written |= (1 << 15);
+    written |= (1 << 12);
     TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-}
-}
-}
-if (GET_H_REGISTERS (FLD (f_rd6))) {
-((void) 0); /*nop*/
-} else {
-  {
-    SI opval = tmp_tmpValReg;
-    SETMEMSI (current_cpu, pc, tmp_tmemaddr, opval);
-    written |= (1 << 11);
-    TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
@@ -4315,7 +4249,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 10);
+    written |= (1 << 9);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4323,7 +4257,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 14);
+    written |= (1 << 11);
     TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4349,11 +4283,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4370,7 +4304,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
@@ -4429,11 +4363,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4450,7 +4384,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -4469,11 +4403,11 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4490,7 +4424,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -4549,11 +4483,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4570,7 +4504,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn));
@@ -4633,11 +4567,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4654,7 +4588,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -4731,11 +4665,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4752,7 +4686,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -4818,11 +4752,11 @@ if (FLD (f_subd)) {
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4839,7 +4773,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -4899,11 +4833,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -4920,7 +4854,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -4993,11 +4927,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5014,7 +4948,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
@@ -5073,11 +5007,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5094,7 +5028,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -5113,11 +5047,11 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5134,7 +5068,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -5193,11 +5127,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5214,7 +5148,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn));
@@ -5277,11 +5211,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5298,7 +5232,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -5375,11 +5309,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5396,7 +5330,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -5462,11 +5396,11 @@ if (FLD (f_subd)) {
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5483,7 +5417,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -5543,11 +5477,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5564,7 +5498,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -5637,11 +5571,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5658,7 +5592,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
@@ -5717,11 +5651,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5738,7 +5672,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -5757,11 +5691,11 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5778,7 +5712,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
@@ -5837,11 +5771,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5858,7 +5792,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn));
@@ -5921,11 +5855,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -5942,7 +5876,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -6019,11 +5953,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6040,7 +5974,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -6106,11 +6040,11 @@ if (FLD (f_subd)) {
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6127,7 +6061,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
@@ -6187,11 +6121,11 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6208,7 +6142,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = GET_H_REGISTERS (FLD (f_rn6));
@@ -6282,12 +6216,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6304,7 +6238,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
@@ -6377,12 +6311,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 if (FLD (f_addsubx)) {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6399,7 +6333,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
@@ -6432,12 +6366,12 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 } else {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6454,7 +6388,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
@@ -6527,12 +6461,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = GET_H_REGISTERS (FLD (f_rn));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6549,7 +6483,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
@@ -6626,12 +6560,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
 {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6648,7 +6582,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
@@ -6739,12 +6673,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6761,7 +6695,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
@@ -6841,12 +6775,12 @@ if (FLD (f_subd)) {
 }
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6863,7 +6797,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
@@ -6937,12 +6871,12 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
     UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
@@ -6959,7 +6893,7 @@ if (NOTBI (tmp_isAligmentAccess)) {
 }
 }
 }
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
