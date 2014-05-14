@@ -1439,15 +1439,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(define-pmacro (callMisaligmentExceptionIfNeeded sel  addr isAligmentAccess)
+(define-pmacro (callMisalignmentExceptionIfNeeded sel  addr isAlignmentAccess)
   (sequence ((BI scale))
-    (set isAligmentAccess
+    (set isAlignmentAccess
 	 (case BI sel
 	   ((OPW_BYTE)	(eq (and addr #x0) #x0))
 	   ((OPW_SHORT)	(eq (and addr #x1) #x0))
 	   ((OPW_WORD)	(eq (and addr #x3) #x0))
 	   (else	(eq (and addr #x7) #x0))))
-    (if (not BI isAligmentAccess)
+    (if (not BI isAlignmentAccess)
 	  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-UNALIGNED))
 	)
   )
@@ -1467,11 +1467,11 @@
 
 ;; common load macros from effective address, handling 8/16/32/64 bits
 (define-pmacro (load-double-from-ea regnum eff-addr mode sel)
-  (sequence ((SI loadaddr) (BI isAligmentAccess))
+  (sequence ((SI loadaddr) (BI isAlignmentAccess))
 	    (set loadaddr eff-addr)
-	    (callMisaligmentExceptionIfNeeded sel  loadaddr isAligmentAccess)
+	    (callMisalignmentExceptionIfNeeded sel  loadaddr isAlignmentAccess)
 
-	    (if (not (not BI isAligmentAccess))
+	    (if (not (not BI isAlignmentAccess))
 		(sequence ()
 			  (set memaddr loadaddr)
 			  (set regnum (mem SI loadaddr))
@@ -1488,10 +1488,10 @@
   )
 
 (define-pmacro (load-from-ea regnum eff-addr mode sel)
-  (sequence ((BI isAligmentAccess))
+  (sequence ((BI isAlignmentAccess))
 
-	    (callMisaligmentExceptionIfNeeded sel eff-addr   isAligmentAccess)
-	    (if (not (not BI isAligmentAccess))
+	    (callMisalignmentExceptionIfNeeded sel eff-addr   isAlignmentAccess)
+	    (if (not (not BI isAlignmentAccess))
 		(sequence ()
 			  (set memaddr eff-addr)
 			  (set regnum (zext SI (mem mode eff-addr)))
@@ -1503,10 +1503,10 @@
 
 ;; common store to effective address, handling 8/16/32/64 bit data
 (define-pmacro (store-double-to-ea eff-addr regnum mode sel)
-  (sequence ((SI storeaddr) (BI isAligmentAccess))
+  (sequence ((SI storeaddr) (BI isAlignmentAccess))
 	    (set storeaddr eff-addr)
-	    (callMisaligmentExceptionIfNeeded sel storeaddr isAligmentAccess)
-	    (if (not (not BI isAligmentAccess))
+	    (callMisalignmentExceptionIfNeeded sel storeaddr isAlignmentAccess)
+	    (if (not (not BI isAlignmentAccess))
 		(sequence ()
 			  (set memaddr storeaddr)
 			  (set (mem SI storeaddr) regnum)
@@ -1520,9 +1520,9 @@
   )
 
 (define-pmacro (store-to-ea eff-addr regnum mode sel)
-  (sequence ((BI isAligmentAccess))
-	    (callMisaligmentExceptionIfNeeded sel eff-addr   isAligmentAccess)
-	    (if (not (not BI isAligmentAccess))
+  (sequence ((BI isAlignmentAccess))
+	    (callMisalignmentExceptionIfNeeded sel eff-addr   isAlignmentAccess)
+	    (if (not (not BI isAlignmentAccess))
 		(sequence ()
 			  (set memaddr eff-addr)
 			  (set (mem mode eff-addr) regnum)
