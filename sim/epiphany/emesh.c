@@ -632,7 +632,7 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   if ((Expr))\
     {\
       fprintf(stderr, "ESIM: Invalid config: %s\n", (Error_string));\
-      return 1;\
+      return -EINVAL;\
     }
 
   FAIL_IF(!c->rows,         "Rows cannot be zero");
