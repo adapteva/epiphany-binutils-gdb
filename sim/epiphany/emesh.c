@@ -283,6 +283,13 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 {
   uint8_t *tmp_ptr;
 
+  if (es_initialized(esim) != ES_OK)
+    {
+      fprintf(stderr, "ESIM: Not initialized\n");
+      transl->location = ES_LOC_INVALID;
+      return;
+    }
+
   /* TESTSET instruction requires requested address to be global */
   transl->addr_was_global = ES_ADDR_IS_GLOBAL(addr);
 
@@ -1041,7 +1048,15 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	  (unsigned long int) esim->shm, esim->shm_size, esim->fd,
 	  esim->coreid, esim->shm_name);
 #endif
+  esim->initialized = 1;
   return ES_OK;
+}
+
+/* Returns ES_OK on success */
+int inline
+es_initialized(const es_state* esim)
+{
+  return (esim->initialized == 1 ? ES_OK : -EINVAL);
 }
 
 void
@@ -1074,6 +1089,7 @@ es_cleanup(es_state *esim)
   esim->ext_ram = NULL;
   esim->coreid = 0;
   esim->creator = 0;
+  esim->initialized = 0;
 }
 
 void

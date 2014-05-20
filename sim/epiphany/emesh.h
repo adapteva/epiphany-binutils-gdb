@@ -108,6 +108,7 @@ typedef struct es_state_ {
     unsigned coreid;
     int fd;
     unsigned creator;         /* True if process created shm file */
+    unsigned initialized;     /* Set by es_init on success */
 } es_state;
 
 int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
@@ -125,5 +126,7 @@ volatile void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
 
 size_t es_get_core_mem_region_size(const es_state *esim);
 unsigned es_get_coreid(const es_state *esim);
+
+int es_initialized(const es_state* esim);
 
 #endif /* __emesh_h__ */
