@@ -81,8 +81,7 @@ static void free_state (SIM_DESC);
 static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
 static SIM_RC sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes,
 				     unsigned new_coreid);
-static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu,
-				   EPIPHANY_OPTIONS last_opt);
+static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu);
 static SIM_RC sim_esim_init(SIM_DESC sd);
 static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
 
@@ -185,9 +184,14 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
     }
 #ifdef WITH_EMESH_SIM
   /* Update options */
-  return sim_esim_set_options(sd, cpu, (EPIPHANY_OPTIONS) opt);
-#endif
 
+  if (STATE_OPEN_KIND (sd) == SIM_OPEN_DEBUG)
+    return sim_esim_set_options(sd, cpu);
+  else
+    return SIM_RC_OK;
+
+#endif
+    return SIM_RC_OK;
 }
 
 
@@ -234,42 +238,37 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
   return SIM_RC_OK;
 }
 
-static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu,
-				   EPIPHANY_OPTIONS last_opt)
+
+/* Return SIM_RC_OK if user specified required params, SIM_RC_FAIL otherwise
+ */
+static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
 {
-  if (emesh_params.initialized && last_opt != E_OPTION_COREID)
-    {
-      sim_io_eprintf(sd, "This option cannot be changed after esim is "
-		         "initialized\n");
-      return SIM_RC_FAIL;
-    }
-  if (emesh_params.initialized && last_opt == E_OPTION_COREID)
-    {
-      if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes (),
-				 emesh_params.coreid) != SIM_RC_OK)
-	{
-	  return SIM_RC_FAIL;
-	}
-
-      return SIM_RC_OK;
+#if WITH_EMESH_SIM
+#define FAIL_IF(Expr, Desc)\
+  if (Expr)\
+    {\
+      if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE) \
+	sim_io_eprintf(sd, "%s\n", Desc);\
+      return SIM_RC_FAIL;\
     }
 
-  /* All options not set yet, so do nothing */
-  if (   !emesh_params.coreid   || !emesh_params.num_cols
-      || !emesh_params.num_rows || !emesh_params.first_coreid)
+
+#undef FAIL_IF
+#endif
+
+  return SIM_RC_OK;
+
+}
+
+/* Only called from debugger */
+static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu)
+{
+  if (sim_esim_have_required_params(sd) != SIM_RC_OK)
     return SIM_RC_OK;
 
   if (sim_esim_init(sd) != SIM_RC_OK)
     return SIM_RC_FAIL;
 
-
-  if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes (),
-			     emesh_params.coreid) != SIM_RC_OK)
-    {
-      return SIM_RC_FAIL;
-    }
-
-  emesh_params.initialized = 1;
   return SIM_RC_OK;
 }
 
@@ -297,6 +296,15 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
     {
       return SIM_RC_FAIL;
     }
+
+  if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes (),
+			     emesh_params.coreid) != SIM_RC_OK)
+    {
+      return SIM_RC_FAIL;
+    }
+
+  sim_io_eprintf(sd, "ESIM: Initialized successfully\n");
+  emesh_params.initialized = 1;
 
   return SIM_RC_OK;
 }
@@ -363,6 +371,12 @@ sim_open (kind, callback, abfd, argv)
     {
       free_state (sd);
       return 0;
+    }
+
+  if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
+    {
+      if (sim_esim_init(sd) != SIM_RC_OK)
+	return SIM_RC_FAIL;
     }
 
 #if 0
