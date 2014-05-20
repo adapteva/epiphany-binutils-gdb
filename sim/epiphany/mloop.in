@@ -296,7 +296,7 @@ while (0)
        */
       -- CPU_INSN_COUNT (current_cpu);
       /* TODO: Would be nicer if we did a timed wait on a pthread cond var */
-      usleep(100000);
+      usleep(10000);
     }
   /*
    * Invalidate vpc in scache if not core-local memory.
