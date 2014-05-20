@@ -683,9 +683,6 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "Number of cores must be even (or exactly 1)");
   FAIL_IF(cores % c->nodes, "Number of cores is not a multiple of nodes");
 
-  FAIL_IF(!c->row_base && !c->col_base,
-			    "Row base and col base cannot both be zero.");
-  FAIL_IF(c->row_base & 1,  "Row base must be even");
   FAIL_IF(c->col_base & 1,  "Col base must be even");
   FAIL_IF(c->row_base+c->rows > 64,
 			    "Bottommost core row must be less than 64");
@@ -701,12 +698,21 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "Core memory region size is zero");
   FAIL_IF(c->core_mem_region & (c->core_mem_region-1),
 			    "Core memory region size must be power of two");
+
+  /* TODO: Revisit when we add net support */
+  FAIL_IF(c->nodes != 1,    "We currently only support one node.");
+
   /* Ignore ext ram node if we don't have external ram */
   FAIL_IF(c->ext_ram_size && c->ext_ram_node >= c->nodes,
 			    "Specified external ram node does not exist");
 
-  FAIL_IF(c->ext_ram_size && (c->ext_ram_size & (c->ext_ram_size-1)),
-			    "External ram size must be power of two.");
+  FAIL_IF(c->ext_ram_size && (c->ext_ram_size & (c->core_mem_region-1)),
+			    "External ram size must be multiple of core mem"
+			    " region size.");
+
+  FAIL_IF(c->ext_ram_size && (c->ext_ram_base & (c->core_mem_region-1)),
+			    "External ram base must be aligned to core mem"
+			    " region size.");
 
   /* TODO: Check if external ram shadows any core mem region */
 
