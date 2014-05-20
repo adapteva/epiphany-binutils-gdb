@@ -191,7 +191,12 @@ epiphany_mem_port_event (struct hw *me,
 static void epiphany_mem_signal(struct hw *me, unsigned_word addr,
 			   unsigned nr_bytes, char *transfer, int sigrc)
 {
-  address_word ip = CIA_ADDR (CIA_GET(hw_system_cpu(me)));
+  SIM_CPU *current_cpu;
+  address_word ip;
+
+  current_cpu = hw_system_cpu(me);
+  sim_cia cia = current_cpu ? CIA_GET (current_cpu) : NULL_CIA;
+  ip = CIA_ADDR (cia);
 
   switch (sigrc)
     {
