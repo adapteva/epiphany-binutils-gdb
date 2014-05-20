@@ -376,7 +376,7 @@ es_tx_one_shm_load(es_state *esim, es_transaction *tx)
   tx->remaining -= n;
 
   /* TODO: Should we return nr of bytes ? */
-  return 0;
+  return ES_OK;
 }
 
 
@@ -412,7 +412,7 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
       tx->sim_addr.cpu->oob_events.external_write = 1;
     }
 
-  return 0;
+  return ES_OK;
 }
 static int
 es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
@@ -464,7 +464,7 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
 	tx->sim_addr.cpu->oob_events.external_write = 1;
       }
 
-  return 0;
+  return ES_OK;
 }
 
 static int
@@ -525,7 +525,7 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
   tx->remaining -= n;
 
   /* TODO: Should we return nr of bytes ? */
-  return 0;
+  return ES_OK;
 }
 
 static int
@@ -656,7 +656,7 @@ unsigned isqrt(unsigned n)
   return low;
 }
 
-/* Return 0 on success */
+/* Returns ES_OK on success */
 static int
 es_validate_cluster_cfg(const es_cluster_cfg *c)
 {
@@ -704,10 +704,10 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   /* TODO: Check if external ram shadows any core mem region */
 
 #undef FAIL_IF
-  return 0;
+  return ES_OK;
 }
 
-/* Return 0 on success */
+/* Returns ES_OK on success */
 static int
 es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
 {
@@ -749,7 +749,7 @@ es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
    c->core_mem_region;
 }
 
-/* Returns 0 on success */
+/* Returns ES_OK on success */
 static int
 es_open_shm_file(es_state *esim, char *name)
 {
@@ -779,10 +779,10 @@ es_open_shm_file(es_state *esim, char *name)
   strncpy(esim->shm_name, name, sizeof(esim->shm_name)-1);
   esim->fd = fd;
   esim->creator = creator;
-  return 0;
+  return ES_OK;
 }
 
-/* Return 0 on succes, sets out_size to size of new file */
+/* Returns ES_OK on success, sets out_size to size of new file */
 static int
 es_truncate_shm_file(es_state *esim, es_node_cfg *n, es_cluster_cfg *c)
 {
@@ -807,10 +807,10 @@ es_truncate_shm_file(es_state *esim, es_node_cfg *n, es_cluster_cfg *c)
     }
   esim->shm_size = size;
 
-  return 0;
+  return ES_OK;
 }
 
-/* Returns 0 on success, timeout in msecs */
+/* Returns ES_OK on success, timeout in msecs */
 static int
 es_wait_truncate_shm_file(es_state *esim, int timeout)
 {
@@ -850,7 +850,7 @@ es_wait_truncate_shm_file(es_state *esim, int timeout)
     }
 
   esim->shm_size = size;
-  return 0;
+  return ES_OK;
 
 }
 
@@ -862,8 +862,9 @@ es_state_init(es_state *esim)
 }
 
 
-/* Return 0 on success, that is: either the file did not exist, it was not an
-   orphan or it was stale but successfully removed */
+/* Returns ES_OK on success, that is: either the file did not exist, it was not
+ *  an orphan or it was stale but successfully removed
+ */
 static int
 es_remove_stale_shm_file(char *name)
 {
@@ -891,10 +892,10 @@ es_remove_stale_shm_file(char *name)
   switch (WEXITSTATUS(res))
     {
     case 0:  fprintf(stderr, "ESIM: removed stale shm file `%s'\n", path);
-	     return 0;        /* Orphan and deleted */
+	     return ES_OK;        /* Orphan and deleted */
     case 1:  return -EACCES;  /* Orphan but could not be deleted */
-    case 2:  return 0;        /* Linked to alive processes */
-    case 3:  return 0;        /* File not found */
+    case 2:  return ES_OK;        /* Linked to alive processes */
+    case 3:  return ES_OK;        /* File not found */
     default: return -EINVAL;
     }
 #else
@@ -902,10 +903,10 @@ es_remove_stale_shm_file(char *name)
   fprintf(stderr, "ESIM: Warning: Could not check for stale shm file. "
 	          "Platform not fully supported\n");
 #endif
-  return 0;
+  return ES_OK;
 }
 
-/* Returns 0 on success */
+/* Returns ES_OK on success */
 int
 es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 {
@@ -1040,7 +1041,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	  (unsigned long int) esim->shm, esim->shm_size, esim->fd,
 	  esim->coreid, esim->shm_name);
 #endif
-  return 0;
+  return ES_OK;
 }
 
 void
@@ -1111,20 +1112,22 @@ es_wait_exit(es_state *esim)
    */
 }
 
-/* Return true on success */
+/* Returns ES_OK on success */
 int
 es_valid_coreid(const es_state *esim, unsigned coreid)
 {
   unsigned row = ES_CORE_ROW(coreid);
   unsigned col = ES_CORE_COL(coreid);
-  return (coreid &&
+  int valid = (coreid &&
 	  ES_NODE_CFG.row_base <= row &&
 	  row < ES_NODE_CFG.row_base + ES_CLUSTER_CFG.rows_per_node &&
 	  ES_NODE_CFG.col_base <= col &&
 	  col < ES_NODE_CFG.col_base + ES_CLUSTER_CFG.cols_per_node);
+
+  return valid ? ES_OK : -EINVAL;
 }
 
-/* Return true on success */
+/* Returns ES_OK on success */
 int
 es_set_coreid(es_state *esim, unsigned coreid)
 {
@@ -1132,19 +1135,19 @@ es_set_coreid(es_state *esim, unsigned coreid)
   es_shm_core_state_header *new_hdr, *old_hdr;
 
 
-  if (!es_valid_coreid(esim, coreid))
-    return 0;
+  if (es_valid_coreid(esim, coreid) != ES_OK)
+    return -EINVAL;
 
   if (coreid == esim->coreid)
-    return 1;
+    return ES_OK;
 
   new_hdr = (es_shm_core_state_header *) es_shm_core_base(esim, coreid);
 
   if (!new_hdr)
-    return 0;
+    return -EINVAL;
 
   if (es_cas32(&new_hdr->reserved, 0, 1))
-    return 0;
+    return -EINVAL;
 
   new_cpu_state = es_shm_core_base(esim, coreid) +
    ES_SHM_CORE_STATE_HEADER_SIZE;
@@ -1159,15 +1162,15 @@ es_set_coreid(es_state *esim, unsigned coreid)
   esim->this_core_cpu_state = new_cpu_state;
   esim->this_core_mem = (uint8_t *) new_hdr + ES_SHM_CORE_STATE_SIZE;
 
-  return 1;
+  return ES_OK;
 }
 
-/* Return pointer on success */
+/* Returns pointer on success, NULL on failure */
 volatile void *
 es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 {
 
-  if (!es_valid_coreid(esim, esim->coreid))
+  if (es_valid_coreid(esim, esim->coreid) != ES_OK)
     return NULL;
 
   if (esim->this_core_cpu_state == cpu)

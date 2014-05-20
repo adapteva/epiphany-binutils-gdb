@@ -230,9 +230,9 @@ epiphany_mem_io_read_buffer (struct hw *me,
 			 unsigned_word base,
 			 unsigned nr_bytes)
 {
-  struct epiphany_mem *controller = hw_data (me);
   HW_TRACE ((me, "read 0x%08lx %d", (long) base, (int) nr_bytes));
-  if (es_mem_load(&hw_system(me)->esim, base, nr_bytes, dest))
+  es_state *esim = STATE_ESIM(hw_system(me));
+  if (es_mem_load(esim, base, nr_bytes, dest) != ES_OK)
     {
       /* TODO: What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "read", SIM_SIGSEGV);
@@ -248,9 +248,9 @@ epiphany_mem_io_write_buffer (struct hw *me,
 			  unsigned_word base,
 			  unsigned nr_bytes)
 {
-  struct epiphany_mem *controller = hw_data (me);
+  es_state *esim = STATE_ESIM(hw_system(me));
   HW_TRACE ((me, "write 0x%08lx %d", (long) base, (int) nr_bytes));
-  if (es_mem_store(&hw_system(me)->esim, base, nr_bytes, source))
+  if (es_mem_store(esim, base, nr_bytes, source) != ES_OK)
     {
       /* TODO: What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "write", SIM_SIGSEGV);

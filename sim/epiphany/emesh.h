@@ -45,6 +45,8 @@
 
 /* TODO: We use standard errnos now but we need more specific, e.g. EALIGN */
 
+#define ES_OK 0
+
 /* Only support homogeneous configurations for now */
 typedef struct es_cluster_cfg_ {
     unsigned row_base;
