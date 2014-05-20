@@ -932,6 +932,8 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   volatile es_shm_header *shm;
   unsigned msecs_wait;
   pthread_barrierattr_t attr;
+  unsigned have_core_0;   /* Special case when node first core and row is 0 */
+  unsigned sim_processes; /* On this node, core 0 does not have sim proc */
 
   error = 0;
   msecs_wait = 0;
@@ -1010,14 +1012,20 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	     sizeof(es_node_cfg));
 
       /* Initialize pthread barriers */
+      have_core_0 = (!ES_NODE_CFG.col_base && !ES_NODE_CFG.row_base);
+      /* Coreid 0 is invalid so we should not wait for it */
+      sim_processes = have_core_0 ?
+	ES_CLUSTER_CFG.cores_per_node-1 :
+	ES_CLUSTER_CFG.cores_per_node;
+
       pthread_barrierattr_init(&attr);
       pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
       pthread_barrier_init(
 	  (pthread_barrier_t *) &esim->shm->run_barrier, &attr,
-	  ES_CLUSTER_CFG.cores_per_node);
+	  sim_processes);
       pthread_barrier_init(
 	  (pthread_barrier_t *) &esim->shm->exit_barrier, &attr,
-	  ES_CLUSTER_CFG.cores_per_node);
+	  sim_processes);
       pthread_barrierattr_destroy(&attr);
 
       /* Signal waiting processes creating (this) process is done */
