@@ -200,7 +200,7 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
   static unsigned freed = 0; /* Original sim_cpu struct is malloced */
   sim_cpu *new_cpu;
 
-  if (!es_valid_coreid(STATE_ESIM(sd), new_coreid))
+  if (es_valid_coreid(STATE_ESIM(sd), new_coreid) != ES_OK)
     {
       sim_io_eprintf(sd, "Invalid coreid `0x%x'.\n", new_coreid);
       return SIM_RC_FAIL;
@@ -209,7 +209,7 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
   if (es_get_coreid(STATE_ESIM(sd)) == new_coreid)
     return SIM_RC_OK;
 
-  if (!es_set_coreid(STATE_ESIM(sd), new_coreid))
+  if (es_set_coreid(STATE_ESIM(sd), new_coreid) != ES_OK)
     {
       sim_io_eprintf (sd, "Could not set coreid to `0x%x'. Perhaps it was "
 		      "already reserved by another sim process.\n",
