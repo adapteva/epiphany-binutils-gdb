@@ -55,27 +55,35 @@ int is_sim_opened=0;
 
 /* Cover function of sim_state_free to free the cpu buffers as well.  */
 
-static unsigned epiphany_add_ext_mem = 1;
-
 typedef enum {
-  E_OPTION_EXT_MEM = OPTION_START,
+  E_OPTION_EXT_RAM = OPTION_START,
   E_OPTION_COREID,
   E_OPTION_NUM_COLS,
   E_OPTION_NUM_ROWS,
   E_OPTION_FIRST_CORE,
+  E_OPTION_ADD_EXT_MEM,
+  E_OPTION_EXT_RAM_BASE,
+  E_OPTION_EXT_RAM_SIZE,
   /* TODO: Add more options:
    * Check es_cluster_cfg and es_node_cfg in emesh.h
    */
 } EPIPHANY_OPTIONS;
 
 struct emesh_params {
-  unsigned coreid;
-  unsigned num_cols;
-  unsigned num_rows;
-  unsigned first_coreid;
+  /* Required */
+  int coreid;
+  int num_cols;
+  int num_rows;
+  int first_coreid;
+
+  /* Extra */
+  unsigned epiphany_add_ext_ram;
+  int ext_ram_base;
+  int ext_ram_size;
 
   unsigned initialized;
 };
+static struct emesh_params emesh_params = {-1, -1, -1, -1, 1, -1, -1, 0};
 
 static void free_state (SIM_DESC);
 static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
@@ -86,12 +94,11 @@ static SIM_RC sim_esim_init(SIM_DESC sd);
 static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
 
 
-static struct emesh_params emesh_params = {0, 0, 0, 0, 0};
 
 static const OPTION options_epiphany[] =
 {
 
-  { {"e-external-memory", optional_argument, NULL, E_OPTION_EXT_MEM},
+  { {"e-external-memory", optional_argument, NULL, E_OPTION_EXT_RAM},
       'e', "off|on", "Turn off/on the external memory region",
       epiphany_option_handler },
 #if EMESH_SIM
@@ -106,6 +113,12 @@ static const OPTION options_epiphany[] =
       epiphany_option_handler  },
   { {"e-first-core", required_argument, NULL, E_OPTION_FIRST_CORE},
       '\0', "COREID", "Coreid of upper leftmost core",
+      epiphany_option_handler  },
+  { {"e-ext-ram-base", required_argument, NULL, E_OPTION_EXT_RAM_BASE},
+      '\0', "address", "Base address of external RAM",
+      epiphany_option_handler  },
+  { {"e-ext-ram-size", required_argument, NULL, E_OPTION_EXT_RAM_SIZE},
+      '\0', "MB", "Size of external RAM in MB",
       epiphany_option_handler  },
 #endif
   { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL, NULL }
@@ -128,22 +141,22 @@ static SIM_RC
 epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 			 int is_command)
 {
-  char * endp;
+  char *endp;
   unsigned long ul;
   unsigned value;
   int valid;
 
   ul = strtoul (arg, &endp, 0);
-  valid = ((isdigit (arg[0]) && ul != 0));
+  valid = ((isdigit (arg[0]) && endp != arg));
 
   switch ((EPIPHANY_OPTIONS) opt)
     {
-    case E_OPTION_EXT_MEM:
+    case E_OPTION_EXT_RAM:
       if(strcmp(arg,"off") == 0 ) {
-	      epiphany_add_ext_mem = 0;
+	      emesh_params.epiphany_add_ext_ram = 0;
       }
       if(strcmp(arg,"on") == 0 ) {
-	      epiphany_add_ext_mem = 1;
+	      emesh_params.epiphany_add_ext_ram = 1;
       }
       return SIM_RC_OK;
       break;
@@ -175,6 +188,12 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
       break;
     case E_OPTION_FIRST_CORE:
       SET_OR_FAIL(first_coreid, "e-first-core");
+      break;
+    case E_OPTION_EXT_RAM_BASE:
+      SET_OR_FAIL(ext_ram_base, "e-ext-ram-base");
+      break;
+    case E_OPTION_EXT_RAM_SIZE:
+      SET_OR_FAIL(ext_ram_size, "e-ext-ram-size");
       break;
 #undef SET_OR_FAIL
 #endif
@@ -252,6 +271,10 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
       return SIM_RC_FAIL;\
     }
 
+    FAIL_IF(0 > emesh_params.coreid      , "--e-coreid not set");
+    FAIL_IF(0 > emesh_params.num_cols    , "--e-num-cols not set");
+    FAIL_IF(0 > emesh_params.num_rows    , "--e-num-rows not set");
+    FAIL_IF(0 > emesh_params.first_coreid, "--e-first-core not set");
 
 #undef FAIL_IF
 #endif
@@ -278,20 +301,40 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
   es_cluster_cfg cluster;
   es_node_cfg node;
 
+  struct emesh_params *p = &emesh_params;
+
+  unsigned ext_ram_size = 32;
+  unsigned ext_ram_base = 0x8e000000;
+
+  if (sim_esim_have_required_params(sd) != SIM_RC_OK)
+    return SIM_RC_FAIL;
+
   memset(STATE_ESIM(sd), 0, sizeof(es_state));
   memset(&node, 0, sizeof(node));
   memset(&cluster, 0, sizeof(cluster));
 
   node.rank = 0;
   cluster.nodes = 1;
-  cluster.col_base = emesh_params.first_coreid & ((1 << 6) -1);
-  cluster.row_base = emesh_params.first_coreid >> 6;
-  cluster.cols = emesh_params.num_cols;
-  cluster.rows = emesh_params.num_rows;
+  cluster.col_base = p->first_coreid & ((1 << 6) -1);
+  cluster.row_base = p->first_coreid >> 6;
+  cluster.cols = p->num_cols;
+  cluster.rows = p->num_rows;
   cluster.core_mem_region = 1024*1024;
-  cluster.ext_ram_size = 32*1024*1024;
+
+  if (p->epiphany_add_ext_ram)
+    {
+      ext_ram_size = (0 <= p->ext_ram_size) ? p->ext_ram_size : ext_ram_size;
+      ext_ram_base = (0 <= p->ext_ram_base) ? p->ext_ram_base : ext_ram_base;
+    }
+  else
+    {
+      ext_ram_size = 0;
+      ext_ram_base = 0xffffffff;
+    }
+  cluster.ext_ram_size = ext_ram_size * 1024*1024;
+  cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
-  cluster.ext_ram_base = 0x8e000000;
+
   if (es_init(STATE_ESIM(sd), node, cluster))
     {
       return SIM_RC_FAIL;
@@ -405,7 +448,7 @@ sim_open (kind, callback, abfd, argv)
   if (sim_core_read_buffer (sd, NULL, read_map, &c, 0, 1) == 0)
     sim_do_commandf (sd, "memory region 0,0x%x", EPIPHANY_DEFAULT_MEM_SIZE);
 
-  if (epiphany_add_ext_mem)
+  if (emesh_params.epiphany_add_ext_ram)
     {
       if (sim_core_read_buffer (sd, NULL, read_map, &c,
 				EPIPHANY_DEFAULT_EXT_MEM_BANK0_START, 1) == 0)
