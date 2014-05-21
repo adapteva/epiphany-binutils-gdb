@@ -731,6 +731,7 @@ es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
 }
 
 /* This must be called *after* es_validate_config */
+/* TODO: This does not work when nodes != 1 */
 static void
 es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
 			       es_cluster_cfg *c)
@@ -739,18 +740,30 @@ es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
   c->cores = c->rows * c->cols;
   c->cores_per_node = c->cores / c->nodes;
 
-  /* Calculate most square-like per node cluster layout as possible */
-  /* TODO: User might want to specify different strategies, e.g., sequential.
-   * When we add MPI support this should be set in leader
-   * and then passed on to all other processses.
-   */
-  c->rows_per_node = isqrt(c->cores_per_node);
-  if (c->rows_per_node > c->rows)
-    c->rows_per_node = c->rows;
-  while (c->cores_per_node % c->rows_per_node)
-    c->rows_per_node--;
+  if (c->nodes == 1)
+    {
+      c->rows_per_node = c->rows;
+      c->cols_per_node = c->cols;
+    }
+  else
+    {
+      /* FIXME: The below code is not correct. */
 
-  c->cols_per_node = c->cores_per_node / c->rows_per_node;
+      /* Calculate most square-like per node cluster layout as possible */
+      /* TODO: User might want to specify different strategies, e.g., sequential.
+       * When we add MPI support this should be set in leader
+       * and then passed on to all other processes.
+       */
+      // node_cols = isqrt(nodes)
+      // node_rows = nodes/node_cols
+      c->rows_per_node = isqrt(c->cores_per_node);
+      if (c->rows_per_node > c->rows)
+	c->rows_per_node = c->rows;
+      while (c->cores_per_node % c->rows_per_node)
+	c->rows_per_node--;
+
+      c->cols_per_node = c->cores_per_node / c->rows_per_node;
+    }
 
 
   /* Node settings */
