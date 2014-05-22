@@ -70,6 +70,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sched.h>
+#include <sys/file.h>
 
 #include <stdio.h>
 
@@ -777,29 +778,38 @@ es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
 
 /* Returns ES_OK on success */
 static int
-es_open_shm_file(es_state *esim, char *name)
+es_open_shm_file(es_state *esim, char *name, struct flock *flock)
 {
   unsigned creator = 1;
-  int fd;
-  fd = shm_open(name, O_RDWR|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR);
+  int fd = -1;
+  int error = 0;
+
+  fd = shm_open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
   if (fd == -1)
+    return -errno;
+
+  /* Try to get exclusive lock on shm file */
+  flock->l_type   = F_WRLCK;
+  error = fcntl(fd, F_SETLK, flock);
+
+  if (!error)
     {
-      if (errno == EEXIST)
-        {
-          creator = 0;
-          fd = shm_open(name, O_RDWR, S_IRUSR|S_IWUSR);
-	  if (fd == -1)
-	    {
-	      return -errno;
-	    }
-        }
-      else
-        {
+      /* We got exclusive lock */
+      creator = 1;
+
+      /* Truncate to 0 to remove any old state */
+      ftruncate(fd, 0);
+    }
+  else if (error == -1 && (errno == EACCES || errno == EAGAIN))
+    {
+      creator = 0;
+    }
+  else
+    {
 #ifdef ES_DEBUG
-          fprintf(stderr, "es_init:shm_open: errno=%d\n", errno);
+      fprintf(stderr, "es_init:shm_open: errno=%d\n", errno);
 #endif
-          return -errno;
-        }
+      return -errno;
     }
 
   strncpy(esim->shm_name, name, sizeof(esim->shm_name)-1);
@@ -887,51 +897,6 @@ es_state_init(es_state *esim)
   esim->fd = -1;
 }
 
-
-/* Returns ES_OK on success, that is: either the file did not exist, it was not
- *  an orphan or it was stale but successfully removed
- */
-static int
-es_remove_stale_shm_file(char *name)
-{
-  char path[256];
-  char cmd[256];
-  int res;
-
-#ifdef __linux__
-  /* Idea from stack overflow:
-   * https://stackoverflow.com/questions/13377982/remove-posix-shared-memory-when-not-in-use
-   */
-  /* This is racy, but better than nothing */
-
-  snprintf(path, sizeof(path)/sizeof(char)-1, "/dev/shm%s", name);
-  snprintf(cmd, sizeof(cmd)/sizeof(char),
-    "if [ -f %s ] ; then "
-      "if ! fuser -s %s ; then "
-	"rm -f %s ; "
-      "else exit 2 ; "
-      "fi "
-    "else exit 3 ; "
-    "fi", path, path, path);
-
-  res = system(cmd);
-  switch (WEXITSTATUS(res))
-    {
-    case 0:  fprintf(stderr, "ESIM: removed stale shm file `%s'\n", path);
-	     return ES_OK;        /* Orphan and deleted */
-    case 1:  return -EACCES;  /* Orphan but could not be deleted */
-    case 2:  return ES_OK;        /* Linked to alive processes */
-    case 3:  return ES_OK;        /* File not found */
-    default: return -EINVAL;
-    }
-#else
-#warn "You should implement es_remove_stale_shm_file for this platform"
-  fprintf(stderr, "ESIM: Warning: Could not check for stale shm file. "
-	          "Platform not fully supported\n");
-#endif
-  return ES_OK;
-}
-
 /* Returns ES_OK on success */
 int
 es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
@@ -947,23 +912,21 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   pthread_barrierattr_t attr;
   unsigned have_core_0;   /* Special case when node first core and row is 0 */
   unsigned sim_processes; /* On this node, core 0 does not have sim proc */
+  struct flock flock;      /* Used when opening shm file */
 
   error = 0;
   msecs_wait = 0;
+
+  flock.l_whence = SEEK_SET;
+  flock.l_start  = 0;
+  flock.l_len    = 16;      /* Whatever, but must be same in all processes */
+
 
   es_state_init(esim);
 
   snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
 
-  /* Check for and remove stale esim shm file */
-  if ((error = es_remove_stale_shm_file(shm_name)))
-    {
-      fprintf(stderr, "ESIM: Could not remove stale esim file `/dev/shm%s'\n",
-	      shm_name);
-      return error;
-    }
-
-  if ((error = es_open_shm_file(esim, shm_name)))
+  if ((error = es_open_shm_file(esim, shm_name, &flock)) != ES_OK)
     {
       fprintf(stderr, "ESIM: Could not open esim file `/dev/shm%s'\n", shm_name);
       return error;
@@ -972,7 +935,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   /* If this process created the file, set its size */
   if (esim->creator)
     {
-      if ((error = es_validate_config(esim, &node, &cluster)))
+      if ((error = es_validate_config(esim, &node, &cluster)) != ES_OK)
 	{
 	  es_cleanup(esim);
 	  return error;
@@ -980,7 +943,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 
       es_fill_in_internal_cfg_values(esim, &node, &cluster);
 
-      if ((error = es_truncate_shm_file(esim, &node, &cluster)))
+      if ((error = es_truncate_shm_file(esim, &node, &cluster)) != ES_OK)
 	{
 	  fprintf(stderr, "ESIM: Could not truncate  esim file `/dev/shm%s'\n",
 		  shm_name);
@@ -988,15 +951,30 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	  return error;
 	}
 
+      /* Downgrade exclusive lock to shared lock */
+      flock.l_type = F_RDLCK;
+      error = fcntl(esim->fd, F_SETLK, &flock);
+      if (error)
+	{
+	  return -errno;
+	}
     }
+
   else /* if (!creator) */
     {
-      /* Busy wait until creating process has truncated shm file */
-      if ((error = es_wait_truncate_shm_file(esim, 3000)))
+      /* Wait until creating process has downgraded lock
+	 (and truncated shm file) */
+      flock.l_type = F_RDLCK;
+
+      error = fcntl(esim->fd, F_SETLKW, &flock);
+      if (error)
 	{
-	  fprintf(stderr, "ESIM: Timed out waiting for creating process\n");
-	  es_cleanup(esim);
-	  return error;
+	  return -errno;
+	}
+      if (error = es_wait_truncate_shm_file(esim, 3000) !=
+	  ES_OK)
+	{
+	  return -errno;
 	}
     }
 
