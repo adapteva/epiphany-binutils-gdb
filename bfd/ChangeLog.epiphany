@@ -1,3 +1,17 @@
+2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* reloc.c (BFD_RELOC_EPIPHANY_OVER32): Define a new PLT
+	relocation.
+	* libbfd.h: Regenerate.
+	* bfd-in2.h: Regenerate.
+	* elf32-epiphany.c (epiphany_elf_howto_table): Add a 32 bit PLT
+	relocation: R_EPIPHANY_OVER32.
+	(epiphany_reloc_type_lookup): Likewise.
+	(epiphany_final_link_relocate): Handle PLT relocation of type
+	R_EPIPHANY_OVER32.
+	(epiphany_elf_check_relocs): Add R_EPIPHANY_OVER32 to the
+	relocation types that need a PLT entry.
+
 2013-06-14  Simon Cook  <simon.cook@embecosm.com>
 
 	* reloc.c: Defined PLT relocations.

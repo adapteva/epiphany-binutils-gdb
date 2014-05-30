@@ -1,3 +1,11 @@
+2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* config/tc-epiphany.h (TC_PARSE_CONS_EXPRESSION): Define.
+	(TC_CONS_FIX_NEW): Likewise.
+	* config/tc-epiphany.c (epiphany_parse_cons_expression): New
+	function.
+	(epiphany_cons_fix_new): New function.
+
 2013-06-14  Simon Cook  <simon.cook@embecosm.com>
 
 	* config/tc-epiphany.c (md_cgen_lookup_lookup): Replace

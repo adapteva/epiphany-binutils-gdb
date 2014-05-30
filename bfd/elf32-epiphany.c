@@ -110,7 +110,10 @@ static reloc_howto_type epiphany_elf_howto_table [] =
   /* %OVERHIGH(EA) */
   AHOW (R_EPIPHANY_OVERHIGH, 0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_OVERHIGH", 0x0ff01fe0, 0x0ff01fe0),
   /* %OVERLOW(EA) */
-  AHOW (R_EPIPHANY_OVERLOW,  0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_OVERLOW",  0x0ff01fe0, 0x0ff01fe0)
+  AHOW (R_EPIPHANY_OVERLOW,  0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_OVERLOW",  0x0ff01fe0, 0x0ff01fe0),
+
+  /* A 32 bit PLT relocation for the overlay. */
+  AHOW (R_EPIPHANY_OVER32,      0, 2,32, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_OVER32",     0xffffffff, 0xffffffff)
 
 };
 #undef AHOW
@@ -167,6 +170,9 @@ epiphany_reloc_type_lookup (bfd * abfd ATTRIBUTE_UNUSED,
       return & epiphany_elf_howto_table[ (int) R_EPIPHANY_OVERHIGH];
     case BFD_RELOC_EPIPHANY_OVERLOW:
       return & epiphany_elf_howto_table[ (int) R_EPIPHANY_OVERLOW];
+
+    case BFD_RELOC_EPIPHANY_OVER32:
+      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_OVER32];
 
     default:
       /* Pacify gcc -Wall.  */
@@ -484,6 +490,11 @@ epiphany_final_link_relocate (bfd *                        output_bfd,
 	|| ((relocation & 0x7f8 )  << 13);
       return _bfd_relocate_contents (howto, input_bfd, relocation,
 				     contents + rel->r_offset);
+    case R_EPIPHANY_OVER32:
+      /* Here we are handling a 32 bit function pointer in the .data section.
+	 Check PLT entry and modify relocation.  */
+      relocation = epiphany_get_plt_address (relocation, output_bfd, h);
+      break;
 
       /* Pass others through.  */
     default:
@@ -721,7 +732,8 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
 
        switch (ELF32_R_TYPE (rel->r_info))
 	 {
-	   /* This reloc requires plt entry */
+	   /* These relocs require a plt entry */
+	   case R_EPIPHANY_OVER32:
 	   case R_EPIPHANY_OVERHIGH:
 	     if (h != NULL)
 	       {
