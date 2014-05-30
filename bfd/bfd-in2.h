@@ -5486,6 +5486,9 @@ giving a 16 bit signed byte offset.  */
 
 /* Adapteva EPIPHANY - 16 least-significant bits of PLT reference  */
   BFD_RELOC_EPIPHANY_OVERLOW,
+
+/* Adapteva EPIPHANY - 32 bits of PLT reference  */
+  BFD_RELOC_EPIPHANY_OVER32,
   BFD_RELOC_UNUSED };
 typedef enum bfd_reloc_code_real bfd_reloc_code_real_type;
 reloc_howto_type *bfd_reloc_type_lookup

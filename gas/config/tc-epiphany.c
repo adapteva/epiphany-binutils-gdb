@@ -360,6 +360,66 @@ epiphany_handle_align (fragS *fragp)
   fragp->fr_fix += fix;
 }
 
+
+/* Parse a .byte, .word, etc. expression.
+
+   Additionnally, we check for .word symbol@PLT and set the relocation type.  */
+
+void
+epiphany_parse_cons_expression (expressionS *exp,
+				int nbytes)
+{
+  expression_and_evaluate (exp);
+  if ((strncasecmp (input_line_pointer, "@PLT", 4) == 0)
+      && (exp->X_op == O_symbol)
+      && (nbytes == 4))
+    {
+      exp->X_md = BFD_RELOC_EPIPHANY_OVER32;
+      input_line_pointer += 4;
+    }
+}
+
+/* Create a fixup for a cons expression. If epiphany_parse_cons_expression
+   found a .word symbol@PLT then we create the reloc accordingly.  */
+
+void
+epiphany_cons_fix_new (fragS *frag,
+		  int where,
+		  int nbytes,
+		  expressionS *exp)
+{
+  bfd_reloc_code_real_type r;
+
+  if (exp->X_md == BFD_RELOC_EPIPHANY_OVER32)
+    r = BFD_RELOC_EPIPHANY_OVER32;
+  else
+    {
+      switch (nbytes)
+	{
+	case 1:
+	  r = BFD_RELOC_8;
+	  break;
+	case 2:
+	  r = BFD_RELOC_16;
+	  break;
+	case 3:
+	  r = BFD_RELOC_24;
+	  break;
+	case 4:
+	  r = BFD_RELOC_32;
+	  break;
+	case 8:
+	  r = BFD_RELOC_64;
+	  break;
+	default:
+	  as_bad (_("unsupported BFD relocation size %u"), nbytes);
+	  r = BFD_RELOC_32;
+	  break;
+	}
+    }
+  fix_new_exp (frag, where, (int) nbytes, exp, 0, r);
+}
+
 /* Read a comma separated incrementing list of register names
    and form a bit mask of upto 15 registers 0..14.  */
 

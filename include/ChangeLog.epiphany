@@ -1,0 +1,3 @@
+2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* elf/epiphany.h (R_EPIPHANY_OVER32): Define.

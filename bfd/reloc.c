@@ -6543,6 +6543,10 @@ ENUM
   BFD_RELOC_EPIPHANY_OVERLOW
 ENUMDOC
   Adapteva EPIPHANY - 16 least-significant bits of PLT reference
+ENUM
+  BFD_RELOC_EPIPHANY_OVER32
+ENUMDOC
+  Adapteva EPIPHANY - 32 bits of PLT reference
 
 ENDSENUM
   BFD_RELOC_UNUSED
