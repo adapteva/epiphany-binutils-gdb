@@ -74,6 +74,8 @@
 
 #include <stdio.h>
 
+#include <pthread.h>
+
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -158,6 +160,46 @@ ES_ATOMIC_INCR_DEF(64)
  (!(ES_ADDR_IS_EXT_RAM((addr))) && \
   (ES_CORE_MMR_BASE <= ES_ADDR_CORE_OFFSET((addr)) && \
    ES_ADDR_CORE_OFFSET((addr)) < ES_CORE_MMR_BASE+ES_CORE_MMR_SIZE))
+
+/*! ESIM configuration header in shared memory */
+typedef struct es_shm_header_ {
+    uint8_t           initialized;         /*!< True if creator has initialized
+					        other members in this struct */
+    uint32_t          node_core_sims_ready;/*!< Atomic increment             */
+    es_cluster_cfg    cluster_cfg;         /*!< Cluster configuration        */
+    es_node_cfg       node_cfg;            /*!< Node configuration           */
+    pthread_barrier_t run_barrier;         /*!< Start barrier                */
+    pthread_barrier_t exit_barrier;        /*!< Exit barrier                 */
+} es_shm_header;
+
+/*! ESIM per core state header (in SHM) */
+typedef struct es_shm_core_state_header_ {
+  uint32_t reserved; /*!< Set to one if reserved by a sim process */
+} es_shm_core_state_header;
+
+
+/*! ESIM per process state */
+typedef struct es_state_ {
+    unsigned initialized;                  /*!< Set by es_init on success */
+    uint8_t ready;                         /*!< True when sim process is
+					        ready                        */
+    unsigned coreid;                       /*!< Coreid of sim process        */
+    int fd;                                /*!< Shared memory file descriptor*/
+    unsigned creator;                      /*!< True if process created shm
+					        file                         */
+    char shm_name[256];                    /*!< Name of shm file             */
+    size_t shm_size;                       /*!< Size of shm file             */
+
+    volatile es_shm_header *shm;           /*!< Pointer to shm config header */
+    volatile uint8_t *cores_mem;           /*!< Base address for core mem
+				    	        (and core state)             */
+    volatile uint8_t *this_core_mem;       /*!< Ptr to this cores mem region */
+    volatile es_shm_core_state_header
+        *this_core_state_header;           /*!< Ptr to core state header     */
+    volatile uint8_t *this_core_cpu_state; /*!< GDB sim_cpu struct           */
+    volatile uint8_t *ext_ram;             /*!< Ptr to external RAM          */
+} es_state;
+
 
 
 /*! Where in simulator an Epiphany address resides */
