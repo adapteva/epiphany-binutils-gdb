@@ -921,7 +921,8 @@ es_open_shm_file(es_state *esim, char *name, struct flock *flock)
       creator = 1;
 
       /* Truncate to 0 to remove any old state */
-      ftruncate(fd, 0);
+      if (ftruncate(fd, 0) == -1)
+	return -errno;
     }
   else if (error == -1 && (errno == EACCES || errno == EAGAIN))
     {
