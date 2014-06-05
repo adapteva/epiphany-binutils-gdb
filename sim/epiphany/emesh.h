@@ -48,85 +48,96 @@
 #define ES_OK 0
 
 /* Only support homogeneous configurations for now */
+/*! ESIM cluster configuration */
 typedef struct es_cluster_cfg_ {
-    unsigned row_base;
-    unsigned col_base;
-    unsigned rows;
-    unsigned cols;
-    size_t   core_mem_region;         /* Core memory region size */
-    /* signed   core_phys_mem; */     /* Allocate entire region for now */
-    unsigned ext_ram_node;            /* Let this be rank '0' for now   */
-    uint32_t ext_ram_base;            /* core_mem_region must be divisor*/
-    size_t   ext_ram_size;
-    /* size_t ext_ram_base */
-    unsigned nodes;                   /* Number of simulation nodes     */
+    unsigned row_base;                /*!< Row of upper leftmost core      */
+    unsigned col_base;                /*!< Col of upper leftmost core      */
+    unsigned rows;                    /*!< Number of rows                  */
+    unsigned cols;                    /*!< Number of cols                  */
+    size_t   core_mem_region;         /*!< Core memory region size         */
+    /* signed   core_phys_mem; */     /* Allocate entire region for now    */
+    unsigned ext_ram_node;            /*!< Let this be rank '0' for now    */
+    uint32_t ext_ram_base;            /*!< core_mem_region must be divisor */
+    size_t   ext_ram_size;            /*!< Size of external memory         */
+    unsigned nodes;                   /*!< Number of simulation nodes      */
 
     /* Keep your grubby little mitts off of these plz :) */
-    unsigned cores;
-    unsigned cores_per_node;
-    size_t   mem_region_per_node;
-    unsigned rows_per_node;
-    unsigned cols_per_node;
+    unsigned cores;                   /*!< Total number of cores           */
+    unsigned cores_per_node;          /*!< Cores per node                  */
+    unsigned rows_per_node;           /*!< Rows per node                   */
+    unsigned cols_per_node;           /*!< Columns per node                */
 } es_cluster_cfg;
 
+/*! ESIM node configuration */
 typedef struct es_node_cfg_ {
-    unsigned rank; /* == lowest mpi rank on node / nodes */
+    unsigned rank; /*!< == lowest mpi rank on node / nodes */
 
     /* Keep your grubby little mitts off of these plz :) */
-    uint32_t mem_base; /* First addr in first core, not used */
-    unsigned row_base;
-    unsigned col_base;
+    unsigned row_base; /*!< Upper leftmost row in this node */
+    unsigned col_base; /*!< Upper leftmost col in this node */
 } es_node_cfg;
 
+/*! ESIM configuration header in shared memory */
 typedef struct es_shm_header_ {
-    uint8_t initialized;
-    uint32_t node_core_sims_ready; /* Atomic increment */
-    es_cluster_cfg cluster_cfg;
-    es_node_cfg node_cfg;
-    size_t ext_ram_base;
-    size_t cores_base;
-    size_t core_state_size;
-    pthread_barrier_t run_barrier;  /* Start barrier */
-    pthread_barrier_t exit_barrier; /* Exit barrier  */
+    uint8_t           initialized;         /*!< True if creator has initialized
+					        other members in this struct */
+    uint32_t          node_core_sims_ready;/*!< Atomic increment             */
+    es_cluster_cfg    cluster_cfg;         /*!< Cluster configuration        */
+    es_node_cfg       node_cfg;            /*!< Node configuration           */
+    pthread_barrier_t run_barrier;         /*!< Start barrier                */
+    pthread_barrier_t exit_barrier;        /*!< Exit barrier                 */
 } es_shm_header;
 
+/*! ESIM per core state header (in SHM) */
 typedef struct es_shm_core_state_header_ {
-  uint32_t reserved; /* Set to one if reserved by a sim process */
+  uint32_t reserved; /*!< Set to one if reserved by a sim process */
 } es_shm_core_state_header;
 
-/* Process local */
+
+/*! ESIM per process state */
 typedef struct es_state_ {
-    uint8_t ready;
-    volatile es_shm_header *shm;
-    char shm_name[256];
-    size_t shm_size;
-    volatile uint8_t *cores_mem;       /* Base address for core mem (and core state) */
-    volatile uint8_t *this_core_mem;   /* Ptr to this cores memory region            */
-    volatile es_shm_core_state_header *this_core_state_header; /*                    */
-    volatile uint8_t *this_core_cpu_state;    /* GDB sim_cpu struct                  */
-    volatile uint8_t *ext_ram;
-    unsigned coreid;
-    int fd;
-    unsigned creator;         /* True if process created shm file */
-    unsigned initialized;     /* Set by es_init on success */
+    unsigned initialized;                  /*!< Set by es_init on success */
+    uint8_t ready;                         /*!< True when sim process is
+					        ready                        */
+    unsigned coreid;                       /*!< Coreid of sim process        */
+    int fd;                                /*!< Shared memory file descriptor*/
+    unsigned creator;                      /*!< True if process created shm
+					        file                         */
+    char shm_name[256];                    /*!< Name of shm file             */
+    size_t shm_size;                       /*!< Size of shm file             */
+
+    volatile es_shm_header *shm;           /*!< Pointer to shm config header */
+    volatile uint8_t *cores_mem;           /*!< Base address for core mem
+				    	        (and core state)             */
+    volatile uint8_t *this_core_mem;       /*!< Ptr to this cores mem region */
+    volatile es_shm_core_state_header
+        *this_core_state_header;           /*!< Ptr to core state header     */
+    volatile uint8_t *this_core_cpu_state; /*!< GDB sim_cpu struct           */
+    volatile uint8_t *ext_ram;             /*!< Ptr to external RAM          */
 } es_state;
+
+/* API functions */
+
+int es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster);
+void es_cleanup(es_state *esim);
 
 int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
 int es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
 int es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
-int es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster);
-void es_cleanup(es_state *esim);
+
 void es_set_ready(es_state *esim);
 void es_wait_run(es_state *esim);
 void es_wait_exit(es_state *esim);
-void es_dump_config(const es_state *esim);
-int es_valid_coreid(const es_state *esim, unsigned coreid);
-int es_set_coreid(es_state *esim, unsigned coreid);
-volatile void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
 
-size_t es_get_core_mem_region_size(const es_state *esim);
+int es_valid_coreid(const es_state *esim, unsigned coreid);
+int es_initialized(const es_state* esim);
+
+int es_set_coreid(es_state *esim, unsigned coreid);
 unsigned es_get_coreid(const es_state *esim);
 
-int es_initialized(const es_state* esim);
+volatile void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
+size_t es_get_core_mem_region_size(const es_state *esim);
+
+void es_dump_config(const es_state *esim);
 
 #endif /* __emesh_h__ */

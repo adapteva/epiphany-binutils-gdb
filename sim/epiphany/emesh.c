@@ -88,19 +88,16 @@
 //#include <openmpi-x86_64/mpi.h>
 
 
-#define ES_SHM_CORE_STATE_HEADER_SIZE 4096 /* Should be plenty */
+#define ES_SHM_CORE_STATE_HEADER_SIZE 4096 /*!< Per core state header size.
+					     Should be plenty */
 
-#define ES_SHM_CORE_STATE_SIZE (1024*1024) /* 1 MB */
-#define ES_SHM_CONFIG_SIZE     (1024*1024) /* 1 MB es_shm_header */
+#define ES_SHM_CORE_STATE_SIZE (1024*1024) /*!< Per core state size (1 MB) */
+#define ES_SHM_CONFIG_SIZE     (1024*1024) /*!< Reserved for shm header (1 MB)*/
 
-#define ES_CORE_MMR_BASE 0xf0000
-#define ES_CORE_MMR_SCRS_BASE 0xf0400
-#define ES_CORE_MMR_SIZE 2048
-/* Number of general purpose registers (GPRs).  */
-#define ES_EPIPHANY_NUM_GPRS  64
-/* Number of Special Core Registers (SCRs).  */
-#define ES_EPIPHANY_NUM_SCRS  32
+#define ES_CORE_MMR_BASE 0xf0000 /*!< Offset for memory mapped registers */
+#define ES_CORE_MMR_SIZE 2048    /*!< MMR region size */
 
+#define ES_EPIPHANY_NUM_GPRS  64 /*!< Number of general purpose registers */
 
 #define ES_CAS_DEF(S) \
 static inline uint##S##_t \
@@ -163,35 +160,37 @@ ES_ATOMIC_INCR_DEF(64)
    ES_ADDR_CORE_OFFSET((addr)) < ES_CORE_MMR_BASE+ES_CORE_MMR_SIZE))
 
 
+/*! Where in simulator an Epiphany address resides */
 typedef enum es_loc_t_ {
   /* TODO: might need ES_LOC_UNALIGNED */
-  ES_LOC_INVALID=0,
-  ES_LOC_SHM,
-  ES_LOC_SHM_MMR,
-  ES_LOC_RAM,     /* External RAM */
-  ES_LOC_NET,
-  ES_LOC_NET_MMR, /* Maybe we don't need this */
-  ES_LOC_NET_RAM  /* External RAM */
+  ES_LOC_INVALID=0, /*!< Invalid memory address */
+  ES_LOC_SHM,       /*!< Core SRAM (in SHM */
+  ES_LOC_SHM_MMR,   /*!< MMR region (in SHM) */
+  ES_LOC_RAM,       /*!< External RAM (in SHM) */
+  ES_LOC_NET,       /*!< Core SRAM (other node) */
+  ES_LOC_NET_MMR,   /*!< MMR region (other node). Maybe we don't need this  */
+  ES_LOC_NET_RAM    /*!< External RAM (other node) */
 } es_loc_t;
 
+/*! Type of memory request */
 typedef enum es_req_t {
   ES_REQ_LOAD,
   ES_REQ_STORE,
   ES_REQ_TESTSET,
 } es_req_t;
 
-/* Internal */
+/*! Address translation */
 typedef struct es_transl_ {
-  es_loc_t	location;  /* Location (local shm or network) and type */
-  uint32_t	addr;      /* Epiphany address */
-  size_t	in_region; /* Num of bytes left in region, need better name */
-  unsigned	coreid;    /* Core (if any) address belongs to */
-  unsigned	node;      /* Node address belongs to */
-  uint8_t	*mem;      /* Native pointer into shm region */
-  sim_cpu       *cpu;      /* Pointer to 'remote' sim cpu    */
-  unsigned      reg;       /* If memory mapped register      */
+  es_loc_t	location;  /*!< Location (local shm or network) and type */
+  uint32_t	addr;      /*!< Epiphany address */
+  size_t	in_region; /*!< Num of bytes left in region, need better name */
+  unsigned	coreid;    /*!< Core (if any) address belongs to */
+  unsigned	node;      /*!< Node address belongs to */
+  uint8_t	*mem;      /*!< Native pointer into shm region */
+  sim_cpu       *cpu;      /*!< Pointer to 'remote' sim cpu    */
+  unsigned      reg;       /*!< If memory mapped register      */
 
-  /* If requested address was global before translation, needed by TESTSET */
+  /*! If requested address was global before translation, needed by TESTSET */
   unsigned      addr_was_global;
 #if 0
 #ifdef HAVE_MPI2
@@ -200,23 +199,30 @@ typedef struct es_transl_ {
 #endif
 } es_transl;
 
-#define ES_TRANSL_INIT {ES_LOC_INVALID, 0, 0, 0, 0, NULL}
+#define ES_TRANSL_INIT {ES_LOC_INVALID, 0, 0, 0, 0, NULL, NULL, 0, 0}
 
-/* Transaction unit */
+/*! Transaction unit */
 typedef struct es_transaction_ {
-  es_req_t	type;
-  uint8_t	*target;
-  uint32_t	addr;
-  uint32_t	size;
-  uint32_t	remaining;
-  es_transl	sim_addr;
+  es_req_t	type;       /*!< Type of request */
+  uint8_t	*target;    /*!< Pointer to target buffer */
+  uint32_t	addr;       /*!< Target (Epiphany) base address */
+  uint32_t	size;       /*!< Total number of bytes requested */
+  uint32_t	remaining;  /*!< Remaining bytes in transaction */
+  es_transl	sim_addr;   /*!< Address translation of current region */
 } es_transaction;
 
 
-/* Core offset in shm   */
-/* Negative num = error */
+/*! Get core index in shared memory
+ *
+ * @warning Does not range check
+ *
+ * @param[in] esim   ESIM handle
+ * @param[in] coreid Coreid
+ *
+ * @return Core index in shared memory
+ */
 static signed
-es_shm_core_offset(const es_state *esim, unsigned coreid)
+es_shm_core_index(const es_state *esim, unsigned coreid)
 {
   signed row_offset, col_offset;
   row_offset = ES_CORE_ROW(coreid) - ES_NODE_CFG.row_base;
@@ -225,11 +231,17 @@ es_shm_core_offset(const es_state *esim, unsigned coreid)
   return row_offset*ES_CLUSTER_CFG.cols_per_node + col_offset;
 }
 
-/* Get pointer to core mem */
+/*! Get pointer to core mem
+ *
+ * @param[in] esim   ESIM handle
+ * @param[in] coreid Coreid
+ *
+ * @return Pointer to start of Epiphany cores memory, or NULL
+ */
 volatile static uint8_t *
 es_shm_core_base(const es_state *esim, unsigned coreid)
 {
-  signed offset = es_shm_core_offset(esim, coreid);
+  signed offset = es_shm_core_index(esim, coreid);
   if (offset < 0 || offset > (signed) ES_CLUSTER_CFG.cores_per_node)
     return NULL;
 
@@ -237,7 +249,13 @@ es_shm_core_base(const es_state *esim, unsigned coreid)
    (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region);
 }
 
-/* Get node that holds this address. Must be a global address */
+/*! Get node that holds this address. Must be a global address
+ *
+ * @param[in] esim   ESIM handle
+ * @param[in] addr   target (Epiphany) memory address
+ *
+ * @return Simulator node where addr is located
+ */
 static signed
 es_addr_to_node(const es_state *esim, uint32_t addr)
 {
@@ -279,6 +297,12 @@ out:
 }
 
 
+/*! Translate target (Epiphany) address to simulator address
+ *
+ * @param[in]  esim   ESIM handle
+ * @param[out] transl Simulator address
+ * @param[in]  addr   target (Epiphany) memory address
+ */
 static void
 es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 {
@@ -312,7 +336,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
       else
 	{
 	  tmp_ptr = ((uint8_t *) esim->cores_mem) +
-	    (es_shm_core_offset(esim, transl->coreid) *
+	    (es_shm_core_index(esim, transl->coreid) *
 	      (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region)) +
 	      ES_SHM_CORE_STATE_HEADER_SIZE;
 	  transl->cpu = (sim_cpu *) tmp_ptr;
@@ -339,7 +363,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 	      transl->location = ES_LOC_SHM;
 	      transl->mem =
 	       ((uint8_t *) esim->cores_mem) +
-		(es_shm_core_offset(esim, transl->coreid) *
+		(es_shm_core_index(esim, transl->coreid) *
 		  (ES_SHM_CORE_STATE_SIZE+ES_CLUSTER_CFG.core_mem_region)) +
 		  ES_SHM_CORE_STATE_SIZE +
 		  (addr % ES_CLUSTER_CFG.core_mem_region);
@@ -369,6 +393,11 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 #endif
 }
 
+/*! Translate next target (Epiphany) region address to simulator address
+ *
+ * @param[in]     esim   ESIM handle
+ * @param[in,out] transl Simulator address
+ */
 static void
 es_addr_translate_next_region(const es_state *esim, es_transl *transl)
 {
@@ -388,6 +417,13 @@ es_tx_one_shm_load(es_state *esim, es_transaction *tx)
 }
 
 
+/*! Perform one store to SHM, and advance transaction state
+ *
+ * @param[in]     esim   ESIM handle
+ * @param[in,out] tx     Transaction
+ *
+ * @return ES_OK on success
+ */
 static int
 es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 {
@@ -422,6 +458,15 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 
   return ES_OK;
 }
+
+
+/*! Perform one TESTSET to SHM, and advance transaction state
+ *
+ * @param[in]     esim   ESIM handle
+ * @param[in,out] tx     Transaction
+ *
+ * @return ES_OK on success
+ */
 static int
 es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
 {
@@ -475,6 +520,13 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
   return ES_OK;
 }
 
+/*! Perform one load or store to MMR, and advance transaction state
+ *
+ * @param[in]     esim   ESIM handle
+ * @param[in,out] tx     Transaction
+ *
+ * @return ES_OK on success
+ */
 static int
 es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 {
@@ -536,6 +588,13 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
   return ES_OK;
 }
 
+/*! Perform one portion of transaction (might span more than one region)
+ *
+ * @param[in]     esim   ESIM handle
+ * @param[in,out] tx     Transaction
+ *
+ * @return ES_OK on success
+ */
 static int
 es_tx_one(es_state *esim, es_transaction *tx)
 {
@@ -588,6 +647,13 @@ es_tx_one(es_state *esim, es_transaction *tx)
 }
 
 
+/*! Perform transaction (memory access request)
+ *
+ * @param[in]     esim   ESIM handle
+ * @param[in,out] tx     Transaction
+ *
+ * @return ES_OK on success
+ */
 static int
 es_tx_run(es_state *esim, es_transaction *tx)
 {
@@ -604,6 +670,15 @@ es_tx_run(es_state *esim, es_transaction *tx)
   return ret;
 }
 
+/*! Write to memory
+ *
+ * @param[in] esim   ESIM handle
+ * @param[in] addr   Target (Epiphany) address
+ * @param[in] size   Number of bytes
+ * @param[in] src    Source buffer
+ *
+ * @return ES_OK on success
+ */
 int
 es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
 {
@@ -618,6 +693,15 @@ es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
   return es_tx_run(esim, &tx);
 }
 
+/*! Read from memory
+ *
+ * @param[in]  esim   ESIM handle
+ * @param[in]  addr   Target (Epiphany) address
+ * @param[in]  size   Number of bytes
+ * @param[out] dst    Destination buffer
+ *
+ * @return ES_OK on success
+ */
 int
 es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
 {
@@ -632,6 +716,15 @@ es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
   return es_tx_run(esim, &tx);
 }
 
+/*! Perform TESTSET on memory address
+ *
+ * @param[in]  esim   ESIM handle
+ * @param[in]  addr   Target (Epiphany) address
+ * @param[in]  size   Number of bytes
+ * @param[out] dst    Destination buffer
+ *
+ * @return ES_OK on success
+ */
 int
 es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
 {
@@ -646,7 +739,12 @@ es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
   return es_tx_run(esim, &tx);
 }
 
-/* Integer floored sqrt */
+/*! Integer floored sqrt
+ *
+ * @param[in] n number
+ *
+ * @return Floored integer square root
+ */
 static
 unsigned isqrt(unsigned n)
 {
@@ -664,7 +762,12 @@ unsigned isqrt(unsigned n)
   return low;
 }
 
-/* Returns ES_OK on success */
+/*! Validate cluster configuration
+ *
+ * @param[in] c Cluster configuration
+ *
+ * @return ES_OK on success
+ */
 static int
 es_validate_cluster_cfg(const es_cluster_cfg *c)
 {
@@ -721,7 +824,14 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   return ES_OK;
 }
 
-/* Returns ES_OK on success */
+/*! Validate node and cluster configuration
+ *
+ * @param[in] esim     ESIM handle
+ * @param[in] node     Node configuration
+ * @param[in] cluster  Cluster configuration
+ *
+ * @return ES_OK on success
+ */
 static int
 es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
 {
@@ -731,8 +841,15 @@ es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
   return es_validate_cluster_cfg(cluster);
 }
 
-/* This must be called *after* es_validate_config */
-/* TODO: This does not work when nodes != 1 */
+/*! Calculate and fill in internal configuration values not specified by user.
+ *
+ * TODO: This does not work when nodes != 1
+ * @warning This must be called *after* es_validate_config
+ *
+ * @param[in]     esim     ESIM handle
+ * @param[in,out] node     Node configuration
+ * @param[in,out] cluster  Cluster configuration
+ */
 static void
 es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
 			       es_cluster_cfg *c)
@@ -770,13 +887,19 @@ es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
   /* Node settings */
   n->row_base = c->row_base + (c->cores_per_node * n->rank) / c->cols;
   n->col_base = c->col_base + (c->cols_per_node  * n->rank) % c->cols;
-
-  n->mem_base =
-   ES_COREID(n->row_base, n->col_base) *
-   c->core_mem_region;
 }
 
-/* Returns ES_OK on success */
+/*! Open ESIM shared memory file
+ *
+ * Open SHM file shared between simulator processes on this node.
+ * Use advisory file locking to avoid problem with stale SHM file due to crash.
+ *
+ * @param[out]    esim     ESIM handle
+ * @param[in]     name     name of shm file
+ * @param[in,out] flock    Advisory file lock
+ *
+ * @return ES_OK on success
+ */
 static int
 es_open_shm_file(es_state *esim, char *name, struct flock *flock)
 {
@@ -818,7 +941,17 @@ es_open_shm_file(es_state *esim, char *name, struct flock *flock)
   return ES_OK;
 }
 
-/* Returns ES_OK on success, sets out_size to size of new file */
+/*! Truncate ESIM SHM file to right size
+ *
+ * Truncate ESIM SHM file to right size to accommodate cluster configuration,
+ * node configuration, core's state and core's memory.
+ *
+ * @param[in,out] esim     ESIM handle
+ * @param[in]     n        Node configuration
+ * @param[in]     c        Cluster configuration
+ *
+ * @return ES_OK on success
+ */
 static int
 es_truncate_shm_file(es_state *esim, es_node_cfg *n, es_cluster_cfg *c)
 {
@@ -846,7 +979,16 @@ es_truncate_shm_file(es_state *esim, es_node_cfg *n, es_cluster_cfg *c)
   return ES_OK;
 }
 
-/* Returns ES_OK on success, timeout in msecs */
+/*! Wait for creating process to truncate SHM file to correct size
+ *
+ * Wait for creating sim process (the one with excluse lock) to truncate SHM
+ * file.
+ *
+ * @param[in,out] esim   ESIM handle
+ * @param[in,out] flock  advisory file lock to use
+ *
+ * @return ES_OK on success
+ */
 static int
 es_wait_truncate_shm_file(es_state *esim, struct flock *flock)
 {
@@ -873,6 +1015,10 @@ es_wait_truncate_shm_file(es_state *esim, struct flock *flock)
 
 }
 
+/*! Reset esim state
+ *
+ * @param[out] esim     ESIM handle
+ */
 inline static void
 es_state_init(es_state *esim)
 {
@@ -880,7 +1026,16 @@ es_state_init(es_state *esim)
   esim->fd = -1;
 }
 
-/* Returns ES_OK on success */
+/*! Initialize esim
+ *
+ * @param[in,out] esim     pointer to ESIM handle
+ * @param[in]     node     Node configuration
+ * @param[in]     cluster  Cluster configuration
+ *
+ * @return On success returns ES_OK and sets handle to allocated
+ *         esim structure. On error returns a negative error number and sets
+ *         handle to NULL.
+ */
 int
 es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 {
@@ -1028,13 +1183,24 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   return ES_OK;
 }
 
-/* Returns ES_OK on success */
+/*! Check if ESIM is initialized
+ *
+ * @param[in] esim     ESIM handle
+ *
+ * @return ES_OK if ESIM is initialized, -EINVAL otherwise.
+ */
 int inline
 es_initialized(const es_state* esim)
 {
   return (esim->initialized == 1 ? ES_OK : -EINVAL);
 }
 
+/*! Cleanup after ESIM
+ *
+ * Unmaps mmaped memory, closes SHM file and resets esim handle
+ *
+ * @param[in,out] esim     ESIM handle
+ */
 void
 es_cleanup(es_state *esim)
 {
@@ -1079,6 +1245,10 @@ es_set_ready(es_state *esim)
   es_atomic_incr32((uint32_t *) &esim->shm->node_core_sims_ready);
 }
 
+/*! Wait on other sim processes before starting simulation
+ *
+ * @param[in,out] esim     ESIM handle
+ */
 void
 es_wait_run(es_state *esim)
 {
@@ -1091,6 +1261,10 @@ es_wait_run(es_state *esim)
   es_set_ready(esim);
 }
 
+/*! Wait on other sim processes before exiting after simulation
+ *
+ * @param[in] esim     ESIM handle
+ */
 void
 es_wait_exit(es_state *esim)
 {
@@ -1104,7 +1278,13 @@ es_wait_exit(es_state *esim)
    */
 }
 
-/* Returns ES_OK on success */
+/*! Check whether a given core-id is valid for current configuration
+ *
+ * @param[in] esim     ESIM handle
+ * @param[in] coreid   Coreid
+ *
+ * @return ES_OK on success, otherwise -EINVAL
+ */
 int
 es_valid_coreid(const es_state *esim, unsigned coreid)
 {
@@ -1119,7 +1299,13 @@ es_valid_coreid(const es_state *esim, unsigned coreid)
   return valid ? ES_OK : -EINVAL;
 }
 
-/* Returns ES_OK on success */
+/*! Set coreid for this sim process
+ *
+ * @param[in,out] esim     ESIM handle
+ * @param[in]     coreid   Coreid
+ *
+ * @return ES_OK on success
+ */
 int
 es_set_coreid(es_state *esim, unsigned coreid)
 {
@@ -1157,7 +1343,14 @@ es_set_coreid(es_state *esim, unsigned coreid)
   return ES_OK;
 }
 
-/* Returns pointer on success, NULL on failure */
+/*! Set (overwrite) CPU state for this sim process
+ *
+ * @param[in,out] esim     ESIM handle
+ * @param[in]     cpu      Pointer to new CPU data
+ * @param[in]     size     Size of CPU data
+ *
+ * @return Pointer to CPU state address or NULL
+ */
 volatile void *
 es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 {
@@ -1175,6 +1368,10 @@ es_set_cpu_state(es_state *esim, void *cpu, size_t size)
   return esim->this_core_cpu_state;
 }
 
+/*! Dump node and cluster configuration
+ *
+ * @param[in] esim     ESIM handle
+ */
 void
 es_dump_config(const es_state *esim)
 {
@@ -1210,12 +1407,10 @@ es_dump_config(const es_state *esim)
   fprintf(stderr,
 	  "es_node_cfg = {\n"
 	  "  .rank     = %d\n"
-	  "  .mem_base = 0x%.8x\n"
 	  "  .row_base = %d\n"
 	  "  .col_base = %d\n"
 	  "}\n",
 	  ES_NODE_CFG.rank,
-	  ES_NODE_CFG.mem_base,
 	  ES_NODE_CFG.row_base,
 	  ES_NODE_CFG.col_base);
   fprintf(stderr,
