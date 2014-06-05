@@ -45,7 +45,7 @@
 #include "sim-options.h"
 
 #if WITH_EMESH_SIM
-#include "emesh.h"
+#include "esim/esim.h"
 #endif
 
 /* Records simulator descriptor so utilities like epiphany_dump_regs can be

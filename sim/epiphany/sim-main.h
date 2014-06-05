@@ -21,7 +21,7 @@
 #include "arch.h"
 
 #if WITH_EMESH_SIM
-#include "emesh.h"
+#include "esim/esim.h"
 #endif
 #include "oob-events.h"
 
