@@ -100,8 +100,8 @@ struct sim_state {
   sim_state_base base;
 
 #if WITH_EMESH_SIM
-  es_state esim;
-#define STATE_ESIM(sd) (&(sd)->esim)
+  es_state *esim;
+#define STATE_ESIM(sd) (sd->esim)
 #endif
 };
 
