@@ -309,7 +309,6 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
   if (sim_esim_have_required_params(sd) != SIM_RC_OK)
     return SIM_RC_FAIL;
 
-  memset(STATE_ESIM(sd), 0, sizeof(es_state));
   memset(&node, 0, sizeof(node));
   memset(&cluster, 0, sizeof(cluster));
 
@@ -335,7 +334,7 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
   cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
 
-  if (es_init(STATE_ESIM(sd), node, cluster))
+  if (es_init(&STATE_ESIM(sd), node, cluster))
     {
       return SIM_RC_FAIL;
     }

@@ -1038,7 +1038,7 @@ es_state_reset(es_state *esim)
  *         handle to NULL.
  */
 int
-es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
+es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
 {
   /* TODO: Revisit once we have MPI support
    * Cluster cfg should be set in leader (rank0) and then passed to all other
@@ -1046,6 +1046,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
    */
   int error;
   char shm_name[256];
+  es_state *esim;
   volatile es_shm_header *shm;
   unsigned msecs_wait;
   pthread_barrierattr_t attr;
@@ -1060,7 +1061,14 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   flock.l_start  = 0;
   flock.l_len    = 16;      /* Whatever, but must be same in all processes */
 
-
+  *handle = NULL;
+  esim = (es_state *) malloc(sizeof(es_state));
+  if (esim == NULL)
+    {
+      fprintf(stderr, "ESIM: Out of memory\n");
+      error = -ENOMEM;
+      goto err_out;
+    }
   es_state_reset(esim);
 
   snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
@@ -1180,6 +1188,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 #endif
 
   esim->initialized = 1;
+  *handle = esim;
   return ES_OK;
 
 err_out:
@@ -1212,6 +1221,9 @@ es_cleanup(es_state *esim)
   fprintf(stderr, "es_cleanup\n");
 #endif
 
+  if (!esim)
+    return;
+
   if (esim->shm)
     munmap((void *) esim->shm, esim->shm_size);
 
@@ -1226,6 +1238,7 @@ es_cleanup(es_state *esim)
     close(esim->fd);
 
   es_state_reset(esim);
+  free(esim);
 }
 
 void
