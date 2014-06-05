@@ -1099,7 +1099,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   else /* if (!creator) */
     {
       if ((error = es_wait_truncate_shm_file(esim, &flock)) != ES_OK)
-	return error;
+	goto err_out;
     }
 
   shm = (es_shm_header*) mmap(NULL,
