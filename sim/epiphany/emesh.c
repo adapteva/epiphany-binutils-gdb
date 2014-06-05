@@ -1020,7 +1020,7 @@ es_wait_truncate_shm_file(es_state *esim, struct flock *flock)
  * @param[out] esim     ESIM handle
  */
 inline static void
-es_state_init(es_state *esim)
+es_state_reset(es_state *esim)
 {
   memset((void*) esim, 0, sizeof(es_state));
   esim->fd = -1;
@@ -1060,14 +1060,14 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
   flock.l_len    = 16;      /* Whatever, but must be same in all processes */
 
 
-  es_state_init(esim);
+  es_state_reset(esim);
 
   snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
 
   if ((error = es_open_shm_file(esim, shm_name, &flock)) != ES_OK)
     {
       fprintf(stderr, "ESIM: Could not open esim file `/dev/shm%s'\n", shm_name);
-      return error;
+      goto err_out;
     }
 
   /* If this process created the file, set its size */
@@ -1075,8 +1075,7 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
     {
       if ((error = es_validate_config(esim, &node, &cluster)) != ES_OK)
 	{
-	  es_cleanup(esim);
-	  return error;
+	  goto err_out;
 	}
 
       es_fill_in_internal_cfg_values(esim, &node, &cluster);
@@ -1085,16 +1084,15 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	{
 	  fprintf(stderr, "ESIM: Could not truncate  esim file `/dev/shm%s'\n",
 		  shm_name);
-	  es_cleanup(esim);
-	  return error;
+	  goto err_out;
 	}
 
       /* Downgrade exclusive lock to shared lock */
       flock.l_type = F_RDLCK;
-      error = fcntl(esim->fd, F_SETLK, &flock);
-      if (error)
+      if (fcntl(esim->fd, F_SETLK, &flock))
 	{
-	  return -errno;
+	  error = -errno;
+	  goto err_out;
 	}
     }
 
@@ -1111,9 +1109,9 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 			      (off_t) 0);
   if (shm == MAP_FAILED)
     {
-      es_cleanup(esim);
       fprintf(stderr, "ESIM: mmap failed\n");
-      return -EINVAL;
+      error = -EINVAL;
+      goto err_out;
     }
 
   esim->shm = shm;
@@ -1158,9 +1156,9 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	}
       if (!shm->initialized)
 	{
-	  es_cleanup(esim);
 	  fprintf(stderr, "ESIM: Timed out waiting.\n");
-	  return -ETIME;
+	  error = -ETIME;
+	  goto err_out;
 	}
 
     }
@@ -1179,8 +1177,13 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 	  (unsigned long int) esim->shm, esim->shm_size, esim->fd,
 	  esim->coreid, esim->shm_name);
 #endif
+
   esim->initialized = 1;
   return ES_OK;
+
+err_out:
+  es_cleanup(esim);
+  return error;
 }
 
 /*! Check if ESIM is initialized
@@ -1209,29 +1212,19 @@ es_cleanup(es_state *esim)
 #endif
 
   if (esim->shm)
-    {
-      munmap((void *) esim->shm, esim->shm_size);
-      esim->shm = NULL;
-      esim->shm_size = 0;
-    }
-  if (esim->fd >= 0)
-    {
-      close(esim->fd);
-      esim->fd = -1;
-    }
+    munmap((void *) esim->shm, esim->shm_size);
+
+  /* Unlink before close, to avoid race in between file locks are released and
+   * unlink.
+   */
   if (esim->creator)
     shm_unlink(esim->shm_name);
 
-  *esim->shm_name = '\0';
+  /* Close file, will also release all advisory file locks */
+  if (esim->fd >= 0)
+    close(esim->fd);
 
-  esim->cores_mem = NULL;
-  esim->this_core_mem = NULL;
-  esim->this_core_state_header = NULL;
-  esim->this_core_cpu_state = NULL;
-  esim->ext_ram = NULL;
-  esim->coreid = 0;
-  esim->creator = 0;
-  esim->initialized = 0;
+  es_state_reset(esim);
 }
 
 void
