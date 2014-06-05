@@ -29,17 +29,17 @@ dnl --enable-emesh-sim
 AC_ARG_ENABLE(emesh-sim,
 [  --enable-emesh-sim			Enable simulation of emesh],
 [case "${enableval}" in
-  yes) emesh="yes"; emesh_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1";;
-  no)  emesh=""   ; emesh_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0";;
+  yes) esim="yes"; esim_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1";;
+  no)  esim=""   ; esim_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0";;
   *)   AC_MSG_ERROR("--enable-emesh-sim does not take a value"); sim_cflags="#" ;;
 esac
 if test x"$silent" != x"yes" && test x"$sim_cflags" != x""; then
   echo "Setting emesh sim cflags = $sim_cflags" 6>&1
 fi],[sim_cflags=""])dnl
-AC_SUBST(emesh)
-AC_SUBST(sim_cflags, ["$sim_cflags $emesh_cflags"])
+AC_SUBST(esim)
+AC_SUBST(sim_cflags, ["$sim_cflags $esim_cflags"])
 
-if test "x$emesh" = "xyes"; then
+if test "x$esim" = "xyes"; then
 AC_CHECK_LIB(rt, shm_open, [
   lib_rt="-lrt"
   ], [lib_rt=])

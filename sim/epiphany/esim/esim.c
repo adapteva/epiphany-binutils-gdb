@@ -50,7 +50,7 @@
 #define WANT_CPU epiphanybf
 #define WANT_CPU_EPIPHANYBF
 
-#include "emesh.h"
+#include "esim.h"
 #include "sim-main.h"
 #include "mem-barrier.h"
 

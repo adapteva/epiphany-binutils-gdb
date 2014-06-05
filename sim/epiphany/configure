@@ -602,7 +602,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 cgen_breaks
 epiphany_extra_libs
-emesh
+esim
 SIM_DV_SOCKSER_O
 cgen
 cgendir
@@ -13594,8 +13594,8 @@ fi
 # Check whether --enable-emesh-sim was given.
 if test "${enable_emesh_sim+set}" = set; then :
   enableval=$enable_emesh_sim; case "${enableval}" in
-  yes) emesh="yes"; emesh_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1";;
-  no)  emesh=""   ; emesh_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0";;
+  yes) esim="yes"; esim_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1";;
+  no)  esim=""   ; esim_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0";;
   *)   as_fn_error "\"--enable-emesh-sim does not take a value\"" "$LINENO" 5; sim_cflags="#" ;;
 esac
 if test x"$silent" != x"yes" && test x"$sim_cflags" != x""; then
@@ -13605,10 +13605,10 @@ else
   sim_cflags=""
 fi
 
-sim_cflags="$sim_cflags $emesh_cflags"
+sim_cflags="$sim_cflags $esim_cflags"
 
 
-if test "x$emesh" = "xyes"; then
+if test "x$esim" = "xyes"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for shm_open in -lrt" >&5
 $as_echo_n "checking for shm_open in -lrt... " >&6; }
 if test "${ac_cv_lib_rt_shm_open+set}" = set; then :

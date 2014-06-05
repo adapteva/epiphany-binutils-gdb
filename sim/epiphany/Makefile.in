@@ -23,10 +23,10 @@ EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o \
 
 SIM_EXTRA_LIBS = -lm @epiphany_extra_libs@
 
-ifeq (@emesh@, yes)
-	EMESH_OBJS = emesh.o
+ifeq (@esim@, yes)
+	ESIM_OBJS = esim/esim.o
 else
-	EMESH_OBJS =
+	ESIM_OBJS =
 endif
 
 SIM_OBJS = \
@@ -41,7 +41,7 @@ SIM_OBJS = \
 	sim-if.o arch.o \
 	$(EPIPHANY_OBJS) \
 	traps.o \
-	$(EMESH_OBJS)
+	$(ESIM_OBJS)
 
 
 # Extra headers included by sim-main.h.
@@ -74,7 +74,12 @@ arch.o: arch.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
 traps.o: traps.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
-emesh.o: emesh.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
+esim/esim.o: esim/stamp-esim esim/esim.c $(SIM_MAIN_DEPS) \
+			 $(EPIPHANYBF_INCLUDE_DEPS)
+
+esim/stamp-esim:
+	mkdir -p esim
+	touch esim/stamp-esim
 
 
 # FIXME: Use of `mono' is wip.
