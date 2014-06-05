@@ -848,44 +848,27 @@ es_truncate_shm_file(es_state *esim, es_node_cfg *n, es_cluster_cfg *c)
 
 /* Returns ES_OK on success, timeout in msecs */
 static int
-es_wait_truncate_shm_file(es_state *esim, int timeout)
+es_wait_truncate_shm_file(es_state *esim, struct flock *flock)
 {
   struct stat st;
-  size_t size;
-  unsigned msecs_wait;
 
-  msecs_wait=0;
-  size = 0;
+  /* Wait until creating process has downgraded lock
+     (and truncated shm file) */
+  flock->l_type = F_RDLCK;
 
-  while (msecs_wait <= timeout)
+  if (fcntl(esim->fd, F_SETLKW, flock))
     {
-      if (fstat(esim->fd, &st) == -1)
-	{
-#ifdef ES_DEBUG
-	  fprintf(stderr, "es_init:stat: errno=%d\n", errno);
-#endif
-	  return -errno;
-	}
-      else
-	{
-	  if (st.st_size)
-	    {
-	      size = st.st_size;
-	      break;
-	    }
-	}
-      msecs_wait += 5;
-      usleep(5000);
+      return -errno;
     }
-  if (!size)
+  if (fstat(esim->fd, &st) == -1)
     {
 #ifdef ES_DEBUG
-      fprintf(stderr, "es_init: Timed out waiting.\n");
+      fprintf(stderr, "es_init:stat: errno=%d\n", errno);
 #endif
-      return -ETIME;
+      return -errno;
     }
 
-  esim->shm_size = size;
+  esim->shm_size = st.st_size;
   return ES_OK;
 
 }
@@ -962,20 +945,8 @@ es_init(es_state *esim, es_node_cfg node, es_cluster_cfg cluster)
 
   else /* if (!creator) */
     {
-      /* Wait until creating process has downgraded lock
-	 (and truncated shm file) */
-      flock.l_type = F_RDLCK;
-
-      error = fcntl(esim->fd, F_SETLKW, &flock);
-      if (error)
-	{
-	  return -errno;
-	}
-      if (error = es_wait_truncate_shm_file(esim, 3000) !=
-	  ES_OK)
-	{
-	  return -errno;
-	}
+      if ((error = es_wait_truncate_shm_file(esim, &flock)) != ES_OK)
+	return error;
     }
 
   shm = (es_shm_header*) mmap(NULL,
