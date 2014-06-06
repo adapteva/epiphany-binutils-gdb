@@ -78,8 +78,8 @@ struct emesh_params {
 
   /* Extra */
   unsigned epiphany_add_ext_ram;
-  int ext_ram_base;
-  int ext_ram_size;
+  int64_t ext_ram_base;
+  int64_t ext_ram_size;
 
   unsigned initialized;
 };
