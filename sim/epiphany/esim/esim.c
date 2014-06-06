@@ -813,7 +813,9 @@ unsigned isqrt(unsigned n)
 static int
 es_validate_cluster_cfg(const es_cluster_cfg *c)
 {
+  unsigned row, begin, end, mem_coreid_base;
   unsigned cores, nodes;
+
   cores = c->rows * c->cols;
 
 #define FAIL_IF(Expr, Error_string)\
@@ -848,6 +850,12 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   /* TODO: Revisit when we add net support */
   FAIL_IF(c->nodes != 1,    "We currently only support one node.");
 
+
+  FAIL_IF(c->ext_ram_size > ((size_t) (1UL<<32)),
+			    "External RAM size too large");
+  FAIL_IF(c->ext_ram_size + ((size_t) c->ext_ram_base) > ((size_t) (1UL<<32)),
+			    "External RAM would overflow address space");
+
   /* Ignore ext ram node if we don't have external ram */
   FAIL_IF(c->ext_ram_size && c->ext_ram_node >= c->nodes,
 			    "Specified external ram node does not exist");
@@ -860,7 +868,21 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "External ram base must be aligned to core mem"
 			    " region size.");
 
-  /* TODO: Check if external ram shadows any core mem region */
+
+  /* WARN: This only works with 1M core mem region size */
+  if (c->ext_ram_size)
+    {
+      /* First core memory shadows */
+      mem_coreid_base = c->ext_ram_base / c->core_mem_region;
+
+      for (row = c->row_base; row < c->row_base+c->rows; row++)
+	{
+	  begin = ES_COREID(row, c->col_base);
+	  end = begin + c->cols;
+	  FAIL_IF(begin <= mem_coreid_base && mem_coreid_base < end,
+				"External RAM shadows core memory");
+	}
+    }
 
 #undef FAIL_IF
   return ES_OK;
