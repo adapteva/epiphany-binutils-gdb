@@ -13474,10 +13474,14 @@ fi
 
 # Hardware support
 
+sim_hw_p=
+sim_hw=
+sim_hw_objs=
+
 if test x"yes" != x"no"; then
-  enable_sim_hardware=yes
+  sim_hw_p="yes"
 else
-  enable_sim_hardware=no
+  sim_hw_p="no"
 fi
 
 if test ""; then
@@ -13489,16 +13493,9 @@ hardware="$hardware \
 	epiphany_mem \
 "
 
-sim_hw_cflags="-DWITH_HW=1"
-sim_hw="$hardware"
-sim_hw_objs="\$(SIM_COMMON_HW_OBJS) `echo $sim_hw | sed -e 's/\([^ ][^ ]*\)/dv-\1.o/g'`"
-
 # Check whether --enable-sim-hardware was given.
 if test "${enable_sim_hardware+set}" = set; then :
-  enableval=$enable_sim_hardware;
-fi
-
-case ${enable_sim_hardware} in
+  enableval=$enable_sim_hardware; case ${enableval} in
   yes)  sim_hw_p=yes;;
   no)   sim_hw_p=no;;
   ,*)   sim_hw_p=yes; hardware="${hardware} `echo ${enableval} | sed -e 's/,/ /'`";;
@@ -13506,10 +13503,12 @@ case ${enable_sim_hardware} in
   *)    sim_hw_p=yes; hardware="`echo ${enableval} | sed -e 's/,/ /'`"'';;
 esac
 
+fi
+
 if test "$sim_hw_p" != yes; then
   if test "yes" = "always"; then
     as_fn_error "Sorry, but this simulator requires that hardware support
-be enabled. Please configure without --disable-hw-support." "$LINENO" 5
+be enabled. Please configure without --disable-sim-hardware." "$LINENO" 5
   fi
   sim_hw_objs=
   sim_hw_cflags="-DWITH_HW=0"
