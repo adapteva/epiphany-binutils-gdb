@@ -608,10 +608,14 @@ dnl arg[2] is a space separated list of devices that override the defaults
 dnl arg[3] is a space separated list of extra target specific devices.
 AC_DEFUN([SIM_AC_OPTION_HARDWARE],
 [
+sim_hw_p=
+sim_hw=
+sim_hw_objs=
+
 if test x"[$1]" != x"no"; then
-  enable_sim_hardware=yes
+  sim_hw_p="yes"
 else
-  enable_sim_hardware=no
+  sim_hw_p="no"
 fi
 
 if test "[$2]"; then
@@ -621,25 +625,21 @@ else
 fi
 hardware="$hardware [$3]"
 
-sim_hw_cflags="-DWITH_HW=1"
-sim_hw="$hardware"
-sim_hw_objs="\$(SIM_COMMON_HW_OBJS) `echo $sim_hw | sed -e 's/\([[^ ]][[^ ]]*\)/dv-\1.o/g'`"
-
 AC_ARG_ENABLE(sim-hardware,
   [AS_HELP_STRING([--enable-sim-hardware=LIST],
-                  [Specify the hardware to be included in the build.])])
-case ${enable_sim_hardware} in
+                  [Specify the hardware to be included in the build.])],
+[case ${enableval} in
   yes)  sim_hw_p=yes;;
   no)   sim_hw_p=no;;
   ,*)   sim_hw_p=yes; hardware="${hardware} `echo ${enableval} | sed -e 's/,/ /'`";;
   *,)   sim_hw_p=yes; hardware="`echo ${enableval} | sed -e 's/,/ /'` ${hardware}";;
   *)    sim_hw_p=yes; hardware="`echo ${enableval} | sed -e 's/,/ /'`"'';;
 esac
-
+])
 if test "$sim_hw_p" != yes; then
   if test "[$1]" = "always"; then
     AC_MSG_ERROR([Sorry, but this simulator requires that hardware support
-be enabled. Please configure without --disable-hw-support.])
+be enabled. Please configure without --disable-sim-hardware.])
   fi
   sim_hw_objs=
   sim_hw_cflags="-DWITH_HW=0"
