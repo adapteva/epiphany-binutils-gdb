@@ -601,8 +601,8 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 cgen_breaks
-epiphany_extra_libs
 esim
+epiphany_extra_libs
 SIM_DV_SOCKSER_O
 cgen
 cgendir
@@ -1432,7 +1432,7 @@ Optional Features:
   --enable-cgen-maint=DIR    build cgen generated files
   --enable-sim-hardware=LIST
                           Specify the hardware to be included in the build.
-  --enable-emesh-sim			Enable simulation of emesh
+  --enable-emesh-sim			Enable simulation of eMesh
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -13478,7 +13478,7 @@ sim_hw_p=
 sim_hw=
 sim_hw_objs=
 
-if test x"yes" != x"no"; then
+if test x"no" != x"no"; then
   sim_hw_p="yes"
 else
   sim_hw_p="no"
@@ -13489,9 +13489,7 @@ if test ""; then
 else
   hardware="cfi core pal glue"
 fi
-hardware="$hardware \
-	epiphany_mem \
-"
+hardware="$hardware epiphany_mem"
 
 # Check whether --enable-sim-hardware was given.
 if test "${enable_sim_hardware+set}" = set; then :
@@ -13506,7 +13504,7 @@ esac
 fi
 
 if test "$sim_hw_p" != yes; then
-  if test "yes" = "always"; then
+  if test "no" = "always"; then
     as_fn_error "Sorry, but this simulator requires that hardware support
 be enabled. Please configure without --disable-sim-hardware." "$LINENO" 5
   fi
@@ -13590,21 +13588,40 @@ fi
 fi
 
 
+
+esim_enabled_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1"
+esim_disabled_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0"
+
 # Check whether --enable-emesh-sim was given.
 if test "${enable_emesh_sim+set}" = set; then :
-  enableval=$enable_emesh_sim; case "${enableval}" in
-  yes) esim="yes"; esim_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1";;
-  no)  esim=""   ; esim_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0";;
-  *)   as_fn_error "\"--enable-emesh-sim does not take a value\"" "$LINENO" 5; sim_cflags="#" ;;
+  enableval=$enable_emesh_sim;
+case "x${enableval}" in
+  x)    esim="yes"; esim_cflags="${esim_enabled_cflags}";;
+  xyes) esim="yes"; esim_cflags="${esim_enabled_cflags}";;
+  xno)  esim=""   ; esim_cflags="${esim_disabled_cflags}";;
+  *)    as_fn_error "--enable-emesh-sim does not take a value" "$LINENO" 5; ;;
 esac
-if test x"$silent" != x"yes" && test x"$sim_cflags" != x""; then
-  echo "Setting emesh sim cflags = $sim_cflags" 6>&1
-fi
+
 else
-  sim_cflags=""
+  esim_cflags="${esim_disabled_cflags}"
+
 fi
 
-sim_cflags="$sim_cflags $esim_cflags"
+
+if test x"${esim}" = x"yes"; then
+  case "${sim_hw_cflags}" in
+  *"-DWITH_HW=1"*) ;;
+  *) as_fn_error "Sorry, but --enable-emesh-sim requires that hardware \
+support be enabled. Please configure with --enable-sim-hardware." "$LINENO" 5 ;;
+  esac
+else
+  case "${sim_hw}" in
+  *"epiphany_mem"*) as_fn_error "Sorry, but --enable-sim-hardware \
+(epiphany_mem) requires that eMesh support be enabled. Please configure \
+with --enable-emesh-sim." "$LINENO" 5 ;;
+  *) ;;
+  esac
+fi
 
 
 if test "x$esim" = "xyes"; then
@@ -13696,10 +13713,19 @@ else
   lib_pthread=
 fi
 
-epiphany_extra_libs="$lib_rt $lib_pthread"
+epiphany_extra_libs="${epiphany_extra_libs} ${lib_rt} ${lib_pthread}"
 
-echo $epiphany_extra_libs
 fi
+
+if test x"$silent" != x"yes"; then
+  echo "Setting emesh sim cflags = ${esim_cflags}" 6>&1
+  echo "Setting emesh extra libs = ${lib_rt} ${lib_pthread}" 6>&1
+fi
+
+
+sim_cflags="${sim_cflags} ${esim_cflags}"
+
+
 
 
 ac_sources="$sim_link_files"

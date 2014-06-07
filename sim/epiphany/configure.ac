@@ -21,23 +21,41 @@ SIM_AC_OPTION_INLINE()
 SIM_AC_OPTION_CGEN_MAINT
 
 # Hardware support
-SIM_AC_OPTION_HARDWARE(yes,,\
-	epiphany_mem \
-)
+SIM_AC_OPTION_HARDWARE(no,,epiphany_mem)
+
 
 dnl --enable-emesh-sim
+esim_enabled_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1"
+esim_disabled_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0"
+
 AC_ARG_ENABLE(emesh-sim,
-[  --enable-emesh-sim			Enable simulation of emesh],
-[case "${enableval}" in
-  yes) esim="yes"; esim_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1";;
-  no)  esim=""   ; esim_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0";;
-  *)   AC_MSG_ERROR("--enable-emesh-sim does not take a value"); sim_cflags="#" ;;
+[  --enable-emesh-sim			Enable simulation of eMesh],
+[
+case "x${enableval}" in
+  x)    esim="yes"; esim_cflags="${esim_enabled_cflags}";;
+  xyes) esim="yes"; esim_cflags="${esim_enabled_cflags}";;
+  xno)  esim=""   ; esim_cflags="${esim_disabled_cflags}";;
+  *)    AC_MSG_ERROR([--enable-emesh-sim does not take a value]); ;;
 esac
-if test x"$silent" != x"yes" && test x"$sim_cflags" != x""; then
-  echo "Setting emesh sim cflags = $sim_cflags" 6>&1
-fi],[sim_cflags=""])dnl
-AC_SUBST(esim)
-AC_SUBST(sim_cflags, ["$sim_cflags $esim_cflags"])
+],
+[esim_cflags="${esim_disabled_cflags}"]
+)
+
+if test x"${esim}" = x"yes"; then
+  case "${sim_hw_cflags}" in
+  *"-DWITH_HW=1"*) ;;
+  *) AC_MSG_ERROR([Sorry, but --enable-emesh-sim requires that hardware \
+support be enabled. Please configure with --enable-sim-hardware.]) ;;
+  esac
+else
+  case "${sim_hw}" in
+  *"epiphany_mem"*) AC_MSG_ERROR([Sorry, but --enable-sim-hardware \
+(epiphany_mem) requires that eMesh support be enabled. Please configure \
+with --enable-emesh-sim.]) ;;
+  *) ;;
+  esac
+fi
+
 
 if test "x$esim" = "xyes"; then
 AC_CHECK_LIB(rt, shm_open, [
@@ -46,8 +64,17 @@ AC_CHECK_LIB(rt, shm_open, [
 AC_CHECK_LIB(pthread, pthread_barrier_init, [
   lib_pthread="-lpthread"
   ], [lib_pthread=])
-AC_SUBST(epiphany_extra_libs, ["$lib_rt $lib_pthread"])
-echo $epiphany_extra_libs
+AC_SUBST(epiphany_extra_libs, ["${epiphany_extra_libs} ${lib_rt} ${lib_pthread}"])
 fi
+
+if test x"$silent" != x"yes"; then
+  echo "Setting emesh sim cflags = ${esim_cflags}" 6>&1
+  echo "Setting emesh extra libs = ${lib_rt} ${lib_pthread}" 6>&1
+fi
+
+AC_SUBST(esim)
+AC_SUBST(sim_cflags, ["${sim_cflags} ${esim_cflags}"])
+dnl end --enable-emesh-sim
+
 
 SIM_AC_OUTPUT
