@@ -436,16 +436,28 @@ SI epiphany_testset(SIM_CPU *current_cpu, USI addr, SI newval, int bytes)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
   USI tmpval = newval;
+#if WITH_EMESH_SIM
+  if (es_mem_testset(STATE_ESIM(sd), addr, bytes, &tmpval) != ES_OK)
+    goto fail;
+#else
+  if (bytes != 4)
+    goto fail;
 
-  if (es_mem_testset(STATE_ESIM(sd), addr, bytes, &tmpval))
-    {
-      /* SIM framework has no concept of test and set so this is the closest
-	 we can get */
-      epiphany_core_signal(sd, current_cpu, CIA_GET(current_cpu), read_map,
-			   bytes, addr, read_transfer,
-			   sim_core_unmapped_signal);
-    }
+  tmpval = sim_core_read_unaligned_4 (current_cpu, GET_H_PC(), read_map, addr);
+  if (!tmpval)
+    sim_core_write_unaligned_4 (current_cpu, GET_H_PC(), write_map, addr,
+				newval);
+#endif
+
   return tmpval;
+
+fail:
+  /* SIM framework has no concept of test and set so this is the closest
+     we can get */
+  epiphany_core_signal(sd, current_cpu, CIA_GET(current_cpu), read_map,
+		       bytes, addr, read_transfer,
+		       sim_core_unmapped_signal);
+return tmpval;
 }
 
 SI epiphany_testset_SI(SIM_CPU* current_cpu, USI addr, SI newval)

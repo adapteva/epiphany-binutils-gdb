@@ -415,11 +415,13 @@ sim_open (kind, callback, abfd, argv)
       return 0;
     }
 
+#if WITH_EMESH_SIM
   if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
     {
       if (sim_esim_init(sd) != SIM_RC_OK)
 	return SIM_RC_FAIL;
     }
+#endif
 
 #if 0
   /* Allocate a handler for the control registers and other devices
