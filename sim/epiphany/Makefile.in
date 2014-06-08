@@ -102,6 +102,7 @@ epiphany-clean:
 	rm -f mloop.c eng.h stamp-mloop
 	rm -f tmp-*
 	rm -f stamp-arch stamp-cpu
+	rm -r esim/stamp-esim esim/*.o
 
 # cgen support, enable with --enable-cgen-maint
 CGEN_MAINT = ; @true
