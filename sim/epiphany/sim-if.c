@@ -81,18 +81,19 @@ struct emesh_params {
   int64_t ext_ram_base;
   int64_t ext_ram_size;
 
-  unsigned initialized;
 };
-static struct emesh_params emesh_params = {-1, -1, -1, -1, 1, -1, -1, 0};
+static struct emesh_params emesh_params = {-1, -1, -1, -1, 1, -1, -1};
 
 static void free_state (SIM_DESC);
 static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
+static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
+
+#ifdef WITH_EMESH_SIM
 static SIM_RC sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes,
 				     unsigned new_coreid);
 static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu);
 static SIM_RC sim_esim_init(SIM_DESC sd);
-static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
-
+#endif
 
 
 static const OPTION options_epiphany[] =
@@ -262,7 +263,6 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
  */
 static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
 {
-#if WITH_EMESH_SIM
 #define FAIL_IF(Expr, Desc)\
   if (Expr)\
     {\
@@ -277,10 +277,8 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
     FAIL_IF(0 > emesh_params.first_coreid, "--e-first-core not set");
 
 #undef FAIL_IF
-#endif
 
   return SIM_RC_OK;
-
 }
 
 /* Only called from debugger */
@@ -346,7 +344,6 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
     }
 
   sim_io_eprintf(sd, "ESIM: Initialized successfully\n");
-  emesh_params.initialized = 1;
 
   return SIM_RC_OK;
 }
@@ -555,7 +552,8 @@ sim_create_inferior (sd, abfd, argv, envp)
   SIM_ADDR addr;
 
 #if WITH_EMESH_SIM
-  if (!emesh_params.initialized || !es_get_coreid(STATE_ESIM(sd)))
+  if (es_initialized(STATE_ESIM(sd)) != ES_OK ||
+      !es_get_coreid(STATE_ESIM(sd)))
     {
       if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
 	sim_io_eprintf(sd,
