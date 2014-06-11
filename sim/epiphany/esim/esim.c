@@ -1269,7 +1269,7 @@ err_out:
 int inline
 es_initialized(const es_state* esim)
 {
-  return (esim->initialized == 1 ? ES_OK : -EINVAL);
+  return ((esim && esim->initialized == 1) ? ES_OK : -EINVAL);
 }
 
 /*! Cleanup after ESIM
