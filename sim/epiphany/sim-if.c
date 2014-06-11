@@ -46,6 +46,9 @@
 
 #if WITH_EMESH_SIM
 #include "esim/esim.h"
+#if HAVE_E_XML
+#include <epiphany_xml_c.h>
+#endif
 #endif
 
 /* Records simulator descriptor so utilities like epiphany_dump_regs can be
@@ -56,7 +59,8 @@ int is_sim_opened=0;
 /* Cover function of sim_state_free to free the cpu buffers as well.  */
 
 typedef enum {
-  E_OPTION_EXT_RAM = OPTION_START,
+  E_OPTION_XML_HDF = OPTION_START, /* Epiphany XML hardware description file */
+  E_OPTION_EXT_RAM,
   E_OPTION_COREID,
   E_OPTION_NUM_COLS,
   E_OPTION_NUM_ROWS,
@@ -81,8 +85,9 @@ struct emesh_params {
   int64_t ext_ram_base;
   int64_t ext_ram_size;
 
+  char *xml_hdf_file;
 };
-static struct emesh_params emesh_params = {-1, -1, -1, -1, 1, -1, -1};
+static struct emesh_params emesh_params = {-1, -1, -1, -1, 1, -1, -1, NULL};
 
 static void free_state (SIM_DESC);
 static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
@@ -103,6 +108,11 @@ static const OPTION options_epiphany[] =
       'e', "off|on", "Turn off/on the external memory region",
       epiphany_option_handler },
 #if EMESH_SIM
+#if HAVE_E_XML
+  { {"e-hdf", required_argument, NULL, E_OPTION_XML_HDF},
+      '\0', "FILE", "Epiphany XML hardware description file",
+      epiphany_option_handler },
+#endif
   { {"e-coreid", required_argument, NULL, E_OPTION_COREID},
       '\0', "COREID", "Set coreid",
       epiphany_option_handler  },
@@ -177,7 +187,11 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 	}\
     }\
   while (0)
-
+#if HAVE_E_XML
+    case E_OPTION_XML_HDF:
+      emesh_params.xml_hdf_file = arg;
+      break;
+#endif
     case E_OPTION_COREID:
       SET_OR_FAIL(coreid, "e-coreid");
       break;
@@ -195,6 +209,8 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
       break;
     case E_OPTION_EXT_RAM_SIZE:
       SET_OR_FAIL(ext_ram_size, "e-ext-ram-size");
+      /* Specified in MB */
+      emesh_params.ext_ram_size = emesh_params.ext_ram_size << 20;
       break;
 #undef SET_OR_FAIL
 #endif
@@ -260,22 +276,44 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
 
 
 /* Return SIM_RC_OK if user specified required params, SIM_RC_FAIL otherwise
+ * TODO: This does not work so well in debugger mode. If e.g. e-cols is set
+ * and then e-hdf is set after that, it gets stuck.
  */
 static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
 {
 #define FAIL_IF(Expr, Desc)\
   if (Expr)\
     {\
-      if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE) \
+      if (emesh_params.xml_hdf_file != NULL ||\
+	  STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE) \
 	sim_io_eprintf(sd, "%s\n", Desc);\
       return SIM_RC_FAIL;\
     }
 
-    FAIL_IF(0 > emesh_params.coreid      , "--e-coreid not set");
-    FAIL_IF(0 > emesh_params.num_cols    , "--e-num-cols not set");
-    FAIL_IF(0 > emesh_params.num_rows    , "--e-num-rows not set");
-    FAIL_IF(0 > emesh_params.first_coreid, "--e-first-core not set");
+  /* If there is only one core, we know first coreid */
+  if (emesh_params.coreid < 0 &&
+      emesh_params.num_rows == 1 && emesh_params.num_cols == 1)
+    emesh_params.coreid = emesh_params.first_coreid;
 
+  FAIL_IF(0 > emesh_params.coreid      , "--e-coreid not set");
+
+  /* Either use hardware definition file or other params */
+  if (emesh_params.xml_hdf_file != NULL)
+    {
+      FAIL_IF(-1 != emesh_params.num_cols    ,
+	      "Both --e-xml-file and --e-num-cols set");
+      FAIL_IF(-1 != emesh_params.num_rows    ,
+	      "Both --e-xml-file and --e-num-rows set");
+      FAIL_IF(-1 != emesh_params.first_coreid,
+	      "Both --e-xml-file and --e-first-core set");
+      /* TODO: Also check add_ext_ram */
+    }
+  else
+    {
+      FAIL_IF(0 > emesh_params.num_cols    , "--e-num-cols not set");
+      FAIL_IF(0 > emesh_params.num_rows    , "--e-num-rows not set");
+      FAIL_IF(0 > emesh_params.first_coreid, "--e-first-core not set");
+    }
 #undef FAIL_IF
 
   return SIM_RC_OK;
@@ -293,6 +331,67 @@ static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu)
   return SIM_RC_OK;
 }
 
+#if HAVE_E_XML
+static SIM_RC sim_esim_params_from_xml(SIM_DESC sd)
+{
+  e_xml_t xml;
+  platform_definition_t* p;
+  int i;
+
+  xml = e_xml_new(emesh_params.xml_hdf_file);
+
+#define FAIL_IF(Expr, Desc)\
+  if ((Expr))\
+    {\
+      sim_io_eprintf(sd, "%s\n", (Desc));\
+      goto err_out;\
+    }
+
+  if (e_xml_parse(xml))
+    {
+      sim_io_eprintf(sd, "Could not parse XML HDF file `%s'\n",
+		     emesh_params.xml_hdf_file);
+      goto err_out;
+    }
+  FAIL_IF((p = e_xml_get_platform(xml)) == NULL, "Internal error in e-xml.");
+  FAIL_IF(p->num_chips != 1, "The simulator only supports one chip");
+
+  emesh_params.num_rows = p->chips[0].num_rows;
+  emesh_params.num_cols = p->chips[0].num_cols;
+  emesh_params.first_coreid = (p->chips[0].yid << 6) + p->chips[0].xid;
+  /* TODO: */
+  /* emesh_params.core_mem_size = p->chips[0].core_memory_size; */
+
+  /* No external RAM unless specified in HDF file */
+  emesh_params.epiphany_add_ext_ram = 0;
+
+  for (i=0; i < p->num_banks; i++)
+    {
+      /* TODO: Will mem naming always be the same ? */
+      if (strncmp(p->ext_mem[i].name, "EXTERNAL_DRAM", 13) == 0)
+	{
+	  /* Fail if there already was an ext ram bank */
+	  FAIL_IF(emesh_params.epiphany_add_ext_ram,
+		  "The simulator only supports at most 1 memory bank");
+
+	  emesh_params.epiphany_add_ext_ram = 1;
+
+	  emesh_params.ext_ram_base = p->ext_mem[i].base;
+	  emesh_params.ext_ram_size = p->ext_mem[i].size;
+	}
+    }
+
+#undef FAIL_IF
+
+out:
+  e_xml_delete(xml);
+  return SIM_RC_OK;
+err_out:
+  e_xml_delete(xml);
+  return SIM_RC_FAIL;
+}
+#endif /* HAVE_E_XML */
+
 static SIM_RC sim_esim_init(SIM_DESC sd)
 {
   /* TODO: Of course this shouldn't be hard coded */
@@ -301,11 +400,20 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
 
   struct emesh_params *p = &emesh_params;
 
-  unsigned ext_ram_size = 32;
-  unsigned ext_ram_base = 0x8e000000;
+  uint64_t ext_ram_size = 32*1024*1024;
+  uint64_t ext_ram_base = 0x8e000000;
 
   if (sim_esim_have_required_params(sd) != SIM_RC_OK)
     return SIM_RC_FAIL;
+
+#if HAVE_E_XML
+  /* Parse XML file, if specified */
+  if (emesh_params.xml_hdf_file != NULL)
+    {
+      if (sim_esim_params_from_xml(sd) != SIM_RC_OK)
+	return SIM_RC_FAIL;
+    }
+#endif
 
   memset(&node, 0, sizeof(node));
   memset(&cluster, 0, sizeof(cluster));
@@ -328,7 +436,7 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
       ext_ram_size = 0;
       ext_ram_base = 0xffffffff;
     }
-  cluster.ext_ram_size = ext_ram_size * 1024*1024;
+  cluster.ext_ram_size = ext_ram_size;
   cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
 

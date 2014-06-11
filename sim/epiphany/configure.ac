@@ -56,24 +56,33 @@ with --enable-emesh-sim.]) ;;
   esac
 fi
 
-
+epihany_extra_libs=
 if test "x$esim" = "xyes"; then
-AC_CHECK_LIB(rt, shm_open, [
-  lib_rt="-lrt"
-  ], [lib_rt=])
-AC_CHECK_LIB(pthread, pthread_barrier_init, [
-  lib_pthread="-lpthread"
-  ], [lib_pthread=])
-AC_SUBST(epiphany_extra_libs, ["${epiphany_extra_libs} ${lib_rt} ${lib_pthread}"])
-fi
+AC_CHECK_LIB(rt, shm_open,
+  [ epiphany_extra_libs+=" -lrt" ],
+  [ AC_MSG_ERROR([Could not find rt]) ]
+)
+AC_CHECK_LIB(pthread, pthread_barrier_init,
+  [ epiphany_extra_libs+=" -lpthread" ],
+  [ AC_MSG_ERROR([Could not find pthread]) ]
+)
+AC_CHECK_LIB(e-xml, e_xml_new,
+  [
+    epiphany_extra_libs+=" -le-xml"
+    esim_cflags+=" -DHAVE_E_XML=1"
+  ],
+  []
+)
 
 if test x"$silent" != x"yes"; then
   echo "Setting emesh sim cflags = ${esim_cflags}" 6>&1
-  echo "Setting emesh extra libs = ${lib_rt} ${lib_pthread}" 6>&1
+  echo "Setting emesh extra libs = ${epiphany_extra_libs}" 6>&1
+fi
 fi
 
 AC_SUBST(esim)
 AC_SUBST(sim_cflags, ["${sim_cflags} ${esim_cflags}"])
+AC_SUBST(epiphany_extra_libs, [${epiphany_extra_libs}])
 dnl end --enable-emesh-sim
 
 
