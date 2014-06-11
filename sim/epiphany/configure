@@ -601,8 +601,8 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 cgen_breaks
-esim
 epiphany_extra_libs
+esim
 SIM_DV_SOCKSER_O
 cgen
 cgendir
@@ -13623,7 +13623,7 @@ with --enable-emesh-sim." "$LINENO" 5 ;;
   esac
 fi
 
-
+epihany_extra_libs=
 if test "x$esim" = "xyes"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for shm_open in -lrt" >&5
 $as_echo_n "checking for shm_open in -lrt... " >&6; }
@@ -13662,11 +13662,10 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rt_shm_open" >&5
 $as_echo "$ac_cv_lib_rt_shm_open" >&6; }
 if test "x$ac_cv_lib_rt_shm_open" = x""yes; then :
-
-  lib_rt="-lrt"
-
+   epiphany_extra_libs+=" -lrt"
 else
-  lib_rt=
+   as_fn_error "Could not find rt" "$LINENO" 5
+
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_barrier_init in -lpthread" >&5
@@ -13706,24 +13705,66 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_barrier_init" >&5
 $as_echo "$ac_cv_lib_pthread_pthread_barrier_init" >&6; }
 if test "x$ac_cv_lib_pthread_pthread_barrier_init" = x""yes; then :
-
-  lib_pthread="-lpthread"
-
+   epiphany_extra_libs+=" -lpthread"
 else
-  lib_pthread=
-fi
-
-epiphany_extra_libs="${epiphany_extra_libs} ${lib_rt} ${lib_pthread}"
+   as_fn_error "Could not find pthread" "$LINENO" 5
 
 fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for e_xml_new in -le-xml" >&5
+$as_echo_n "checking for e_xml_new in -le-xml... " >&6; }
+if test "${ac_cv_lib_e_xml_e_xml_new+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-le-xml  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char e_xml_new ();
+int
+main ()
+{
+return e_xml_new ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_e_xml_e_xml_new=yes
+else
+  ac_cv_lib_e_xml_e_xml_new=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_e_xml_e_xml_new" >&5
+$as_echo "$ac_cv_lib_e_xml_e_xml_new" >&6; }
+if test "x$ac_cv_lib_e_xml_e_xml_new" = x""yes; then :
+
+    epiphany_extra_libs+=" -le-xml"
+    esim_cflags+=" -DHAVE_E_XML=1"
+
+fi
+
 
 if test x"$silent" != x"yes"; then
   echo "Setting emesh sim cflags = ${esim_cflags}" 6>&1
-  echo "Setting emesh extra libs = ${lib_rt} ${lib_pthread}" 6>&1
+  echo "Setting emesh extra libs = ${epiphany_extra_libs}" 6>&1
+fi
 fi
 
 
 sim_cflags="${sim_cflags} ${esim_cflags}"
+
+epiphany_extra_libs=${epiphany_extra_libs}
 
 
 
