@@ -53,7 +53,7 @@ epiphany_decode_gdb_ctrl_regnum (int gdb_regnum)
   abort ();
 }
 
-static int epiphanybf_src_gdb_regmap[42] =
+static int epiphanybf_scr_gdb_regmap[42] =
 {
   H_REG_SCR_CONFIG,
   H_REG_SCR_STATUS,
@@ -98,8 +98,8 @@ static int epiphanybf_src_gdb_regmap[42] =
   H_REG_MESH_XMESHROUTE,
   H_REG_MESH_RMESHROUTE
 };
-static size_t epiphanybf_src_gdb_regmap_num_regs =
-  sizeof(epiphanybf_src_gdb_regmap) / sizeof(epiphanybf_src_gdb_regmap[0]);
+static size_t epiphanybf_scr_gdb_regmap_num_regs =
+  sizeof(epiphanybf_scr_gdb_regmap) / sizeof(epiphanybf_scr_gdb_regmap[0]);
 
 
 
@@ -107,7 +107,7 @@ static size_t epiphanybf_src_gdb_regmap_num_regs =
 #define EPIPHANY_NUM_GPRS   64
 /* Number of Special Core Registers (SCRs).  */
 #define EPIPHANY_NUM_SCRS_0 16
-#define EPIPHANY_NUM_SCRS   (epiphanybf_src_gdb_regmap_num_regs)
+#define EPIPHANY_NUM_SCRS   (epiphanybf_scr_gdb_regmap_num_regs)
 
 /* Number of raw registers used.  */
 #define  EPIPHANY_NUM_REGS   (EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS)
@@ -166,7 +166,7 @@ epiphanybf_fetch_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
     }
   else if (rn < EPIPHANY_TOTAL_NUM_REGS)
     {
-      reg = epiphanybf_src_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
+      reg = epiphanybf_scr_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
       /* Other.  */
       SETTWI (buf,
 	      epiphanybf_h_all_registers_get (current_cpu,
@@ -200,7 +200,7 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
     }
   else if (rn < EPIPHANY_TOTAL_NUM_REGS)
     {
-      reg = epiphanybf_src_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
+      reg = epiphanybf_scr_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
       /* Other.  */
       epiphanybf_h_all_registers_set (current_cpu, reg, GETTWI (buf));
     }
