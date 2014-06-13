@@ -31,7 +31,7 @@
 
 /* Current PLT Design:
    [....] Push LR to stack
-   [....] Jump with Link to overlaymanager
+   [....] Jump with Link to cachemanager
    [....] Startaddr
    [....] Size (or should this be endaddr?) */
    
@@ -107,13 +107,13 @@ static reloc_howto_type epiphany_elf_howto_table [] =
   /* imm8 */
   AHOW (R_EPIPHANY_IMM8,    0, 1, 8, FALSE, 8, complain_overflow_signed,   "R_EPIPHANY_IMM8",    0x0000ff00, 0x0000ff00),
 
-  /* %OVERHIGH(EA) */
-  AHOW (R_EPIPHANY_OVERHIGH, 0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_OVERHIGH", 0x0ff01fe0, 0x0ff01fe0),
-  /* %OVERLOW(EA) */
-  AHOW (R_EPIPHANY_OVERLOW,  0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_OVERLOW",  0x0ff01fe0, 0x0ff01fe0),
+  /* %CACHEHIGH(EA) */
+  AHOW (R_EPIPHANY_CACHEHIGH, 0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_CACHEHIGH", 0x0ff01fe0, 0x0ff01fe0),
+  /* %CACHELOW(EA) */
+  AHOW (R_EPIPHANY_CACHELOW,  0, 2,16, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_CACHELOW",  0x0ff01fe0, 0x0ff01fe0),
 
-  /* A 32 bit PLT relocation for the overlay. */
-  AHOW (R_EPIPHANY_OVER32,      0, 2,32, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_OVER32",     0xffffffff, 0xffffffff)
+  /* A 32 bit PLT relocation for the software cache. */
+  AHOW (R_EPIPHANY_CACHE32,      0, 2,32, FALSE, 0, complain_overflow_dont,     "R_EPIPHANY_CACHE32",     0xffffffff, 0xffffffff)
 
 };
 #undef AHOW
@@ -166,13 +166,13 @@ epiphany_reloc_type_lookup (bfd * abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_EPIPHANY_IMM8:
       return & epiphany_elf_howto_table[ (int) R_EPIPHANY_IMM8];
 
-    case BFD_RELOC_EPIPHANY_OVERHIGH:
-      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_OVERHIGH];
-    case BFD_RELOC_EPIPHANY_OVERLOW:
-      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_OVERLOW];
+    case BFD_RELOC_EPIPHANY_CACHEHIGH:
+      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_CACHEHIGH];
+    case BFD_RELOC_EPIPHANY_CACHELOW:
+      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_CACHELOW];
 
-    case BFD_RELOC_EPIPHANY_OVER32:
-      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_OVER32];
+    case BFD_RELOC_EPIPHANY_CACHE32:
+      return & epiphany_elf_howto_table[ (int) R_EPIPHANY_CACHE32];
 
     default:
       /* Pacify gcc -Wall.  */
@@ -452,7 +452,7 @@ epiphany_final_link_relocate (bfd *                        output_bfd,
   switch (howto->type)
     {
       /* Handle 16 bit immediates.  */
-    case R_EPIPHANY_OVERHIGH:
+    case R_EPIPHANY_CACHEHIGH:
       /* In this case check PLT entry and modify relocation */
       relocation = epiphany_get_plt_address(relocation, output_bfd, h);
     case R_EPIPHANY_HIGH:
@@ -460,7 +460,7 @@ epiphany_final_link_relocate (bfd *                        output_bfd,
       relocation >>= 16;
       goto common;
 
-    case R_EPIPHANY_OVERLOW:
+    case R_EPIPHANY_CACHELOW:
       relocation = epiphany_get_plt_address(relocation, output_bfd, h);
     case R_EPIPHANY_LOW:
       relocation += rel->r_addend;
@@ -490,7 +490,7 @@ epiphany_final_link_relocate (bfd *                        output_bfd,
 	|| ((relocation & 0x7f8 )  << 13);
       return _bfd_relocate_contents (howto, input_bfd, relocation,
 				     contents + rel->r_offset);
-    case R_EPIPHANY_OVER32:
+    case R_EPIPHANY_CACHE32:
       /* Here we are handling a 32 bit function pointer in the .data section.
 	 Check PLT entry and modify relocation.  */
       relocation = epiphany_get_plt_address (relocation, output_bfd, h);
@@ -733,8 +733,8 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
        switch (ELF32_R_TYPE (rel->r_info))
 	 {
 	   /* These relocs require a plt entry */
-	   case R_EPIPHANY_OVER32:
-	   case R_EPIPHANY_OVERHIGH:
+	   case R_EPIPHANY_CACHE32:
+	   case R_EPIPHANY_CACHEHIGH:
 	     if (h != NULL)
 	       {
 		 /* Should this call be elsewhere? */
@@ -773,23 +773,23 @@ epiphany_elf_size_dynamic_sections (bfd *output_bfd,
   return TRUE;
 }
 
-/* Generate the branches to our overlay manager */
+/* Generate the branches to our cache manager */
 static bfd_boolean
 epiphany_elf_finish_dynamic_sections (bfd * output_bfd,
 				      struct bfd_link_info * info ATTRIBUTE_UNUSED)
 {
   asection *plt;
-  asection *overlayman;
+  asection *cacheman;
   bfd_vma   i;
 
   plt = bfd_get_section_by_name (output_bfd, ".plt");
   if (plt == NULL)
     return TRUE;
 
-  /* We assume our overlay manager is in .overlayman */
-  overlayman = bfd_get_section_by_name (output_bfd, ".overlayman");
-  BFD_ASSERT (overlayman != NULL);
-  if (overlayman == NULL)
+  /* We assume our chache manager is in .cacheman */
+  cacheman = bfd_get_section_by_name (output_bfd, ".cacheman");
+  BFD_ASSERT (cacheman != NULL);
+  if (cacheman == NULL)
     return FALSE;
 
   for (i = 0; i < plt->size; i += PLT_ENTRY_SIZE)
@@ -798,7 +798,7 @@ epiphany_elf_finish_dynamic_sections (bfd * output_bfd,
       bfd_put_32 (output_bfd, 0x2700d55c, plt->contents + i);
       
       bfd_vma branch = 0x000000f8; /* 32-bit relative branch with link */
-      bfd_vma diff = overlayman->vma - plt->vma - i - 4;
+      bfd_vma diff = cacheman->vma - plt->vma - i - 4;
       /* Check that the branch target is within 24-bit range
          Note signed immediates are shifted one to the left  */
       BFD_ASSERT ((signed long) diff <  33554431 &&

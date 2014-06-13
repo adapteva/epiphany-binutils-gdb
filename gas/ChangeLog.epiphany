@@ -1,3 +1,15 @@
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* config/tc-epiphany.h: Rename R_EPIPHANY_OVER32 to
+	BFD_RELOC_EPIPHANY_CACHE32.
+	* config/tc-epiphany.c (epiphany_parse_cons_expression): Rename
+	BFD_RELOC_EPIPHANY_OVER32 to BFD_RELOC_EPIPHANY_CACHE32.
+	(epiphany_cons_fix_new): Likewise.
+	(epiphany_fix_adjustable): Rename BFD_RELOC_EPIPHANY_OVERHIGH to
+	BFD_RELOC_EPIPHANY_CACHEHIGH and BFD_RELOC_EPIPHANY_OVERLOW to
+	BFD_RELOC_EPIPHANY_CACHELOW.
+	(epiphany_cgen_parse_fix_exp): Likewise.
+
 2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
 
 	* config/tc-epiphany.h (TC_PARSE_CONS_EXPRESSION): Define.

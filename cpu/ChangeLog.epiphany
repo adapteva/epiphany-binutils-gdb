@@ -1,3 +1,9 @@
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* epiphany.cpu (parse_imm16): Rename BFD_RELOC_EPIPHANY_OVERHIGH
+	to BFD_RELOC_EPIPHANY_CACHEHIGH and BFD_RELOC_EPIPHANY_OVERLOW to
+	BFD_RELOC_EPIPHANY_CACHELOW.
+
 2013-12-18  Simon Cook  <simon.cook@embecosm.com>
 
 	* epiphany.cpu: Reset fp alias to r11.

@@ -1,3 +1,21 @@
+2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
+
+	* reloc.c (BFD_RELOC_EPIPHANY_OVERHIGH): Rename to ...
+	(BFD_RELOC_EPIPHANY_CACHEHIGH): ... this.
+	(BFD_RELOC_EPIPHANY_OVERLOW): Rename to ...
+	(BFD_RELOC_EPIPHANY_CACHELOW): ... this.
+	(BFD_RELOC_EPIPHANY_OVER32): Rename to ...
+	(BFD_RELOC_EPIPHANY_CACHE32): ... this.
+	* libbfd.h: Regenerate.
+	* bfd-in2.h: Regenerate.
+	* elf32-epiphany.c: Rename overlaymanager to cachemanager.
+	(epiphany_elf_howto_table): Rename R_EPIPHANY_OVERHIGH to
+	R_EPIPHANY_CACHEHIGH.  Rename R_EPIPHANY_OVERLOW to R_EPIPHANY_CACHELOW.
+	Rename R_EPIPHANY_OVER32 to R_EPIPHANY_CACHE32.
+	(epiphany_reloc_type_lookup): Likewise.
+	(epiphany_final_link_relocate): Likewise.
+	(epiphany_elf_finish_dynamic_sections): Rename .overlayman section to .cacheman.
+
 2014-05-30  Pierre Langlois  <pierre.langlois@embecosm.com>
 
 	* reloc.c (BFD_RELOC_EPIPHANY_OVER32): Define a new PLT

@@ -83,7 +83,8 @@ extern void epiphany_handle_align (fragS *);
 extern void epiphany_parse_cons_expression (expressionS *, int);
 
 /* This is called by emit_expr when creating a reloc for a cons. We use this to
-   set the relocation type manually to R_EPIPHANY_OVER32 for PLT relocs.  */
+   set the relocation type manually to BFD_RELOC_EPIPHANY_CACHE32 for PLT
+   relocs.  */
 
 #define TC_CONS_FIX_NEW epiphany_cons_fix_new
 extern void epiphany_cons_fix_new (fragS *, int, int, expressionS *);
