@@ -222,7 +222,7 @@ parse_imm16 (CGEN_CPU_DESC cd,
       else
 	{
 	  errmsg = cgen_parse_address (cd, strp, opindex,
-				       BFD_RELOC_EPIPHANY_OVERHIGH,
+				       BFD_RELOC_EPIPHANY_CACHEHIGH,
 				       result_type, valuep);
 	  if (strncasecmp (*strp, "@PLT)", 5) != 0)
 	    return MISSING_CLOSE_PARENTHESIS;
@@ -246,7 +246,7 @@ parse_imm16 (CGEN_CPU_DESC cd,
       else
 	{
 	  errmsg = cgen_parse_address (cd, strp, opindex,
-				       BFD_RELOC_EPIPHANY_OVERLOW,
+				       BFD_RELOC_EPIPHANY_CACHELOW,
 				       result_type, valuep);
 	  if (strncasecmp (*strp, "@PLT)", 5) != 0)
 	    return MISSING_CLOSE_PARENTHESIS;

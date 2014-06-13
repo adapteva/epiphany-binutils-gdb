@@ -374,7 +374,7 @@ epiphany_parse_cons_expression (expressionS *exp,
       && (exp->X_op == O_symbol)
       && (nbytes == 4))
     {
-      exp->X_md = BFD_RELOC_EPIPHANY_OVER32;
+      exp->X_md = BFD_RELOC_EPIPHANY_CACHE32;
       input_line_pointer += 4;
     }
 }
@@ -390,8 +390,8 @@ epiphany_cons_fix_new (fragS *frag,
 {
   bfd_reloc_code_real_type r;
 
-  if (exp->X_md == BFD_RELOC_EPIPHANY_OVER32)
-    r = BFD_RELOC_EPIPHANY_OVER32;
+  if (exp->X_md == BFD_RELOC_EPIPHANY_CACHE32)
+    r = BFD_RELOC_EPIPHANY_CACHE32;
   else
     {
       switch (nbytes)
@@ -1122,8 +1122,8 @@ epiphany_fix_adjustable (fixS *fixP)
 	  || reloc_type == BFD_RELOC_EPIPHANY_SIMM8
 	  || reloc_type == BFD_RELOC_EPIPHANY_HIGH
 	  || reloc_type == BFD_RELOC_EPIPHANY_LOW
-	  || reloc_type == BFD_RELOC_EPIPHANY_OVERHIGH
-	  || reloc_type == BFD_RELOC_EPIPHANY_OVERLOW))
+	  || reloc_type == BFD_RELOC_EPIPHANY_CACHEHIGH
+	  || reloc_type == BFD_RELOC_EPIPHANY_CACHELOW))
     return FALSE;
 
   /* Since we don't use partial_inplace, we must not reduce symbols in
@@ -1149,8 +1149,8 @@ epiphany_cgen_parse_fix_exp (int opinfo, expressionS *exp ATTRIBUTE_UNUSED)
     {
     case BFD_RELOC_EPIPHANY_LOW:
     case BFD_RELOC_EPIPHANY_HIGH:
-    case BFD_RELOC_EPIPHANY_OVERLOW:
-    case BFD_RELOC_EPIPHANY_OVERHIGH:
+    case BFD_RELOC_EPIPHANY_CACHELOW:
+    case BFD_RELOC_EPIPHANY_CACHEHIGH:
       break;
     default:
       return opinfo;
