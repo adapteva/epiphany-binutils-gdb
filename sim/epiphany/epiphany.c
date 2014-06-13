@@ -138,7 +138,7 @@ static size_t epiphanybf_scr_gdb_regmap_num_regs =
 #define EPIPHANY_SCR_HSCONFIG 17
 #define EPIPHANY_SCR_DEBUGCMD 18
 
-/* TODO: Reg fetch/store can be simplified ((reg mmr offset - mmr base) / 4 )
+/** @todo Reg fetch/store can be simplified ((reg mmr offset - mmr base) / 4 )
    ... but then we have to modify gdb/epiphany-tdep.c
    ... but then we probably need modify e-server (epiphany remote gdb server)
    ... so leave it be for now and *never* use in simulator code until
@@ -215,7 +215,7 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 void
 epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
 {
-  /* TODO: Any sticky bits? */
+  /** @todo Any sticky bits? */
   CPU(h_all_registers[H_REG_SCR_CONFIG]) = val;
   /* Rounding mode might have changed */
   __sync_fetch_and_add(&current_cpu->oob_events.rounding_mode, 1);
@@ -325,7 +325,7 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
   host_callback *cb = STATE_CALLBACK (sd);
   void *buf;
 
-/* TODO: Revisit. Might rename H_ALL_REGISTERS */
+/** @todo Revisit. Might rename H_ALL_REGISTERS */
 #define PARM0 (GET_H_ALL_REGISTERS(H_REG_R0))
 #define PARM1 (GET_H_ALL_REGISTERS(H_REG_R1))
 #define PARM2 (GET_H_ALL_REGISTERS(H_REG_R2))
@@ -566,7 +566,7 @@ epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc)
   unused_addr = 0xffffffff;
   /* Look up current insn in hash table. */
 #if WITH_SCACHE_PBB
-  /* TODO: Not tested */
+  /** @todo Not tested */
   sc = scache_lookup(current_cpu, vpc);
 #else
   sc = CPU_SCACHE_CACHE (current_cpu) + SCACHE_HASH_PC (vpc, hash_mask);

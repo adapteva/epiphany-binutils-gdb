@@ -39,14 +39,14 @@
 
 
    Implements memory m
-   TODO: Make more fine-grained so e.g., local mem accesses don't have to go
+   @todo Make more fine-grained so e.g., local mem accesses don't have to go
    through this device.
 
 
    PROPERTIES
 
    none
-   TODO:
+   @todo
    Properties needed:
        coreid       - so we can calculate local memory address.
        mem_per_core - so we can experiment with different memory sizes.
@@ -56,7 +56,7 @@
    PORTS
 
    none
-   TODO: investigate which ports are needed
+   @todo investigate which ports are needed
 
    */
 
@@ -150,7 +150,7 @@ epiphany_mem_io_read_buffer (struct hw *me,
   es_state *esim = STATE_ESIM(hw_system(me));
   if (es_mem_load(esim, base, nr_bytes, dest) != ES_OK)
     {
-      /* TODO: What about SIGBUS (unaligned access) */
+      /** @todo What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "read", SIM_SIGSEGV);
     }
   else
@@ -168,7 +168,7 @@ epiphany_mem_io_write_buffer (struct hw *me,
   HW_TRACE ((me, "write 0x%08lx %d", (long) base, (int) nr_bytes));
   if (es_mem_store(esim, base, nr_bytes, source) != ES_OK)
     {
-      /* TODO: What about SIGBUS (unaligned access) */
+      /** @todo What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "write", SIM_SIGSEGV);
     }
   else

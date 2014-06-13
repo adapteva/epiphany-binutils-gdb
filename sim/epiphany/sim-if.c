@@ -68,7 +68,7 @@ typedef enum {
   E_OPTION_ADD_EXT_MEM,
   E_OPTION_EXT_RAM_BASE,
   E_OPTION_EXT_RAM_SIZE,
-  /* TODO: Add more options:
+  /** @todo Add more options:
    * Check es_cluster_cfg and es_node_cfg in emesh.h
    */
 } EPIPHANY_OPTIONS;
@@ -276,7 +276,7 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
 
 
 /* Return SIM_RC_OK if user specified required params, SIM_RC_FAIL otherwise
- * TODO: This does not work so well in debugger mode. If e.g. e-cols is set
+ * @todo This does not work so well in debugger mode. If e.g. e-cols is set
  * and then e-hdf is set after that, it gets stuck.
  */
 static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
@@ -306,7 +306,7 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
 	      "Both --e-xml-file and --e-num-rows set");
       FAIL_IF(-1 != emesh_params.first_coreid,
 	      "Both --e-xml-file and --e-first-core set");
-      /* TODO: Also check add_ext_ram */
+      /** @todo Also check add_ext_ram */
     }
   else
     {
@@ -359,7 +359,7 @@ static SIM_RC sim_esim_params_from_xml(SIM_DESC sd)
   emesh_params.num_rows = p->chips[0].num_rows;
   emesh_params.num_cols = p->chips[0].num_cols;
   emesh_params.first_coreid = (p->chips[0].yid << 6) + p->chips[0].xid;
-  /* TODO: */
+  /** @todo */
   /* emesh_params.core_mem_size = p->chips[0].core_memory_size; */
 
   /* No external RAM unless specified in HDF file */
@@ -367,7 +367,7 @@ static SIM_RC sim_esim_params_from_xml(SIM_DESC sd)
 
   for (i=0; i < p->num_banks; i++)
     {
-      /* TODO: Will mem naming always be the same ? */
+      /** @todo Will mem naming always be the same ? */
       if (strncmp(p->ext_mem[i].name, "EXTERNAL_DRAM", 13) == 0)
 	{
 	  /* Fail if there already was an ext ram bank */
@@ -394,7 +394,7 @@ err_out:
 
 static SIM_RC sim_esim_init(SIM_DESC sd)
 {
-  /* TODO: Of course this shouldn't be hard coded */
+  /** @todo Of course this shouldn't be hard coded */
   es_cluster_cfg cluster;
   es_node_cfg node;
 
@@ -549,7 +549,7 @@ sim_open (kind, callback, abfd, argv)
 
 #if (WITH_HW)
   sim_hw_parse (sd, "/epiphany_mem");
-  /* TODO: Need to be able to map external mem */
+  /** @todo Need to be able to map external mem */
 #else
   if (sim_core_read_buffer (sd, NULL, read_map, &c, 0, 1) == 0)
     sim_do_commandf (sd, "memory region 0,0x%x", EPIPHANY_DEFAULT_MEM_SIZE);
@@ -702,7 +702,7 @@ sim_create_inferior (sd, abfd, argv, envp)
 				 es_get_coreid(STATE_ESIM(sd)));
 
   /* Start by triggering SYNC interrupt*/
-  /* TODO: There should be a command-line option for disabling this so we can
+  /** @todo There should be a command-line option for disabling this so we can
    * mimic hardware.
    */
   epiphanybf_h_all_registers_set(STATE_CPU(sd, 0), H_REG_SCR_ILATST, 1);

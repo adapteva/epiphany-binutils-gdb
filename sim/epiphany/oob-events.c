@@ -44,7 +44,7 @@ static IADDR interrupt_handler(SIM_CPU *current_cpu, IADDR vpc)
     }
 
   /* Find highest prio interrupt to handle: the least significant bit set.
-   * TODO: Revisit when we have access to real hardware to verify that nested
+   * @todo Revisit when we have access to real hardware to verify that nested
    * interrupts behave this way.
    */
   interrupt = ffs(possible) -1; /* ffs indexes lsb as 1 */
@@ -121,7 +121,7 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
       oob->last_rounding_mode = rounding_mode;
       epiphany_set_rounding_mode(current_cpu, config);
     }
-  /* TODO: Might get improved performance by having a special interrupt event.
+  /** @todo Might get improved performance by having a special interrupt event.
    * This must be set every time we write to any register that *might* trigger
    * an interrupt.
    */

@@ -246,7 +246,7 @@ while (0)
   if (!initialized)
     {
       sim_io_eprintf(current_state, "ESIM: Waiting for other cores...");
-      /* TODO: Would be nice to support Ctrl-C here */
+      /** @todo Would be nice to support Ctrl-C here */
       es_wait_run(STATE_ESIM(current_state));
       sim_io_eprintf(current_state, " done.\n");
 
@@ -295,7 +295,7 @@ while (0)
        * so we need to cancel it out.
        */
       -- CPU_INSN_COUNT (current_cpu);
-      /* TODO: Would be nicer if we did a timed wait on a pthread cond var */
+      /** @todo Would be nicer if we did a timed wait on a pthread cond var */
       usleep(10000);
     }
   /*
@@ -315,7 +315,7 @@ while (0)
 
   /* If another core (or the host CPU) wrote to local memory we need to make
    * sure that cached instructions are flushed.
-   * TODO: Now we flush the entire cache - this is *slow*.
+   * @todo Now we flush the entire cache - this is *slow*.
    * Instead, we could maintain a write-list and then just flush instructions
    * inside memory written to from the scache.
    * When flushing we need to take into account local/global addresses, and
@@ -327,7 +327,7 @@ while (0)
       scache_flush_cpu(current_cpu);
     }
 
-   /* TODO: We might need to check if the PC was changed externally before it
+   /** @todo We might need to check if the PC was changed externally before it
     * is overwritten. (PC will be set to vpc after this code block)
     * Need real hardware to verify behaviour.
     */
