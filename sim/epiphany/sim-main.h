@@ -58,7 +58,7 @@ typedef struct oob_state_ {
   unsigned external_write; /* Other agent wrote to cores mem */
 #endif
   /* Lock for ALL SCR regs (all non-GPR regs) */
-  /* TODO: Might want to implement more fine-grained locking later */
+  /** @todo Might want to implement more fine-grained locking later */
   unsigned scr_lock;
   unsigned rounding_mode;
   /* DMA */

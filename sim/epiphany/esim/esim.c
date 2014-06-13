@@ -36,12 +36,12 @@
  *
  */
 
-/* TODO: Check address overflow (addr+nr_bytes) */
+/** @todo Check address overflow (addr+nr_bytes) */
 
-/*TODO: rename es_tx_one_* to something better */
+/*@todo rename es_tx_one_* to something better */
 
 #if 0
-/* TODO: define in config.h */
+/** @todo define in config.h */
 /* #define HAVE_MPI2 */
 #define HAVE_MPI2_ACC_REPLACE
 #endif
@@ -58,7 +58,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-/* TODO: Standard errnos should be sufficient for now */
+/** @todo Standard errnos should be sufficient for now */
 /* Errors are returned as negative numbers. */
 #include <errno.h>
 
@@ -130,7 +130,7 @@ ES_ATOMIC_INCR_DEF(64)
 #define ES_NODE_CFG (esim->shm->node_cfg)
 #define ES_CLUSTER_CFG (esim->shm->cluster_cfg)
 
-/* TODO: These needs to be more general if we want allow larger than 1MB per-core
+/** @todo These needs to be more general if we want allow larger than 1MB per-core
  * address space
  */
 
@@ -204,7 +204,7 @@ typedef struct es_state_ {
 
 /*! Where in simulator an Epiphany address resides */
 typedef enum es_loc_t_ {
-  /* TODO: might need ES_LOC_UNALIGNED */
+  /** @todo might need ES_LOC_UNALIGNED */
   ES_LOC_INVALID=0, /*!< Invalid memory address */
   ES_LOC_SHM,       /*!< Core SRAM (in SHM */
   ES_LOC_SHM_MMR,   /*!< MMR region (in SHM) */
@@ -387,7 +387,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 	      if (addr % 4)
 		{
 		  /* Unaligned */
-		  /* TODO: ES_LOC_UNALIGNED would be more accurate */
+		  /** @todo ES_LOC_UNALIGNED would be more accurate */
 		  transl->location = ES_LOC_INVALID;
 		}
 	      else
@@ -395,7 +395,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 		  transl->location = ES_LOC_SHM_MMR;
 		  transl->reg = (addr & (ES_CORE_MMR_SIZE-1)) >> 2;
 		  /* Point mem to sim cpu struct */
-		  /* TODO: Could optimize this so that entire region is one
+		  /** @todo Could optimize this so that entire region is one
 		     transaction */
 		  transl->in_region = 4;
 		}
@@ -410,7 +410,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 		  ES_SHM_CORE_STATE_SIZE +
 		  (addr % ES_CLUSTER_CFG.core_mem_region);
 
-	      /* TODO: We have to check on which side of the memory mapped
+	      /** @todo We have to check on which side of the memory mapped
 	       * register we are and take that into account.
 	       */
 	      transl->in_region = (ES_CLUSTER_CFG.core_mem_region) -
@@ -426,7 +426,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 #endif
     }
 #ifdef ES_DEBUG
-  /* TODO: Revisit when adding network support */
+  /** @todo Revisit when adding network support */
   fprintf(stderr, "es_addr_translate: location=%d addr=0x%8x in_region=%ld"
 	  " coreid=%d node=%d mem=0x%016lx\n reg=%d shm_offset=0x%016lx\n",
 	  transl->location, transl->addr, transl->in_region, transl->coreid,
@@ -454,7 +454,7 @@ es_tx_one_shm_load(es_state *esim, es_transaction *tx)
   tx->target += n;
   tx->remaining -= n;
 
-  /* TODO: Should we return nr of bytes ? */
+  /** @todo Should we return nr of bytes ? */
   return ES_OK;
 }
 
@@ -512,7 +512,7 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 static int
 es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
 {
-  /* TODO: Revisit, might not work as expected. Probably need to modify
+  /** @todo Revisit, might not work as expected. Probably need to modify
    * single-core simulator.
    */
   unsigned old;
@@ -581,7 +581,7 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
   target = (uint32_t *) tx->target;
 
   /*
-   * TODO: Writes are racy by design. We need to verify that this is the
+   * @todo Writes are racy by design. We need to verify that this is the
    * correct behavior when we get access to the real hardware.
   */
 
@@ -600,9 +600,9 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 	{
 	  /* Reading directly from the general-purpose registers by an external
 	   * agent is not supported while the CPU is active.
-	   * TODO: It is unclear if this is allowed from local core so allow it
+	   * @todo It is unclear if this is allowed from local core so allow it
 	   * for now.
-	   * TODO: We pretend remote core is always active.
+	   * @todo We pretend remote core is always active.
 	   */
 	  n = -EINVAL;
 	}
@@ -626,7 +626,7 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
   tx->target += n;
   tx->remaining -= n;
 
-  /* TODO: Should we return nr of bytes ? */
+  /** @todo Should we return nr of bytes ? */
   return ES_OK;
 }
 
@@ -640,7 +640,7 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 static int
 es_tx_one(es_state *esim, es_transaction *tx)
 {
-  /* TODO: Use function vtable instead? */
+  /** @todo Use function vtable instead? */
   switch (tx->sim_addr.location)
     {
     case ES_LOC_SHM:
@@ -839,7 +839,7 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 
   FAIL_IF((ES_COREID(c->row_base+c->rows-1, c->col_base+c->col_base-1)) > 4095,
 			    "At least one of core in mesh has coreid > 4095");
-  /* TODO: Only support 1M for now */
+  /** @todo Only support 1M for now */
   FAIL_IF(c->core_mem_region != (1<<20),
 			    "Currently only 1M core region is supported");
   FAIL_IF(!c->core_mem_region,
@@ -847,7 +847,7 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   FAIL_IF(c->core_mem_region & (c->core_mem_region-1),
 			    "Core memory region size must be power of two");
 
-  /* TODO: Revisit when we add net support */
+  /** @todo Revisit when we add net support */
   FAIL_IF(c->nodes != 1,    "We currently only support one node.");
 
 
@@ -899,7 +899,7 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 static int
 es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
 {
-  /* TODO: Revisit when we have network/MPI support.
+  /** @todo Revisit when we have network/MPI support.
    * We might have to also validate node config 
    */
   return es_validate_cluster_cfg(cluster);
@@ -907,7 +907,7 @@ es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
 
 /*! Calculate and fill in internal configuration values not specified by user.
  *
- * TODO: This does not work when nodes != 1
+ * @todo This does not work when nodes != 1
  * @warning This must be called *after* es_validate_config
  *
  * @param[in]     esim     ESIM handle
@@ -932,7 +932,7 @@ es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
       /* FIXME: The below code is not correct. */
 
       /* Calculate most square-like per node cluster layout as possible */
-      /* TODO: User might want to specify different strategies, e.g., sequential.
+      /** @todo User might want to specify different strategies, e.g., sequential.
        * When we add MPI support this should be set in leader
        * and then passed on to all other processes.
        */
@@ -1104,7 +1104,7 @@ es_state_reset(es_state *esim)
 int
 es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
 {
-  /* TODO: Revisit once we have MPI support
+  /** @todo Revisit once we have MPI support
    * Cluster cfg should be set in leader (rank0) and then passed to all other
    * processes.
    */
@@ -1323,11 +1323,11 @@ es_set_ready(es_state *esim)
 void
 es_wait_run(es_state *esim)
 {
-  /* TODO: Before this, leader process (the one that created shm file should wait
+  /** @todo Before this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
    */
 
-  /* TODO: Would be nice to support Ctrl-C here */
+  /** @todo Would be nice to support Ctrl-C here */
   pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
   es_set_ready(esim);
 }
@@ -1339,12 +1339,12 @@ es_wait_run(es_state *esim)
 void
 es_wait_exit(es_state *esim)
 {
-  /* TODO: Would be nice to support Ctrl-C here */
+  /** @todo Would be nice to support Ctrl-C here */
   if (esim->ready)
     {
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->exit_barrier);
     }
-  /* TODO: After this, leader process (the one that created shm file should wait
+  /** @todo After this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
    */
 }

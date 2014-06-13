@@ -41,7 +41,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* TODO: We use standard errnos now but we need more specific, e.g. EALIGN */
+/** @todo We use standard errnos now but we need more specific, e.g. EALIGN */
 
 #define ES_OK 0
 
