@@ -2,6 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.64)dnl
 AC_INIT(Makefile.in)
 sinclude(../common/acinclude.m4)
+sinclude(config/ax_mpi.m4)
 
 SIM_AC_COMMON
 
@@ -32,13 +33,13 @@ AC_ARG_ENABLE(emesh-sim,
 [  --enable-emesh-sim			Enable simulation of eMesh],
 [
 case "x${enableval}" in
-  x)    esim="yes"; esim_cflags="${esim_enabled_cflags}";;
-  xyes) esim="yes"; esim_cflags="${esim_enabled_cflags}";;
-  xno)  esim=""   ; esim_cflags="${esim_disabled_cflags}";;
+  x)    esim="yes"; esim_cflags+=" ${esim_enabled_cflags}";;
+  xyes) esim="yes"; esim_cflags+=" ${esim_enabled_cflags}";;
+  xno)  esim=""   ; esim_cflags+=" ${esim_disabled_cflags}";;
   *)    AC_MSG_ERROR([--enable-emesh-sim does not take a value]); ;;
 esac
 ],
-[esim_cflags="${esim_disabled_cflags}"]
+[esim_cflags+=" ${esim_disabled_cflags}"]
 )
 
 if test x"${esim}" = x"yes"; then
@@ -55,6 +56,30 @@ with --enable-emesh-sim.]) ;;
   *) ;;
   esac
 fi
+
+
+esim_net_enabled_cflags="-DEMESH_NET=1 -DWITH_EMESH_NET=1"
+esim_net_disabled_cflags="-DEMESH_NET=0 -DWITH_EMESH_NET=0"
+AC_ARG_ENABLE(emesh-net,
+[  --enable-emesh-net			Enable eMesh sim network support],
+[
+case "x${enableval}" in
+  x)    esim_net="yes"; esim_cflags+=" ${esim_net_enabled_cflags}";;
+  xyes) esim_net="yes"; esim_cflags+=" ${esim_net_enabled_cflags}";;
+  xno)  esim_net=""   ; esim_cflags+=" ${esim_net_disabled_cflags}";;
+  *)    AC_MSG_ERROR([--enable-emesh-net does not take a value]); ;;
+esac
+],
+[esim_cflags+=" ${esim_net_disabled_cflags}"]
+)
+dnl Need MPI for esim-net
+if test x"${esim_net}" = x"yes"; then
+  AX_MPI(
+    [],
+    [AC_MSG_ERROR([MPI not found])]
+  )
+fi
+
 
 epihany_extra_libs=
 if test "x$esim" = "xyes"; then
