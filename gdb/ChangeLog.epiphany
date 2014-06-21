@@ -1,6 +1,18 @@
+2014-06-21  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-tdep.c (epiphany_is_instr32): Created.
+	(epiphany_is_branch): Created.
+	(epiphany_is_jump): Created.
+	(epiphany_is_uncond_branch): Created.
+	(epiphany_branch_offset): Created.
+	(epiphany_jump_register): Created.
+	(epiphany_ss_instr_type): Created.
+	(epiphany_software_single_step): Created.
+	(epiphany_gdbarch_init): Add software single step to arch.
+
 2014-02-20  Jeremy Bennett  <jeremy.bennett@embecosm.com>
 
-	* gdb/epiphany-tdep.c: Use new (larger) set of SCRs to match target.
+	* epiphany-tdep.c: Use new (larger) set of SCRs to match target.
 	(epiphany_register_name): Updated for new SCRs and check for valid
 	register number.
 
