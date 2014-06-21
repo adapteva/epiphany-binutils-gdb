@@ -88,38 +88,38 @@
 #define EPIPHANY_NUM_GPRS         64
 
 /* Offsets into SCRs (in GDB sequence) */
-#define EPIPHANY_SCR_CONFIG       0 /*!< Offset to config register */	       
-#define EPIPHANY_SCR_STATUS	  1 /*!< Offset to status register */	       
-#define EPIPHANY_SCR_PC		  2 /*!< Offset to program counter register */ 
-#define EPIPHANY_SCR_DEBUGSTATUS  3 /*!< Offset to debug register */	       
-#define EPIPHANY_SCR_LC		  4 /*!< Offset to loop count register */      
-#define EPIPHANY_SCR_LS		  5 /*!< Offset to loop start register */      
-#define EPIPHANY_SCR_LE		  6 /*!< Offset to loop end register */	       
+#define EPIPHANY_SCR_CONFIG       0 /*!< Offset to config register */
+#define EPIPHANY_SCR_STATUS	  1 /*!< Offset to status register */
+#define EPIPHANY_SCR_PC		  2 /*!< Offset to program counter register */
+#define EPIPHANY_SCR_DEBUGSTATUS  3 /*!< Offset to debug register */
+#define EPIPHANY_SCR_LC		  4 /*!< Offset to loop count register */
+#define EPIPHANY_SCR_LS		  5 /*!< Offset to loop start register */
+#define EPIPHANY_SCR_LE		  6 /*!< Offset to loop end register */
 #define EPIPHANY_SCR_IRET	  7 /*!< Offset to interrupt return register */
-#define EPIPHANY_SCR_IMASK	  8 /*!< Offset to interrupt mask register */  
-#define EPIPHANY_SCR_ILAT	  9 /*!< Offset to interrupt latch register */ 
-#define EPIPHANY_SCR_ILATST	 10 /*!< Offset to interrupt set register */   
-#define EPIPHANY_SCR_ILATCL	 11 /*!< Offset to interrupt clear register */ 
+#define EPIPHANY_SCR_IMASK	  8 /*!< Offset to interrupt mask register */
+#define EPIPHANY_SCR_ILAT	  9 /*!< Offset to interrupt latch register */
+#define EPIPHANY_SCR_ILATST	 10 /*!< Offset to interrupt set register */
+#define EPIPHANY_SCR_ILATCL	 11 /*!< Offset to interrupt clear register */
 #define EPIPHANY_SCR_IPEND	 12 /*!< Offset to interrupt status register */
-#define EPIPHANY_SCR_FSTATUS	 13					       
-#define EPIPHANY_SCR_DEBUGCMD	 14					       
-#define EPIPHANY_SCR_RESETCORE	 15 /*!< Offset to core timer 0 register */    
-#define EPIPHANY_SCR_CTIMER0	 16 /*!< Offset to core timer 1 register */    
+#define EPIPHANY_SCR_FSTATUS	 13
+#define EPIPHANY_SCR_DEBUGCMD	 14
+#define EPIPHANY_SCR_RESETCORE	 15 /*!< Offset to core timer 0 register */
+#define EPIPHANY_SCR_CTIMER0	 16 /*!< Offset to core timer 1 register */
 #define EPIPHANY_SCR_CTIMER1	 17
-#define EPIPHANY_SCR_MEMSTATUS	 18					       
-#define EPIPHANY_SCR_MEMPROTECT	 19					       
-#define EPIPHANY_SCR_DMA0CONFIG	 20					       
-#define EPIPHANY_SCR_DMA0STRIDE	 21					       
-#define EPIPHANY_SCR_DMA0COUNT	 22					       
-#define EPIPHANY_SCR_DMA0SRCADDR 23					       
-#define EPIPHANY_SCR_DMA0DSTADDR 24					       
-#define EPIPHANY_SCR_DMA0AUTO0	 25					       
-#define EPIPHANY_SCR_DMA0AUTO1	 26					       
-#define EPIPHANY_SCR_DMA0STATUS	 27					       
-#define EPIPHANY_SCR_DMA1CONFIG	 28					       
-#define EPIPHANY_SCR_DMA1STRIDE	 29					       
-#define EPIPHANY_SCR_DMA1COUNT	 30					       
-#define EPIPHANY_SCR_DMA1SRCADDR 31                                            
+#define EPIPHANY_SCR_MEMSTATUS	 18
+#define EPIPHANY_SCR_MEMPROTECT	 19
+#define EPIPHANY_SCR_DMA0CONFIG	 20
+#define EPIPHANY_SCR_DMA0STRIDE	 21
+#define EPIPHANY_SCR_DMA0COUNT	 22
+#define EPIPHANY_SCR_DMA0SRCADDR 23
+#define EPIPHANY_SCR_DMA0DSTADDR 24
+#define EPIPHANY_SCR_DMA0AUTO0	 25
+#define EPIPHANY_SCR_DMA0AUTO1	 26
+#define EPIPHANY_SCR_DMA0STATUS	 27
+#define EPIPHANY_SCR_DMA1CONFIG	 28
+#define EPIPHANY_SCR_DMA1STRIDE	 29
+#define EPIPHANY_SCR_DMA1COUNT	 30
+#define EPIPHANY_SCR_DMA1SRCADDR 31
 #define EPIPHANY_SCR_DMA1DSTADDR 32
 #define EPIPHANY_SCR_DMA1AUTO0   33
 #define EPIPHANY_SCR_DMA1AUTO1   34
@@ -237,6 +237,9 @@
 /*! Maximum instruction size */
 #define EPIPHANY_MAX_INST_SIZE  EPIPHANY_SIZE_WORD
 
+/*! Condition bits we care about in instructions */
+#define UNCOND_BITS 0xe;
+
 /*! Maximum number of cores */
 #define MAX_CORES  4096
 
@@ -245,7 +248,19 @@
 #define SUBMASK(x) ((1L << ((x) + 1)) - 1)
 #define BIT(obj,st) (((obj) >> (st)) & 1)
 #define BITS(obj,fn,st) (((obj) >> (st)) & SUBMASK ((fn) - (st)))
+#define SEXTEND8(v) (((v) ^ (long int) 0x80) - (long int) 0x80)
 #define SEXTEND16(v) (((v) ^ (long int) 0x8000) - (long int) 0x8000)
+#define SEXTEND24(v) (((v) ^ (long int) 0x800000) - (long int) 0x800000)
+
+/*! The type of instruction we might find when setting single step
+    breakpoints. */
+enum epiphany_ss_type {
+  UNCOND_BRANCH,
+  COND_BRANCH,
+  JUMP,
+  OTHER
+};
+
 
 /* External debug flags */
 extern unsigned int frame_debug;		/*!< frame debugging flag */
@@ -306,7 +321,7 @@ epiphany_debug_infrun (const char *fmt,
 
 /*----------------------------------------------------------------------------*/
 /*!Analyse the prologue
-  
+
    Populate a cache with information about where registers in the PREVIOUS
    frame may be found from THIS frame.
 
@@ -387,7 +402,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
   unsigned int     bpw                 = EPIPHANY_BYTES_PER_WORD;
 
   int        regnum;
-  CORE_ADDR  current_pc; 
+  CORE_ADDR  current_pc;
   CORE_ADDR  this_sp;
   int        framesize;
 
@@ -548,7 +563,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	       || ((insn & 0x1e001c7f) == 0x06000c5c))
 	{
 	  /* str rD,[sp],#+/-<imm>. ddd0011+iiiiiiiiddd101iii1011100
-	     str rD,[fp],#+/-<imm>. ddd0011+iiiiiiiiddd011iii1011100 
+	     str rD,[fp],#+/-<imm>. ddd0011+iiiiiiiiddd011iii1011100
 
 	     Displacement-postmodify. Potentially this trashes, the stack, in
 	     which case we stop here. */
@@ -620,7 +635,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
       for (regnum = 0; regnum < EPIPHANY_NUM_GPRS; regnum++)
 	{
 	  CORE_ADDR  offset;
-	  
+
 	  if (pv_area_find_reg (stack, gdbarch, regnum, &offset))
 	    {
 	      trad_frame_set_reg_addr (cache, regnum, offset);
@@ -754,6 +769,170 @@ epiphany_parm_size (int  len)
     * PARM_BOUNDARY_BYTES;
 
 }	/* epiphany_parm_size () */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Test if we have a 32-bit instruction in our hand.
+
+    @param[in] instr  The instruction to test
+    @return  Non-zero (TRUE) if this is a 32-bit instruction, zero (FALSE)
+             otherwise.                                                       */
+/*----------------------------------------------------------------------------*/
+static int
+epiphany_is_instr32 (uint32_t instr)
+{
+  return (BITS (instr, 3, 0) == 0xf)	/* Extended instr */
+    || (BITS (instr, 3, 0) == 0xd)	/* Load/store */
+    || (BITS (instr, 3, 0) == 0xc)	/* Load/store */
+    || (BITS (instr, 3, 0) == 0x9)	/* Load/store */
+    || (BITS (instr, 3, 0) == 0xb)	/* Immediate/register */
+    || (BITS (instr, 3, 0) == 0x8);	/* Branch */
+
+}	/* epiphany_is_instr32 () */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Test if we have a branch in our hand
+
+    @param[in] instr    The instruction to test
+    @param[in] is32bit  Non-zero (TRUE) if this is a 32-bit instruction, zero
+                        (FALSE) otherwise. Currently unused
+
+    @return  Non-zero (TRUE) if this is a branch instruction, zero (FALSE)
+             otherwise.                                                       */
+/*----------------------------------------------------------------------------*/
+static int
+epiphany_is_branch (uint32_t  instr,
+		    int       is32bit __attribute__ ((unused)) )
+{
+  return BITS (instr, 2, 0) == 0;
+
+}	/* epiphany_is_branch () */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Test if we have a jump in our hand
+
+    @param[in] instr     The instruction to test
+    @param[in] is32bit  Non-zero (TRUE) if this is a 32-bit instruction, zero
+                        (FALSE) otherwise.
+
+    @return TRUE if this is a 32-bit instruction, FALSE otherwise.            */
+/*----------------------------------------------------------------------------*/
+static int
+epiphany_is_jump (uint32_t instr,
+		  int       is32bit)
+{
+  if (is32bit)
+    {
+      return (BITS (instr, 19, 16) == 0x2)
+	&& (BITS (instr, 9, 5) == 0xa)
+	&& (BITS (instr, 3, 0) == 0xf);
+    }
+  else
+    {
+      return (BITS (instr, 9, 5) == 0xa)
+	&& (BITS (instr, 3, 0) == 0x2);
+    }
+}	/* epiphany_is_jump () */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Test if a branch is unconditional
+
+    @param[in] br_instr  The branch instruction to test. NOTE we do not check
+                         it really is a branch instruction.
+    @param[in] is32bit   Non-zero (TRUE) if this is a 32-bit instruction, zero
+                         (FALSE) otherwise. Currently unused
+
+    @return  Non-zero (TRUE) if this is an unconditional branch instruction,
+             zero (FALSE) otherwise.                                          */
+/*----------------------------------------------------------------------------*/
+static int
+epiphany_is_uncond_branch (uint32_t  br_instr,
+			   int       is32bit __attribute__ ((unused)) )
+{
+  return BITS (br_instr, 7, 4) == UNCOND_BITS;
+
+}	/* epiphany_is_uncond_branch () */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Get a branch offset in bytes
+
+    Remember the offset in the instruction is a half-word offset and must be
+    sign extended.
+
+    @param[in] br_instr  The branch instruction to extract the offset
+                         from. @note we do not check it really is a branch
+                         instruction.
+    @param[in] is32bit   Non-zero (TRUE) if this is a 32-bit instruction, zero
+                         (FALSE) otherwise.
+
+    @return  The byte offset                                                  */
+/*----------------------------------------------------------------------------*/
+static long int
+epiphany_branch_offset (uint32_t  br_instr,
+			int       is32bit)
+{
+  if (is32bit)
+    return SEXTEND24 (BITS (br_instr, 31, 8)) << 1;
+  else
+    return SEXTEND8 (BITS (br_instr, 15, 8)) << 1;
+
+}	/* epiphany_branch_offset () */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Get a jump destination register
+
+    For these instructions, the address is in a register, which we must
+    extract.
+
+    @param[in] jr_instr  The jump instruction to extract the offset
+                         from. NOTE we do not check it really is a jump
+                         instruction.
+    @param[in] is32bit   Non-zero (TRUE) if this is a 32-bit instruction, zero
+                         (FALSE) otherwise.
+
+    @return  The register number                                              */
+/*----------------------------------------------------------------------------*/
+static unsigned int
+epiphany_jump_register (uint32_t  jr_instr,
+			int       is32bit)
+{
+  if (is32bit)
+    return (BITS (jr_instr, 28, 26) << 3) | BITS (jr_instr, 12, 10);
+  else
+    return BITS (jr_instr, 12, 10);
+
+}	/* epiphany_jump_register () */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Determine the type of instruction at the PC for single stepping
+
+    @param[in] instr  The instruction to analyse
+    @param[in] is32bit   Non-zero (TRUE) if this is a 32-bit instruction, zero
+                        (FALSE) otherwise.
+
+    @return  The type of instruction we have                                  */
+/*----------------------------------------------------------------------------*/
+static enum epiphany_ss_type
+epiphany_ss_instr_type (uint32_t  instr,
+			int       is32bit)
+{
+  if (epiphany_is_branch (instr, is32bit))
+    {
+      int is_uncond = epiphany_is_uncond_branch (instr, is32bit);
+      return  is_uncond  ? UNCOND_BRANCH : COND_BRANCH;
+    }
+  else if (epiphany_is_jump (instr, is32bit))
+    return JUMP;
+  else
+    return OTHER;
+
+}	/* epiphany_ss_instr_type () */
 
 
 /*============================================================================*/
@@ -896,7 +1075,7 @@ epiphany_register_name (struct gdbarch *gdbarch,
   else
     internal_error (__FILE__, __LINE__,
 		    _("epiphany_register_name: illegal register number %d"),
-		    regnum); 
+		    regnum);
 
 }	/* epiphany_register_name() */
 
@@ -971,7 +1150,7 @@ epiphany_register_type (struct gdbarch *arch,
 /*----------------------------------------------------------------------------*/
 static struct frame_id
 epiphany_dummy_id (struct gdbarch    *gdbarch,
-		   struct frame_info *this_frame) 
+		   struct frame_info *this_frame)
 {
   CORE_ADDR this_sp = get_frame_sp (this_frame);
   CORE_ADDR this_pc = get_frame_pc (this_frame);
@@ -979,7 +1158,7 @@ epiphany_dummy_id (struct gdbarch    *gdbarch,
   epiphany_debug_infrun ("dummy_id called.\n");
   epiphany_debug_infrun ("  SP = %p.\n", (void *) this_sp);
   epiphany_debug_infrun ("  PC = %p.\n", (void *) this_pc);
-      
+
   return  frame_id_build (this_sp, this_pc);
 
 }	/* epiphany_dummy_id() */
@@ -1022,7 +1201,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 			  struct value   **args,
 			  CORE_ADDR        sp,
 			  int              struct_return,
-			  CORE_ADDR        struct_addr) 
+			  CORE_ADDR        struct_addr)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
@@ -1049,7 +1228,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
      argument. */
   if (struct_return)
     {
-      regcache_cooked_write_unsigned (regcache, EPIPHANY_FIRST_ARG_REGNUM, 
+      regcache_cooked_write_unsigned (regcache, EPIPHANY_FIRST_ARG_REGNUM,
 				      struct_addr);
       epiphany_debug_infrun ("dummy frame struct return\n");
       epiphany_debug_infrun ("  address 0x%p in r%d\n", struct_addr, argreg);
@@ -1195,7 +1374,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	  /* This is an impossible length (longer arguments are passed by
 	     reference, so by now len is just one word), so we have hit some
 	     sort of problem. */
-	  internal_error (__FILE__, __LINE__, 
+	  internal_error (__FILE__, __LINE__,
 			  _("epiphany_push_dummy_call bad reg arg length"));
 	  break;
 	}
@@ -1222,7 +1401,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	    {
 	      /* Pass on the stack in multiples of PARM_BOUNDARY_BYTES.
 		 Except that if we are a multiple of words in length, we must
-		 align by that length. For now we only deal with 2 x words.*/ 
+		 align by that length. For now we only deal with 2 x words.*/
 	      if (len == 2 * bpw)
 		{
 		  epiphany_debug_infrun ("  aligning aggregate stack arg %d\n",
@@ -1235,7 +1414,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 		{
 		  /* This should be an impossible length to get here. But for
 		     safety throw an error. */
-		  internal_error (__FILE__, __LINE__, 
+		  internal_error (__FILE__, __LINE__,
 				  _("epiphany_push_dummy_call bad aggregate length"));
 		}
 
@@ -1262,7 +1441,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	    {
 	      /* This should be an impossible length to get here. But for
 		 safety throw an error. */
-	      internal_error (__FILE__, __LINE__, 
+	      internal_error (__FILE__, __LINE__,
 			      _("epiphany_push_dummy_call bad scalar length"));
 	    }
 
@@ -1320,7 +1499,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	  /* Get the value of a scalar. */
 	  val = (char *) value_contents (arg);
 	  epiphany_debug_infrun ("  scalar passed by value\n");
-	}   
+	}
 
       /* If we have a length longer than bpw (2 or 4 * bpw should be the only
 	 one possible here), then align the stack offset to double word. */
@@ -1663,7 +1842,7 @@ epiphany_return_value (struct gdbarch  *gdbarch,
 
 	  r0 = extract_unsigned_integer (writebuf,       bpw, byte_order);
 	  r1 = extract_unsigned_integer (writebuf + bpw, bpw, byte_order);
- 
+
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM,     r0);
 	  regcache_cooked_write_unsigned (regcache, EPIPHANY_RV_REGNUM + 1, r1);
 
@@ -1713,7 +1892,7 @@ epiphany_return_value (struct gdbarch  *gdbarch,
     {
       /* We really shouldn't get here. This is a safety catch for a bad
 	 size. */
-      internal_error (__FILE__, __LINE__, 
+      internal_error (__FILE__, __LINE__,
 		      _("epiphany_return_value bad size"));
     }
 
@@ -1746,7 +1925,7 @@ epiphany_skip_prologue (struct gdbarch *gdbarch,
 			CORE_ADDR       pc)
 {
   CORE_ADDR  func_start, func_end;
-  
+
   if (find_pc_partial_function (pc, NULL, &func_start, &func_end))
     {
       /* Can we find the prologue end using SAL? */
@@ -1802,7 +1981,7 @@ epiphany_breakpoint_from_pc (struct gdbarch *gdbarch,
 
     @param[in] gdbarch     The GDB architecture being used
     @param[in] next_frame  Frame info for THIS frame
- 
+
     @return  The program counter for THE PREVIOUS frame                       */
 /*----------------------------------------------------------------------------*/
 static CORE_ADDR
@@ -1821,7 +2000,7 @@ epiphany_unwind_pc (struct gdbarch    *gdbarch,
 
     @param[in] gdbarch     The GDB architecture being used
     @param[in] next_frame  Frame info for THIS frame
- 
+
     @return  The stack pointer for the PREVIOUS frame                         */
 /*----------------------------------------------------------------------------*/
 static CORE_ADDR
@@ -1853,6 +2032,81 @@ epiphany_frame_align (struct gdbarch *gdbarch,
   return align_down (sp, EPIPHANY_STACK_ALIGN);
 
 }	/* epiphany_frame_align() */
+
+
+/*----------------------------------------------------------------------------*/
+/*! Set up single step breakpoints
+
+    Epiphany does not have a hardware single step, so we can ask GDB to do it
+    for us using software breakpoints.
+
+    For unconditional branches of all sorts we put a temporary breakpoint on
+    the branch destination. This may mean getting the value in a register if
+    it is an indirect jump.
+
+    For conditional branches of all sorts we put a temporary breakpoint on the
+    branch destination and one on the next instruction.
+
+    For all other instructions, we put a temporary breakpoint on the next
+    instruction, and on the branch destination if we have a branch
+    instruction.
+
+    We don't have to do anything special about single step and the interrupt
+    vector. These are unconditional branches, so the next instruction will be
+    elsewhere in memory.
+
+    @param[in] frame  The frame for which we want to insert single step
+                      breakpoint(s).
+
+    @return  Non-zero (TRUE) if we successfully insert single step
+             breakpoints, zero (FALSE) otherwise.                            */
+/*----------------------------------------------------------------------------*/
+static int
+epiphany_software_single_step (struct frame_info *frame)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian  byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
+  struct address_space *aspace = get_frame_address_space (frame);
+  CORE_ADDR pc, next_pc, branch_dest;
+  int branch_reg;
+  uint32_t instr;
+  int is32bit;
+
+  pc = get_frame_pc (frame);
+  instr = read_memory_unsigned_integer (pc, 4, byte_order_for_code);
+  is32bit = epiphany_is_instr32 (instr);
+
+  next_pc = is32bit ? pc + 4 : pc + 2;
+
+  switch (epiphany_ss_instr_type (instr, is32bit))
+    {
+    case UNCOND_BRANCH:
+      branch_dest = pc + epiphany_branch_offset (instr, is32bit);
+      insert_single_step_breakpoint (gdbarch, aspace, branch_dest);
+      return  1;
+
+    case COND_BRANCH:
+      branch_dest = pc + epiphany_branch_offset (instr, is32bit);
+      insert_single_step_breakpoint (gdbarch, aspace, next_pc);
+      insert_single_step_breakpoint (gdbarch, aspace, branch_dest);
+      return  1;
+
+    case JUMP:
+      branch_reg = epiphany_jump_register (instr, is32bit);
+      branch_dest = get_frame_register_unsigned (frame, branch_reg);
+      insert_single_step_breakpoint (gdbarch, aspace, branch_dest);
+      return  1;
+
+    case OTHER:
+      insert_single_step_breakpoint (gdbarch, aspace, next_pc);
+      return  1;
+
+    default:
+      /* We should never get here. */
+      gdb_assert (1);
+    }
+}	/* epiphany_software_single_step () */
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -2068,10 +2322,10 @@ epiphany_in_function_epilogue_p (struct gdbarch *gdbarch,
 
 	     @todo Should we consider the case where rM is FP or SP?
 
-	     ldr sp,[fp],+/-rM.     001001mmm000000+101011mmm1001101 
-	     ldr rD,[sp],+/-rM.     ddd001mmm000000+ddd101mmm1001101 
-	     ldr fp,[sp],+/-rM.     001001mmm000000+011101mmm1001101 
-	     ldr rD,[fp],+/-rM.     ddd001mmm000000+ddd011mmm1001101 
+	     ldr sp,[fp],+/-rM.     001001mmm000000+101011mmm1001101
+	     ldr rD,[sp],+/-rM.     ddd001mmm000000+ddd101mmm1001101
+	     ldr fp,[sp],+/-rM.     001001mmm000000+011101mmm1001101
+	     ldr rD,[fp],+/-rM.     ddd001mmm000000+ddd011mmm1001101
 
 	     Postmodified load which affects SP/FP.
 
@@ -2158,7 +2412,7 @@ epiphany_in_function_epilogue_p (struct gdbarch *gdbarch,
     register group.
 
     These are the groups of registers that can be displayed via "info reg".
- 
+
     @param[in] gdbarch  The GDB architecture to consider
     @param[in] regnum   The register to consider
     @param[in] group    The group to consider
@@ -2242,7 +2496,7 @@ epiphany_register_reggroup_p (struct gdbarch  *gdbarch,
    very start of the function, which is actually the value of the SP in the
    previous function. We can find the value in this function by subtracting
    the frame size from the current stack pointer (at the end of the prologue).
-    
+
    STACK FRAME FORMAT
    ==================
 
@@ -2250,7 +2504,7 @@ epiphany_register_reggroup_p (struct gdbarch  *gdbarch,
    points to the end of the old stack frame, but the last 4 words of that
    frame are pre-allocated for use by the new function. There are no fixed
    uses of these 4 words.
-   
+
    Epiphany always maintains a stack pointer, pointing to the end of
    stack. An frame pointer may be present. It points to the local variables
    (the SP points to local variables *and* outgoing arguments. The FP is
@@ -2583,7 +2837,7 @@ epiphany_gdbarch_init (struct gdbarch_info  info,
   set_gdbarch_frame_red_zone_size    (gdbarch, EPIPHANY_FRAME_RED_ZONE_SIZE);
   /* No need for convert_from_func_ptr_addr - they are the same thing. */
   /* No need for addr_bits_remove or smash_text_address. All bits are used. */
-  /* No need for software_single_step, since we have hardware support. */
+  set_gdbarch_software_single_step   (gdbarch, epiphany_software_single_step);
   /* No need for single_step_through_delay with no delayed branches. */
   set_gdbarch_print_insn             (gdbarch, print_insn_epiphany);
   set_gdbarch_skip_trampoline_code   (gdbarch, epiphany_skip_trampoline_code);
@@ -2744,7 +2998,7 @@ extern initialize_file_ftype _initialize_epiphany_tdep; /*-Wmissing-prototypes*/
     target.                                                                   */
 /*----------------------------------------------------------------------------*/
 void
-_initialize_epiphany_tdep (void) 
+_initialize_epiphany_tdep (void)
 {
   /* Register this architecture. Uses the BFD defined for this architecture. */
   gdbarch_register (bfd_arch_epiphany, epiphany_gdbarch_init,
