@@ -57,10 +57,10 @@ typedef struct es_cluster_cfg_ {
     unsigned ext_ram_node;            /*!< Let this be rank '0' for now    */
     uint32_t ext_ram_base;            /*!< core_mem_region must be divisor */
     size_t   ext_ram_size;            /*!< Size of external memory         */
-    unsigned nodes;                   /*!< Number of simulation nodes      */
 
     /* Keep your grubby little mitts off of these plz :) */
     unsigned cores;                   /*!< Total number of cores           */
+    unsigned nodes;                   /*!< Number of simulation nodes      */
     unsigned cores_per_node;          /*!< Cores per node                  */
     unsigned rows_per_node;           /*!< Rows per node                   */
     unsigned cols_per_node;           /*!< Columns per node                */

@@ -829,7 +829,6 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   FAIL_IF(!c->cols,         "Cols cannot be zero");
   FAIL_IF((cores != 1) && cores & 1,
 			    "Number of cores must be even (or exactly 1)");
-  FAIL_IF(cores % c->nodes, "Number of cores is not a multiple of nodes");
 
   FAIL_IF(c->col_base & 1,  "Col base must be even");
   FAIL_IF(c->row_base+c->rows > 64,
@@ -847,18 +846,10 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   FAIL_IF(c->core_mem_region & (c->core_mem_region-1),
 			    "Core memory region size must be power of two");
 
-  /** @todo Revisit when we add net support */
-  FAIL_IF(c->nodes != 1,    "We currently only support one node.");
-
-
   FAIL_IF(c->ext_ram_size > ((size_t) (1UL<<32)),
 			    "External RAM size too large");
   FAIL_IF(c->ext_ram_size + ((size_t) c->ext_ram_base) > ((size_t) (1UL<<32)),
 			    "External RAM would overflow address space");
-
-  /* Ignore ext ram node if we don't have external ram */
-  FAIL_IF(c->ext_ram_size && c->ext_ram_node >= c->nodes,
-			    "Specified external ram node does not exist");
 
   FAIL_IF(c->ext_ram_size && (c->ext_ram_size & (c->core_mem_region-1)),
 			    "External ram size must be multiple of core mem"
@@ -918,6 +909,12 @@ static void
 es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
 			       es_cluster_cfg *c)
 {
+#if (!WITH_EMESH_NET) && !defined (ESIM_TEST)
+  /* Without networking there can be only one node */
+  c->nodes = 1;
+  c->ext_ram_node = 0;
+#endif
+
   /* Cluster settings */
   c->cores = c->rows * c->cols;
   c->cores_per_node = c->cores / c->nodes;
