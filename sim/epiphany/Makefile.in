@@ -83,7 +83,7 @@ esim/stamp-esim:
 
 
 # ESIM tests
-ESIM_TEST_SRCS =
+ESIM_TEST_SRCS = esim/test/calculate_node_dims.c
 ESIM_TEST_OBJS = $(ESIM_TEST_SRCS:.c=.o)
 ESIM_TEST_BINS = $(ESIM_TEST_SRCS:.c=)
 
