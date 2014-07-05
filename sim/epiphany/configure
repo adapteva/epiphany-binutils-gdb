@@ -602,6 +602,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 cgen_breaks
 epiphany_extra_libs
+esim_net
 esim
 MPILIBS
 MPICC
@@ -12382,7 +12383,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 12385 "configure"
+#line 12386 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -12488,7 +12489,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 12491 "configure"
+#line 12492 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -14062,6 +14063,7 @@ if test x"$silent" != x"yes"; then
   echo "Setting emesh extra libs = ${epiphany_extra_libs}" 6>&1
 fi
 fi
+
 
 
 sim_cflags="${sim_cflags} ${esim_cflags}"

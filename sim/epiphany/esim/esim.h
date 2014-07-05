@@ -58,19 +58,28 @@ typedef struct es_cluster_cfg_ {
     uint32_t ext_ram_base;            /*!< core_mem_region must be divisor */
     size_t   ext_ram_size;            /*!< Size of external memory         */
 
+    /*! @privatesection */
     /* Keep your grubby little mitts off of these plz :) */
+    /* Filled in by es_fill_in_internal_cfg_values() */
     unsigned cores;                   /*!< Total number of cores           */
-    unsigned nodes;                   /*!< Number of simulation nodes      */
-    unsigned cores_per_node;          /*!< Cores per node                  */
+    unsigned nodes;                   /*!< Number of simulation nodes.
+                                        Computed by es_net_init if networking
+                                        is enabled */
+    unsigned cores_per_node;          /*!< Cores per node
+                                        Computed by es_net_init if networking
+                                        is enabled */
     unsigned rows_per_node;           /*!< Rows per node                   */
     unsigned cols_per_node;           /*!< Columns per node                */
 } es_cluster_cfg;
 
-/*! ESIM node configuration */
+/*! ESIM node configuration
+ * @todo: This struct doesn't need to be exposed to users.
+ */
 typedef struct es_node_cfg_ {
+    /*! @privatesection */
+    /* Keep your grubby little mitts off of these plz :) */
     unsigned rank; /*!< == lowest mpi rank on node / nodes */
 
-    /* Keep your grubby little mitts off of these plz :) */
     unsigned row_base; /*!< Upper leftmost row in this node */
     unsigned col_base; /*!< Upper leftmost col in this node */
 } es_node_cfg;

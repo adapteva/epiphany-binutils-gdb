@@ -23,10 +23,12 @@ EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o \
 
 SIM_EXTRA_LIBS = -lm @epiphany_extra_libs@
 
+ESIM_OBJS =
 ifeq (@esim@, yes)
-	ESIM_OBJS = esim/esim.o
-else
-	ESIM_OBJS =
+	ESIM_OBJS += esim/esim.o
+endif
+ifeq (@esim_net@, yes)
+	ESIM_OBJS += esim/esim-net.o
 endif
 
 SIM_OBJS = \

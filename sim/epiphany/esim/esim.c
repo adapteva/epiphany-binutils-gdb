@@ -40,17 +40,16 @@
 
 /*@todo rename es_tx_one_* to something better */
 
-#if 0
-/** @todo define in config.h */
-/* #define HAVE_MPI2 */
-#define HAVE_MPI2_ACC_REPLACE
-#endif
 
 /* Need these for correct cpu struct */
 #define WANT_CPU epiphanybf
 #define WANT_CPU_EPIPHANYBF
 
 #include "esim.h"
+#if WITH_EMESH_NET
+#include "esim-net.h"
+#endif
+
 #include "sim-main.h"
 #include "mem-barrier.h"
 
@@ -660,6 +659,9 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "External ram base must be aligned to core mem"
 			    " region size.");
 
+  /** @todo Require external RAM to be on node 0 for now */
+  FAIL_IF(c->ext_ram_node != 0,
+			    "External RAM must reside on node 0");
 
   /* WARN: This only works with 1M core mem region size */
   if (c->ext_ram_size)
@@ -706,62 +708,69 @@ es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
  * @param[in,out] cluster  Cluster configuration
  */
 static void
-es_fill_in_internal_cfg_values(es_state *esim, es_node_cfg *n,
-			       es_cluster_cfg *c)
+es_fill_in_internal_cfg_values(es_state *esim)
 {
   unsigned cols_per_node, rows_per_node;
   float ratio, best_ratio;
 
 #if (!WITH_EMESH_NET) && !defined (ESIM_TEST)
   /* Without networking there can be only one node */
-  c->nodes = 1;
-  c->ext_ram_node = 0;
+  ES_CLUSTER_CFG.nodes = 1;
+  ES_CLUSTER_CFG.ext_ram_node = 0;
 #endif
 
   /* Cluster settings */
-  c->cores = c->rows * c->cols;
-  c->cores_per_node = c->cores / c->nodes;
+  ES_CLUSTER_CFG.cores = ES_CLUSTER_CFG.rows * ES_CLUSTER_CFG.cols;
+  ES_CLUSTER_CFG.cores_per_node = ES_CLUSTER_CFG.cores / ES_CLUSTER_CFG.nodes;
 
   /* Calculate number of columns and rows per node.
    * Optimize for most square-like configuration.
    */
-  if (c->nodes == 1)
+  if (ES_CLUSTER_CFG.nodes == 1)
     {
       /* Trivial case */
-      c->rows_per_node = c->rows;
-      c->cols_per_node = c->cols;
+      ES_CLUSTER_CFG.rows_per_node = ES_CLUSTER_CFG.rows;
+      ES_CLUSTER_CFG.cols_per_node = ES_CLUSTER_CFG.cols;
     }
   else
     {
-      best_ratio = ((float) (c->cols+1));
-      cols_per_node = min(c->cols, c->cores_per_node);
+      best_ratio = ((float) (ES_CLUSTER_CFG.cols+1));
+      cols_per_node = min(ES_CLUSTER_CFG.cols, ES_CLUSTER_CFG.cores_per_node);
       for (; cols_per_node >= 1; cols_per_node--)
 	{
-	  rows_per_node = c->cores_per_node / cols_per_node;
+	  rows_per_node = ES_CLUSTER_CFG.cores_per_node / cols_per_node;
 	  ratio = ( max ( ((float)cols_per_node), ((float)rows_per_node) ) ) /
 		  ( min ( ((float)cols_per_node), ((float)rows_per_node) ) );
 
 	  if (ratio >= best_ratio)
 	    break;
-	  if (c->cols % cols_per_node)
+	  if (ES_CLUSTER_CFG.cols % cols_per_node)
 	    continue;
-	  if (c->rows % rows_per_node)
+	  if (ES_CLUSTER_CFG.rows % rows_per_node)
 	    continue;
-	  if (c->cores_per_node % cols_per_node)
+	  if (ES_CLUSTER_CFG.cores_per_node % cols_per_node)
 	    continue;
-	  if ((rows_per_node * c->nodes * cols_per_node) / c->cols != c->rows)
+	  if ((rows_per_node * ES_CLUSTER_CFG.nodes * cols_per_node) /
+	      ES_CLUSTER_CFG.cols != ES_CLUSTER_CFG.rows)
 	    continue;
 
 	  /* Found better candidate */
 	  best_ratio = ratio;
-	  c->cols_per_node = cols_per_node;
-	  c->rows_per_node = rows_per_node;
+	  ES_CLUSTER_CFG.cols_per_node = cols_per_node;
+	  ES_CLUSTER_CFG.rows_per_node = rows_per_node;
 	}
     }
 
   /* Node settings */
-  n->row_base = c->row_base + (c->cores_per_node * n->rank) / c->cols;
-  n->col_base = c->col_base + (c->cols_per_node  * n->rank) % c->cols;
+#if WITH_EMESH_NET
+  ES_NODE_CFG.rank = esim->net.rank / ES_CLUSTER_CFG.cores_per_node;
+#else
+  ES_NODE_CFG.rank = 0;
+#endif
+  ES_NODE_CFG.row_base = ES_CLUSTER_CFG.row_base +
+    (ES_CLUSTER_CFG.cores_per_node * ES_NODE_CFG.rank) / ES_CLUSTER_CFG.cols;
+  ES_NODE_CFG.col_base = ES_CLUSTER_CFG.col_base +
+    (ES_CLUSTER_CFG.cols_per_node  * ES_NODE_CFG.rank) % ES_CLUSTER_CFG.cols;
 }
 
 /*! Open ESIM shared memory file
@@ -831,17 +840,18 @@ es_open_shm_file(es_state *esim, char *name, struct flock *flock)
 static int
 es_truncate_shm_file(es_state *esim, es_node_cfg *n, es_cluster_cfg *c)
 {
-  size_t size;
-  /* MMAP size */
-  size = ES_SHM_CONFIG_SIZE +
-   (c->rows_per_node*c->cols_per_node) *
-   (c->core_mem_region+ES_SHM_CORE_STATE_SIZE);
+  size_t size, per_core, cores;
 
-  /* Should we also allocate space for external ram? */
-  if (c->ext_ram_node == n->rank)
-    {
-      size += c->ext_ram_size;
-    }
+  /* Calculate MMAP file size. */
+#if WITH_EMESH_NET
+  /* This function is called before es_net_init(), so we don't know how many
+   * nodes there are in the cluster. Assume worst case (1 node) and allocate
+   * memory for all cores + external RAM.
+   */
+#endif
+  cores = c->rows * c->cols;
+  per_core = c->core_mem_region + ES_SHM_CORE_STATE_SIZE;
+  size = ES_SHM_CONFIG_SIZE + (cores * per_core) + c->ext_ram_size;
 
   if (ftruncate(esim->fd, size) == -1)
     {
@@ -962,8 +972,6 @@ es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
 	  goto err_out;
 	}
 
-      es_fill_in_internal_cfg_values(esim, &node, &cluster);
-
       if ((error = es_truncate_shm_file(esim, &node, &cluster)) != ES_OK)
 	{
 	  fprintf(stderr, "ESIM: Could not truncate  esim file `/dev/shm%s'\n",
@@ -1010,13 +1018,46 @@ es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
       memcpy((void *) &ES_NODE_CFG, (void *) &node,
 	     sizeof(es_node_cfg));
 
-      /* Initialize pthread barriers */
+      /* Signal waiting processes that shared memory is ready */
+      shm->shm_initialized = 1;
+    }
+  else /* if (!creator) */
+    {
+      /* Busy wait for creating process */
+      msecs_wait = 0;
+      while (!shm->shm_initialized && msecs_wait <= 3000)
+	{
+	  usleep(5000);
+	  msecs_wait += 5;
+	}
+      if (!shm->shm_initialized)
+	{
+	  fprintf(stderr, "ESIM: Timed out waiting on shared memory.\n");
+	  error = -ETIME;
+	  goto err_out;
+	}
+    }
+
+#if WITH_EMESH_NET
+  /* We use a shared counter to calculate how many sim processes there are on
+     every node. Therefore we cannot do this before we have SHM. */
+  if ((error = es_net_init(esim)) != ES_OK)
+    goto err_out;
+#endif
+
+  if (esim->creator)
+    {
+      es_fill_in_internal_cfg_values(esim);
+
+      /** @todo Determine what to do with this edge-case and WITH_EMESH_NET. */
       have_core_0 = (!ES_NODE_CFG.col_base && !ES_NODE_CFG.row_base);
+
       /* Coreid 0 is invalid so we should not wait for it */
       sim_processes = have_core_0 ?
 	ES_CLUSTER_CFG.cores_per_node-1 :
 	ES_CLUSTER_CFG.cores_per_node;
 
+      /* Initialize pthread barriers */
       pthread_barrierattr_init(&attr);
       pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
       pthread_barrier_init(
@@ -1027,33 +1068,39 @@ es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
 	  sim_processes);
       pthread_barrierattr_destroy(&attr);
 
-      /* Signal waiting processes creating (this) process is done */
-      shm->initialized = 1;
+      /* Signal waiting processes that (shared) configuration is ready */
+      shm->cfg_initialized = 1;
     }
   else /* if (!creator) */
     {
       /* Busy wait for creating process */
-      while (!shm->initialized && msecs_wait <= 3000)
+      msecs_wait = 0;
+      while (!shm->cfg_initialized && msecs_wait <= 3000)
 	{
 	  usleep(5000);
 	  msecs_wait += 5;
 	}
-      if (!shm->initialized)
+      if (!shm->cfg_initialized)
 	{
-	  fprintf(stderr, "ESIM: Timed out waiting.\n");
+	  fprintf(stderr, "ESIM: Timed out waiting on config.\n");
 	  error = -ETIME;
 	  goto err_out;
 	}
-
     }
 
   /* If external RAM is on this node, set up pointer */
   if (ES_CLUSTER_CFG.ext_ram_node == ES_NODE_CFG.rank)
     {
       esim->ext_ram = ((uint8_t *) shm) + ES_SHM_CONFIG_SIZE +
-	ES_CLUSTER_CFG.cores_per_node *
+	ES_CLUSTER_CFG.cores *
 	  (ES_CLUSTER_CFG.core_mem_region + ES_SHM_CORE_STATE_SIZE);
     }
+
+#if WITH_EMESH_NET
+  /* Calculate coreid from MPI rank */
+  if ((error = es_net_set_coreid_from_rank(esim)) != ES_OK)
+    goto err_out;
+#endif
 
 #ifdef ES_DEBUG
   fprintf(stderr,
@@ -1062,6 +1109,7 @@ es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
 	  esim->coreid, esim->shm_name);
 #endif
 
+ok_out:
   esim->initialized = 1;
   *handle = esim;
   return ES_OK;
@@ -1158,6 +1206,9 @@ es_wait_exit(es_state *esim)
   /** @todo After this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
    */
+#if WITH_EMESH_NET
+  es_net_wait_exit(esim);
+#endif
 }
 
 /*! Check whether a given core-id is valid for current configuration

@@ -106,6 +106,7 @@ fi
 fi
 
 AC_SUBST(esim)
+AC_SUBST(esim_net)
 AC_SUBST(sim_cflags, ["${sim_cflags} ${esim_cflags}"])
 AC_SUBST(epiphany_extra_libs, [${epiphany_extra_libs}])
 dnl end --enable-emesh-sim
