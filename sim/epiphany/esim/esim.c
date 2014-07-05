@@ -1234,6 +1234,9 @@ es_valid_coreid(const es_state *esim, unsigned coreid)
 
 /*! Set coreid for this sim process
  *
+ * Set coreid for this sim process
+ * This can be done at most once.
+ *
  * @param[in,out] esim     ESIM handle
  * @param[in]     coreid   Coreid
  *
@@ -1242,36 +1245,30 @@ es_valid_coreid(const es_state *esim, unsigned coreid)
 int
 es_set_coreid(es_state *esim, unsigned coreid)
 {
-  volatile uint8_t *new_cpu_state;
-  es_shm_core_state_header *new_hdr, *old_hdr;
+  es_shm_core_state_header *header;
+  int rc;
 
+  /* Verify that coreid was not already set */
+  if (esim->coreid != 0)
+    return -EINVAL;
 
   if (es_valid_coreid(esim, coreid) != ES_OK)
     return -EINVAL;
 
-  if (coreid == esim->coreid)
-    return ES_OK;
+  header = (es_shm_core_state_header *) es_shm_core_base(esim, coreid);
 
-  new_hdr = (es_shm_core_state_header *) es_shm_core_base(esim, coreid);
-
-  if (!new_hdr)
+  if (!header)
     return -EINVAL;
 
-  if (es_cas32(&new_hdr->reserved, 0, 1))
-    return -EINVAL;
-
-  new_cpu_state = es_shm_core_base(esim, coreid) +
-   ES_SHM_CORE_STATE_HEADER_SIZE;
-
-  old_hdr = (es_shm_core_state_header *) es_shm_core_base(esim, esim->coreid);
-  if (old_hdr)
-    old_hdr->reserved = 0;
+  if (es_cas32(&header->reserved, 0, 1))
+    return -EADDRINUSE;
 
   esim->coreid = coreid;
 
-  esim->this_core_state_header = (es_shm_core_state_header *) new_hdr;
-  esim->this_core_cpu_state = new_cpu_state;
-  esim->this_core_mem = (uint8_t *) new_hdr + ES_SHM_CORE_STATE_SIZE;
+  esim->this_core_state_header = (es_shm_core_state_header *) header;
+  esim->this_core_cpu_state = es_shm_core_base(esim, coreid) +
+			      ES_SHM_CORE_STATE_HEADER_SIZE;
+  esim->this_core_mem = (uint8_t *) header + ES_SHM_CORE_STATE_SIZE;
 
   return ES_OK;
 }
