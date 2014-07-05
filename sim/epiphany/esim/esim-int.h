@@ -126,6 +126,9 @@ typedef struct es_state_ {
         *this_core_state_header;           /*!< Ptr to core state header     */
     volatile uint8_t *this_core_cpu_state; /*!< GDB sim_cpu struct           */
     volatile uint8_t *ext_ram;             /*!< Ptr to external RAM          */
+#if WITH_EMESH_NET
+    es_net_state net;
+#endif
 } es_state;
 
 

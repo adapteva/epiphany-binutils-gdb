@@ -113,9 +113,13 @@ static const OPTION options_epiphany[] =
       '\0', "FILE", "Epiphany XML hardware description file",
       epiphany_option_handler },
 #endif
+#if WITH_EMESH_NET
+  /* coreid is determined from MPI rank */
+#else
   { {"e-coreid", required_argument, NULL, E_OPTION_COREID},
       '\0', "COREID", "Set coreid",
       epiphany_option_handler  },
+#endif
   { {"e-cols", required_argument, NULL, E_OPTION_NUM_COLS},
       '\0', "n", "Number of core columns",
       epiphany_option_handler  },
@@ -246,9 +250,6 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
       return SIM_RC_FAIL;
     }
 
-  if (es_get_coreid(STATE_ESIM(sd)) == new_coreid)
-    return SIM_RC_OK;
-
   if (es_set_coreid(STATE_ESIM(sd), new_coreid) != ES_OK)
     {
       sim_io_eprintf (sd, "Could not set coreid to `0x%x'. Perhaps it was "
@@ -290,12 +291,16 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
       return SIM_RC_FAIL;\
     }
 
+#if WITH_EMESH_NET
+  /* Coreid is determined by MPI RANK */
+#else
   /* If there is only one core, we know first coreid */
   if (emesh_params.coreid < 0 &&
       emesh_params.num_rows == 1 && emesh_params.num_cols == 1)
     emesh_params.coreid = emesh_params.first_coreid;
 
   FAIL_IF(0 > emesh_params.coreid      , "--e-coreid not set");
+#endif
 
   /* Either use hardware definition file or other params */
   if (emesh_params.xml_hdf_file != NULL)
@@ -440,13 +445,18 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
   cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
 
-  if (es_init(&STATE_ESIM(sd), node, cluster))
+  if (es_init(&STATE_ESIM(sd), node, cluster) != ES_OK)
     {
       return SIM_RC_FAIL;
     }
 
+#if WITH_EMESH_NET
+  /* coreid is determined from MPI rank */
+  p->coreid = es_get_coreid(STATE_ESIM(sd));
+#endif
+
   if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes (),
-			     emesh_params.coreid) != SIM_RC_OK)
+			     p->coreid) != SIM_RC_OK)
     {
       return SIM_RC_FAIL;
     }
@@ -642,11 +652,11 @@ sim_close (sd, quitting)
   epiphany_cgen_cpu_close (CPU_CPU_DESC (STATE_CPU (sd, 0)));
 #if WITH_EMESH_SIM
   if (es_initialized(STATE_ESIM(sd)) == ES_OK)
-      {
-	sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
-	es_wait_exit(STATE_ESIM(sd));
-	sim_io_eprintf(sd, " done.\n");
-      }
+    {
+      sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
+      es_wait_exit(STATE_ESIM(sd));
+      sim_io_eprintf(sd, " done.\n");
+    }
 #endif
   sim_module_uninstall (sd);
   free_state(sd);
