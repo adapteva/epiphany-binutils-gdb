@@ -682,23 +682,6 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   return ES_OK;
 }
 
-/*! Validate node and cluster configuration
- *
- * @param[in] esim     ESIM handle
- * @param[in] node     Node configuration
- * @param[in] cluster  Cluster configuration
- *
- * @return ES_OK on success
- */
-static int
-es_validate_config(es_state *esim, es_node_cfg *node, es_cluster_cfg *cluster)
-{
-  /** @todo Revisit when we have network/MPI support.
-   * We might have to also validate node config 
-   */
-  return es_validate_cluster_cfg(cluster);
-}
-
 /*! Calculate and fill in internal configuration values not specified by user.
  *
  * @warning This must be called *after* es_validate_config
@@ -915,7 +898,6 @@ es_state_reset(es_state *esim)
 /*! Initialize esim
  *
  * @param[in,out] esim     pointer to ESIM handle
- * @param[in]     node     Node configuration
  * @param[in]     cluster  Cluster configuration
  *
  * @return On success returns ES_OK and sets handle to allocated
@@ -923,7 +905,7 @@ es_state_reset(es_state *esim)
  *         handle to NULL.
  */
 int
-es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
+es_init(es_state **handle, es_cluster_cfg cluster)
 {
   /** @todo Revisit once we have MPI support
    * Cluster cfg should be set in leader (rank0) and then passed to all other
@@ -931,6 +913,7 @@ es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
    */
   int error;
   char shm_name[256];
+  es_node_cfg node;
   es_state *esim;
   volatile es_shm_header *shm;
   unsigned msecs_wait;
@@ -967,7 +950,7 @@ es_init(es_state **handle, es_node_cfg node, es_cluster_cfg cluster)
   /* If this process created the file, set its size */
   if (esim->creator)
     {
-      if ((error = es_validate_config(esim, &node, &cluster)) != ES_OK)
+      if ((error = es_validate_cluster_cfg(&cluster)) != ES_OK)
 	{
 	  goto err_out;
 	}

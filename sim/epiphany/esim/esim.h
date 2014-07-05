@@ -72,23 +72,11 @@ typedef struct es_cluster_cfg_ {
     unsigned cols_per_node;           /*!< Columns per node                */
 } es_cluster_cfg;
 
-/*! ESIM node configuration
- * @todo: This struct doesn't need to be exposed to users.
- */
-typedef struct es_node_cfg_ {
-    /*! @privatesection */
-    /* Keep your grubby little mitts off of these plz :) */
-    unsigned rank; /*!< == lowest mpi rank on node / nodes */
-
-    unsigned row_base; /*!< Upper leftmost row in this node */
-    unsigned col_base; /*!< Upper leftmost col in this node */
-} es_node_cfg;
-
 typedef struct es_state_ es_state;
 
 /* API functions */
 
-int es_init(es_state **esim, es_node_cfg node, es_cluster_cfg cluster);
+int es_init(es_state **esim, es_cluster_cfg cluster);
 void es_cleanup(es_state *esim);
 
 int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);

@@ -89,6 +89,16 @@ ES_ATOMIC_INCR_DEF(64)
 
 typedef struct _sim_cpu sim_cpu;
 
+/*! ESIM node configuration */
+typedef struct es_node_cfg_ {
+    /*! @privatesection */
+    /* Keep your grubby little mitts off of these plz :) */
+    unsigned rank; /*!< == lowest mpi rank on node / nodes */
+
+    unsigned row_base; /*!< Upper leftmost row in this node */
+    unsigned col_base; /*!< Upper leftmost col in this node */
+} es_node_cfg;
+
 /*! ESIM configuration header in shared memory */
 typedef struct es_shm_header_ {
     unsigned          shm_initialized;     /*!< True when shm is initialized */

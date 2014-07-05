@@ -69,7 +69,7 @@ typedef enum {
   E_OPTION_EXT_RAM_BASE,
   E_OPTION_EXT_RAM_SIZE,
   /** @todo Add more options:
-   * Check es_cluster_cfg and es_node_cfg in emesh.h
+   * Check es_cluster_cfg in esim.h
    */
 } EPIPHANY_OPTIONS;
 
@@ -399,11 +399,10 @@ err_out:
 
 static SIM_RC sim_esim_init(SIM_DESC sd)
 {
-  /** @todo Of course this shouldn't be hard coded */
   es_cluster_cfg cluster;
-  es_node_cfg node;
+  struct emesh_params *p;
 
-  struct emesh_params *p = &emesh_params;
+  p = &emesh_params;
 
   uint64_t ext_ram_size = 32*1024*1024;
   uint64_t ext_ram_base = 0x8e000000;
@@ -420,11 +419,8 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
     }
 #endif
 
-  memset(&node, 0, sizeof(node));
   memset(&cluster, 0, sizeof(cluster));
 
-  node.rank = 0;
-  cluster.nodes = 1;
   cluster.col_base = p->first_coreid & ((1 << 6) -1);
   cluster.row_base = p->first_coreid >> 6;
   cluster.cols = p->num_cols;
@@ -445,7 +441,7 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
   cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
 
-  if (es_init(&STATE_ESIM(sd), node, cluster) != ES_OK)
+  if (es_init(&STATE_ESIM(sd), cluster) != ES_OK)
     {
       return SIM_RC_FAIL;
     }
