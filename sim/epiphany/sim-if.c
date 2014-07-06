@@ -94,8 +94,7 @@ static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
 static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
 
 #ifdef WITH_EMESH_SIM
-static SIM_RC sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes,
-				     unsigned new_coreid);
+static SIM_RC sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes);
 static SIM_RC sim_esim_set_options(SIM_DESC sd, sim_cpu *cpu);
 static SIM_RC sim_esim_init(SIM_DESC sd);
 #endif
@@ -239,25 +238,10 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 #if WITH_EMESH_SIM
 /* Custom sim cpu alloc for emesh sim */
 SIM_RC
-sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes, unsigned new_coreid)
+sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes)
 {
   static unsigned freed = 0; /* Original sim_cpu struct is malloced */
   sim_cpu *new_cpu;
-
-  if (es_valid_coreid(STATE_ESIM(sd), new_coreid) != ES_OK)
-    {
-      sim_io_eprintf(sd, "Invalid coreid `0x%x'.\n", new_coreid);
-      return SIM_RC_FAIL;
-    }
-
-  if (es_set_coreid(STATE_ESIM(sd), new_coreid) != ES_OK)
-    {
-      sim_io_eprintf (sd, "Could not set coreid to `0x%x'. Perhaps it was "
-		      "already reserved by another sim process.\n",
-		      new_coreid);
-      return SIM_RC_FAIL;
-    }
-
 
   if (! (new_cpu = es_set_cpu_state(STATE_ESIM(sd), STATE_CPU(sd, 0),
 			sizeof(sim_cpu) + extra_bytes)))
@@ -441,18 +425,12 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
   cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
 
-  if (es_init(&STATE_ESIM(sd), cluster) != ES_OK)
+  if (es_init(&STATE_ESIM(sd), cluster, p->coreid) != ES_OK)
     {
       return SIM_RC_FAIL;
     }
 
-#if WITH_EMESH_NET
-  /* coreid is determined from MPI rank */
-  p->coreid = es_get_coreid(STATE_ESIM(sd));
-#endif
-
-  if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes (),
-			     p->coreid) != SIM_RC_OK)
+  if (sim_esim_cpu_relocate (sd, cgen_cpu_max_extra_bytes ()) != SIM_RC_OK)
     {
       return SIM_RC_FAIL;
     }

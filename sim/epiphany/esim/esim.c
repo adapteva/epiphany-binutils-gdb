@@ -897,15 +897,16 @@ es_state_reset(es_state *esim)
 
 /*! Initialize esim
  *
- * @param[in,out] esim     pointer to ESIM handle
- * @param[in]     cluster  Cluster configuration
+ * @param[in,out] esim          pointer to ESIM handle
+ * @param[in]     cluster       Cluster configuration
+ * @param[in]     coreid_hint   Coreid hint (not used w. esim-net)
  *
  * @return On success returns ES_OK and sets handle to allocated
  *         esim structure. On error returns a negative error number and sets
  *         handle to NULL.
  */
 int
-es_init(es_state **handle, es_cluster_cfg cluster)
+es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
 {
   /** @todo Revisit once we have MPI support
    * Cluster cfg should be set in leader (rank0) and then passed to all other
@@ -1082,7 +1083,25 @@ es_init(es_state **handle, es_cluster_cfg cluster)
 #if WITH_EMESH_NET
   /* Calculate coreid from MPI rank */
   if ((error = es_net_set_coreid_from_rank(esim)) != ES_OK)
-    goto err_out;
+    {
+      fprintf(stderr, "ESIM: Could not set coreid.\n");
+      goto err_out;
+    }
+#else
+  /* Set coreid from hint */
+  if ((error = es_set_coreid(esim, coreid_hint)) != ES_OK)
+    {
+      if (error == -EADDRINUSE)
+	{
+	  fprintf(stderr, "ESIM: Could not set coreid to `%u'. Already "
+		  "reserved by another simulator process\n", coreid_hint);
+	}
+      else
+	{
+	  fprintf(stderr, "ESIM: Could not set coreid to `%u'.\n", coreid_hint);
+	}
+      goto err_out;
+    }
 #endif
 
 #ifdef ES_DEBUG

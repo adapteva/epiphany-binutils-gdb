@@ -76,7 +76,7 @@ typedef struct es_state_ es_state;
 
 /* API functions */
 
-int es_init(es_state **esim, es_cluster_cfg cluster);
+int es_init(es_state **esim, es_cluster_cfg cluster, unsigned coreid);
 void es_cleanup(es_state *esim);
 
 int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
@@ -90,7 +90,6 @@ void es_wait_exit(es_state *esim);
 int es_valid_coreid(const es_state *esim, unsigned coreid);
 int es_initialized(const es_state* esim);
 
-int es_set_coreid(es_state *esim, unsigned coreid);
 unsigned es_get_coreid(const es_state *esim);
 
 volatile void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
