@@ -194,5 +194,6 @@ typedef struct es_transaction_ {
   es_transl	sim_addr;   /*!< Address translation of current region */
 } es_transaction;
 
+int es_set_coreid(es_state *esim, unsigned coreid);
 
 #endif /* __esim_int_h__ */
