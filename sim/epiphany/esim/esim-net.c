@@ -176,3 +176,20 @@ es_net_wait_exit(es_state *esim)
   ES_MPI_TRY(MPI_Barrier(MPI_COMM_WORLD), "MPI_Barrier", { });
   ES_MPI_TRY(MPI_Finalize(), "MPI_Finalize", { });
 }
+
+int es_net_init_mpi_win(es_state *esim)
+{
+  ES_MPI_TRY(MPI_Win_create((void *) esim->this_core_mem,
+			    ES_CLUSTER_CFG.core_mem_region*sizeof(uint8_t),
+			    sizeof(uint8_t),
+			    MPI_INFO_NULL,
+			    MPI_COMM_WORLD,
+			    &esim->net.mem_win),
+	     "MPI_Win_create",
+	     { return -EINVAL; });
+  ES_MPI_TRY(MPI_Win_fence(0, esim->net.mem_win),
+	     "MPI_Win_fence",
+	     { return -EINVAL; });
+
+  return ES_OK;
+}
