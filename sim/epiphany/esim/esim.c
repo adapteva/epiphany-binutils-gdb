@@ -1087,6 +1087,11 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
       fprintf(stderr, "ESIM: Could not set coreid.\n");
       goto err_out;
     }
+  /* Now when coreid is set, we can expose SRAM to other processes */
+  if ((error = es_net_init_mpi_win(esim)) != ES_OK)
+    {
+      goto err_out;
+    }
 #else
   /* Set coreid from hint */
   if ((error = es_set_coreid(esim, coreid_hint)) != ES_OK)
