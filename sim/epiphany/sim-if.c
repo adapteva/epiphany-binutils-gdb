@@ -144,7 +144,7 @@ free_state (SIM_DESC sd)
   if (STATE_MODULES (sd) != NULL)
     sim_module_uninstall (sd);
 #if WITH_EMESH_SIM
-  es_cleanup(STATE_ESIM(sd));
+  es_fini(STATE_ESIM(sd));
 #else
   sim_cpu_free_all (sd);
 #endif
