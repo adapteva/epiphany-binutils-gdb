@@ -273,7 +273,7 @@ static int
 es_tx_one_shm_load(es_state *esim, es_transaction *tx)
 {
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
-  memcpy(tx->target, tx->sim_addr.mem, n);
+  memmove(tx->target, tx->sim_addr.mem, n);
   tx->target += n;
   tx->remaining -= n;
 
@@ -294,7 +294,7 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 {
   uint32_t i, invalidate;
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
-  memcpy(tx->sim_addr.mem, tx->target, n);
+  memmove(tx->sim_addr.mem, tx->target, n);
   tx->target += n;
   tx->remaining -= n;
   if (tx->sim_addr.coreid == esim->coreid && esim->this_core_cpu_state)
@@ -997,9 +997,9 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
   if (esim->creator)
     {
       /* Copy over cluster and node config structs to shared memory */
-      memcpy((void *) &ES_CLUSTER_CFG, (void *) &cluster,
+      memmove((void *) &ES_CLUSTER_CFG, (void *) &cluster,
 	     sizeof(es_cluster_cfg));
-      memcpy((void *) &ES_NODE_CFG, (void *) &node,
+      memmove((void *) &ES_NODE_CFG, (void *) &node,
 	     sizeof(es_node_cfg));
 
       /* Signal waiting processes that shared memory is ready */
@@ -1300,7 +1300,7 @@ es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 
   memset((void *)esim->this_core_cpu_state, 0,
 	 ES_SHM_CORE_STATE_SIZE - ES_SHM_CORE_STATE_HEADER_SIZE);
-  memcpy((void *)esim->this_core_cpu_state, cpu, size);
+  memmove((void *)esim->this_core_cpu_state, cpu, size);
 
   return esim->this_core_cpu_state;
 }
