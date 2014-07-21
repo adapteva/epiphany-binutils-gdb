@@ -241,11 +241,12 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 	    }
 	}
     }
-  else
+  else /* if (transl->node != ES_NODE_CFG.rank) */
     {
+#if WITH_EMESH_NET
+      es_net_addr_translate(esim, transl, addr);
+#else
       transl->location = ES_LOC_INVALID;
-#ifdef ES_DEBUG
-  fprintf(stderr, "es_addr_translate: net not implemented\n");
 #endif
     }
 #ifdef ES_DEBUG
@@ -439,6 +440,8 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
       epiphanybf_h_all_registers_set(current_cpu, reg, *target);
       n = 4;
       break;
+    /*! @todo Implement (if supported by hardware?) */
+    /* case ES_REQ_TESTSET: */
     default:
       n = -EINVAL;
     }
@@ -489,14 +492,13 @@ es_tx_one(es_state *esim, es_transaction *tx)
       return es_tx_one_shm_mmr(esim, tx);
       break;
 
+#if WITH_EMESH_NET
     case ES_LOC_NET:
     case ES_LOC_NET_MMR:
-
-#ifdef ES_DEBUG
-      fprintf(stderr, "es_tx_one: access method not implemented\n");
-#endif
-      return -EINVAL;
+    case ES_LOC_NET_RAM:
+      return es_net_tx_one(esim, tx);
       break;
+#endif
 
     default:
 #ifdef ES_DEBUG
@@ -528,7 +530,7 @@ es_tx_run(es_state *esim, es_transaction *tx)
   while (1)
     {
       ret = es_tx_one(esim, tx);
-      if (ret || !tx->remaining)
+      if (ret != ES_OK || !tx->remaining)
 	break;
       es_addr_translate_next_region(esim, &tx->sim_addr);
     }
@@ -747,8 +749,11 @@ es_fill_in_internal_cfg_values(es_state *esim)
   /* Node settings */
 #if WITH_EMESH_NET
   ES_NODE_CFG.rank = esim->net.rank / ES_CLUSTER_CFG.cores_per_node;
+  ES_CLUSTER_CFG.ext_ram_rank =
+    ES_CLUSTER_CFG.ext_ram_node * ES_CLUSTER_CFG.cores_per_node;
 #else
   ES_NODE_CFG.rank = 0;
+  ES_CLUSTER_CFG.ext_ram_rank = 0;
 #endif
   ES_NODE_CFG.row_base = ES_CLUSTER_CFG.row_base +
     (ES_CLUSTER_CFG.cores_per_node * ES_NODE_CFG.rank) / ES_CLUSTER_CFG.cols;
@@ -1154,6 +1159,10 @@ es_fini(es_state *esim)
   if (!esim)
     return;
 
+#if WITH_EMESH_NET
+  es_net_fini(esim);
+#endif
+
   if (esim->shm)
     munmap((void *) esim->shm, esim->shm_size);
 
@@ -1206,14 +1215,15 @@ void
 es_wait_exit(es_state *esim)
 {
   /** @todo Would be nice to support Ctrl-C here */
+#if !WITH_EMESH_NET
   if (esim->ready)
     {
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->exit_barrier);
     }
+#else
   /** @todo After this, leader process (the one that created shm file should wait
      for network and then set condition variable all other local cores watch.
    */
-#if WITH_EMESH_NET
   es_net_wait_exit(esim);
 #endif
 }
