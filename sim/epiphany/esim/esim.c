@@ -1122,7 +1122,7 @@ ok_out:
   return ES_OK;
 
 err_out:
-  es_cleanup(esim);
+  es_fini(esim);
   return error;
 }
 
@@ -1145,10 +1145,10 @@ es_initialized(const es_state* esim)
  * @param[in,out] esim     ESIM handle
  */
 void
-es_cleanup(es_state *esim)
+es_fini(es_state *esim)
 {
 #ifdef ES_DEBUG
-  fprintf(stderr, "es_cleanup\n");
+  fprintf(stderr, "es_fini\n");
 #endif
 
   if (!esim)

@@ -77,7 +77,7 @@ typedef struct es_state_ es_state;
 /* API functions */
 
 int es_init(es_state **esim, es_cluster_cfg cluster, unsigned coreid);
-void es_cleanup(es_state *esim);
+void es_fini(es_state *esim);
 
 int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
 int es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
