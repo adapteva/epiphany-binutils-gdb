@@ -70,6 +70,8 @@ typedef struct es_cluster_cfg_ {
                                         is enabled */
     unsigned rows_per_node;           /*!< Rows per node                   */
     unsigned cols_per_node;           /*!< Columns per node                */
+
+    unsigned ext_ram_rank;            /*!< Rank of process w. ext ram      */
 } es_cluster_cfg;
 
 typedef struct es_state_ es_state;

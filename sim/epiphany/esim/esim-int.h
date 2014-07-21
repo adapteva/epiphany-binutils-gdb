@@ -2,6 +2,10 @@
 #define __esim_int_h__
 
 #include <pthread.h>
+#if WITH_EMESH_NET
+#include "esim-net.h"
+#endif
+
 
 /** Internal ESIM structures and helper macros */
 
@@ -14,6 +18,9 @@
    ({ __typeof__ (A) _A = (A); \
        __typeof__ (B) _B = (B); \
      _A < _B ? _A : _B; })
+
+/*! type of struct member field */
+#define fieldtype_of(Struct, Field) __typeof__ (((Struct *) 0)->Field)
 
 
 #define ES_SHM_CORE_STATE_HEADER_SIZE 4096 /*!< Per core state header size.
@@ -175,11 +182,13 @@ typedef struct es_transl_ {
 
   /*! If requested address was global before translation, needed by TESTSET */
   unsigned      addr_was_global;
-#if 0
-#ifdef HAVE_MPI2
-  MPI_AInt  mpi_offset;
+
+#if WITH_EMESH_NET
+  unsigned	net_rank;  /*!< Rank of remote process */
+  size_t	net_offset;/*!< Offset in remote process win */
+  const MPI_Win	*net_win;  /*!< MPI Window */
 #endif
-#endif
+
 } es_transl;
 
 #define ES_TRANSL_INIT {ES_LOC_INVALID, 0, 0, 0, 0, NULL, NULL, 0, 0}
