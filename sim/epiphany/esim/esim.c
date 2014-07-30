@@ -727,7 +727,13 @@ es_fill_in_internal_cfg_values(es_state *esim)
     }
   else
     {
-      best_ratio = ((float) (ES_CLUSTER_CFG.cols+1));
+      ES_CLUSTER_CFG.cols_per_node = 0;
+      ES_CLUSTER_CFG.rows_per_node = 0;
+
+      /* Initialize with value worse than worst case */
+      best_ratio =
+       (float) (1 + max (ES_CLUSTER_CFG.cols, ES_CLUSTER_CFG.rows));
+
       cols_per_node = min(ES_CLUSTER_CFG.cols, ES_CLUSTER_CFG.cores_per_node);
       for (; cols_per_node >= 1; cols_per_node--)
 	{
