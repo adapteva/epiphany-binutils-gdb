@@ -2,10 +2,10 @@
 #define __esim_int_h__
 
 #include <pthread.h>
+
 #if WITH_EMESH_NET
 #include "esim-net.h"
 #endif
-
 
 /** Internal ESIM structures and helper macros */
 
@@ -169,6 +169,7 @@ typedef enum es_req_t {
   ES_REQ_TESTSET,
 } es_req_t;
 
+
 /*! Address translation */
 typedef struct es_transl_ {
   es_loc_t	location;  /*!< Location (local shm or network) and type */
@@ -198,11 +199,13 @@ typedef struct es_transaction_ {
   es_req_t	type;       /*!< Type of request */
   uint8_t	*target;    /*!< Pointer to target buffer */
   uint32_t	addr;       /*!< Target (Epiphany) base address */
-  uint32_t	size;       /*!< Total number of bytes requested */
+  uint32_t	size;       /*!< Total number of bytes requested.
+				 @todo not used? remove? */
   uint32_t	remaining;  /*!< Remaining bytes in transaction */
   es_transl	sim_addr;   /*!< Address translation of current region */
 } es_transaction;
 
 int es_set_coreid(es_state *esim, unsigned coreid);
+int es_tx_one_shm_mmr(es_state *esim, es_transaction *tx);
 
 #endif /* __esim_int_h__ */

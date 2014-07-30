@@ -45,11 +45,6 @@
 #define WANT_CPU epiphanybf
 #define WANT_CPU_EPIPHANYBF
 
-#include "esim.h"
-#if WITH_EMESH_NET
-#include "esim-net.h"
-#endif
-
 #include "sim-main.h"
 #include "mem-barrier.h"
 
@@ -60,7 +55,6 @@
 /** @todo Standard errnos should be sufficient for now */
 /* Errors are returned as negative numbers. */
 #include <errno.h>
-
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -75,6 +69,7 @@
 
 #include <pthread.h>
 
+#include "esim.h"
 #include "esim-int.h"
 
 /*! Get core index in shared memory
@@ -401,7 +396,7 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
  *
  * @return ES_OK on success
  */
-static int
+int
 es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 {
   int reg, n;
@@ -1111,6 +1106,11 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
       fprintf(stderr, "ESIM: Could not set coreid.\n");
       goto err_out;
     }
+  /* Need coreid and this_core_cpu_state */
+  if ((error = es_net_init_mmr(esim)) != ES_OK)
+    {
+      goto err_out;
+    }
   /* Now when coreid is set, we can expose SRAM to other processes */
   if ((error = es_net_init_mpi_win(esim)) != ES_OK)
     {
@@ -1217,12 +1217,13 @@ es_set_ready(es_state *esim)
 void
 es_wait_run(es_state *esim)
 {
-  /** @todo Before this, leader process (the one that created shm file should wait
-     for network and then set condition variable all other local cores watch.
-   */
-
   /** @todo Would be nice to support Ctrl-C here */
+
+#if WITH_EMESH_NET
+  es_net_wait_run(esim);
+#else
   pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
+#endif
   es_set_ready(esim);
 }
 
@@ -1234,16 +1235,14 @@ void
 es_wait_exit(es_state *esim)
 {
   /** @todo Would be nice to support Ctrl-C here */
-#if !WITH_EMESH_NET
+
+#if WITH_EMESH_NET
+  es_net_wait_exit(esim);
+#else
   if (esim->ready)
     {
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->exit_barrier);
     }
-#else
-  /** @todo After this, leader process (the one that created shm file should wait
-     for network and then set condition variable all other local cores watch.
-   */
-  es_net_wait_exit(esim);
 #endif
 }
 
