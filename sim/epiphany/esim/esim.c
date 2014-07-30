@@ -172,6 +172,7 @@ static void
 es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 {
   uint8_t *tmp_ptr;
+  signed node;
 
   if (es_initialized(esim) != ES_OK)
     {
@@ -185,8 +186,15 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 
   addr = ES_ADDR_TO_GLOBAL(addr);
   transl->addr = addr;
-  transl->node = es_addr_to_node(esim, addr);
+  if ((node = es_addr_to_node(esim, addr)) < 0)
+    {
+      transl->location = ES_LOC_INVALID;
+      return;
+    }
+  transl->node = node;
+
   transl->coreid = ES_ADDR_TO_CORE(addr);
+
   if (transl->node == ES_NODE_CFG.rank)
     {
       if (ES_ADDR_IS_EXT_RAM(addr))
