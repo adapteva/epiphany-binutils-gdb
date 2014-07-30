@@ -124,8 +124,8 @@ es_shm_core_base(const es_state *esim, unsigned coreid)
 static signed
 es_addr_to_node(const es_state *esim, uint32_t addr)
 {
-  unsigned coreid, node;
-  signed row_offset, col_offset;
+  unsigned coreid;
+  signed row_offset, col_offset, node;
 
   if (ES_ADDR_IS_EXT_RAM(addr))
     {
