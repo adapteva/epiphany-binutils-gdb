@@ -769,10 +769,15 @@ es_fill_in_internal_cfg_values(es_state *esim)
   ES_NODE_CFG.rank = 0;
   ES_CLUSTER_CFG.ext_ram_rank = 0;
 #endif
-  ES_NODE_CFG.row_base = ES_CLUSTER_CFG.row_base +
-    (ES_CLUSTER_CFG.cores_per_node * ES_NODE_CFG.rank) / ES_CLUSTER_CFG.cols;
-  ES_NODE_CFG.col_base = ES_CLUSTER_CFG.col_base +
-    (ES_CLUSTER_CFG.cols_per_node  * ES_NODE_CFG.rank) % ES_CLUSTER_CFG.cols;
+
+  {
+    unsigned node_row =
+     (ES_NODE_CFG.rank * ES_CLUSTER_CFG.cols_per_node) / ES_CLUSTER_CFG.cols;
+    ES_NODE_CFG.row_base = ES_CLUSTER_CFG.row_base +
+      (ES_CLUSTER_CFG.rows_per_node * node_row);
+    ES_NODE_CFG.col_base = ES_CLUSTER_CFG.col_base +
+      (ES_CLUSTER_CFG.cols_per_node  * ES_NODE_CFG.rank) % ES_CLUSTER_CFG.cols;
+  }
 }
 
 /*! Open ESIM shared memory file
