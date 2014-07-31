@@ -506,17 +506,24 @@ es_net_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 static int
 es_net_tx_one_mem_load(es_state *esim, es_transaction *tx)
 {
-  size_t n, dwords, remainder;
-  uint8_t buf[4];
+  size_t n, dwords, leading, trailing;
+  uint8_t leading_buf[8], trailing_buf[8];
+  int do_leading_memmove_after_unlock;
 
   n = min(tx->remaining, tx->sim_addr.in_region);
 
-  /** Read in 32-bit chunks and fix remainder by copying it to target
-   *  afterwards.
-   *  @todo What about the header when (tx->sim_addr.addr % 4) ?
+  /** Read in 64-bit chunks as far as possible and fix any leading or trailing
+    * bytes with separate fetches.
+    * @todo What about alignment checking? Now we allow anything.
+    */
+  leading  = min (n, (8 - (tx->sim_addr.addr % 8)) % 8);
+  trailing = (n - leading) % 8;
+  dwords   = (n - (leading + trailing)) / 8;
+
+  /* If possible, do memmove() for leading bytes after MPI_Win_unlock().
+   * Saves one flush.
    */
-  dwords    = n / 4;
-  remainder = n % 4;
+  do_leading_memmove_after_unlock = (!dwords && leading);
 
   MPI_TRY_CATCH(MPI_Win_lock(MPI_LOCK_SHARED,
 			     tx->sim_addr.net_rank,
@@ -524,51 +531,96 @@ es_net_tx_one_mem_load(es_state *esim, es_transaction *tx)
 			     *tx->sim_addr.net_win),
 		{},
 		{ return -EINVAL; });
+  if (leading)
+    {
+      MPI_TRY_CATCH(MPI_Get_accumulate(NULL,
+				       1, /* Can we say 0 ? */
+				       MPI_UINT64_T,
+				       (void *) leading_buf,
+				       1,
+				       MPI_UINT64_T,
+				       tx->sim_addr.net_rank,
+				       tx->sim_addr.net_offset & (~7),
+				       1,
+				       MPI_UINT64_T,
+				       MPI_NO_OP,
+				       *tx->sim_addr.net_win),
+		    {},
+		    { return -EINVAL; });
+
+      if (!do_leading_memmove_after_unlock)
+	{
+	  MPI_TRY_CATCH(MPI_Win_flush_local(tx->sim_addr.net_rank,
+					    *tx->sim_addr.net_win),
+			{},
+			{ return -EINVAL; });
+	  memmove((void *) tx->target,
+		  (void *) &leading_buf[8-leading],
+		  leading);
+	  tx->target              += leading;
+	  tx->sim_addr.net_offset += leading;
+	  tx->remaining           -= leading;
+	}
+    }
   if (dwords)
     {
       MPI_TRY_CATCH(MPI_Get_accumulate(NULL,
 				       dwords, /* Can we say 0 ? */
-				       MPI_UINT32_T,
+				       MPI_UINT64_T,
 				       (void *) tx->target,
 				       dwords,
-				       MPI_UINT32_T,
+				       MPI_UINT64_T,
 				       tx->sim_addr.net_rank,
 				       tx->sim_addr.net_offset,
 				       dwords,
-				       MPI_UINT32_T,
+				       MPI_UINT64_T,
 				       MPI_NO_OP,
 				       *tx->sim_addr.net_win),
 		    {},
 		    { return -EINVAL; });
-      tx->target              += (dwords * 4);
-      tx->sim_addr.net_offset += (dwords * 4);
-      tx->remaining           -= (dwords * 4);
+      tx->target              += (dwords * 8);
+      tx->sim_addr.net_offset += (dwords * 8);
+      tx->remaining           -= (dwords * 8);
     }
-  if (remainder)
+  if (trailing)
     {
       MPI_TRY_CATCH(MPI_Get_accumulate(NULL,
 				       1, /* Can we say 0 ? */
-				       MPI_UINT32_T,
-				       (void *) buf,
+				       MPI_UINT64_T,
+				       (void *) trailing_buf,
 				       1,
-				       MPI_UINT32_T,
+				       MPI_UINT64_T,
 				       tx->sim_addr.net_rank,
 				       tx->sim_addr.net_offset,
 				       1,
-				       MPI_UINT32_T,
+				       MPI_UINT64_T,
 				       MPI_NO_OP,
 				       *tx->sim_addr.net_win),
 		    {},
 		    { return -EINVAL; });
-      memmove((void *) tx->target, (void *) buf, remainder);
-      tx->target              += remainder;
-      tx->sim_addr.net_offset += remainder;
-      tx->remaining           -= remainder;
+      /* Do actual copy after call to MPI_Win_unlock(). Saves one flush */
     }
 
   MPI_TRY_CATCH(MPI_Win_unlock(tx->sim_addr.net_rank, *tx->sim_addr.net_win),
 		{},
 		{ return -EINVAL; });
+
+  if (do_leading_memmove_after_unlock)
+    {
+      memmove((void *) tx->target,
+	      (void *) &leading_buf[8-leading],
+	      leading);
+      tx->target              += leading;
+      tx->sim_addr.net_offset += leading;
+      tx->remaining           -= leading;
+    }
+  if (trailing)
+    {
+      memmove((void *) tx->target, (void *) trailing_buf, trailing);
+      tx->target              += trailing;
+      tx->sim_addr.net_offset += trailing;
+      tx->remaining           -= trailing;
+    }
 
   return ES_OK;
 }
@@ -579,18 +631,19 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
   /*! @todo Relax locking for better performance */
 
   fieldtype_of(oob_state, external_write) one, dontcare;
-  size_t n, dwords, words, bytes;
+  size_t n, dwords, leading, trailing;
 
   one = 1;
 
   n = min(tx->remaining, tx->sim_addr.in_region);
 
-  /** Write in same chunk size as hardware would
-   *  @todo What about the header when (tx->sim_addr.addr % 4) ?
-   */
-  dwords = n / 4;
-  words  = n & 2;
-  bytes  = n & 1;
+  /** Write in 64-bit chunks as far as possible and fix any leading or trailing
+    * bytes with separate stores.
+    * @todo What about alignment checking? Now we allow anything.
+    */
+  leading  = min (n, (8 - (tx->sim_addr.addr % 8)) % 8);
+  trailing = (n - leading) % 8;
+  dwords   = (n - (leading + trailing)) / 8;
 
   MPI_TRY_CATCH(MPI_Win_lock(MPI_LOCK_SHARED,
 			     tx->sim_addr.net_rank,
@@ -599,57 +652,46 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
 		{},
 		{ return -EINVAL; });
 
+#define ACCUM(N, Datatype)\
+  do\
+    {\
+      MPI_TRY_CATCH(MPI_Accumulate((void *) tx->target,\
+				   (N),\
+				   mpi_type(sizeof(Datatype)),\
+				   tx->sim_addr.net_rank,\
+				   tx->sim_addr.net_offset,\
+				   (N),\
+				   mpi_type(sizeof(Datatype)),\
+				   MPI_REPLACE,\
+				   *tx->sim_addr.net_win),\
+		    {},\
+		    { return -EINVAL; });\
+      tx->target              += sizeof(Datatype) * (N);\
+      tx->sim_addr.net_offset += sizeof(Datatype) * (N);\
+      tx->remaining           -= sizeof(Datatype) * (N);\
+    }\
+  while (0)
+
+
+  if (leading & 1)
+    ACCUM(1, uint8_t);
+  if (leading & 2)
+    ACCUM(1, uint16_t);
+  if (leading & 4)
+    ACCUM(1, uint32_t);
+
   if (dwords)
-    {
-      MPI_TRY_CATCH(MPI_Accumulate((void *) tx->target,
-				   dwords,
-				   MPI_UINT32_T,
-				   tx->sim_addr.net_rank,
-				   tx->sim_addr.net_offset,
-				   dwords,
-				   MPI_UINT32_T,
-				   MPI_REPLACE,
-				   *tx->sim_addr.net_win),
-		    {},
-		    { return -EINVAL; });
-      tx->target              += (dwords * 4);
-      tx->sim_addr.net_offset += (dwords * 4);
-      tx->remaining           -= (dwords * 4);
-    }
-  if (words)
-    {
-      MPI_TRY_CATCH(MPI_Accumulate((void *) tx->target,
-				   words,
-				   MPI_UINT16_T,
-				   tx->sim_addr.net_rank,
-				   tx->sim_addr.net_offset,
-				   words,
-				   MPI_UINT16_T,
-				   MPI_REPLACE,
-				   *tx->sim_addr.net_win),
-		    {},
-		    { return -EINVAL; });
-      tx->target              += (words * 2);
-      tx->sim_addr.net_offset += (words * 2);
-      tx->remaining           -= (words * 2);
-    }
-  if (bytes)
-    {
-      MPI_TRY_CATCH(MPI_Accumulate((void *) tx->target,
-				   bytes,
-				   MPI_UINT8_T,
-				   tx->sim_addr.net_rank,
-				   tx->sim_addr.net_offset,
-				   bytes,
-				   MPI_UINT8_T,
-				   MPI_REPLACE,
-				   *tx->sim_addr.net_win),
-		    {},
-		    { return -EINVAL; });
-      tx->target              += bytes;
-      tx->sim_addr.net_offset += bytes;
-      tx->remaining           -= bytes;
-    }
+    ACCUM(dwords, uint64_t);
+
+  if (trailing & 4)
+    ACCUM(1, uint32_t);
+  if (trailing & 2)
+    ACCUM(1, uint16_t);
+  if (trailing & 1)
+    ACCUM(1, uint8_t);
+
+
+#undef ACCUM
 
   MPI_TRY_CATCH(MPI_Win_unlock(tx->sim_addr.net_rank, *tx->sim_addr.net_win),
 		{},
