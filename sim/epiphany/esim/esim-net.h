@@ -29,9 +29,6 @@ typedef struct es_net_state_ {
   MPI_Win ext_ram_win;     /*!< MPI window for remote access to external ram */
   MPI_Win ext_write_win;   /*!< Expose external write flag  */
   pthread_t mmr_thread;    /*!< MMR access remote helper thread */
-
-  /*! Corresponding MPI integer datatypes. Set up in es_init() */
-  MPI_Datatype mpi_int[sizeof(uint64_t)+1];
 } es_net_state;
 
 

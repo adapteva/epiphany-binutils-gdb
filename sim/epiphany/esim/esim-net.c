@@ -113,31 +113,24 @@ es_net_coreid_to_rank(const es_state *esim, unsigned coreid)
   return rank;
 }
 
-/*! Lookup corresponding MPI Integer datatype with same size as Type */
-#define ES_NET_MPI_TYPE(Type) (esim->net.mpi_int[sizeof((Type))])
-
-/*! Initialize MPI datatype lookup table
- *
- * Build lookup table for types with sizes [1,2,4,8] bytes to corresponding
- * MPI Integer datatype.
- */
-static inline int
-es_net_init_mpi_datatypes(es_state *esim)
+static inline MPI_Datatype
+mpi_type(size_t size)
 {
-#define INIT_DATATYPE(Type) \
-  MPI_TRY_CATCH(MPI_Type_match_size(MPI_TYPECLASS_INTEGER,\
-				    sizeof(Type),\
-				    &esim->net.mpi_int[sizeof(Type)]),\
-		{},\
-		{ return -EINVAL; })
-  INIT_DATATYPE(uint8_t);
-  INIT_DATATYPE(uint16_t);
-  INIT_DATATYPE(uint32_t);
-  INIT_DATATYPE(uint64_t);
-#undef INIT_DATATYPE
-
-  return ES_OK;
+  switch (size)
+    {
+    case 1: return MPI_UINT8_T;
+    case 2: return MPI_UINT16_T;
+    case 4: return MPI_UINT32_T;
+    case 8: return MPI_UINT64_T;
+    default: /* fall through */;
+    }
+  fprintf (stderr, "ESIM:NET: Internal error in es_net_mpi_datatype()\n");
+  MPI_Abort(MPI_COMM_WORLD, EINVAL);
+  return MPI_DATATYPE_NULL;
 }
+/*! Lookup corresponding MPI Integer datatype with same size as Type */
+#define ES_NET_MPI_TYPE(Type) mpi_type(sizeof((Type)))
+
 
 /*! Initialize ESIM networking.
  *  Must be called *after* shared memory is set up.
@@ -180,11 +173,6 @@ es_net_init(es_state *esim)
 
   /* Signal errors with return codes */
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-
-  /* Initialize integer data-types */
-  if ((rc = es_net_init_mpi_datatypes(esim)) != ES_OK)
-    goto err_out;
-
 
   MPI_TRY_CATCH(MPI_Comm_rank(MPI_COMM_WORLD, &esim->net.rank),
 		{},
@@ -248,11 +236,6 @@ es_net_state_reset(es_state *esim)
   esim->net.mem_win = MPI_WIN_NULL;
   esim->net.ext_ram_win = MPI_WIN_NULL;
   esim->net.ext_write_win = MPI_WIN_NULL;
-
-  for (i = 0; i < (sizeof(esim->net.mpi_int)/sizeof(esim->net.mpi_int[0])); i++)
-    {
-      esim->net.mpi_int[i] = MPI_DATATYPE_NULL;
-    }
 
   esim->net.mpi_initialized = 0;
 }
