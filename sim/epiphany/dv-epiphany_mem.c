@@ -107,10 +107,11 @@ static void epiphany_mem_signal(struct hw *me, unsigned_word addr,
 			   unsigned nr_bytes, char *transfer, int sigrc)
 {
   SIM_CPU *current_cpu;
+  sim_cia cia;
   address_word ip;
 
   current_cpu = hw_system_cpu(me);
-  sim_cia cia = current_cpu ? CIA_GET (current_cpu) : NULL_CIA;
+  cia = current_cpu ? CIA_GET (current_cpu) : NULL_CIA;
   ip = CIA_ADDR (cia);
 
   switch (sigrc)
@@ -146,12 +147,15 @@ epiphany_mem_io_read_buffer (struct hw *me,
 			 unsigned_word base,
 			 unsigned nr_bytes)
 {
+  es_state *esim;
+
+  esim = STATE_ESIM(hw_system(me));
   HW_TRACE ((me, "read 0x%08lx %d", (long) base, (int) nr_bytes));
-  es_state *esim = STATE_ESIM(hw_system(me));
-  if (es_mem_load(esim, base, nr_bytes, dest) != ES_OK)
+  if (es_mem_load(esim, base, nr_bytes, (uint8_t *) dest) != ES_OK)
     {
       /** @todo What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "read", SIM_SIGSEGV);
+      return 0;
     }
   else
     return nr_bytes;
@@ -164,12 +168,15 @@ epiphany_mem_io_write_buffer (struct hw *me,
 			  unsigned_word base,
 			  unsigned nr_bytes)
 {
-  es_state *esim = STATE_ESIM(hw_system(me));
+  es_state *esim;
+
+  esim = STATE_ESIM(hw_system(me));
   HW_TRACE ((me, "write 0x%08lx %d", (long) base, (int) nr_bytes));
-  if (es_mem_store(esim, base, nr_bytes, source) != ES_OK)
+  if (es_mem_store(esim, base, nr_bytes, (uint8_t *) source) != ES_OK)
     {
       /** @todo What about SIGBUS (unaligned access) */
       epiphany_mem_signal(me, base, nr_bytes, "write", SIM_SIGSEGV);
+      return 0;
     }
   else
     return nr_bytes;

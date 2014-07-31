@@ -437,7 +437,7 @@ SI epiphany_testset(SIM_CPU *current_cpu, USI addr, SI newval, int bytes)
   SIM_DESC sd = CPU_STATE (current_cpu);
   USI tmpval = newval;
 #if WITH_EMESH_SIM
-  if (es_mem_testset(STATE_ESIM(sd), addr, bytes, &tmpval) != ES_OK)
+  if (es_mem_testset(STATE_ESIM(sd), addr, bytes, (uint8_t *) &tmpval) != ES_OK)
     goto fail;
 #else
   if (bytes != 4)
