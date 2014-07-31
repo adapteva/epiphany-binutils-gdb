@@ -35,12 +35,9 @@
 #include <strings.h>
 #endif
 #endif
-#ifdef HAVE_STDLIB_H
+
 #include <stdlib.h>
-#endif
-#ifdef HAVE_CTYPE_H
 #include <ctype.h>
-#endif
 
 #include "sim-options.h"
 
@@ -385,11 +382,12 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
 {
   es_cluster_cfg cluster;
   struct emesh_params *p;
+  uint64_t ext_ram_size, ext_ram_base;
 
   p = &emesh_params;
 
-  uint64_t ext_ram_size = 32*1024*1024;
-  uint64_t ext_ram_base = 0x8e000000;
+  ext_ram_size = 32*1024*1024;
+  ext_ram_base = 0x8e000000;
 
   if (sim_esim_have_required_params(sd) != SIM_RC_OK)
     return SIM_RC_FAIL;
@@ -611,9 +609,12 @@ sim_open (kind, callback, abfd, argv)
   current_state = sd;
   is_sim_opened = 1; /* To distinguish between HW and simulator target.  */
 
-  SIM_CPU *current_cpu = STATE_CPU (sd, 0);
-  cgen_init_accurate_fpu (current_cpu, CGEN_CPU_FPU (current_cpu),
-			  epiphany_fpu_error);
+  {
+    SIM_CPU *current_cpu;
+    current_cpu = STATE_CPU (sd, 0);
+    cgen_init_accurate_fpu (STATE_CPU (sd, 0), CGEN_CPU_FPU (current_cpu),
+			    epiphany_fpu_error);
+  }
 
   return sd;
 }
