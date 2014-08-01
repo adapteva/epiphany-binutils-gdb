@@ -339,52 +339,41 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 static int
 es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
 {
-  /** @todo Revisit, might not work as expected. Probably need to modify
-   * single-core simulator.
-   */
-  unsigned old;
-  size_t n = min(tx->remaining, tx->sim_addr.in_region);
+  uint32_t tmp;
+  uint32_t *target;
 
-  /* Return addr must be 4 bytes */
-  uint32_t *target = (uint32_t *) tx->target;
+  target = (uint32_t *) tx->target;
 
   /* TESTSET requires that requested addr is global */
   if (!tx->sim_addr.addr_was_global)
-    {
-      return -EINVAL;
-    }
+    return -EINVAL;
+
+  /* Only word size is supported */
+  if (tx->remaining != 4)
+    return -EINVAL;
+
+  /* Must be word aligned */
+  if (tx->sim_addr.addr % 4)
+    return -EINVAL;
 
   /* addr cannot reside in RAM, must be in on-chip memory  */
   if (tx->sim_addr.location != ES_LOC_SHM)
-    {
-      return -EINVAL;
-    }
+    return -EINVAL;
 
-  switch (n)
+  tmp = es_cas32((uint32_t *) tx->sim_addr.mem, 0, *target);
+  *target = tmp;
+
+  tx->target += 4;
+  tx->remaining -= 4;
+
+  /* Signal other CPU simulator a write from another core did occur so that
+   * it can invalidate its scache.
+   */
+  if (tx->sim_addr.coreid != esim->coreid)
     {
-    case 1:
-      old = es_cas8((uint8_t *) tx->sim_addr.mem, 0, *tx->target);
-      break;
-    case 2:
-      old = es_cas16((uint16_t *) tx->sim_addr.mem, 0, *tx->target);
-      break;
-    case 4:
-      old = es_cas32((uint32_t *) tx->sim_addr.mem, 0, *tx->target);
-      break;
-    default:
-      return -EINVAL;
+      MEM_BARRIER();
+      tx->sim_addr.cpu->oob_events.external_write = 1;
     }
-    *target = old;
-    tx->target += n;
-    tx->remaining -= n;
-    /* Signal other CPU simulator a write from another core did occur so that
-     * it can invalidate its scache.
-     */
-    if (tx->sim_addr.coreid != esim->coreid)
-      {
-	MEM_BARRIER();
-	tx->sim_addr.cpu->oob_events.external_write = 1;
-      }
 
   return ES_OK;
 }
