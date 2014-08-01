@@ -730,11 +730,80 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
 static int
 es_net_tx_one_mem_testset(es_state *esim, es_transaction *tx)
 {
-  /*! @todo Implement */
+  uint32_t *target;
+  uint32_t zero, one, tmp;
 
-  /* Can't do test set on external ram */
+  zero = 0;
+  one = 1;
 
-  return -EINVAL;
+  target = (uint32_t *) tx->target;
+
+  /* TESTSET requires that requested addr is global */
+  if (!tx->sim_addr.addr_was_global)
+    return -EINVAL;
+
+  /* Only word size is supported */
+  if (tx->remaining != 4)
+    return -EINVAL;
+
+  /* Must be word aligned */
+  if (tx->sim_addr.addr % 4)
+    return -EINVAL;
+
+  if (tx->sim_addr.location != ES_LOC_NET)
+    return -EINVAL;
+
+  MPI_TRY_CATCH(MPI_Win_lock(MPI_LOCK_SHARED,
+			     tx->sim_addr.net_rank,
+			     MPI_MODE_NOCHECK,
+			     *tx->sim_addr.net_win),
+		{},
+		{ return -EINVAL; });
+
+  MPI_TRY_CATCH(MPI_Compare_and_swap((void *) target,
+				     (void *) &zero,
+				     (void *) &tmp,
+				     MPI_UINT32_T,
+				     tx->sim_addr.net_rank,
+				     tx->sim_addr.net_offset,
+				     *tx->sim_addr.net_win),
+		{},
+		{ return -EINVAL; });
+
+  MPI_TRY_CATCH(MPI_Win_unlock(tx->sim_addr.net_rank, *tx->sim_addr.net_win),
+		{},
+		{ return -EINVAL; });
+
+  *target = tmp;
+
+  tx->target += 4;
+  tx->remaining -= 4;
+
+  /*! Update oob_events.external_write on remote in remote cpu state to
+   *  trigger cache scache flush */
+  MPI_TRY_CATCH(MPI_Win_lock(MPI_LOCK_SHARED,
+			     tx->sim_addr.net_rank,
+			     MPI_MODE_NOCHECK,
+			     esim->net.ext_write_win),
+		{},
+		{ return -EINVAL; });
+  MPI_TRY_CATCH(MPI_Accumulate((void *) &one,
+			       1,
+			       ES_NET_MPI_TYPE(one),
+			       tx->sim_addr.net_rank,
+			       0,
+			       1,
+			       ES_NET_MPI_TYPE(one),
+			       MPI_REPLACE,
+			       esim->net.ext_write_win),
+		{},
+		{ return -EINVAL; });
+  MPI_TRY_CATCH(MPI_Win_unlock(tx->sim_addr.net_rank, esim->net.ext_write_win),
+		{},
+		{ return -EINVAL; });
+
+  return ES_OK;
+
 }
 
 static int
