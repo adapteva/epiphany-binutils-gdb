@@ -716,7 +716,7 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
 			       0,
 			       1,
 			       ES_NET_MPI_TYPE(one),
-			       MPI_SUM,
+			       MPI_REPLACE,
 			       esim->net.ext_write_win),
 		{},
 		{ return -EINVAL; });
