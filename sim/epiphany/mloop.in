@@ -323,8 +323,8 @@ while (0)
    */
   if (current_cpu->oob_events.external_write)
     {
-      current_cpu->oob_events.external_write = 0;
       scache_flush_cpu(current_cpu);
+      current_cpu->oob_events.external_write = 0;
     }
 
    /** @todo We might need to check if the PC was changed externally before it
