@@ -275,10 +275,16 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
 #if WITH_EMESH_NET
   /* Coreid is determined by MPI RANK */
 #else
-  /* If there is only one core, we know first coreid */
-  if (emesh_params.coreid < 0 &&
-      emesh_params.num_rows == 1 && emesh_params.num_cols == 1)
-    emesh_params.coreid = emesh_params.first_coreid;
+  /* If there is only one core, we can determine coreid from first core, and
+   * vice versa. */
+  if (emesh_params.num_rows == 1 && emesh_params.num_cols == 1)
+    {
+      if (0 > emesh_params.coreid)
+	emesh_params.coreid = emesh_params.first_coreid;
+
+      if (0 > emesh_params.first_coreid)
+	emesh_params.first_coreid = emesh_params.coreid;
+    }
 
   FAIL_IF(0 > emesh_params.coreid      , "--e-coreid not set");
 #endif
