@@ -76,12 +76,20 @@ arch.o: arch.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
 traps.o: traps.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
+esim/esim.o: CFLAGS += -fvisibility=default
 esim/esim.o: esim/stamp-esim esim/esim.c $(SIM_MAIN_DEPS) \
 			 $(EPIPHANYBF_INCLUDE_DEPS)
 
 esim/stamp-esim:
 	mkdir -p esim
 	touch esim/stamp-esim
+
+# ESIM shared library
+libesim.so: libsim.a $(LIBDEPS) $(ESIM_OBJS)
+	$(CC) $(ALL_CFLAGS) -shared -o $@ -fPIC \
+	    -Wl,--whole-archive $(ESIM_OBJS) -Wl,--no-whole-archive \
+	    libsim.a $(LIBDEPS) $(EXTRA_LIBS)
+
 
 
 # ESIM tests
@@ -122,6 +130,7 @@ epiphany-clean:
 	rm -f stamp-arch stamp-cpu
 	rm -f esim/stamp-esim esim/*.o
 	rm -f esim/test/stamp-esim-test $(ESIM_TEST_OBJS) $(ESIM_TEST_BINS)
+	rm -f libesim.so
 
 # cgen support, enable with --enable-cgen-maint
 CGEN_MAINT = ; @true

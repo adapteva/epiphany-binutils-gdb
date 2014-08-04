@@ -385,6 +385,7 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
  *
  * @return ES_OK on success
  */
+__attribute__ ((visibility("hidden")))
 int
 es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 {
