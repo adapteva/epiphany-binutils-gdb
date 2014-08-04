@@ -677,16 +677,15 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
   return ES_OK;
 }
 
-/*! Calculate and fill in internal configuration values not specified by user.
+/*! Calculate and fill in internal cluster configuration values not specified
+ *  by user.
  *
  * @warning This must be called *after* es_validate_config
  *
  * @param[in]     esim     ESIM handle
- * @param[in,out] node     Node configuration
- * @param[in,out] cluster  Cluster configuration
  */
 static void
-es_fill_in_internal_cfg_values(es_state *esim)
+es_fill_in_internal_cluster_cfg_values(es_state *esim)
 {
   unsigned cols_per_node, rows_per_node;
   float ratio, best_ratio;
@@ -745,6 +744,21 @@ es_fill_in_internal_cfg_values(es_state *esim)
 	}
     }
 
+}
+
+/*! Calculate and fill in internal node configuration values not specified
+ *  by user.
+ *
+ * @warning This must be called *after* es_validate_config and
+ * es_fill_in_internal_node_cfg_values.
+ *
+ * @param[in]     esim     ESIM handle
+ * @param[in,out] node     Node configuration
+ * @param[in,out] cluster  Cluster configuration
+ */
+static void
+es_fill_in_internal_node_cfg_values(es_state *esim)
+{
   /* Node settings */
 #if WITH_EMESH_NET
   ES_NODE_CFG.rank = esim->net.rank / ES_CLUSTER_CFG.cores_per_node;
@@ -779,13 +793,22 @@ es_fill_in_internal_cfg_values(es_state *esim)
 static int
 es_open_shm_file(es_state *esim, char *name, struct flock *flock)
 {
-  unsigned creator = 1;
-  int fd = -1;
-  int error = 0;
+  unsigned creator;
+  int fd, error, oflag;
 
-  fd = shm_open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+  creator = 0;
+  fd = -1;
+  error = 0;
+
+  /* File must exist when connecting as slave */
+  oflag = esim->slave ? (O_RDWR) : (O_RDWR|O_CREAT);
+
+  fd = shm_open(name, oflag, S_IRUSR|S_IWUSR);
   if (fd == -1)
     return -errno;
+
+  if (esim->slave)
+    goto out;
 
   /* Try to get exclusive lock on shm file */
   flock->l_type   = F_WRLCK;
@@ -812,9 +835,11 @@ es_open_shm_file(es_state *esim, char *name, struct flock *flock)
       return -errno;
     }
 
+out:
   strncpy(esim->shm_name, name, sizeof(esim->shm_name)-1);
   esim->fd = fd;
   esim->creator = creator;
+
   return ES_OK;
 }
 
@@ -906,28 +931,29 @@ es_state_reset(es_state *esim)
 
 /*! Initialize esim
  *
+ * Actual implementation.
+ *
  * @param[in,out] esim          pointer to ESIM handle
  * @param[in]     cluster       Cluster configuration
  * @param[in]     coreid_hint   Coreid hint (not used w. esim-net)
+ * @param[in]     slave         If true, connect as slave.
  *
  * @return On success returns ES_OK and sets handle to allocated
  *         esim structure. On error returns a negative error number and sets
  *         handle to NULL.
  */
-int
-es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
+static int
+es_init_impl(es_state **handle,
+	es_cluster_cfg cluster,
+	unsigned coreid_hint,
+	int slave)
 {
-  /** @todo Revisit once we have MPI support
-   * Cluster cfg should be set in leader (rank0) and then passed to all other
-   * processes.
-   */
   int error;
   char shm_name[256];
   es_node_cfg node;
   es_state *esim;
   volatile es_shm_header *shm;
   unsigned msecs_wait;
-  pthread_barrierattr_t attr;
   unsigned have_core_0;   /* Special case when node first core and row is 0 */
   unsigned sim_processes; /* On this node, core 0 does not have sim proc */
   struct flock flock;      /* Used when opening shm file */
@@ -949,13 +975,38 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
     }
   es_state_reset(esim);
 
+  esim->slave = slave;
+
   snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
 
-  if ((error = es_open_shm_file(esim, shm_name, &flock)) != ES_OK)
+  msecs_wait = 0;
+  do
+    {
+      if ((error = es_open_shm_file(esim, shm_name, &flock)) == ES_OK)
+	break;
+
+      if (!esim->slave)
+	break;
+
+      /* Notify user we're waiting once */
+      if (msecs_wait == 0)
+	fprintf(stderr, "ESIM: Will wait 10s for core simulators\n");
+
+      usleep(200000);
+      msecs_wait += 200;
+    }
+  while (msecs_wait <= 10000);
+  if (error != ES_OK)
     {
       fprintf(stderr, "ESIM: Could not open esim file `/dev/shm%s'\n", shm_name);
       goto err_out;
     }
+
+#if WITH_EMESH_NET
+  /* Initialize networking */
+  if ((error = es_net_init(esim, &cluster)) != ES_OK)
+    goto err_out;
+#endif
 
   /* If this process created the file, set its size */
   if (esim->creator)
@@ -1031,16 +1082,10 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
 	}
     }
 
-#if WITH_EMESH_NET
-  /* We use a shared counter to calculate how many sim processes there are on
-     every node. Therefore we cannot do this before we have SHM. */
-  if ((error = es_net_init(esim)) != ES_OK)
-    goto err_out;
-#endif
-
   if (esim->creator)
     {
-      es_fill_in_internal_cfg_values(esim);
+      es_fill_in_internal_cluster_cfg_values(esim);
+      es_fill_in_internal_node_cfg_values(esim);
 
       /** @todo Determine what to do with this edge-case and WITH_EMESH_NET. */
       have_core_0 = (!ES_NODE_CFG.col_base && !ES_NODE_CFG.row_base);
@@ -1051,15 +1096,43 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
 	ES_CLUSTER_CFG.cores_per_node;
 
       /* Initialize pthread barriers */
-      pthread_barrierattr_init(&attr);
-      pthread_barrierattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-      pthread_barrier_init(
-	  (pthread_barrier_t *) &esim->shm->run_barrier, &attr,
-	  sim_processes);
-      pthread_barrier_init(
-	  (pthread_barrier_t *) &esim->shm->exit_barrier, &attr,
-	  sim_processes);
-      pthread_barrierattr_destroy(&attr);
+      {
+	pthread_barrierattr_t barr_attr;
+	pthread_mutexattr_t   mutex_attr;
+	pthread_condattr_t    cond_attr;
+
+	/* Need shared process attributes */
+	pthread_barrierattr_init(&barr_attr);
+	pthread_barrierattr_setpshared(&barr_attr, PTHREAD_PROCESS_SHARED);
+	pthread_mutexattr_init(&mutex_attr);
+	pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED);
+	pthread_condattr_init(&cond_attr);
+	pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED);
+
+	/* Initialize barriers */
+	pthread_barrier_init((pthread_barrier_t *) &esim->shm->run_barrier,
+			     &barr_attr,
+			     sim_processes);
+	pthread_barrier_init((pthread_barrier_t *) &esim->shm->exit_barrier,
+			     &barr_attr,
+			     sim_processes);
+
+	/* Initialize slave mutex */
+	pthread_mutex_init((pthread_mutex_t *) &esim->shm->slave_mtx,
+			   &mutex_attr);
+
+	/* ... and slave cond vars */
+	pthread_cond_init((pthread_cond_t *) &esim->shm->slave_exit_cond,
+			  &cond_attr);
+	pthread_cond_init((pthread_cond_t *) &esim->shm->slave_run_cond,
+			  &cond_attr);
+
+
+	/* Cleanup */
+	pthread_barrierattr_destroy(&barr_attr);
+	pthread_mutexattr_destroy(&mutex_attr);
+	pthread_condattr_destroy(&cond_attr);
+      }
 
       /* Signal waiting processes that (shared) configuration is ready */
       shm->cfg_initialized = 1;
@@ -1089,13 +1162,39 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
 	  (ES_CLUSTER_CFG.core_mem_region + ES_SHM_CORE_STATE_SIZE);
     }
 
-#if WITH_EMESH_NET
-  /* Calculate coreid from MPI rank */
-  if ((error = es_net_set_coreid_from_rank(esim)) != ES_OK)
+  /* Set coreid */
+  if (!esim->slave)
     {
-      fprintf(stderr, "ESIM: Could not set coreid.\n");
-      goto err_out;
+#if WITH_EMESH_NET
+      /* Calculate coreid from MPI rank */
+      if ((error = es_net_set_coreid_from_rank(esim)) != ES_OK)
+	{
+	  fprintf(stderr, "ESIM: Could not set coreid.\n");
+	  goto err_out;
+	}
+#else
+      /* Set coreid from hint */
+      if ((error = es_set_coreid(esim, coreid_hint)) != ES_OK)
+	{
+	  if (error == -EADDRINUSE)
+	    {
+	      fprintf(stderr,
+		      "ESIM: Could not set coreid to `%u'. Already "
+		      "reserved by another simulator process\n",
+		      coreid_hint);
+	    }
+	  else
+	    {
+	      fprintf(stderr,
+		      "ESIM: Could not set coreid to `%u'.\n",
+		      coreid_hint);
+	    }
+	  goto err_out;
+	}
+#endif
     }
+
+#if WITH_EMESH_NET
   /* Need coreid and this_core_cpu_state */
   if ((error = es_net_init_mmr(esim)) != ES_OK)
     {
@@ -1106,20 +1205,40 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
     {
       goto err_out;
     }
-#else
-  /* Set coreid from hint */
-  if ((error = es_set_coreid(esim, coreid_hint)) != ES_OK)
+#endif
+
+#if !WITH_EMESH_NET
+  /* Notify sim processes slave is connected */
+  if (esim->slave)
     {
-      if (error == -EADDRINUSE)
+      pthread_mutex_lock((pthread_mutex_t *) &shm->slave_mtx);
+
+      /* Fail early if any core is in the process of exiting. */
+      if (esim->shm->exiting)
 	{
-	  fprintf(stderr, "ESIM: Could not set coreid to `%u'. Already "
-		  "reserved by another simulator process\n", coreid_hint);
+	  if (!esim->shm->slaves)
+	    pthread_cond_broadcast((pthread_cond_t *) &shm->slave_exit_cond);
+
+	  pthread_mutex_unlock((pthread_mutex_t *) &shm->slave_mtx);
+
+	  fprintf(stderr, "ESIM: Remote is exiting.\n");
+	  error = -EPIPE;
+	  goto err_out;
 	}
-      else
+
+      /* Only support one slave for now */
+      if (esim->shm->slaves)
 	{
-	  fprintf(stderr, "ESIM: Could not set coreid to `%u'.\n", coreid_hint);
+	  pthread_mutex_unlock((pthread_mutex_t *) &shm->slave_mtx);
+
+	  fprintf(stderr, "ESIM: Maximum number of slaves already connected.\n");
+	  error = -EBUSY;
+	  goto err_out;
 	}
-      goto err_out;
+
+      esim->shm->slaves += 1;
+
+      pthread_mutex_unlock((pthread_mutex_t *) &shm->slave_mtx);
     }
 #endif
 
@@ -1139,6 +1258,61 @@ err_out:
   es_fini(esim);
   return error;
 }
+
+
+/*! Initialize esim
+ *
+ * @param[in,out] handle        pointer to ESIM handle
+ * @param[in]     cluster       Cluster configuration
+ * @param[in]     coreid_hint   Coreid hint (not used w. esim-net)
+ * @param[in]     slave         If true, connect as slave.
+ *
+ * @return On success returns ES_OK and sets handle to allocated
+ *         esim structure. On error returns a negative error number and sets
+ *         handle to NULL.
+ */
+int
+es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
+{
+  return es_init_impl(handle, cluster, coreid_hint, 0);
+}
+
+/*! Connect to eMesh simulator as a slave
+ *
+ * @param[in,out] handle          pointer to ESIM handle
+ *
+ * @return On success returns ES_OK and sets handle to allocated
+ *         esim structure. On error returns a negative error number and sets
+ *         handle to NULL.
+ */
+int
+es_slave_connect(es_state **handle)
+{
+  int rc;
+  es_cluster_cfg cluster;
+
+  if ((rc = es_init_impl(handle, cluster, 0, 1)) != ES_OK)
+    return rc;
+
+  es_wait_run(*handle);
+
+  return ES_OK;
+}
+
+/*! Disconnect slave from eMesh simulator
+ *
+ * @param[in,out] esim          pointer to ESIM handle
+ */
+void
+es_slave_disconnect(es_state *esim)
+{
+  if (!esim)
+    return;
+
+  es_wait_exit(esim);
+  es_fini(esim);
+}
+
 
 /*! Check if ESIM is initialized
  *
@@ -1189,15 +1363,15 @@ es_fini(es_state *esim)
   free(esim);
 }
 
-void
+static void
 es_set_ready(es_state *esim)
 {
   if (esim->ready)
-    {
       return;
-    }
+
   esim->ready = 1;
-  es_atomic_incr32((uint32_t *) &esim->shm->node_core_sims_ready);
+  if (!esim->slave)
+    es_atomic_incr32((uint32_t *) &esim->shm->node_core_sims_ready);
 }
 
 /*! Wait on other sim processes before starting simulation
@@ -1209,12 +1383,33 @@ es_wait_run(es_state *esim)
 {
   /** @todo Would be nice to support Ctrl-C here */
 
-#if WITH_EMESH_NET
-  es_net_wait_run(esim);
-#else
-  pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
-#endif
   es_set_ready(esim);
+
+#if WITH_EMESH_NET
+      es_net_wait_run(esim);
+#else
+  if (!esim->slave)
+    {
+      pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
+      if (!(esim->coreid % ES_CLUSTER_CFG.cores_per_node))
+	{
+	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
+	  pthread_cond_broadcast((pthread_cond_t *) &esim->shm->slave_run_cond);
+	  pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
+	}
+    }
+  else /* esim->slave */
+    {
+      if (esim->shm->node_core_sims_ready < ES_CLUSTER_CFG.cores_per_node)
+	{
+	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
+	  pthread_cond_wait((pthread_cond_t *) &esim->shm->slave_run_cond,
+			    (pthread_mutex_t *) &esim->shm->slave_mtx);
+	  pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
+	}
+      es_set_ready(esim);
+    }
+#endif
 }
 
 /*! Wait on other sim processes before exiting after simulation
@@ -1229,9 +1424,35 @@ es_wait_exit(es_state *esim)
 #if WITH_EMESH_NET
   es_net_wait_exit(esim);
 #else
-  if (esim->ready)
+
+  /* Exit early */
+  if (!esim->ready && !esim->slave)
+    return;
+
+  if (!esim->slave)
     {
+      /* Inform any connecting slave we want to exit */
+      esim->shm->exiting = 1;
+
+      /* Wait for slaves */
+      pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
+      if (esim->shm->slaves)
+	{
+	  pthread_cond_wait((pthread_cond_t *) &esim->shm->slave_exit_cond,
+			    (pthread_mutex_t *) &esim->shm->slave_mtx);
+	}
+      pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
+
+      /* Wait for other sim processes */
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->exit_barrier);
+    }
+  else
+    {
+      pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
+      esim->shm->slaves -= 1;
+      if (esim->shm->exiting && !esim->shm->slaves)
+	pthread_cond_broadcast((pthread_cond_t *) &esim->shm->slave_exit_cond);
+      pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
     }
 #endif
 }

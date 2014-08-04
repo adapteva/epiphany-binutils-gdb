@@ -26,6 +26,10 @@
 #include <errno.h>
 #include <stdint.h>
 
+
+/* Communicator to be used. */
+#define ES_NET_COMM_WORLD esim->net.comm
+
 static void es_net_state_reset(es_state *esim);
 void *es_net_mmr_thread(void *);
 
@@ -133,90 +137,259 @@ mpi_type(size_t size)
 
 
 /*! Initialize ESIM networking.
- *  Must be called *after* shared memory is set up.
  *
- *  @todo We can make this more efficient on MPI-3 by using a communicator
- *  for shared memory processes only (instead of MPI_WORLD), when calling
- *  MPI_Barrier().
+ *  @todo Support non-continous (per host) rank assignments.
  *
  *  @param[in] esim     ESIM handle
+ *  @param[in,out]      cluster configuration
  *
  *  @return ES_OK on success
  */
 int
-es_net_init(es_state *esim)
+es_net_init(es_state *esim, es_cluster_cfg *cluster)
 {
-  int rc, mpi_rc, provided;
-  unsigned cores;
+  int rc;
 
   /* Reset state */
   es_net_state_reset(esim);
 
   /* Initialize MPI and request multi-threading support */
-  provided = 0;
-  MPI_TRY_CATCH(
-		MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided),
-		{},
-		{
-		  rc = -EINVAL;
-		  goto err_out;
-		});
-  esim->net.mpi_initialized = 1;
+  {
+    int provided;
 
-  /* We need multiple threads support. */
-  if (provided != MPI_THREAD_MULTIPLE)
+    provided = 0;
+    MPI_TRY_CATCH(MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+    esim->net.mpi_initialized = 1;
+
+    /* We need multiple threads support. */
+    if (provided != MPI_THREAD_MULTIPLE)
+      {
+	fprintf(stderr, "ESIM:NET: MPI library does not support threads\n");
+	rc = -ENOTSUP;
+	goto err_out;
+      }
+
+    /* Signal errors with return codes */
+    MPI_TRY_CATCH(MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN),
+		  { },
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+  }
+
+
+  /* Set up new communicator with correct ranks */
+  {
+    /* Reorder ranks with slaves in tail */
+    MPI_TRY_CATCH(MPI_Comm_split(MPI_COMM_WORLD,
+				 0,
+				 esim->slave,
+				 &esim->net.comm),
+		  { },
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    /* Signal errors with return codes */
+    MPI_TRY_CATCH(MPI_Comm_set_errhandler(ES_NET_COMM_WORLD, MPI_ERRORS_RETURN),
+		  { },
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_rank(ES_NET_COMM_WORLD, &esim->net.rank),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_size(ES_NET_COMM_WORLD, &esim->net.size),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+  }
+
+  if (esim->slave && esim->net.rank == 0)
     {
-      fprintf(stderr, "ESIM:NET: MPI library does not support threads\n");
-      rc = -ENOTSUP;
-      goto err_out;
-    }
-
-  /* Signal errors with return codes */
-  MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-
-  MPI_TRY_CATCH(MPI_Comm_rank(MPI_COMM_WORLD, &esim->net.rank),
-		{},
-		{
-		  rc = -EINVAL;
-		  goto err_out;
-		});
-
-  MPI_TRY_CATCH(MPI_Comm_size(MPI_COMM_WORLD, &esim->net.processes),
-		{},
-		{
-		  rc = -EINVAL;
-		  goto err_out;
-		});
-
-  cores = ES_CLUSTER_CFG.rows * ES_CLUSTER_CFG.cols;
-  if (esim->net.processes != cores)
-    {
-      fprintf(stderr, "ESIM:NET: Number of MPI processes (%u) doesn't match "
-	      "number of cores (%u)\n", esim->net.processes, cores);
+      fprintf(stderr, "ESIM:NET: Running a simulation with only slaves is not"
+	      " allowed (it does not make sense).\n");
       rc = -EINVAL;
       goto err_out;
     }
 
-  /* Calculate number of processes per node. Assume homogenous configuration */
-  __sync_fetch_and_add(&ES_CLUSTER_CFG.cores_per_node, 1);
-  MPI_TRY_CATCH(MPI_Barrier(MPI_COMM_WORLD),
+  /* Calculate total number of simulator processes (non-slaves) */
+  {
+    MPI_Comm tmp_comm;
+    int tmp_sz;
+
+    MPI_TRY_CATCH(MPI_Comm_split(ES_NET_COMM_WORLD, esim->slave, 0, &tmp_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_size(tmp_comm, &tmp_sz),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Barrier(tmp_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_disconnect(&tmp_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    esim->net.sim_processes =
+     esim->slave ? esim->net.size - tmp_sz: tmp_sz;
+  }
+
+  /* Let process with rank 0 dictate cluster configuration */
+  MPI_TRY_CATCH(MPI_Bcast((void *) cluster,
+			  sizeof(es_cluster_cfg),
+			  MPI_UINT8_T,
+			  0,
+			  ES_NET_COMM_WORLD),
 		{},
 		{
 		  rc = -EINVAL;
 		  goto err_out;
 		});
 
-  if (esim->creator)
-    ES_CLUSTER_CFG.nodes = esim->net.processes / ES_CLUSTER_CFG.cores_per_node;
+  /* Calculate number of simulator processes per node */
+  {
+    int procs_per_node, cores_per_node, core_comm_sz;
 
-  MPI_TRY_CATCH(MPI_Barrier(MPI_COMM_WORLD),
-		{},
-		{
-		  rc = -EINVAL;
-		  goto err_out;
-		});
+    MPI_Comm node_comm; /* Processes on this node */
+    MPI_Comm core_comm; /* Split in simulator processes and only slaves */
 
-  /* @todo Run simple message passing selfcheck here */
+    /* Get all procs on node */
+    MPI_TRY_CATCH(MPI_Comm_split_type(ES_NET_COMM_WORLD,
+				      MPI_COMM_TYPE_SHARED,
+				      0,
+				      MPI_INFO_NULL,
+				      &node_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    /* Then split by sim-process / slave */
+    MPI_TRY_CATCH(MPI_Comm_split(node_comm, esim->slave, 0, &core_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_size(node_comm, &procs_per_node),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_size(core_comm, &core_comm_sz),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    /* Wait for all (local) processes to get size */
+    MPI_TRY_CATCH(MPI_Barrier(node_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_disconnect(&core_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    MPI_TRY_CATCH(MPI_Comm_disconnect(&node_comm),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    cluster->cores_per_node =
+     esim->slave ? (procs_per_node-core_comm_sz) : core_comm_sz;
+
+    cluster->nodes = esim->net.sim_processes / cluster->cores_per_node;
+
+  }
+
+  /* Ensure that the configuration is homogeneous, i.e., same number of
+   * simulator processes on all nodes. */
+  {
+    int leader_says;
+
+    if (esim->net.rank == 0)
+      leader_says = cluster->cores_per_node;
+
+    MPI_TRY_CATCH(MPI_Bcast((void *) &leader_says,
+			    1,
+			    MPI_INTEGER,
+			    0,
+			    ES_NET_COMM_WORLD),
+		  {},
+		  {
+		    rc = -EINVAL;
+		    goto err_out;
+		  });
+
+    if (cluster->cores_per_node != leader_says)
+      {
+	fprintf(stderr, "ESIM:NET: Simulation must be run with the same number "
+		"of simulator processes on all nodes.\n");
+	rc = -EINVAL;
+	goto err_out;
+      }
+  }
+
+  /* Fail if there isn't exactly one sim process per core */
+  {
+    unsigned cores;
+
+    cores = cluster->rows * cluster->cols;
+
+    if (esim->net.sim_processes != cores)
+      {
+	fprintf(stderr, "ESIM:NET: Number of MPI processes (%u) doesn't match "
+		"number of cores (%u)\n", esim->net.sim_processes, cores);
+	rc = -EINVAL;
+	goto err_out;
+      }
+  }
 
 ok_out:
   return ES_OK;
@@ -231,7 +404,7 @@ es_net_state_reset(es_state *esim)
   int i;
 
   esim->net.rank = -1;
-  esim->net.processes = -1;
+  esim->net.sim_processes = 0;
 
   esim->net.mem_win = MPI_WIN_NULL;
   esim->net.ext_ram_win = MPI_WIN_NULL;
@@ -290,7 +463,7 @@ es_net_wait_run(es_state *esim)
   MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.mem_win), { }, { });
   MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.ext_ram_win), { }, { });
   MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.ext_write_win), { }, { });
-  MPI_TRY_CATCH(MPI_Barrier(MPI_COMM_WORLD), { }, { });
+  MPI_TRY_CATCH(MPI_Barrier(ES_NET_COMM_WORLD), { }, { });
 }
 
 /*! Wait for all processes to finish before we go ahead and finalize MPI.
@@ -302,42 +475,39 @@ es_net_wait_exit(es_state *esim)
   MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.ext_ram_win), { }, { });
   MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.ext_write_win), { }, { });
 
-  MPI_TRY_CATCH(MPI_Barrier(MPI_COMM_WORLD), { }, { });
+  MPI_TRY_CATCH(MPI_Barrier(ES_NET_COMM_WORLD), { }, { });
 
-  {
-    /* send exit msg to service mmr thread */
+  /* send exit msg to service mmr thread */
+  if (!esim->slave)
+    {
+      int rc;
 
-    es_net_mmr_request req;
-    MPI_Request mpi_req;
+      es_net_mmr_request req;
+      MPI_Request mpi_req;
 
-    req.type = ES_NET_MMR_REQ_EXIT;
+      req.type = ES_NET_MMR_REQ_EXIT;
 
-    /* Use non-blocking send. Standard isn't really clear about what should
-     * happen on blocking send to self.
-     */
-    MPI_TRY_CATCH(MPI_Isend((void *) &req,
-			   sizeof(req),
-			   MPI_UINT8_T,
-			   esim->net.rank,
-			   ES_NET_TAG_REQUEST,
-			   MPI_COMM_WORLD,
-			   &mpi_req),
-		  {},
-		  {});
-  }
+      /* Use non-blocking send. Standard isn't really clear about what should
+       * happen on blocking send to self.
+       */
+      MPI_TRY_CATCH(MPI_Isend((void *) &req,
+			     sizeof(req),
+			     MPI_UINT8_T,
+			     esim->net.rank,
+			     ES_NET_TAG_REQUEST,
+			     ES_NET_COMM_WORLD,
+			     &mpi_req),
+		    {},
+		    {});
 
-  {
-    /* Wait for thread exit */
+      /* Wait for thread to exit */
+      pthread_join(esim->net.mmr_thread, (void **) &rc);
 
-    int rc;
+      if (rc != ES_OK)
+	fprintf(stderr, "ESIM:NET: Error in MMR helper thread.\n");
+    }
 
-    pthread_join(esim->net.mmr_thread, (void **) &rc);
-
-    if (rc != ES_OK)
-      fprintf(stderr, "ESIM:NET: Error in MMR helper thread.\n");
-  }
-
-  MPI_TRY_CATCH(MPI_Barrier(MPI_COMM_WORLD), { }, { });
+  MPI_TRY_CATCH(MPI_Barrier(ES_NET_COMM_WORLD), { }, { });
 
 }
 
@@ -349,6 +519,9 @@ es_net_wait_exit(es_state *esim)
 int
 es_net_init_mmr(es_state *esim)
 {
+
+  if (esim->slave)
+    return ES_OK;
 
   /* Create MMR access helper thread */
   if ((pthread_create(&esim->net.mmr_thread,
@@ -362,6 +535,55 @@ es_net_init_mmr(es_state *esim)
   return ES_OK;
 }
 
+static int
+es_net_create_mpi_win(es_state *esim, MPI_Win *win, void *ptr, size_t size)
+{
+  /* Expose per core local SRAM to other MPI processes */
+  MPI_TRY_CATCH(MPI_Win_create(ptr,
+			       size,
+			       1,
+			       MPI_INFO_NULL,
+			       ES_NET_COMM_WORLD,
+			       win),
+		{},
+		{ return -EINVAL; });
+
+  /* Signal errors with return codes */
+  MPI_Win_set_errhandler(*win, MPI_ERRORS_RETURN);
+
+  MPI_TRY_CATCH(MPI_Win_fence(0, *win),
+		{},
+		{ return -EINVAL; });
+
+  return ES_OK;
+}
+
+/*! Create dummy MPI Windows for slaves
+ *
+ */
+static int
+es_net_init_slave_mpi_win(es_state *esim)
+{
+  int rc;
+
+  if (ES_OK != (rc = es_net_create_mpi_win(esim, &esim->net.mem_win, NULL, 0)))
+    return rc;
+
+  if (ES_OK != (rc = es_net_create_mpi_win(esim,
+					   &esim->net.ext_ram_win,
+					   NULL,
+					   0)))
+    return rc;
+
+  if (ES_OK != (rc = es_net_create_mpi_win(esim,
+					   &esim->net.ext_write_win,
+					   NULL,
+					   0)))
+    return rc;
+
+  return ES_OK;
+}
+
 /*! Create MPI Windows for Remote Memory Access to core SRAM + external RAM
  *
  * @warn Must be called late in es_init(), after esim->coreid is set.
@@ -369,85 +591,62 @@ es_net_init_mmr(es_state *esim)
 int
 es_net_init_mpi_win(es_state *esim)
 {
-  {
-    /* Expose per core local SRAM to other MPI processes */
-    MPI_TRY_CATCH(MPI_Win_create((void *) esim->this_core_mem,
-				 ES_CLUSTER_CFG.core_mem_region*sizeof(uint8_t),
-				 sizeof(uint8_t),
-				 MPI_INFO_NULL,
-				 MPI_COMM_WORLD,
-				 &esim->net.mem_win),
-		  {},
-		  { return -EINVAL; });
+  int rc;
 
-    /* Signal errors with return codes */
-    MPI_Win_set_errhandler(esim->net.mem_win, MPI_ERRORS_RETURN);
+  if (esim->slave)
+    return es_net_init_slave_mpi_win(esim);
 
-    MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.mem_win),
-		  {},
-		  { return -EINVAL; });
-  }
+  /* Expose per core local SRAM to other MPI processes */
+  if (ES_OK != (rc = es_net_create_mpi_win(esim,
+					   &esim->net.mem_win,
+					   (void *) esim->this_core_mem,
+					   ES_CLUSTER_CFG.core_mem_region)))
+    return rc;
 
-  {
-    /* Expose external RAM to other MPI processes.
-     * Let process with lowest rank on `ext_ram_node' provide the MPI window.
-     * Because this is a collective call all other processes share a
-     * NULL-window.
-     */
 
-    void *ext_ram_ptr;
-    size_t win_size;
+  /* Expose external RAM to other MPI processes.
+   * Let process with lowest rank on `ext_ram_node' provide the MPI window.
+   * Because this is a collective call all other processes share a
+   * NULL-window.
+   */
+    {
+      void *ext_ram_ptr;
+      size_t win_size;
 
-    if (ES_CLUSTER_CFG.ext_ram_rank == esim->net.rank)
-      {
-	ext_ram_ptr = (void *) esim->ext_ram;
-	win_size = ES_CLUSTER_CFG.ext_ram_size;
-      }
-    else
-      {
-	ext_ram_ptr = NULL;
-	win_size = 0;
-      }
-    MPI_TRY_CATCH(MPI_Win_create(ext_ram_ptr,
-				 win_size,
-				 sizeof(uint8_t),
-				 MPI_INFO_NULL,
-				 MPI_COMM_WORLD,
-				 &esim->net.ext_ram_win),
-		  {},
-		  { return -EINVAL; });
+      if (ES_CLUSTER_CFG.ext_ram_rank == esim->net.rank)
+	{
+	  ext_ram_ptr = (void *) esim->ext_ram;
+	  win_size = ES_CLUSTER_CFG.ext_ram_size;
+	}
+      else
+	{
+	  ext_ram_ptr = NULL;
+	  win_size = 0;
+	}
 
-    /* Signal errors with return codes */
-    MPI_Win_set_errhandler(esim->net.ext_ram_win, MPI_ERRORS_RETURN);
+      if (ES_OK != (rc = es_net_create_mpi_win(esim,
+					       &esim->net.ext_ram_win,
+					       ext_ram_ptr,
+					       win_size)))
+	return rc;
+    }
 
-    MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.ext_ram_win),
-		  { },
-		  { return -EINVAL; });
-  }
+  /* Expose external write flag */
+    {
+      sim_cpu *current_cpu;
+      void *ext_write_ptr;
+      size_t size;
 
-  {
-    /* Expose external write flag */
-    sim_cpu *current_cpu = (sim_cpu *) esim->this_core_cpu_state;
-    void *ext_write_ptr = (void *) &current_cpu->oob_events.external_write;
+      current_cpu = (sim_cpu *) esim->this_core_cpu_state;
+      ext_write_ptr = (void *) &current_cpu->oob_events.external_write;
+      size = sizeof(current_cpu->oob_events.external_write);
 
-    MPI_TRY_CATCH(MPI_Win_create(ext_write_ptr,
-				 sizeof(current_cpu->oob_events.external_write),
-				 1,
-				 MPI_INFO_NULL,
-				 MPI_COMM_WORLD,
-				 &esim->net.ext_write_win),
-		  {},
-		  { return -EINVAL; });
-
-    /* Signal errors with return codes */
-    MPI_Win_set_errhandler(esim->net.ext_write_win, MPI_ERRORS_RETURN);
-
-    MPI_TRY_CATCH(MPI_Win_fence(0, esim->net.ext_write_win),
-		  { },
-		  { return -EINVAL; });
-  }
-
-  MPI_TRY_CATCH(MPI_Barrier(MPI_COMM_WORLD), { }, { return -EINVAL; });
+      if (ES_OK != (rc = es_net_create_mpi_win(esim,
+					       &esim->net.ext_write_win,
+					       ext_write_ptr,
+					       size)))
+	return rc;
+    }
 
   return ES_OK;
 }
@@ -848,7 +1047,7 @@ es_net_tx_one_mmr(es_state *esim, es_transaction *tx)
 			 MPI_UINT8_T,
 			 tx->sim_addr.net_rank,
 			 ES_NET_TAG_REQUEST,
-			 MPI_COMM_WORLD),
+			 ES_NET_COMM_WORLD),
 		{},
 		{ return -EINVAL; });
 
@@ -857,7 +1056,7 @@ es_net_tx_one_mmr(es_state *esim, es_transaction *tx)
 			 MPI_UINT8_T,
 			 tx->sim_addr.net_rank,
 			 ES_NET_TAG_REPLY,
-			 MPI_COMM_WORLD,
+			 ES_NET_COMM_WORLD,
 			 &status),
 		{},
 		{ return -EINVAL; });
@@ -939,7 +1138,7 @@ es_net_mmr_thread(void *p)
 			     MPI_UINT8_T,
 			     MPI_ANY_SOURCE,
 			     ES_NET_TAG_REQUEST,
-			     MPI_COMM_WORLD,
+			     ES_NET_COMM_WORLD,
 			     &status),
 		    {},
 		    {
@@ -985,7 +1184,7 @@ es_net_mmr_thread(void *p)
 			     MPI_UINT8_T,
 			     status.MPI_SOURCE,
 			     ES_NET_TAG_REPLY,
-			     MPI_COMM_WORLD),
+			     ES_NET_COMM_WORLD),
 		    {},
 		    {
 		      rc = -EINVAL;
@@ -1011,7 +1210,7 @@ handle_error:
 			       MPI_UINT8_T,
 			       status.MPI_SOURCE,
 			       ES_NET_TAG_REPLY,
-			       MPI_COMM_WORLD),
+			       ES_NET_COMM_WORLD),
 		      {},
 		      {
 			goto abort;
@@ -1023,7 +1222,7 @@ abort:
        *  @todo Investigate if there is a way to recover from this.
        *  Maybe timeouts?
        */
-      MPI_Abort(MPI_COMM_WORLD, EINVAL);
+      MPI_Abort(ES_NET_COMM_WORLD, EINVAL);
       return (void *) -EINVAL;
     }
 
