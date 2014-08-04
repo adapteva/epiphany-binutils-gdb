@@ -390,13 +390,16 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
   struct emesh_params *p;
   uint64_t ext_ram_size, ext_ram_base;
 
+  if (es_initialized(STATE_ESIM(sd)) == ES_OK)
+    return SIM_RC_OK;
+
+  if (sim_esim_have_required_params(sd) != SIM_RC_OK)
+    return SIM_RC_FAIL;
+
   p = &emesh_params;
 
   ext_ram_size = 32*1024*1024;
   ext_ram_base = 0x8e000000;
-
-  if (sim_esim_have_required_params(sd) != SIM_RC_OK)
-    return SIM_RC_FAIL;
 
 #if HAVE_E_XML
   /* Parse XML file, if specified */
