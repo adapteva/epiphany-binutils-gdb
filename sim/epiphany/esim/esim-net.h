@@ -22,12 +22,14 @@
 #define ES_CORE_MMR_SIZE 2048
 
 typedef struct es_net_state_ {
-  int     mpi_initialized;
-  int     rank;            /*!< This process' rank           */
-  int     processes;       /*!< Total number of MPI processes */
-  MPI_Win mem_win;         /*!< MPI window for remote access local mem */
-  MPI_Win ext_ram_win;     /*!< MPI window for remote access to external ram */
-  MPI_Win ext_write_win;   /*!< Expose external write flag  */
+  int       mpi_initialized;
+  MPI_Comm  comm;            /*!< Communicator w/ right process rank order */
+  int       rank;            /*!< This process' rank (in comm) */
+  int       size;            /*!< Total number of MPI processes */
+  int       sim_processes;   /*!< Total number of simulator processes */
+  MPI_Win   mem_win;         /*!< MPI window for remote access local mem */
+  MPI_Win   ext_ram_win;     /*!< MPI window for remote access to external ram */
+  MPI_Win   ext_write_win;   /*!< Expose external write flag  */
   pthread_t mmr_thread;    /*!< MMR access remote helper thread */
 } es_net_state;
 
@@ -61,7 +63,7 @@ typedef struct es_net_mmr_reply_ {
 typedef struct es_transl_ es_transl;
 typedef struct es_transaction_ es_transaction;
 
-int es_net_init(es_state *esim);
+int es_net_init(es_state *esim, es_cluster_cfg *cluster);
 void es_net_fini(es_state *esim);
 int es_net_set_coreid_from_rank(es_state *esim);
 void es_net_wait_exit(es_state *esim);
