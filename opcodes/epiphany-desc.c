@@ -217,7 +217,7 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_all_reg_names_entries[] =
   { "SCR-CONFIG", 256, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-STATUS", 257, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-PC", 258, {0, {{{0, 0}}}}, 0, 0 },
-  { "SCR-DEBUG", 259, {0, {{{0, 0}}}}, 0, 0 },
+  { "SCR-DEBUGSTATUS", 259, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-IAB", 260, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-LC", 261, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-LS", 262, {0, {{{0, 0}}}}, 0, 0 },
@@ -238,16 +238,16 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_all_reg_names_entries[] =
   { "DMA0-COUNT", 322, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA0-SRCADDR", 323, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA0-DSTADDR", 324, {0, {{{0, 0}}}}, 0, 0 },
-  { "DMA0-AUTODMA0", 325, {0, {{{0, 0}}}}, 0, 0 },
-  { "DMA0-AUTODMA1", 326, {0, {{{0, 0}}}}, 0, 0 },
+  { "DMA0-AUTO0", 325, {0, {{{0, 0}}}}, 0, 0 },
+  { "DMA0-AUTO1", 326, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA0-STATUS", 327, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA1-CONFIG", 328, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA1-STRIDE", 329, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA1-COUNT", 330, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA1-SRCADDR", 331, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA1-DSTADDR", 332, {0, {{{0, 0}}}}, 0, 0 },
-  { "DMA1-AUTODMA0", 333, {0, {{{0, 0}}}}, 0, 0 },
-  { "DMA1-AUTODMA1", 334, {0, {{{0, 0}}}}, 0, 0 },
+  { "DMA1-AUTO0", 333, {0, {{{0, 0}}}}, 0, 0 },
+  { "DMA1-AUTO1", 334, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA1-STATUS", 335, {0, {{{0, 0}}}}, 0, 0 },
   { "MEM-CONFIG", 384, {0, {{{0, 0}}}}, 0, 0 },
   { "MEM-STATUS", 385, {0, {{{0, 0}}}}, 0, 0 },
@@ -256,7 +256,7 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_all_reg_names_entries[] =
   { "MESH-CONFIG", 448, {0, {{{0, 0}}}}, 0, 0 },
   { "MESH-COREID", 449, {0, {{{0, 0}}}}, 0, 0 },
   { "MESH-MULTICAST", 450, {0, {{{0, 0}}}}, 0, 0 },
-  { "MESH-SWRESET", 451, {0, {{{0, 0}}}}, 0, 0 },
+  { "MESH-RESETCORE", 451, {0, {{{0, 0}}}}, 0, 0 },
   { "MESH-CMESHROUTE", 452, {0, {{{0, 0}}}}, 0, 0 },
   { "MESH-XMESHROUTE", 453, {0, {{{0, 0}}}}, 0, 0 },
   { "MESH-RMESHROUTE", 454, {0, {{{0, 0}}}}, 0, 0 }
@@ -367,7 +367,7 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_cr_names_entries[] =
   { "config", 0, {0, {{{0, 0}}}}, 0, 0 },
   { "status", 1, {0, {{{0, 0}}}}, 0, 0 },
   { "pc", 2, {0, {{{0, 0}}}}, 0, 0 },
-  { "debug", 3, {0, {{{0, 0}}}}, 0, 0 },
+  { "debugstatus", 3, {0, {{{0, 0}}}}, 0, 0 },
   { "iab", 4, {0, {{{0, 0}}}}, 0, 0 },
   { "lc", 5, {0, {{{0, 0}}}}, 0, 0 },
   { "ls", 6, {0, {{{0, 0}}}}, 0, 0 },
@@ -437,7 +437,7 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_crmesh_names_entries[] =
   { "meshconfig", 0, {0, {{{0, 0}}}}, 0, 0 },
   { "coreid", 1, {0, {{{0, 0}}}}, 0, 0 },
   { "meshmulticast", 2, {0, {{{0, 0}}}}, 0, 0 },
-  { "swreset", 3, {0, {{{0, 0}}}}, 0, 0 }
+  { "resetcore", 3, {0, {{{0, 0}}}}, 0, 0 }
 };
 
 CGEN_KEYWORD epiphany_cgen_opval_crmesh_names =

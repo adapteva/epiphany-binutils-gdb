@@ -376,7 +376,7 @@
 	(SCR-CONFIG      #x100) ;; configuration register
 	(SCR-STATUS      #x101) ;; unified condition codes
 	(SCR-PC          #x102) ;; program counter                        CORE  RD/WR*
-	(SCR-DEBUG       #x103) ;; debug status register                  CORE  RD/WR     used by debugger tools only
+	(SCR-DEBUGSTATUS #x103) ;; debug status register                  CORE  RD/WR     used by debugger tools only
 	(SCR-IAB         #x104) ;; iab fifo register for external fetch   CORE  WR*       external instruction fetch return register. Don't use.
 	(SCR-LC          #x105) ;; hw loop counter                        CORE  RD/WR
 	(SCR-LS          #x106) ;; hardware loop start                    CORE  RD/WR
@@ -399,29 +399,29 @@
 	(DMA0-COUNT     #x142) ;; count register                         DMA   RD/WR
 	(DMA0-SRCADDR   #x143) ;; source register                        DMA   RD/WR
 	(DMA0-DSTADDR   #x144) ;; destination register                   DMA   RD/WR
-	(DMA0-AUTODMA0  #x145) ;; autodma register                       DMA   RD/WR
-	(DMA0-AUTODMA1  #x146) ;; autodma register                       DMA   RD/WR*
+	(DMA0-AUTO0     #x145) ;; autodma register                       DMA   RD/WR
+	(DMA0-AUTO1     #x146) ;; autodma register                       DMA   RD/WR*
 	(DMA0-STATUS    #x147) ;; dma status register                    DMA   RD/WR*
 	(DMA1-CONFIG    #x148) ;; (samed as dma0*)
 	(DMA1-STRIDE    #x149)
 	(DMA1-COUNT     #x14a)
 	(DMA1-SRCADDR   #x14b)
 	(DMA1-DSTADDR   #x14c)
-	(DMA1-AUTODMA0  #x14d)
-	(DMA1-AUTODMA1  #x14e)
+	(DMA1-AUTO0     #x14d)
+	(DMA1-AUTO1     #x14e)
 	(DMA1-STATUS    #x14f)
 
 	;; Memory Protection Registers
 	(MEM-CONFIG     #x180) ;; Forums: test register for the local SRAM (ignore, has not logical effect)
-	(MEM-STATUS     #x181) ;; ???
-	(MEM-PROTECT    #x182) ;; allows you to specify parts or all of the local memory as read only memory.
+	(MEM-STATUS     #x181) ;; Memory protection status
+	(MEM-PROTECT    #x182) ;; Memory protection configuration
 	(MEM-RESERVE    #x183) ;; Forums: no idea should probably be removed :D
 
 	;; MESH group
 	(MESH-CONFIG         #x1c0) ;; mesh control register                 MESH   RD/WR
 	(MESH-COREID         #x1c1) ;; mesh status and ID register           MESH   RD
 	(MESH-MULTICAST      #x1c2) ;; multicast address                     MESH   RD/WR
-	(MESH-SWRESET        #x1c3) ;; core specific software reset                 WR
+	(MESH-RESETCORE      #x1c3) ;; core specific software reset                 WR
 	(MESH-CMESHROUTE     #x1c4) ;; Not available on Epiphany-III
 	(MESH-XMESHROUTE     #x1c5) ;; Not available on Epiphany-III
 	(MESH-RMESHROUTE     #x1c6) ;; Not available on Epiphany-III
@@ -716,23 +716,23 @@
   (enum-prefix H-CORE-REGISTERS-)
   (name-prefix "")
   (values
-	(config   0)
-	(status   1) ; unified condition codes
-	(pc       2) ; virtualized PC
-	(debug    3) ;
-	(iab      4)
-	(lc       5) ;loop counter            Not impemented
-	(ls       6) ;loop start address      Not impemented
-	(le       7) ;loop end address        Not impemented
-	(iret     8)
-	(imask    9)
-	(ilat    10)
-	(ilatst  11)
-	(ilatcl  12)
-	(ipend   13)
-	(ctimer0 14)
-	(ctimer1 15)
-	(fstatus 16)
+	(config       0)
+	(status       1) ; unified condition codes
+	(pc           2) ; virtualized PC
+	(debugstatus  3) ;
+	(iab          4)
+	(lc           5) ;loop counter            Not impemented
+	(ls           6) ;loop start address      Not impemented
+	(le           7) ;loop end address        Not impemented
+	(iret         8)
+	(imask        9)
+	(ilat        10)
+	(ilatst      11)
+	(ilatcl      12)
+	(ipend       13)
+	(ctimer0     14)
+	(ctimer1     15)
+	(fstatus     16)
   )
 )
 ;; DMA registers in group MR0=1, MR1=0
@@ -791,7 +791,7 @@
 	(meshconfig    0)
 	(coreid        1)
 	(meshmulticast 2)
-	(swreset       3)
+	(resetcore     3)
   )
 )
 
@@ -882,7 +882,7 @@
 			    config
 			    status
 			    pc
-			    debug
+			    debugstatus
 			    iab
 			    lc
 			    ls
