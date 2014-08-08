@@ -318,11 +318,11 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
     }
   else if (tx->sim_addr.location == ES_LOC_SHM)
     {
+      SIM_CPU *current_cpu = (SIM_CPU *) tx->sim_addr.cpu;
       /* Signal other CPU simulator a write from another core did occur so that
        * it can flush its scache.
        */
-      MEM_BARRIER();
-      tx->sim_addr.cpu->oob_events.external_write = 1;
+      OOB_EMIT_EVENT(OOB_EVT_EXTERNAL_WRITE);
     }
 
   return ES_OK;
@@ -371,8 +371,11 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
    */
   if (tx->sim_addr.coreid != esim->coreid)
     {
-      MEM_BARRIER();
-      tx->sim_addr.cpu->oob_events.external_write = 1;
+      SIM_CPU *current_cpu = (SIM_CPU *) tx->sim_addr.cpu;
+      /* Signal other CPU simulator a write from another core did occur so that
+       * it can flush its scache.
+       */
+      OOB_EMIT_EVENT(OOB_EVT_EXTERNAL_WRITE);
     }
 
   return ES_OK;

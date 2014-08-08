@@ -158,8 +158,14 @@ extern void epiphany_fpu_error (CGEN_FPU *, int);
 /* Handle ipend on rti call.  */
 extern USI epiphany_rti (SIM_CPU *, USI ipend);
 
+/* Handle the gie insn.  */
+extern void epiphany_gie( SIM_CPU * );
+
 /* Call back after every instruction.  */
 extern USI epiphany_post_isn_callback (SIM_CPU *cpu , USI pc) ;
+
+/* Check if core is active */
+extern int epiphany_cpu_is_active(SIM_CPU *current_cpu);
 
 #if WITH_SCACHE
 extern void epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc);

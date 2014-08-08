@@ -631,15 +631,16 @@ es_net_init_mpi_win(es_state *esim)
 	return rc;
     }
 
-  /* Expose external write flag */
+  /* Expose external write event counter */
     {
       sim_cpu *current_cpu;
       void *ext_write_ptr;
       size_t size;
 
       current_cpu = (sim_cpu *) esim->this_core_cpu_state;
-      ext_write_ptr = (void *) &current_cpu->oob_events.external_write;
-      size = sizeof(current_cpu->oob_events.external_write);
+      ext_write_ptr =
+       (void *) &current_cpu->oob_events.events[OOB_EVT_EXTERNAL_WRITE];
+      size = sizeof(current_cpu->oob_events.events[OOB_EVT_EXTERNAL_WRITE]);
 
       if (ES_OK != (rc = es_net_create_mpi_win(esim,
 					       &esim->net.ext_write_win,
@@ -829,7 +830,7 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
 {
   /*! @todo Relax locking for better performance */
 
-  fieldtype_of(oob_state, external_write) one, dontcare;
+  unsigned one, dontcare; /* Must match element type of oob_state.events */
   size_t n, dwords, leading, trailing;
 
   one = 1;
@@ -915,7 +916,7 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
 			       0,
 			       1,
 			       ES_NET_MPI_TYPE(one),
-			       MPI_REPLACE,
+			       MPI_SUM,
 			       esim->net.ext_write_win),
 		{},
 		{ return -EINVAL; });
