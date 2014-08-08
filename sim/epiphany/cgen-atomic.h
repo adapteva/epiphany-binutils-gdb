@@ -18,87 +18,37 @@
     } \
   while (0)
 
-#define DECR_REG_ATOMIC(regno, val)\
+#define _OP_REG_ATOMIC(Op, Regno, Val)\
 do\
   {\
     volatile USI *ptr;\
 \
-    assert (0 <= regno && regno < H_REG_NUM_REGS);\
+    assert (0 <= Regno && Regno < H_REG_NUM_REGS);\
 \
-    ptr = &(CPU (h_all_registers)[regno]);\
-    __sync_fetch_and_sub(ptr, val);\
+    ptr = &(CPU (h_all_registers)[Regno]);\
+    __sync_fetch_and_##Op(ptr, Val);\
   }\
 while (0)
 
-#define INCR_REG_ATOMIC(regno, val)\
-do\
-  {\
-    volatile USI *ptr;\
-\
-    assert (0 <= regno && regno < H_REG_NUM_REGS);\
-\
-    ptr = &(CPU (h_all_registers)[regno]);\
-    __sync_fetch_and_add(ptr, val);\
-  }\
-while (0)
+#define ADD_REG_ATOMIC(Regno, Val) _OP_REG_ATOMIC(add, Regno, Val)
+#define SUB_REG_ATOMIC(Regno, Val) _OP_REG_ATOMIC(sub, Regno, Val)
+#define OR_REG_ATOMIC(Regno, Val) _OP_REG_ATOMIC(or, Regno, Val)
+#define AND_REG_ATOMIC(Regno, Val) _OP_REG_ATOMIC(and, Regno, Val)
+#define XOR_REG_ATOMIC(Regno, Val) _OP_REG_ATOMIC(xor, Regno, Val)
 
-#define XOR_REG_ATOMIC(regno, val)\
-do\
-  {\
-    volatile USI *ptr;\
-\
-    assert (0 <= regno && regno < H_REG_NUM_REGS);\
-\
-    ptr = &(CPU (h_all_registers)[regno]);\
-    __sync_fetch_and_xor(ptr, val);\
-  }\
-while (0)
-
-#define OR_REG_ATOMIC(regno, val)\
-do\
-  {\
-    volatile USI *ptr;\
-\
-    assert (0 <= regno && regno < H_REG_NUM_REGS);\
-\
-    ptr = &(CPU (h_all_registers)[regno]);\
-    __sync_fetch_and_or(ptr, val);\
-  }\
-while (0)
-
-#define AND_REG_ATOMIC(regno, val)\
-do\
-  {\
-    volatile USI *ptr;\
-\
-    assert (0 <= regno && regno < H_REG_NUM_REGS);\
-\
-    ptr = &(CPU (h_all_registers)[regno]);\
-    __sync_fetch_and_and(ptr, val);\
-  }\
-while (0)
-
-/* Compare and swap loop to make sure we only affect the bit we're
- * interested in
- */
 #define SET_REG_BIT_ATOMIC(regno, bit, val)\
 do\
   {\
     volatile USI *ptr;\
-    USI old, reg, newval;\
 \
     assert (0 <= regno && regno < H_REG_NUM_REGS);\
     assert (0 <= bit && bit < 32);\
 \
     ptr = &(CPU (h_all_registers)[regno]);\
-    old = *ptr;\
-    do\
-      {\
-	reg = old;\
-	newval = val ? ((reg | (1<<bit))) : ((reg & ~(1<<bit)));\
-	old = __sync_val_compare_and_swap(ptr, reg, newval);\
-      }\
-    while (old != reg); /* Retry if reg was changed by other process */\
+    if (val)\
+      __sync_fetch_and_or(ptr, (1ULL << bit));\
+    else\
+      __sync_fetch_and_and(ptr, ~(1ULL << bit));\
   }\
 while (0)
 
