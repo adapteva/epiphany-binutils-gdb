@@ -277,6 +277,32 @@ epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val)
   CPU_SCR_RELEASE();
 }
 
+void
+epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
+{
+  USI masked, old;
+
+  masked = val & 1; /* Only allow writes to bit 0 */
+
+  CPU_SCR_LOCK();
+
+  old = CPU(h_all_registers[H_REG_MESH_RESETCORE]);
+  CPU(h_all_registers[H_REG_MESH_RESETCORE]) = masked;
+
+  /* Asserted */
+  if (!old && masked)
+    {
+      OOB_EMIT_EVENT(OOB_EVT_RESET_ASSERT);
+    }
+  /* Deasserted */
+  else if (old && !masked)
+    {
+      OOB_EMIT_EVENT(OOB_EVT_RESET_DEASSERT);
+      CPU_WAKEUP_SIGNAL();
+    }
+  CPU_SCR_RELEASE();
+}
+
 /* Backdoor access for e.g read-only register */
 void
 epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
@@ -572,6 +598,41 @@ epiphanybf_model_epiphany32_u_exec (SIM_CPU * cpu, const IDESC * idesc,
   fprintf (stderr, "-------------epiphanybf_model_epiphany32_u_exec\n");
 #endif
   return 1;
+}
+
+void
+epiphanybf_cpu_reset(SIM_CPU *current_cpu)
+{
+  int i;
+
+  CPU_SCR_LOCK();
+
+  /* R0-R64 are not reset ...*/
+  for (i=64; i < H_REG_NUM_REGS; i++)
+    {
+      /* ... and neither are these */
+      switch (i)
+	{
+	case H_REG_DMA0_STRIDE:
+	case H_REG_DMA0_SRCADDR:
+	case H_REG_DMA0_DSTADDR:
+	case H_REG_DMA0_AUTO0:
+	case H_REG_DMA0_AUTO1:
+	case H_REG_DMA1_STRIDE:
+	case H_REG_DMA1_SRCADDR:
+	case H_REG_DMA1_DSTADDR:
+	case H_REG_DMA1_AUTO0:
+	case H_REG_DMA1_AUTO1:
+
+	/* Don't reset. Might miss a deassert event in OOB logic */
+	case H_REG_MESH_RESETCORE:
+
+	  continue;
+	}
+      CPU(h_all_registers[i]) = 0;
+    }
+
+  CPU_SCR_RELEASE();
 }
 
 USI

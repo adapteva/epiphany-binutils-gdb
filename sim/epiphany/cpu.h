@@ -63,6 +63,9 @@ epiphanybf_set_ilatst (current_cpu, (x));\
  else if ((((index)) == (H_REG_SCR_ILATCL))) {\
 epiphanybf_set_ilatcl (current_cpu, (x));\
 }\
+ else if ((((index)) == (H_REG_MESH_RESETCORE))) {\
+epiphanybf_set_resetcore (current_cpu, (x));\
+}\
  else {\
 CPU (h_all_registers[(index)]) = (x);\
 }\

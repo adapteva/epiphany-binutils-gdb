@@ -120,6 +120,22 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
   if (OOB_HAVE_EVENT(event_mask, OOB_EVT_EXTERNAL_WRITE))
     scache_flush_cpu(current_cpu);
 
+  {
+    if (OOB_HAVE_EVENT(event_mask, OOB_EVT_RESET_DEASSERT))
+      {
+	epiphanybf_cpu_reset(current_cpu);
+	vpc = 0;
+	goto out;
+      }
+    if (OOB_HAVE_EVENT(event_mask, OOB_EVT_RESET_ASSERT))
+      {
+	/* Clear CAI- and set GID-bit. Not exactly what hardware would do but
+	 * it should have same effect (stop core until RESET is deasserted). */
+	AND_REG_ATOMIC(H_REG_SCR_STATUS, (~(1 << H_SCR_STATUS_CAIBIT)));
+	OR_REG_ATOMIC( H_REG_SCR_STATUS, (1 << H_SCR_STATUS_GIDISABLEBIT));
+	goto out;
+      }
+  }
 
   if (OOB_HAVE_EVENT(event_mask, OOB_EVT_ROUNDING))
     {
