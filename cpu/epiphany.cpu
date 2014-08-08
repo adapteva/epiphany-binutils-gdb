@@ -508,6 +508,9 @@
 		((eq index (enum USI H-REG-SCR-STATUS))
 		  (c-call "epiphanybf_set_status" val)
 		)
+		((eq index (enum USI H-REG-SCR-IMASK))
+		  (c-call "epiphanybf_set_imask" val)
+		)
 		((eq index (enum USI H-REG-SCR-ILATST))
 		  (c-call "epiphanybf_set_ilatst" val)
 		)
@@ -2187,7 +2190,8 @@
 	     (SHORT-INSN)
 	     "gie"
 	     (+ OP4_FLOW16 (f-gien-gidis-9-1 #x0) (f-opc-8-5 #x19) (f-dc-15-6 #x0))
-	     (set gidisablebit 0)
+		 ;; Might trigger interrupt
+		 (c-call VOID "epiphany_gie")
 	     ()
 	     )
 

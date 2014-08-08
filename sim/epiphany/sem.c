@@ -9137,18 +9137,14 @@ SEM_FN_NAME (epiphanybf,gien) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-  {
-    BI opval = 0;
-    SET_H_GIDISABLEBIT (opval);
-    TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
+epiphany_gie (current_cpu);
 {
   USI tmp_tmpPC;
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 5);
+    written |= (1 << 4);
     TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -9156,7 +9152,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 6);
+    written |= (1 << 5);
     TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }

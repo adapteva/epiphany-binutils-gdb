@@ -5,10 +5,12 @@
 #include <strings.h>
 
 #include "sim-main.h"
+#include "cgen-ops.h"
 #include "epiphany-sim.h"
 #include "mem-barrier.h"
 
-static IADDR interrupt_handler(SIM_CPU *current_cpu, IADDR vpc)
+static IADDR
+interrupt_handler(SIM_CPU *current_cpu, IADDR vpc)
 {
   BI gidisablebit;
   USI status, ilat, ilatcl, iret, imask, ipend;
@@ -17,7 +19,7 @@ static IADDR interrupt_handler(SIM_CPU *current_cpu, IADDR vpc)
   signed current;     /* Highest currently serviced interrupt */
 
   /* Take ilatcl/st reg lock */
-  SPIN_LOCK(&current_cpu->oob_events.scr_lock);
+  CPU_SCR_LOCK();
 
   /* Read all regs we need */
   status = GET_H_ALL_REGISTERS(H_REG_SCR_STATUS); /* Shared  */
@@ -91,7 +93,7 @@ update_ilatcl:
   AND_REG_ATOMIC(H_REG_SCR_ILATCL, ~(ilatcl));
 
   /* Release lock */
-  SPIN_RELEASE(&current_cpu->oob_events.scr_lock);
+  CPU_SCR_RELEASE();
 
   return vpc;
 }
@@ -101,33 +103,74 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
   /* Ack-ing an oob event (by clearing it) must be done before handling the
    * event.
    */
-  SIM_DESC current_state;
-  oob_state *oob;
-  unsigned rounding_mode;
-  USI config, ilat, ilatcl;
+  unsigned event_mask;
 
-  current_state = CPU_STATE (current_cpu);
-  oob = &current_cpu->oob_events;
-  rounding_mode = oob->rounding_mode;
-
-  config = GET_H_ALL_REGISTERS(H_REG_SCR_CONFIG);
-  ilat   = GET_H_ALL_REGISTERS(H_REG_SCR_ILAT);
-  ilatcl = GET_H_ALL_REGISTERS(H_REG_SCR_ILATCL);
+  event_mask = oob_check_all_events(current_cpu);
 
   MEM_BARRIER();
 
-  if (rounding_mode != oob->last_rounding_mode)
+  /* If another core (or the host CPU) wrote to local memory we need to make
+   * sure that cached instructions are flushed.
+   * @todo Now we flush the entire cache - this is *slow*.
+   * Instead, we could maintain a write-list and then just flush instructions
+   * inside memory written to from the scache.
+   * When flushing we need to take into account local/global addresses, and
+   * partly overwritten instructions.
+   */
+  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_EXTERNAL_WRITE))
+    scache_flush_cpu(current_cpu);
+
+
+  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_ROUNDING))
     {
-      oob->last_rounding_mode = rounding_mode;
+      USI config = GET_H_ALL_REGISTERS(H_REG_SCR_CONFIG);
       epiphany_set_rounding_mode(current_cpu, config);
     }
-  /** @todo Might get improved performance by having a special interrupt event.
-   * This must be set every time we write to any register that *might* trigger
-   * an interrupt.
-   */
-  if (ilat || ilatcl)
-    {
-      vpc = interrupt_handler(current_cpu, vpc);
-    }
+
+  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_INTERRUPT))
+    vpc = interrupt_handler(current_cpu, vpc);
+
+
+out:
   return vpc;
 }
+
+int
+oob_no_pending_wakeup_events(SIM_CPU *current_cpu)
+{
+#define HAVE_LATEST(E) \
+  (current_cpu->oob_events.events[(E)] == current_cpu->oob_events.acked[(E)])
+  return (HAVE_LATEST(OOB_EVT_RESET_DEASSERT) &&
+	  HAVE_LATEST(OOB_EVT_DEBUGCMD) &&
+	  HAVE_LATEST(OOB_EVT_INTERRUPT));
+#undef HAVE_LATEST
+}
+
+/* Return true when action is needed */
+inline int
+oob_check_event(SIM_CPU *current_cpu, oob_event_t event)
+{
+    unsigned old_ack;
+    old_ack = current_cpu->oob_events.acked[event];
+    current_cpu->oob_events.acked[event] = current_cpu->oob_events.events[event];
+    return (old_ack != current_cpu->oob_events.acked[event]);
+}
+
+/* Return bitmask with events that occurred and ack them */
+inline unsigned oob_check_all_events(SIM_CPU *current_cpu)
+{
+  oob_event_t i;
+  unsigned mask;
+
+  mask = 0;
+
+  for (i=0; i < OOB_EVT_NUM_EVENTS; i++)
+    {
+      if (oob_check_event(current_cpu, i))
+	mask |= (1ULL << i);
+    }
+
+  return mask;
+}
+
+

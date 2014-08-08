@@ -54,6 +54,9 @@ epiphanybf_set_config (current_cpu, (x));\
  else if ((((index)) == (H_REG_SCR_STATUS))) {\
 epiphanybf_set_status (current_cpu, (x));\
 }\
+ else if ((((index)) == (H_REG_SCR_IMASK))) {\
+epiphanybf_set_imask (current_cpu, (x));\
+}\
  else if ((((index)) == (H_REG_SCR_ILATST))) {\
 epiphanybf_set_ilatst (current_cpu, (x));\
 }\

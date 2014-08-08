@@ -190,8 +190,8 @@ static const struct insn_sem epiphanybf_insn_sem[] =
   { EPIPHANY_INSN_RTI, EPIPHANYBF_INSN_RTI, EPIPHANYBF_SFMT_RTI },
   { EPIPHANY_INSN_WAND, EPIPHANYBF_INSN_WAND, EPIPHANYBF_SFMT_WAND },
   { EPIPHANY_INSN_SYNC, EPIPHANYBF_INSN_SYNC, EPIPHANYBF_SFMT_NOP },
-  { EPIPHANY_INSN_GIEN, EPIPHANYBF_INSN_GIEN, EPIPHANYBF_SFMT_GIEN },
-  { EPIPHANY_INSN_GIDIS, EPIPHANYBF_INSN_GIDIS, EPIPHANYBF_SFMT_GIEN },
+  { EPIPHANY_INSN_GIEN, EPIPHANYBF_INSN_GIEN, EPIPHANYBF_SFMT_NOP },
+  { EPIPHANY_INSN_GIDIS, EPIPHANYBF_INSN_GIDIS, EPIPHANYBF_SFMT_GIDIS },
   { EPIPHANY_INSN_SWI_NUM, EPIPHANYBF_INSN_SWI_NUM, EPIPHANYBF_SFMT_SWI_NUM },
   { EPIPHANY_INSN_TRAP16, EPIPHANYBF_INSN_TRAP16, EPIPHANYBF_SFMT_TRAP16 },
   { EPIPHANY_INSN_ADD16, EPIPHANYBF_INSN_ADD16, EPIPHANYBF_SFMT_ADD16 },
@@ -402,7 +402,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 25 :
             if ((entire_insn & 0xffff) == 0x192)
-              { itype = EPIPHANYBF_INSN_GIEN; goto extract_sfmt_gien; }
+              { itype = EPIPHANYBF_INSN_GIEN; goto extract_sfmt_nop; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 26 :
             if ((entire_insn & 0xffff) == 0x1a2)
@@ -427,7 +427,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 57 :
             if ((entire_insn & 0xffff) == 0x392)
-              { itype = EPIPHANYBF_INSN_GIDIS; goto extract_sfmt_gien; }
+              { itype = EPIPHANYBF_INSN_GIDIS; goto extract_sfmt_gidis; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 58 :
             if ((entire_insn & 0xffff) == 0x3a2)
@@ -5103,14 +5103,14 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     return idesc;
   }
 
- extract_sfmt_gien:
+ extract_sfmt_gidis:
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
 #define FLD(f) abuf->fields.sfmt_empty.f
 
 
   /* Record the fields for the semantic handler.  */
-  TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_gien", (char *) 0));
+  TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_gidis", (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */

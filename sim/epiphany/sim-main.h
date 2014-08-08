@@ -23,9 +23,9 @@ typedef struct _sim_cpu SIM_CPU;
 #include "arch.h"
 
 #if WITH_EMESH_SIM
+#include <pthread.h>
 #include "esim/esim.h"
 #endif
-#include "oob-events.h"
 
 /* These must be defined before sim-base.h.  */
 typedef USI sim_cia;
@@ -53,20 +53,7 @@ do { \
 
 
 /* Out of band events */
-typedef struct oob_state_ {
-#if WITH_EMESH_SIM
-  unsigned external_write; /* Other agent wrote to cores mem */
-#endif
-  /* Lock for ALL SCR regs (all non-GPR regs) */
-  /** @todo Might want to implement more fine-grained locking later */
-  unsigned scr_lock;
-  unsigned rounding_mode;
-  /* DMA */
-  /* ... ??? */
-
-  /* These are local core private */
-  unsigned last_rounding_mode;
-} oob_state;
+#include "oob-events.h"
 
 /* The _sim_cpu struct.  */
 
@@ -78,7 +65,27 @@ struct _sim_cpu {
   /* Static parts of cgen.  */
   CGEN_CPU cgen_cpu;
 
-  oob_state oob_events; /* Out of band event hints */
+#if WITH_EMESH_SIM
+  /* Write (Set) lock for Special Core Registers. Since readers don't take the
+  lock, updates must be done in one step for consistency. */
+  pthread_mutex_t scr_lock;
+  pthread_cond_t wakeup_cond; /* IDLE, Debugstatus ... */
+#define CPU_SCR_LOCK() pthread_mutex_lock(&current_cpu->scr_lock)
+#define CPU_SCR_RELEASE() pthread_mutex_unlock(&current_cpu->scr_lock)
+#define CPU_WAKEUP_WAIT() \
+  pthread_cond_wait(&current_cpu->wakeup_cond, &current_cpu->scr_lock)
+#define CPU_WAKEUP_SIGNAL() \
+  pthread_cond_signal(&current_cpu->wakeup_cond)
+#else
+#define CPU_SCR_LOCK()
+#define CPU_SCR_RELEASE()
+#define CPU_WAKEUP_SIGNAL()
+#define CPU_WAKEUP_WAIT()\
+      sim_engine_halt (current_state, current_cpu, NULL, \
+		       sim_pc_get(current_cpu), sim_stopped, SIM_SIGTRAP)
+#endif
+
+  oob_state oob_events; /* Out of band events */
 
 #if defined (WANT_CPU_EPIPHANYBF)
   EPIPHANYBF_CPU_DATA cpu_data;
@@ -87,6 +94,9 @@ struct _sim_cpu {
 #define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
 
 };
+
+
+
 
 /* The sim_state struct.  */
 

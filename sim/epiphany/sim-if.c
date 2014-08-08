@@ -42,6 +42,7 @@
 #include "sim-options.h"
 
 #if WITH_EMESH_SIM
+#include <pthread.h>
 #include "esim/esim.h"
 #if HAVE_E_XML
 #include <epiphany_xml_c.h>
@@ -384,7 +385,8 @@ err_out:
 }
 #endif /* HAVE_E_XML */
 
-static SIM_RC sim_esim_init(SIM_DESC sd)
+static SIM_RC
+sim_esim_init(SIM_DESC sd)
 {
   es_cluster_cfg cluster;
   struct emesh_params *p;
@@ -441,6 +443,27 @@ static SIM_RC sim_esim_init(SIM_DESC sd)
     {
       return SIM_RC_FAIL;
     }
+
+  /* Set up lock and cond vars */
+  {
+    SIM_CPU *current_cpu;
+    pthread_mutexattr_t mutexattr;
+    pthread_condattr_t condattr;
+
+    current_cpu = STATE_CPU (sd, 0);
+
+    pthread_mutexattr_init(&mutexattr);
+    pthread_condattr_init(&condattr);
+
+    pthread_mutexattr_setpshared(&mutexattr, PTHREAD_PROCESS_SHARED);
+    pthread_condattr_setpshared(&condattr, PTHREAD_PROCESS_SHARED);
+
+    pthread_mutex_init(&current_cpu->scr_lock, &mutexattr);
+    pthread_cond_init(&current_cpu->wakeup_cond, &condattr);
+
+    pthread_condattr_destroy(&condattr);
+    pthread_mutexattr_destroy(&mutexattr);
+  }
 
   sim_io_eprintf(sd, "ESIM: Initialized successfully\n");
 
@@ -695,11 +718,11 @@ sim_create_inferior (sd, abfd, argv, envp)
   epiphanybf_h_all_registers_set_raw(STATE_CPU(sd, 0), H_REG_MESH_COREID,
 				 es_get_coreid(STATE_ESIM(sd)));
 
-  /* Start by triggering SYNC interrupt*/
-  /** @todo There should be a command-line option for disabling this so we can
-   * mimic hardware.
-   */
-  epiphanybf_h_all_registers_set(STATE_CPU(sd, 0), H_REG_SCR_ILATST, 1);
+  if (STATE_ENVIRONMENT (sd) != OPERATING_ENVIRONMENT)
+    {
+      /* Start by triggering SYNC interrupt*/
+      epiphanybf_h_all_registers_set(STATE_CPU(sd, 0), H_REG_SCR_ILATST, 1);
+    }
 
 #endif
 
