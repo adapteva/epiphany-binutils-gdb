@@ -76,7 +76,7 @@ arch.o: arch.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
 traps.o: traps.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
-esim/esim.o: CFLAGS += -fvisibility=default
+esim/esim.o: ALL_CFLAGS += -fvisibility=default
 esim/esim.o: esim/stamp-esim esim/esim.c $(SIM_MAIN_DEPS) \
 			 $(EPIPHANYBF_INCLUDE_DEPS)
 
