@@ -66,6 +66,7 @@ void epiphanybf_set_config(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_status(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val);
 
 /* Misc. profile data.  */
