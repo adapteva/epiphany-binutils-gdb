@@ -278,6 +278,23 @@ epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val)
 }
 
 void
+epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val)
+{
+  USI masked;
+
+  masked = val & 3; /* Only allow writes to bit 0-1 */
+
+  CPU_SCR_LOCK();
+
+  CPU(h_all_registers[H_REG_SCR_STATUS]) = masked;
+
+  OOB_EMIT_EVENT(OOB_EVT_DEBUGCMD);
+  CPU_WAKEUP_SIGNAL();
+
+  CPU_SCR_RELEASE();
+}
+
+void
 epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
 {
   USI masked, old;
@@ -367,8 +384,9 @@ epiphany_cpu_is_active(SIM_CPU *current_cpu)
 
   /* Need to think about this more, think it is ok without locking though. */
 
-  return ((!CPU(h_all_registers[H_REG_MESH_RESETCORE])) &&
-	  GET_H_CAIBIT()); // && debugstatus ....
+  return (!GET_H_ALL_REGISTERS(H_REG_MESH_RESETCORE) &&
+	  GET_H_CAIBIT() &&
+	  !(GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGSTATUS) & 1));
 }
 
 

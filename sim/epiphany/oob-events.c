@@ -137,6 +137,20 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
       }
   }
 
+  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_DEBUGCMD))
+    {
+      USI debugcmd = GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGCMD);
+
+      /*! @todo Manual does not mention what bit 1 means. Only check bit 0.
+       *  Might be wrong. */
+
+      /* Set or clear halt bit */
+      if (debugcmd & 1)
+	OR_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, 1);
+      else
+	AND_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, ~1);
+    }
+
   if (OOB_HAVE_EVENT(event_mask, OOB_EVT_ROUNDING))
     {
       USI config = GET_H_ALL_REGISTERS(H_REG_SCR_CONFIG);
