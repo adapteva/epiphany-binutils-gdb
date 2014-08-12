@@ -227,40 +227,28 @@ epiphanybf_set_status(SIM_CPU *current_cpu, USI val)
 {
   USI old, new;
 
-  CPU_SCR_LOCK();
   old = CPU(h_all_registers[H_REG_SCR_STATUS]);
   /* First 3 bits are sticky */
   new = (old & 7) | (val & (~7));
   CPU(h_all_registers[H_REG_SCR_STATUS]) = new;
-  CPU_SCR_RELEASE();
 }
 
 void
 epiphanybf_set_imask(SIM_CPU *current_cpu, USI val)
 {
-  CPU_SCR_LOCK();
   CPU(h_all_registers[H_REG_SCR_IMASK]) = val;
 
   /* Might trigger interrupt */
   OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
-  CPU_WAKEUP_SIGNAL();
-
-  CPU_SCR_RELEASE();
 }
 
 void
 epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val)
 {
-  CPU_SCR_LOCK();
-
   /* Write directly to ILAT. This is ok since we have mutual exclusion. */
   OR_REG_ATOMIC(H_REG_SCR_ILAT, val);
 
   OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
-  /* Might wake up inactive core */
-  CPU_WAKEUP_SIGNAL();
-
-  CPU_SCR_RELEASE();
 }
 
 void
@@ -269,12 +257,9 @@ epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val)
   /* Don't write directly to ILAT. Interrupts are positive edge triggered,
    * so the target sim process should be able to see one before it's cleared.
    */
-  CPU_SCR_LOCK();
   OR_REG_ATOMIC(H_REG_SCR_ILATCL, val);
-  OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
   /* Might wake up inactive core */
-  CPU_WAKEUP_SIGNAL();
-  CPU_SCR_RELEASE();
+  OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
 }
 
 void
@@ -284,14 +269,9 @@ epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val)
 
   masked = val & 3; /* Only allow writes to bit 0-1 */
 
-  CPU_SCR_LOCK();
-
   CPU(h_all_registers[H_REG_SCR_STATUS]) = masked;
 
   OOB_EMIT_EVENT(OOB_EVT_DEBUGCMD);
-  CPU_WAKEUP_SIGNAL();
-
-  CPU_SCR_RELEASE();
 }
 
 void
@@ -300,8 +280,6 @@ epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
   USI masked, old;
 
   masked = val & 1; /* Only allow writes to bit 0 */
-
-  CPU_SCR_LOCK();
 
   old = CPU(h_all_registers[H_REG_MESH_RESETCORE]);
   CPU(h_all_registers[H_REG_MESH_RESETCORE]) = masked;
@@ -315,9 +293,7 @@ epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
   else if (old && !masked)
     {
       OOB_EMIT_EVENT(OOB_EVT_RESET_DEASSERT);
-      CPU_WAKEUP_SIGNAL();
     }
-  CPU_SCR_RELEASE();
 }
 
 /* Backdoor access for e.g read-only register */
@@ -367,23 +343,16 @@ epiphany_gie(SIM_CPU *current_cpu)
 
   gidbit = (1 << H_SCR_STATUS_GIDISABLEBIT);
 
-  CPU_SCR_LOCK();
-
   /* Clear GID bit */
   AND_REG_ATOMIC(H_REG_SCR_STATUS, ~gidbit);
 
   /* Might trigger interrupt */
   OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
-
-  CPU_SCR_RELEASE();
 }
 
 int
 epiphany_cpu_is_active(SIM_CPU *current_cpu)
 {
-
-  /* Need to think about this more, think it is ok without locking though. */
-
   return (!GET_H_ALL_REGISTERS(H_REG_MESH_RESETCORE) &&
 	  GET_H_CAIBIT() &&
 	  !(GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGSTATUS) & 1));
@@ -623,8 +592,6 @@ epiphanybf_cpu_reset(SIM_CPU *current_cpu)
 {
   int i;
 
-  CPU_SCR_LOCK();
-
   /* R0-R64 are not reset ...*/
   for (i=64; i < H_REG_NUM_REGS; i++)
     {
@@ -641,16 +608,10 @@ epiphanybf_cpu_reset(SIM_CPU *current_cpu)
 	case H_REG_DMA1_DSTADDR:
 	case H_REG_DMA1_AUTO0:
 	case H_REG_DMA1_AUTO1:
-
-	/* Don't reset. Might miss a deassert event in OOB logic */
-	case H_REG_MESH_RESETCORE:
-
 	  continue;
 	}
       CPU(h_all_registers[i]) = 0;
     }
-
-  CPU_SCR_RELEASE();
 }
 
 USI

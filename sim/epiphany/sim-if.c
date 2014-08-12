@@ -444,7 +444,9 @@ sim_esim_init(SIM_DESC sd)
       return SIM_RC_FAIL;
     }
 
-  /* Set up lock and cond vars */
+  /*! Set up lock and cond vars
+   *  @todo Should be moved to esim
+   */
   {
     SIM_CPU *current_cpu;
     pthread_mutexattr_t mutexattr;
@@ -459,7 +461,11 @@ sim_esim_init(SIM_DESC sd)
     pthread_condattr_setpshared(&condattr, PTHREAD_PROCESS_SHARED);
 
     pthread_mutex_init(&current_cpu->scr_lock, &mutexattr);
-    pthread_cond_init(&current_cpu->wakeup_cond, &condattr);
+    pthread_cond_init(&current_cpu->scr_wakeup_cond, &condattr);
+    pthread_cond_init(&current_cpu->scr_writeslot_cond, &condattr);
+
+    current_cpu->scr_remote_write_reg = -1;
+    current_cpu->scr_remote_write_val = 0xbaadbeef;
 
     pthread_condattr_destroy(&condattr);
     pthread_mutexattr_destroy(&mutexattr);

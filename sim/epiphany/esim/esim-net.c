@@ -631,16 +631,15 @@ es_net_init_mpi_win(es_state *esim)
 	return rc;
     }
 
-  /* Expose external write event counter */
+  /* Expose external write flag */
     {
       sim_cpu *current_cpu;
       void *ext_write_ptr;
       size_t size;
 
       current_cpu = (sim_cpu *) esim->this_core_cpu_state;
-      ext_write_ptr =
-       (void *) &current_cpu->oob_events.events[OOB_EVT_EXTERNAL_WRITE];
-      size = sizeof(current_cpu->oob_events.events[OOB_EVT_EXTERNAL_WRITE]);
+      ext_write_ptr = (void *) &current_cpu->external_write;
+      size = sizeof(current_cpu->external_write);
 
       if (ES_OK != (rc = es_net_create_mpi_win(esim,
 					       &esim->net.ext_write_win,
@@ -830,7 +829,7 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
 {
   /*! @todo Relax locking for better performance */
 
-  unsigned one, dontcare; /* Must match element type of oob_state.events */
+  fieldtype_of(sim_cpu, external_write) one, dontcare;
   size_t n, dwords, leading, trailing;
 
   one = 1;
@@ -901,7 +900,7 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
   if (tx->sim_addr.location == ES_LOC_NET_RAM)
     return ES_OK;
 
-  /*! Update oob_events.external_write on remote in remote cpu state to
+  /*! Update current_cpu.external_write on remote in remote cpu state to
    *  trigger cache scache flush */
   MPI_TRY_CATCH(MPI_Win_lock(MPI_LOCK_SHARED,
 			     tx->sim_addr.net_rank,
@@ -916,7 +915,7 @@ es_net_tx_one_mem_store(es_state *esim, es_transaction *tx)
 			       0,
 			       1,
 			       ES_NET_MPI_TYPE(one),
-			       MPI_SUM,
+			       MPI_REPLACE,
 			       esim->net.ext_write_win),
 		{},
 		{ return -EINVAL; });
@@ -979,7 +978,7 @@ es_net_tx_one_mem_testset(es_state *esim, es_transaction *tx)
   tx->target += 4;
   tx->remaining -= 4;
 
-  /*! Update oob_events.external_write on remote in remote cpu state to
+  /*! Update current_cpu.external_write on remote in remote cpu state to
    *  trigger cache scache flush */
   MPI_TRY_CATCH(MPI_Win_lock(MPI_LOCK_SHARED,
 			     tx->sim_addr.net_rank,
