@@ -318,11 +318,11 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
     }
   else if (tx->sim_addr.location == ES_LOC_SHM)
     {
-      SIM_CPU *current_cpu = (SIM_CPU *) tx->sim_addr.cpu;
       /* Signal other CPU simulator a write from another core did occur so that
        * it can flush its scache.
        */
-      OOB_EMIT_EVENT(OOB_EVT_EXTERNAL_WRITE);
+      MEM_BARRIER();
+      tx->sim_addr.cpu->external_write = 1;
     }
 
   return ES_OK;
@@ -371,11 +371,11 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
    */
   if (tx->sim_addr.coreid != esim->coreid)
     {
-      SIM_CPU *current_cpu = (SIM_CPU *) tx->sim_addr.cpu;
       /* Signal other CPU simulator a write from another core did occur so that
        * it can flush its scache.
        */
-      OOB_EMIT_EVENT(OOB_EVT_EXTERNAL_WRITE);
+      MEM_BARRIER();
+      tx->sim_addr.cpu->external_write = 1;
     }
 
   return ES_OK;
@@ -433,7 +433,14 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 	}
       break;
     case ES_REQ_STORE:
-      epiphanybf_h_all_registers_set(current_cpu, reg, *target);
+      CPU_SCR_WRITESLOT_LOCK();
+      while (!CPU_SCR_WRITESLOT_EMPTY())
+	CPU_SCR_WRITESLOT_WAIT();
+      current_cpu->scr_remote_write_reg = reg;
+      current_cpu->scr_remote_write_val = *target;
+      CPU_SCR_WAKEUP_SIGNAL();
+      CPU_SCR_WRITESLOT_RELEASE();
+
       n = 4;
       break;
     /*! @todo Implement (if supported by hardware?) */

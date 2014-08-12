@@ -55,6 +55,8 @@ do { \
 /* Out of band events */
 #include "oob-events.h"
 
+#include "mem-barrier.h"
+
 /* The _sim_cpu struct.  */
 
 struct _sim_cpu {
@@ -68,24 +70,38 @@ struct _sim_cpu {
 #if WITH_EMESH_SIM
   /* Write (Set) lock for Special Core Registers. Since readers don't take the
   lock, updates must be done in one step for consistency. */
+  /*!  @todo Most of this should be moved to esim */
   pthread_mutex_t scr_lock;
-  pthread_cond_t wakeup_cond; /* IDLE, Debugstatus ... */
-#define CPU_SCR_LOCK() pthread_mutex_lock(&current_cpu->scr_lock)
-#define CPU_SCR_RELEASE() pthread_mutex_unlock(&current_cpu->scr_lock)
+  pthread_cond_t scr_wakeup_cond;    /* When someone writes to a SCR */
+  pthread_cond_t scr_writeslot_cond; /* When core acks SCR write (and write slot becomes free) */
+  volatile int scr_remote_write_reg; /* Set to -1 by core when a write is acked */
+  volatile uint32_t scr_remote_write_val;
+#define CPU_SCR_WRITESLOT_LOCK() pthread_mutex_lock(&current_cpu->scr_lock)
+#define CPU_SCR_WRITESLOT_RELEASE() pthread_mutex_unlock(&current_cpu->scr_lock)
 #define CPU_WAKEUP_WAIT() \
-  pthread_cond_wait(&current_cpu->wakeup_cond, &current_cpu->scr_lock)
-#define CPU_WAKEUP_SIGNAL() \
-  pthread_cond_signal(&current_cpu->wakeup_cond)
+  pthread_cond_wait(&current_cpu->scr_wakeup_cond, &current_cpu->scr_lock)
+#define CPU_SCR_WAKEUP_SIGNAL() \
+  pthread_cond_signal(&current_cpu->scr_wakeup_cond)
+#define CPU_SCR_WRITESLOT_EMPTY() (current_cpu->scr_remote_write_reg == -1)
+#define CPU_SCR_WRITESLOT_WAIT() \
+  pthread_cond_wait(&current_cpu->scr_writeslot_cond, &current_cpu->scr_lock)
+#define CPU_SCR_WRITESLOT_SIGNAL() \
+  pthread_cond_signal(&current_cpu->scr_writeslot_cond)
 #else
-#define CPU_SCR_LOCK()
-#define CPU_SCR_RELEASE()
-#define CPU_WAKEUP_SIGNAL()
-#define CPU_WAKEUP_WAIT()\
+#define CPU_SCR_WRITESLOT_LOCK()
+#define CPU_SCR_WRITESLOT_RELEASE()
+#define CPU_SCR_WAKEUP_SIGNAL()
+#define CPU_SCR_WAKEUP_WAIT()\
       sim_engine_halt (current_state, current_cpu, NULL, \
 		       sim_pc_get(current_cpu), sim_stopped, SIM_SIGTRAP)
+#define CPU_SCR_WRITESLOT_EMPTY() (1)
+#define CPU_SCR_WRITESLOT_WAIT()
+#define CPU_SCR_WRITESLOT_SIGNAL()
 #endif
 
-  oob_state oob_events; /* Out of band events */
+  oob_event_t oob_event; /* Out of band event (There can be only one) */
+
+  volatile unsigned external_write; /* Write from other core (for scache) */
 
 #if defined (WANT_CPU_EPIPHANYBF)
   EPIPHANYBF_CPU_DATA cpu_data;

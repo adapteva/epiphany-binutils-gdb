@@ -18,9 +18,6 @@ interrupt_handler(SIM_CPU *current_cpu, IADDR vpc)
   signed interrupt; /* Highest prio interrupt to handle */
   signed current;     /* Highest currently serviced interrupt */
 
-  /* Take ilatcl/st reg lock */
-  CPU_SCR_LOCK();
-
   /* Read all regs we need */
   status = GET_H_ALL_REGISTERS(H_REG_SCR_STATUS); /* Shared  */
   ilat   = GET_H_ALL_REGISTERS(H_REG_SCR_ILAT);   /* Private */
@@ -92,115 +89,57 @@ update_ilatcl:
   /* Clear ack-ed ilatcl bits */
   AND_REG_ATOMIC(H_REG_SCR_ILATCL, ~(ilatcl));
 
-  /* Release lock */
-  CPU_SCR_RELEASE();
-
   return vpc;
 }
 
 inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
 {
-  /* Ack-ing an oob event (by clearing it) must be done before handling the
-   * event.
-   */
-  unsigned event_mask;
 
-  event_mask = oob_check_all_events(current_cpu);
+  if (!current_cpu->oob_event)
+    return vpc;
 
-  MEM_BARRIER();
-
-  /* If another core (or the host CPU) wrote to local memory we need to make
-   * sure that cached instructions are flushed.
-   * @todo Now we flush the entire cache - this is *slow*.
-   * Instead, we could maintain a write-list and then just flush instructions
-   * inside memory written to from the scache.
-   * When flushing we need to take into account local/global addresses, and
-   * partly overwritten instructions.
-   */
-  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_EXTERNAL_WRITE))
-    scache_flush_cpu(current_cpu);
-
-  {
-    if (OOB_HAVE_EVENT(event_mask, OOB_EVT_RESET_DEASSERT))
-      {
-	epiphanybf_cpu_reset(current_cpu);
-	vpc = 0;
-	goto out;
-      }
-    if (OOB_HAVE_EVENT(event_mask, OOB_EVT_RESET_ASSERT))
-      {
-	/* Clear CAI- and set GID-bit. Not exactly what hardware would do but
-	 * it should have same effect (stop core until RESET is deasserted). */
-	AND_REG_ATOMIC(H_REG_SCR_STATUS, (~(1 << H_SCR_STATUS_CAIBIT)));
-	OR_REG_ATOMIC( H_REG_SCR_STATUS, (1 << H_SCR_STATUS_GIDISABLEBIT));
-	goto out;
-      }
-  }
-
-  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_DEBUGCMD))
+  switch (current_cpu->oob_event)
     {
-      USI debugcmd = GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGCMD);
+    case OOB_EVT_RESET_DEASSERT:
+      epiphanybf_cpu_reset(current_cpu);
+      vpc = 0;
+      break;
+    case OOB_EVT_RESET_ASSERT:
+      /* Clear CAI- and set GID-bit. Not exactly what hardware would do but
+       * it should have same effect (stop core until RESET is deasserted). */
+      AND_REG_ATOMIC(H_REG_SCR_STATUS, (~(1 << H_SCR_STATUS_CAIBIT)));
+      OR_REG_ATOMIC( H_REG_SCR_STATUS, (1 << H_SCR_STATUS_GIDISABLEBIT));
+      break;
+    case OOB_EVT_DEBUGCMD:
+      {
+	USI debugcmd = GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGCMD);
 
-      /*! @todo Manual does not mention what bit 1 means. Only check bit 0.
-       *  Might be wrong. */
+	/*! @todo Manual does not mention what bit 1 means. Only check bit 0.
+	 *  Might be wrong. */
 
-      /* Set or clear halt bit */
-      if (debugcmd & 1)
-	OR_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, 1);
-      else
-	AND_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, ~1);
+	/* Set or clear halt bit */
+	if (debugcmd & 1)
+	  OR_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, 1);
+	else
+	  AND_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, ~1);
+      }
+      break;
+    case OOB_EVT_ROUNDING:
+      {
+	USI config = GET_H_ALL_REGISTERS(H_REG_SCR_CONFIG);
+	epiphany_set_rounding_mode(current_cpu, config);
+      }
+      break;
+
+    case OOB_EVT_INTERRUPT:
+      vpc = interrupt_handler(current_cpu, vpc);
+      break;
+    default:
+      fprintf(stderr, "ESIM: Unknown OOB event: %d\n", current_cpu->oob_event);
     }
 
-  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_ROUNDING))
-    {
-      USI config = GET_H_ALL_REGISTERS(H_REG_SCR_CONFIG);
-      epiphany_set_rounding_mode(current_cpu, config);
-    }
-
-  if (OOB_HAVE_EVENT(event_mask, OOB_EVT_INTERRUPT))
-    vpc = interrupt_handler(current_cpu, vpc);
-
-
-out:
+  current_cpu->oob_event = 0;
   return vpc;
-}
-
-int
-oob_no_pending_wakeup_events(SIM_CPU *current_cpu)
-{
-#define HAVE_LATEST(E) \
-  (current_cpu->oob_events.events[(E)] == current_cpu->oob_events.acked[(E)])
-  return (HAVE_LATEST(OOB_EVT_RESET_DEASSERT) &&
-	  HAVE_LATEST(OOB_EVT_DEBUGCMD) &&
-	  HAVE_LATEST(OOB_EVT_INTERRUPT));
-#undef HAVE_LATEST
-}
-
-/* Return true when action is needed */
-inline int
-oob_check_event(SIM_CPU *current_cpu, oob_event_t event)
-{
-    unsigned old_ack;
-    old_ack = current_cpu->oob_events.acked[event];
-    current_cpu->oob_events.acked[event] = current_cpu->oob_events.events[event];
-    return (old_ack != current_cpu->oob_events.acked[event]);
-}
-
-/* Return bitmask with events that occurred and ack them */
-inline unsigned oob_check_all_events(SIM_CPU *current_cpu)
-{
-  oob_event_t i;
-  unsigned mask;
-
-  mask = 0;
-
-  for (i=0; i < OOB_EVT_NUM_EVENTS; i++)
-    {
-      if (oob_check_event(current_cpu, i))
-	mask |= (1ULL << i);
-    }
-
-  return mask;
 }
 
 
