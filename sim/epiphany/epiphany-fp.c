@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "targ-vals.h"
 #include "cgen-engine.h"
 #include "cgen-par.h"
+#include "cgen-ops.h"
 
 #include <math.h>
 
@@ -551,14 +552,14 @@ epiphany_fix (SIM_CPU * current_cpu, SI a1, SI a2, SI a3)
     result = 0;
   else
     {
-      /* We always round the number towards zero,
-	 regardless of rounding setting.  */
       if (fn > max_int_p)
 	result = max_int_p;
       else if (fn < max_int_n)
 	result = max_int_n;
-      else
+      else if (GET_H_TRMBIT())
 	result = (int) fn;
+      else
+	result = round(fn);
     }
 
   return result;
