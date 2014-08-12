@@ -416,13 +416,14 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
   switch (tx->type)
     {
     case ES_REQ_LOAD:
-      if (reg < ES_EPIPHANY_NUM_GPRS && tx->sim_addr.coreid != esim->coreid)
+      if (reg < ES_EPIPHANY_NUM_GPRS &&
+	  tx->sim_addr.coreid != esim->coreid &&
+	  epiphany_cpu_is_active(current_cpu))
 	{
 	  /* Reading directly from the general-purpose registers by an external
 	   * agent is not supported while the CPU is active.
 	   * @todo It is unclear if this is allowed from local core so allow it
 	   * for now.
-	   * @todo We pretend remote core is always active.
 	   */
 	  n = -EINVAL;
 	}
