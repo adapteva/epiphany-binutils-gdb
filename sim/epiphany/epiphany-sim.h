@@ -158,7 +158,7 @@ extern void epiphany_break( SIM_CPU *,PCADDR );
 extern void epiphany_fpu_error (CGEN_FPU *, int);
 
 /* Handle ipend on rti call.  */
-extern USI epiphany_rti (SIM_CPU *, USI ipend);
+extern USI epiphany_rti (SIM_CPU *);
 
 /* Handle the gie insn.  */
 extern void epiphany_gie( SIM_CPU * );

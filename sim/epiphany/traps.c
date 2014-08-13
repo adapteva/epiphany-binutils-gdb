@@ -28,6 +28,8 @@
 #include "cgen-par.h"
 #include "sim-fpu.h"
 
+#include "cgen-ops.h"
+#include "cpu.h"
 
 /* The semantic code invokes this for invalid (unrecognized) instructions.  */
 
@@ -78,16 +80,48 @@ syscall_write_mem (host_callback *cb, struct cb_syscall *sc,
 }
 
 
-
-USI epiphany_rti(SIM_CPU *current_cpu, USI ipend)
+/*! @todo Rewrite this and interrupt_handler in oob_events */
+USI epiphany_rti(SIM_CPU *current_cpu)
 {
-  /* Get which interrupt routine we're returning from
-   * (interrupt with highest prio).
-   */
-  unsigned long interrupt = ffs(ipend) - 1;
+  USI ipend, ilat, iret, imask;
+  int serviced, next;
 
-  /* Clear interrupt from ipend */
-  return ( (ipend ? ipend & (~( 1 << interrupt) ): 0) );
+  ipend = GET_H_ALL_REGISTERS(H_REG_SCR_IPEND);
+  ilat  = GET_H_ALL_REGISTERS(H_REG_SCR_ILAT);
+  iret  = GET_H_ALL_REGISTERS(H_REG_SCR_IRET);
+  imask = GET_H_ALL_REGISTERS(H_REG_SCR_IMASK);
+
+  serviced = ffs(ipend) - 1 ;
+
+  /* Clear serviced interrupt */
+  if (serviced > -1)
+    ipend = ipend & (~(1 << serviced));
+  SET_H_ALL_REGISTERS(H_REG_SCR_IPEND, ipend);
+
+  /* Check if there are pending non-masked interrupts */
+  /* @todo We should check IPEND??? Need to rewrite interrupt_handler() too */
+  next = ffs(ilat & ~imask) - 1;
+  if (next > -1)
+    {
+      /* Set cai, gidisable, and km-bit */
+      OR_REG_ATOMIC(H_REG_SCR_STATUS, (( 1 << H_SCR_STATUS_CAIBIT)
+				       |(1 << H_SCR_STATUS_GIDISABLEBIT)
+				       |(1 << H_SCR_STATUS_KMBIT)));
+
+      /* Set ipend */
+      OR_REG_ATOMIC(H_REG_SCR_IPEND, (1 << next));
+
+      /* Clear current interrupt from ILAT */
+      AND_REG_ATOMIC(H_REG_SCR_ILAT, (~(1 << next)));
+
+      return (next << 2);
+    }
+  else
+    {
+      SET_H_GIDISABLEBIT(0);
+      SET_H_KMBIT(0);
+      return iret;
+    }
 }
 
 void

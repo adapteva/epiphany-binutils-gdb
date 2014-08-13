@@ -9012,22 +9012,7 @@ SEM_FN_NAME (epiphanybf,rti) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = epiphany_rti (current_cpu, GET_H_CORE_REGISTERS (((UINT) 13)));
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    BI opval = 0;
-    SET_H_GIDISABLEBIT (opval);
-    TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    BI opval = 0;
-    SET_H_KMBIT (opval);
-    TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    USI opval = GET_H_CORE_REGISTERS (((UINT) 8));
+    USI opval = epiphany_rti (current_cpu);
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
     TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
