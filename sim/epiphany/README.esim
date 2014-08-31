@@ -1,16 +1,46 @@
 Build instructions:
 
+Without networking (MPI) support:
+
 In source root directory
 mkdir build
 cd build
-LDFLAGS="-lrt" ../configure --target=epiphany-elf    \
-  --enable-fast-install=N/A --enable-languages=c,c++ \
-  --disable-gdbtk --disable-werror                   \
-  --enable-emesh-sim --enable-hardware               \
+CFLAGS="-pthread -lrt -fPIC -fvisibility=hidden" \
+LDFLAGS="-lrt" \
+../configure --target=epiphany-elf \
+  --enable-emesh-sim --enable-sim-hardware \
   --prefix="/SOME/PREFIX"
 (Change prefix to match your settings)
 make
 make install
+
+
+With networking (MPI) support:
+
+You need a recent MPI implementation compiled with full multi-threaded
+(MPI_THREAD_MULTIPLE) support. The recommended implementation is Intel MPI 5.0.
+This is the only implementation the simulator has been tested on. Intel MPI is
+based on mpich so that should probably work too, but YMMV.
+
+
+Add "-mt_mpi" to CFLAGS when compiling with Intel MPI.
+
+In source root directory
+mkdir build.net
+cd build.net
+CC=mpicc \
+CFLAGS="-pthread -lrt -fPIC -fvisibility=hidden" \
+LDFLAGS="-lrt" \
+../configure --target=epiphany-elf \
+  --enable-emesh-sim --enable-sim-hardware \
+  --enable-emesh-net \
+  --prefix="/SOME/PREFIX"
+(Change prefix to match your settings)
+make
+make install
+
+
+
 
 Running:
 
@@ -37,7 +67,7 @@ Loading section ivt_reset, size 0x4 lma 0x0
 (gdb) run
 
 One more example:
-Simulating the upper leftmost 2x2 mesh of Parallella-16:
+Simulating the upper leftmost (northwest) 2x2 mesh of Parallella-16:
 In four separate terminals issue:
 $ epiphany-elf-run --e-coreid 0x808 --e-cols 2 --e-rows 2 --e-first-core 0x808 program1
 $ epiphany-elf-run --e-coreid 0x809 --e-cols 2 --e-rows 2 --e-first-core 0x808 program2
@@ -45,5 +75,6 @@ $ epiphany-elf-run --e-coreid 0x848 --e-cols 2 --e-rows 2 --e-first-core 0x808 p
 $ epiphany-elf-run --e-coreid 0x849 --e-cols 2 --e-rows 2 --e-first-core 0x808 program4
 
 Stale files:
-If you run into troubles, remove /dev/shm/esim
+If you run into trouble, try 'killall epiphany-elf-run' and then removing
+/dev/shm/esim.*
 
