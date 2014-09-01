@@ -1,40 +1,19 @@
-/*
- * eMesh and simulation nodes
- *
- *
- * Every node will map a partition of the mesh.
- * Example:
- *     Cores       Nodes    Row offset  Col Offset
- *        16           4            32          32
- *
- * This means 4 (16/4) cores will be mapped to each node.
- * Nodes are numbered from [0..No nodes - 1]
- *
- * Assume we have a simple configuration where
- * the partition is 2 rows and 2 cols.
- *
- * Cores mapped to node 2
- * (cow, col)
- * (34, 32) (34, 33)
- * (35, 32) (35, 33)
- *
- * The core at position (34,33) has core id (34*64 + 33) = 2209.
- * Each core in the eMesh has a global memory region of 1MB (don't confuse
- * this with physical memory).
- * The base address for core 2209 is 2209*1MB = 0x8A100000
- *
- *
- * So the following cores identified by coreid are mapped on node 2
- *
- * Address ranges mapped on node 3:
- *
- * CoreId   Row Col       Addr base   Addr end
- *   2208    34  32       0x8A100000  0x8A1FFFFF
- *   2209    34  33       0x8A200000  0x8A2FFFFF
- *   2278    35  32       0x8E600000  0x8E6FFFFF
- *   2279    35  33       0x8E700000  0x8E7FFFFF
- *
- */
+/* Epiphany eMesh functional simulator
+   Copyright (C) 2014 Ola Jeppsson
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
 
 /** @todo Check address overflow (addr+nr_bytes) */
 
