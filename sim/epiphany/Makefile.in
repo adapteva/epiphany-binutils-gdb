@@ -23,6 +23,11 @@ EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o \
 
 SIM_EXTRA_LIBS = -lm @epiphany_extra_libs@
 
+SIM_EXTRA_INSTALL =
+ifeq (@esim@, yes)
+	SIM_EXTRA_INSTALL += esim-install
+endif
+
 ESIM_OBJS =
 ifeq (@esim@, yes)
 	ESIM_OBJS += esim/esim.o
@@ -50,6 +55,14 @@ SIM_OBJS = \
 SIM_EXTRA_DEPS = \
 	$(CGEN_INCLUDE_DEPS) \
 	arch.h cpuall.h epiphany-sim.h $(srcdir)/../../opcodes/epiphany-desc.h
+
+SIM_EXTRA_ALL =
+ifeq (@esim@, yes)
+	SIM_EXTRA_ALL += epiphany-elf-sim.py
+ifeq (@have_target_as@, yes)
+	SIM_EXTRA_ALL += epiphany-elf-sim-dummy
+endif
+endif
 
 SIM_RUN_OBJS = nrun.o
 SIM_EXTRA_CLEAN = epiphany-clean
@@ -124,6 +137,24 @@ decode.o: decode.c $(EPIPHANYBF_INCLUDE_DEPS)
 sem.o: sem.c $(EPIPHANYBF_INCLUDE_DEPS)
 model.o: model.c $(EPIPHANYBF_INCLUDE_DEPS)
 
+epiphany-elf-sim-dummy: epiphany-elf-sim-dummy.s
+	epiphany-elf-as -o epiphany-elf-sim-dummy \
+		$(srcdir)/epiphany-elf-sim-dummy.s
+
+epiphany-elf-sim.py: $(srcdir)/epiphany-elf-sim.py.in
+	sed 's,@TARGET_PREFIX@,$(DESTDIR)$(exec_prefix)/$(target_alias),g' \
+		$(srcdir)/epiphany-elf-sim.py.in > epiphany-elf-sim.py
+
+esim-install: installdirs
+	$(INSTALL_PROGRAM) epiphany-elf-sim.py \
+		$(DESTDIR)$(bindir)/epiphany-elf-sim
+	$(INSTALL) -d libexec $(DESTDIR)$(exec_prefix)/$(target_alias)/libexec
+ifeq (@have_target_as@, yes)
+	$(INSTALL_PROGRAM) epiphany-elf-sim-dummy \
+		$(DESTDIR)$(exec_prefix)/$(target_alias)/libexec/epiphany-elf-sim-dummy
+endif
+
+
 epiphany-clean:
 	rm -f mloop.c eng.h stamp-mloop
 	rm -f tmp-*
@@ -131,6 +162,8 @@ epiphany-clean:
 	rm -f esim/stamp-esim esim/*.o
 	rm -f esim/test/stamp-esim-test $(ESIM_TEST_OBJS) $(ESIM_TEST_BINS)
 	rm -f libesim.so
+	rm -f epiphany-elf-sim.py
+	rm -f epiphany-elf-sim-dummy
 
 # cgen support, enable with --enable-cgen-maint
 CGEN_MAINT = ; @true
