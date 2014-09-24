@@ -105,10 +105,15 @@ if test x"$silent" != x"yes"; then
 fi
 fi
 
+
+dnl Check for epiphany-elf-as (Needed for epiphany-elf-sim-dummy)
+AC_CHECK_TARGET_TOOL(have_target_as, as, no)
+
 AC_SUBST(esim)
 AC_SUBST(esim_net)
 AC_SUBST(sim_cflags, ["${sim_cflags} ${esim_cflags}"])
 AC_SUBST(epiphany_extra_libs, [${epiphany_extra_libs}])
+AC_SUBST(have_target_as)
 dnl end --enable-emesh-sim
 
 
