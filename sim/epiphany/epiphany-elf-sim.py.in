@@ -254,7 +254,7 @@ def redirect_stdio(prefix):
 
     # stdout/stderr
     flags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY
-    mode = 0644
+    mode = 0o644
 
     new_stdout_fd = os.open(prefix + '.stdout', flags, mode)
     new_stderr_fd = os.open(prefix + '.stderr', flags, mode)
