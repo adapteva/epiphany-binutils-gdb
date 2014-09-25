@@ -103,11 +103,19 @@ struct _sim_cpu {
 
   volatile unsigned external_write; /* Write from other core (for scache) */
 
+  EPIPHANY_MISC_PROFILE epiphany_misc_profile;
+#define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
+
+  /* CPU specific parts go here.
+     Note that in files that don't need to access these pieces WANT_CPU_FOO
+     won't be defined and thus these parts won't appear.  This is ok in the
+     sense that things work.  It is a source of bugs though.
+     One has to of course be careful to not take the size of this
+     struct and no structure members accessed in non-cpu specific files can
+     go after here.  Oh for a better language.  */
 #if defined (WANT_CPU_EPIPHANYBF)
   EPIPHANYBF_CPU_DATA cpu_data;
 #endif
-  EPIPHANY_MISC_PROFILE epiphany_misc_profile;
-#define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
 
 };
 
