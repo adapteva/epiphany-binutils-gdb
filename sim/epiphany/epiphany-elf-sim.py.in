@@ -333,7 +333,8 @@ def spawn(args, i, j):
     if pid == 0:
         """ Child """
         # Raising exceptions with multiple processes seems messy so just
-        # print error and exit in case of any error in child.
+        # print error, send SIGTERM to parent, and exit in case of any error
+        # in child.
         try:
             try:
                 if args.redirect_dir:
@@ -342,6 +343,7 @@ def spawn(args, i, j):
                     redirect_stdin('/dev/null')
             except OSError as e:
                 print_stderr('[ERR ] core-0x%03x: Could not redirect stdio: %s' % (coreid, str(e)))
+                os.kill(os.getppid(), signal.SIGTERM)
                 os._exit(1)
 
             os.execlp('epiphany-elf-run', 'epiphany-elf-run', *sim_args)
@@ -349,6 +351,7 @@ def spawn(args, i, j):
         except Exception as e:
             print_stderr('[ERR ] core-0x%03x: ' % coreid)
             traceback.print_exc(file=sys.stderr)
+            os.kill(os.getppid(), signal.SIGTERM)
             os._exit(1)
 
     else:
@@ -398,9 +401,15 @@ def main():
                 print_stderr('[INFO] Created output directory')
         except OSError as e:
             if e.errno == os.errno.EEXIST:
-                print_stderr('[ERR ] Specified output directory `%s\' already '
+                print_stderr('[ERR ] Specified redirect directory `%s\' already '
                 'exists but is not a directory' % args.redirect_dir)
                 exit(8)
+            if e.errno == os.errno.EACCES:
+                print_stderr('[ERR ] Permission denied to access specified '
+                'redirect directory `%s\'' % args.redirect_dir)
+                exit(9)
+            else:
+                raise
 
     if args.verbose:
         print_stderr('[INFO] Spawning core simulator processes')
@@ -440,7 +449,7 @@ def sigterm_handler(sig, frame):
     signal.signal(signal.SIGTERM, (lambda sig, frame : 0))
     signal.signal(signal.SIGINT, (lambda sig, frame : 0))
     time.sleep(1)
-    print_stderr('\n[INFO] Got SIGTERM. Terminating all children...')
+    print_stderr('[INFO] Got SIGTERM. Terminating all children...')
     time.sleep(1)
     os.kill(0, signal.SIGTERM)
     exit(6)
@@ -466,7 +475,7 @@ if __name__ == "__main__":
         signal.signal(signal.SIGINT, (lambda sig, frame : 0))
         time.sleep(1)
         traceback.print_exc(file=sys.stderr)
-        print_stderr('\n[ERR ] Terminating all children...')
+        print_stderr('[ERR ] Terminating all children...')
         time.sleep(1)
         os.kill(0, signal.SIGTERM)
         exit(5)
