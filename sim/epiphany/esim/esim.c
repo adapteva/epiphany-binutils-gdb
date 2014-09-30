@@ -413,13 +413,20 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 	}
       break;
     case ES_REQ_STORE:
-      CPU_SCR_WRITESLOT_LOCK();
-      while (!CPU_SCR_WRITESLOT_EMPTY())
-	CPU_SCR_WRITESLOT_WAIT();
-      current_cpu->scr_remote_write_reg = reg;
-      current_cpu->scr_remote_write_val = *target;
-      CPU_SCR_WAKEUP_SIGNAL();
-      CPU_SCR_WRITESLOT_RELEASE();
+      /* If target cpu is local cpu, we can do the write immediately,
+       * otherwise we need to serialize it on the target */
+      if (tx->sim_addr.coreid == esim->coreid)
+	epiphanybf_h_all_registers_set(current_cpu, reg, *target);
+      else
+	{
+	  CPU_SCR_WRITESLOT_LOCK();
+	  while (!CPU_SCR_WRITESLOT_EMPTY())
+	    CPU_SCR_WRITESLOT_WAIT();
+	  current_cpu->scr_remote_write_reg = reg;
+	  current_cpu->scr_remote_write_val = *target;
+	  CPU_SCR_WAKEUP_SIGNAL();
+	  CPU_SCR_WRITESLOT_RELEASE();
+	}
 
       n = 4;
       break;
