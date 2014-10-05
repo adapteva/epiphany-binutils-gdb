@@ -62,8 +62,8 @@ int es_init(es_state **esim, es_cluster_cfg cluster, unsigned coreid);
 void es_fini(es_state *esim);
 
 /* Get access to eMesh simulator address space */
-int es_slave_connect(es_state **esim);
-void es_slave_disconnect(es_state *esim);
+int es_client_connect(es_state **esim);
+void es_client_disconnect(es_state *esim);
 
 int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
 int es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);

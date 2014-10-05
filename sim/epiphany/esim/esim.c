@@ -797,14 +797,14 @@ es_open_shm_file(es_state *esim, char *name, struct flock *flock)
   fd = -1;
   error = 0;
 
-  /* File must exist when connecting as slave */
-  oflag = esim->slave ? (O_RDWR) : (O_RDWR|O_CREAT);
+  /* File must exist when connecting as client */
+  oflag = esim->is_client ? (O_RDWR) : (O_RDWR|O_CREAT);
 
   fd = shm_open(name, oflag, S_IRUSR|S_IWUSR);
   if (fd == -1)
     return -errno;
 
-  if (esim->slave)
+  if (esim->is_client)
     goto out;
 
   /* Try to get exclusive lock on shm file */
@@ -933,7 +933,7 @@ es_state_reset(es_state *esim)
  * @param[in,out] esim          pointer to ESIM handle
  * @param[in]     cluster       Cluster configuration
  * @param[in]     coreid_hint   Coreid hint (not used w. esim-net)
- * @param[in]     slave         If true, connect as slave.
+ * @param[in]     client         If true, connect as client.
  *
  * @return On success returns ES_OK and sets handle to allocated
  *         esim structure. On error returns a negative error number and sets
@@ -943,7 +943,7 @@ static int
 es_init_impl(es_state **handle,
 	es_cluster_cfg cluster,
 	unsigned coreid_hint,
-	int slave)
+	int client)
 {
   int error;
   char shm_name[256];
@@ -972,7 +972,7 @@ es_init_impl(es_state **handle,
     }
   es_state_reset(esim);
 
-  esim->slave = slave;
+  esim->is_client = client;
 
   snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
 
@@ -982,7 +982,7 @@ es_init_impl(es_state **handle,
       if ((error = es_open_shm_file(esim, shm_name, &flock)) == ES_OK)
 	break;
 
-      if (!esim->slave)
+      if (!esim->is_client)
 	break;
 
       /* Notify user we're waiting once */
@@ -1114,14 +1114,14 @@ es_init_impl(es_state **handle,
 			     &barr_attr,
 			     sim_processes);
 
-	/* Initialize slave mutex */
-	pthread_mutex_init((pthread_mutex_t *) &esim->shm->slave_mtx,
+	/* Initialize client mutex */
+	pthread_mutex_init((pthread_mutex_t *) &esim->shm->client_mtx,
 			   &mutex_attr);
 
-	/* ... and slave cond vars */
-	pthread_cond_init((pthread_cond_t *) &esim->shm->slave_exit_cond,
+	/* ... and client cond vars */
+	pthread_cond_init((pthread_cond_t *) &esim->shm->client_exit_cond,
 			  &cond_attr);
-	pthread_cond_init((pthread_cond_t *) &esim->shm->slave_run_cond,
+	pthread_cond_init((pthread_cond_t *) &esim->shm->client_run_cond,
 			  &cond_attr);
 
 
@@ -1160,7 +1160,7 @@ es_init_impl(es_state **handle,
     }
 
   /* Set coreid */
-  if (!esim->slave)
+  if (!esim->is_client)
     {
 #if WITH_EMESH_NET
       /* Calculate coreid from MPI rank */
@@ -1205,37 +1205,37 @@ es_init_impl(es_state **handle,
 #endif
 
 #if !WITH_EMESH_NET
-  /* Notify sim processes slave is connected */
-  if (esim->slave)
+  /* Notify sim processes client is connected */
+  if (esim->is_client)
     {
-      pthread_mutex_lock((pthread_mutex_t *) &shm->slave_mtx);
+      pthread_mutex_lock((pthread_mutex_t *) &shm->client_mtx);
 
       /* Fail early if any core is in the process of exiting. */
       if (esim->shm->exiting)
 	{
-	  if (!esim->shm->slaves)
-	    pthread_cond_broadcast((pthread_cond_t *) &shm->slave_exit_cond);
+	  if (!esim->shm->clients)
+	    pthread_cond_broadcast((pthread_cond_t *) &shm->client_exit_cond);
 
-	  pthread_mutex_unlock((pthread_mutex_t *) &shm->slave_mtx);
+	  pthread_mutex_unlock((pthread_mutex_t *) &shm->client_mtx);
 
 	  fprintf(stderr, "ESIM: Remote is exiting.\n");
 	  error = -EPIPE;
 	  goto err_out;
 	}
 
-      /* Only support one slave for now */
-      if (esim->shm->slaves)
+      /* Only support one client for now */
+      if (esim->shm->clients)
 	{
-	  pthread_mutex_unlock((pthread_mutex_t *) &shm->slave_mtx);
+	  pthread_mutex_unlock((pthread_mutex_t *) &shm->client_mtx);
 
-	  fprintf(stderr, "ESIM: Maximum number of slaves already connected.\n");
+	  fprintf(stderr, "ESIM: Maximum number of clients already connected.\n");
 	  error = -EBUSY;
 	  goto err_out;
 	}
 
-      esim->shm->slaves += 1;
+      esim->shm->clients += 1;
 
-      pthread_mutex_unlock((pthread_mutex_t *) &shm->slave_mtx);
+      pthread_mutex_unlock((pthread_mutex_t *) &shm->client_mtx);
     }
 #endif
 
@@ -1262,7 +1262,7 @@ err_out:
  * @param[in,out] handle        pointer to ESIM handle
  * @param[in]     cluster       Cluster configuration
  * @param[in]     coreid_hint   Coreid hint (not used w. esim-net)
- * @param[in]     slave         If true, connect as slave.
+ * @param[in]     client         If true, connect as client.
  *
  * @return On success returns ES_OK and sets handle to allocated
  *         esim structure. On error returns a negative error number and sets
@@ -1274,7 +1274,7 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
   return es_init_impl(handle, cluster, coreid_hint, 0);
 }
 
-/*! Connect to eMesh simulator as a slave
+/*! Connect to eMesh simulator as a client
  *
  * @param[in,out] handle          pointer to ESIM handle
  *
@@ -1283,7 +1283,7 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
  *         handle to NULL.
  */
 int
-es_slave_connect(es_state **handle)
+es_client_connect(es_state **handle)
 {
   int rc;
   es_cluster_cfg cluster;
@@ -1296,12 +1296,12 @@ es_slave_connect(es_state **handle)
   return ES_OK;
 }
 
-/*! Disconnect slave from eMesh simulator
+/*! Disconnect client from eMesh simulator
  *
  * @param[in,out] esim          pointer to ESIM handle
  */
 void
-es_slave_disconnect(es_state *esim)
+es_client_disconnect(es_state *esim)
 {
   if (!esim)
     return;
@@ -1367,7 +1367,7 @@ es_set_ready(es_state *esim)
       return;
 
   esim->ready = 1;
-  if (!esim->slave)
+  if (!esim->is_client)
     es_atomic_incr32((uint32_t *) &esim->shm->node_core_sims_ready);
 }
 
@@ -1385,24 +1385,24 @@ es_wait_run(es_state *esim)
 #if WITH_EMESH_NET
       es_net_wait_run(esim);
 #else
-  if (!esim->slave)
+  if (!esim->is_client)
     {
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
       if (!(esim->coreid % ES_CLUSTER_CFG.cores_per_node))
 	{
-	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
-	  pthread_cond_broadcast((pthread_cond_t *) &esim->shm->slave_run_cond);
-	  pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
+	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->client_mtx);
+	  pthread_cond_broadcast((pthread_cond_t *) &esim->shm->client_run_cond);
+	  pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->client_mtx);
 	}
     }
-  else /* esim->slave */
+  else /* esim->is_client */
     {
       if (esim->shm->node_core_sims_ready < ES_CLUSTER_CFG.cores_per_node)
 	{
-	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
-	  pthread_cond_wait((pthread_cond_t *) &esim->shm->slave_run_cond,
-			    (pthread_mutex_t *) &esim->shm->slave_mtx);
-	  pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
+	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->client_mtx);
+	  pthread_cond_wait((pthread_cond_t *) &esim->shm->client_run_cond,
+			    (pthread_mutex_t *) &esim->shm->client_mtx);
+	  pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->client_mtx);
 	}
       es_set_ready(esim);
     }
@@ -1423,33 +1423,33 @@ es_wait_exit(es_state *esim)
 #else
 
   /* Exit early */
-  if (!esim->ready && !esim->slave)
+  if (!esim->ready && !esim->is_client)
     return;
 
-  if (!esim->slave)
+  if (!esim->is_client)
     {
-      /* Inform any connecting slave we want to exit */
+      /* Inform any connecting client we want to exit */
       esim->shm->exiting = 1;
 
-      /* Wait for slaves */
-      pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
-      if (esim->shm->slaves)
+      /* Wait for clients */
+      pthread_mutex_lock((pthread_mutex_t *) &esim->shm->client_mtx);
+      if (esim->shm->clients)
 	{
-	  pthread_cond_wait((pthread_cond_t *) &esim->shm->slave_exit_cond,
-			    (pthread_mutex_t *) &esim->shm->slave_mtx);
+	  pthread_cond_wait((pthread_cond_t *) &esim->shm->client_exit_cond,
+			    (pthread_mutex_t *) &esim->shm->client_mtx);
 	}
-      pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
+      pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->client_mtx);
 
       /* Wait for other sim processes */
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->exit_barrier);
     }
   else
     {
-      pthread_mutex_lock((pthread_mutex_t *) &esim->shm->slave_mtx);
-      esim->shm->slaves -= 1;
-      if (esim->shm->exiting && !esim->shm->slaves)
-	pthread_cond_broadcast((pthread_cond_t *) &esim->shm->slave_exit_cond);
-      pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->slave_mtx);
+      pthread_mutex_lock((pthread_mutex_t *) &esim->shm->client_mtx);
+      esim->shm->clients -= 1;
+      if (esim->shm->exiting && !esim->shm->clients)
+	pthread_cond_broadcast((pthread_cond_t *) &esim->shm->client_exit_cond);
+      pthread_mutex_unlock((pthread_mutex_t *) &esim->shm->client_mtx);
     }
 #endif
 }
