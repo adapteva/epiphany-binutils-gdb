@@ -231,9 +231,10 @@ cat <<EOF
   static size_t core_mem_region_size = 0;
   static size_t core_glob_addr_start = 0;
 
+  SEM_PC old_vpc = vpc;
+
   if (!initialized)
     {
-      SEM_PC old_vpc;
 
       sim_io_eprintf(current_state, "ESIM: Waiting for other cores...");
       /** @todo Would be nice to support Ctrl-C here */
@@ -245,7 +246,6 @@ cat <<EOF
       core_glob_addr_start =
         es_get_coreid(STATE_ESIM(current_state)) * core_mem_region_size;
 
-      old_vpc = vpc;
       vpc = epiphany_handle_oob_events(current_cpu, vpc);
 
       if (vpc != old_vpc)
@@ -272,49 +272,6 @@ cat <<EOF
       goto wakeup_from_idle;
     }
 
-  /*
-   * Invalidate vpc in scache if not core-local memory.
-   * Ideally, we would like to never consult scache for non core-local
-   * memory, but due to how genmloop.sh works, I cannot see a straight-forward
-   * way to accomplish this.
-   * We don't want to cache remote mem since if we did, every write
-   * would have to be followed by an invalidate request to all cores in the
-   * system.
-   */
-
-  /* Allow addresses inside both core-local and the cores global address
-   * space.
-   */
-#if WITH_EMESH_SIM
-
-#define INVALIDATE_IF_NOT_LOCAL(xpc)\
-do\
-  {\
-    if (xpc >= core_mem_region_size &&\
-	  !(core_glob_addr_start <= xpc &&\
-	    xpc < core_glob_addr_start + core_mem_region_size))\
-      epiphanybf_scache_invalidate(current_cpu, xpc);\
-  }\
-while (0)
-
-  INVALIDATE_IF_NOT_LOCAL(vpc);
-#endif
-
-  /* If another core (or the host CPU) wrote to local memory we need to make
-   * sure that cached instructions are flushed.
-   * @todo Now we flush the entire cache - this is *slow*.
-   * Instead, we could maintain a write-list and then just flush instructions
-   * inside memory written to from the scache.
-   * When flushing we need to take into account local/global addresses, and
-   * partly overwritten instructions.
-   */
-  if (current_cpu->external_write)
-    {
-      scache_flush_cpu(current_cpu);
-      MEM_BARRIER();
-      current_cpu->external_write = 0;
-    }
-
   /* Handle out of band events.
    * (All except external_write which we do after execute (too many arguments
    * to pass to epiphany_handle_oob_events otherwise). This is ok because
@@ -338,10 +295,50 @@ wakeup_from_idle:
 
   vpc = epiphany_handle_oob_events(current_cpu, vpc);
 
-  /** @todo We might need to check if the PC was changed externally before it
-   * is overwritten. (PC will be set to vpc after this code block)
-   * Need real hardware to verify behaviour.
+
+  /*
+   * Invalidate vpc in scache if not core-local memory.
+   * Ideally, we would like to never consult scache for non core-local
+   * memory, but due to how genmloop.sh works, I cannot see a straight-forward
+   * way to accomplish this.
+   * We don't want to cache remote mem since if we did, every write
+   * would have to be followed by an invalidate request to all cores in the
+   * system.
    */
+
+
+  /* If another core (or the host CPU) wrote to local memory we need to make
+   * sure that cached instructions are flushed.
+   * @todo Now we flush the entire cache - this is *slow*.
+   * Instead, we could maintain a write-list and then just flush instructions
+   * inside memory written to from the scache.
+   * When flushing we need to take into account local/global addresses, and
+   * partly overwritten instructions.
+   */
+  if (current_cpu->external_write)
+    {
+      scache_flush_cpu(current_cpu);
+      MEM_BARRIER();
+      current_cpu->external_write = 0;
+    }
+
+  /* Allow addresses inside both core-local and the cores global address
+   * space. Otherwise invalidate the executed address from the scache.
+   */
+#if WITH_EMESH_SIM
+
+#define INVALIDATE_IF_NOT_LOCAL(xpc)\
+do\
+  {\
+    if (xpc >= core_mem_region_size &&\
+	  !(core_glob_addr_start <= xpc &&\
+	    xpc < core_glob_addr_start + core_mem_region_size))\
+      epiphanybf_scache_invalidate(current_cpu, xpc);\
+  }\
+while (0)
+
+  INVALIDATE_IF_NOT_LOCAL(old_vpc);
+#endif
 
 #endif
 }
