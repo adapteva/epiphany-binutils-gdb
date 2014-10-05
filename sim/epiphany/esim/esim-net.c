@@ -200,10 +200,10 @@ es_net_init(es_state *esim, es_cluster_cfg *cluster)
 
   /* Set up new communicator with correct ranks */
   {
-    /* Reorder ranks with slaves in tail */
+    /* Reorder ranks with clients in tail */
     MPI_TRY_CATCH(MPI_Comm_split(MPI_COMM_WORLD,
 				 0,
-				 esim->slave,
+				 esim->is_client,
 				 &esim->net.comm),
 		  { },
 		  {
@@ -234,20 +234,20 @@ es_net_init(es_state *esim, es_cluster_cfg *cluster)
 		  });
   }
 
-  if (esim->slave && esim->net.rank == 0)
+  if (esim->is_client && esim->net.rank == 0)
     {
-      fprintf(stderr, "ESIM:NET: Running a simulation with only slaves is not"
+      fprintf(stderr, "ESIM:NET: Running a simulation with only clients is not"
 	      " allowed (it does not make sense).\n");
       rc = -EINVAL;
       goto err_out;
     }
 
-  /* Calculate total number of simulator processes (non-slaves) */
+  /* Calculate total number of simulator processes (non-clients) */
   {
     MPI_Comm tmp_comm;
     int tmp_sz;
 
-    MPI_TRY_CATCH(MPI_Comm_split(ES_NET_COMM_WORLD, esim->slave, 0, &tmp_comm),
+    MPI_TRY_CATCH(MPI_Comm_split(ES_NET_COMM_WORLD, esim->is_client, 0, &tmp_comm),
 		  {},
 		  {
 		    rc = -EINVAL;
@@ -276,7 +276,7 @@ es_net_init(es_state *esim, es_cluster_cfg *cluster)
 		  });
 
     esim->net.sim_processes =
-     esim->slave ? esim->net.size - tmp_sz: tmp_sz;
+     esim->is_client ? esim->net.size - tmp_sz: tmp_sz;
   }
 
   /* Let process with rank 0 dictate cluster configuration */
@@ -296,7 +296,7 @@ es_net_init(es_state *esim, es_cluster_cfg *cluster)
     int procs_per_node, cores_per_node, core_comm_sz;
 
     MPI_Comm node_comm; /* Processes on this node */
-    MPI_Comm core_comm; /* Split in simulator processes and only slaves */
+    MPI_Comm core_comm; /* Split in simulator processes and only clients */
 
     /* Get all procs on node */
     MPI_TRY_CATCH(MPI_Comm_split_type(ES_NET_COMM_WORLD,
@@ -310,8 +310,8 @@ es_net_init(es_state *esim, es_cluster_cfg *cluster)
 		    goto err_out;
 		  });
 
-    /* Then split by sim-process / slave */
-    MPI_TRY_CATCH(MPI_Comm_split(node_comm, esim->slave, 0, &core_comm),
+    /* Then split by sim-process / client */
+    MPI_TRY_CATCH(MPI_Comm_split(node_comm, esim->is_client, 0, &core_comm),
 		  {},
 		  {
 		    rc = -EINVAL;
@@ -355,7 +355,7 @@ es_net_init(es_state *esim, es_cluster_cfg *cluster)
 		  });
 
     cluster->cores_per_node =
-     esim->slave ? (procs_per_node-core_comm_sz) : core_comm_sz;
+     esim->is_client ? (procs_per_node-core_comm_sz) : core_comm_sz;
 
     cluster->nodes = esim->net.sim_processes / cluster->cores_per_node;
 
@@ -491,7 +491,7 @@ es_net_wait_exit(es_state *esim)
   MPI_TRY_CATCH(MPI_Barrier(ES_NET_COMM_WORLD), { }, { });
 
   /* send exit msg to service mmr thread */
-  if (!esim->slave)
+  if (!esim->is_client)
     {
       int rc;
 
@@ -533,7 +533,7 @@ int
 es_net_init_mmr(es_state *esim)
 {
 
-  if (esim->slave)
+  if (esim->is_client)
     return ES_OK;
 
   /* Create MMR access helper thread */
@@ -571,11 +571,11 @@ es_net_create_mpi_win(es_state *esim, MPI_Win *win, void *ptr, size_t size)
   return ES_OK;
 }
 
-/*! Create dummy MPI Windows for slaves
+/*! Create dummy MPI Windows for clients
  *
  */
 static int
-es_net_init_slave_mpi_win(es_state *esim)
+es_net_init_client_mpi_win(es_state *esim)
 {
   int rc;
 
@@ -606,8 +606,8 @@ es_net_init_mpi_win(es_state *esim)
 {
   int rc;
 
-  if (esim->slave)
-    return es_net_init_slave_mpi_win(esim);
+  if (esim->is_client)
+    return es_net_init_client_mpi_win(esim);
 
   /* Expose per core local SRAM to other MPI processes */
   if (ES_OK != (rc = es_net_create_mpi_win(esim,

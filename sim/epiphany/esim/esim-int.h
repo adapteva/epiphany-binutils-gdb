@@ -132,12 +132,12 @@ typedef struct es_shm_header_ {
     pthread_barrier_t run_barrier;         /*!< Start barrier                */
     pthread_barrier_t exit_barrier;        /*!< Exit barrier                 */
 
-    /* For slaves. Everything protected by the mutex */
-    pthread_mutex_t   slave_mtx;           /*!< Wait for slaves on exit.     */
-    pthread_cond_t    slave_exit_cond;     /*!< Wait for slaves on exit.     */
-    pthread_cond_t    slave_run_cond;      /*!< Notify slaves in es_wait_run */
+    /* For clients. Everything protected by the mutex */
+    pthread_mutex_t   client_mtx;          /*!< Wait for clients on exit.     */
+    pthread_cond_t    client_exit_cond;    /*!< Wait for clients on exit.     */
+    pthread_cond_t    client_run_cond;     /*!< Notify clients in es_wait_run */
     unsigned          exiting;
-    signed            slaves;
+    signed            clients;
 } es_shm_header;
 
 /*! ESIM per core state header (in SHM) */
@@ -158,7 +158,7 @@ typedef struct es_state_ {
     char shm_name[256];                    /*!< Name of shm file             */
     size_t shm_size;                       /*!< Size of shm file             */
 
-    unsigned slave;                        /*!< True if slave (es_connect()) */
+    unsigned is_client;                    /*!< True if client (es_connect()) */
 
     volatile es_shm_header *shm;           /*!< Pointer to shm config header */
     volatile uint8_t *cores_mem;           /*!< Base address for core mem
