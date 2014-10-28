@@ -104,36 +104,11 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
       epiphanybf_cpu_reset(current_cpu);
       vpc = 0;
       break;
-    case OOB_EVT_RESET_ASSERT:
-      /* Clear CAI- and set GID-bit. Not exactly what hardware would do but
-       * it should have same effect (stop core until RESET is deasserted). */
-      AND_REG_ATOMIC(H_REG_SCR_STATUS, (~(1 << H_SCR_STATUS_CAIBIT)));
-      OR_REG_ATOMIC( H_REG_SCR_STATUS, (1 << H_SCR_STATUS_GIDISABLEBIT));
-      break;
-    case OOB_EVT_DEBUGCMD:
-      {
-	USI debugcmd = GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGCMD);
-
-	/*! @todo Manual does not mention what bit 1 means. Only check bit 0.
-	 *  Might be wrong. */
-
-	/* Set or clear halt bit */
-	if (debugcmd & 1)
-	  OR_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, 1);
-	else
-	  AND_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, ~1);
-      }
-      break;
-    case OOB_EVT_ROUNDING:
-      {
-	USI config = GET_H_ALL_REGISTERS(H_REG_SCR_CONFIG);
-	epiphany_set_rounding_mode(current_cpu, config);
-      }
-      break;
 
     case OOB_EVT_INTERRUPT:
       vpc = interrupt_handler(current_cpu, vpc);
       break;
+
     default:
       fprintf(stderr, "ESIM: Unknown OOB event: %d\n", current_cpu->oob_event);
     }

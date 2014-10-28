@@ -219,7 +219,7 @@ epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
   CPU(h_all_registers[H_REG_SCR_CONFIG]) = val;
 
   /* Rounding mode might have changed */
-  OOB_EMIT_EVENT(OOB_EVT_ROUNDING);
+  epiphany_set_rounding_mode(current_cpu, val);
 }
 
 void
@@ -271,7 +271,14 @@ epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val)
 
   CPU(h_all_registers[H_REG_SCR_STATUS]) = masked;
 
-  OOB_EMIT_EVENT(OOB_EVT_DEBUGCMD);
+  /*! @todo Manual does not mention what bit 1 means. Only check bit 0.
+   *  Might be wrong. */
+
+  /* Set or clear halt bit */
+  if (masked & 1)
+    OR_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, 1);
+  else
+    AND_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, ~1);
 }
 
 void
@@ -287,7 +294,10 @@ epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
   /* Asserted */
   if (!old && masked)
     {
-      OOB_EMIT_EVENT(OOB_EVT_RESET_ASSERT);
+      /* Clear CAI- and set GID-bit. Not exactly what hardware would do but
+       * it should have same effect (stop core until RESET is deasserted). */
+      AND_REG_ATOMIC(H_REG_SCR_STATUS, (~(1 << H_SCR_STATUS_CAIBIT)));
+      OR_REG_ATOMIC( H_REG_SCR_STATUS, (1 << H_SCR_STATUS_GIDISABLEBIT));
     }
   /* Deasserted */
   else if (old && !masked)
