@@ -34,7 +34,6 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 EXEC_DIR = os.path.dirname(os.path.realpath(__file__))
 DUMMY_PROGRAM = os.path.join(EXEC_DIR, '..', 'epiphany-elf', 'libexec', 'epiphany-elf-sim-dummy')
-print(DUMMY_PROGRAM)
 
 SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) \
     for n in dir(signal) if n.startswith('SIG') and '_' not in n)
