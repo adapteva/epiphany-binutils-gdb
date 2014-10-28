@@ -59,7 +59,7 @@ SIM_EXTRA_DEPS = \
 SIM_EXTRA_ALL =
 ifeq (@esim@, yes)
 	SIM_EXTRA_ALL += epiphany-elf-sim.py
-ifeq (@have_target_as@, yes)
+ifneq (@have_target_as@, no)
 	SIM_EXTRA_ALL += epiphany-elf-sim-dummy
 endif
 endif
@@ -145,11 +145,12 @@ epiphany-elf-sim.py: $(srcdir)/epiphany-elf-sim.py.in
 	sed 's,@TARGET_PREFIX@,$(DESTDIR)$(exec_prefix)/$(target_alias),g' \
 		$(srcdir)/epiphany-elf-sim.py.in > epiphany-elf-sim.py
 
+.PHONY: esim-install
 esim-install: installdirs
 	$(INSTALL_PROGRAM) epiphany-elf-sim.py \
 		$(DESTDIR)$(bindir)/epiphany-elf-sim
 	$(INSTALL) -d libexec $(DESTDIR)$(exec_prefix)/$(target_alias)/libexec
-ifeq (@have_target_as@, yes)
+ifneq (@have_target_as@, no)
 	$(INSTALL_PROGRAM) epiphany-elf-sim-dummy \
 		$(DESTDIR)$(exec_prefix)/$(target_alias)/libexec/epiphany-elf-sim-dummy
 endif
