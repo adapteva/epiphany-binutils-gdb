@@ -1,6 +1,7 @@
 /*  This file is part of the program GDB, the GNU debugger.
 
-    Copyright (C) 2014 Ola Jeppsson
+    Copyright (C) 2014 Adapteva
+    Contributed by Ola Jeppsson
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
