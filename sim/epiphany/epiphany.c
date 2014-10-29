@@ -241,10 +241,11 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
   host_callback *cb = STATE_CALLBACK (sd);
   void *buf;
 
-#define PARM0 CPU (h_registers[0])
-#define PARM1 CPU (h_registers[1])
-#define PARM2 CPU (h_registers[2])
-#define PARM3 CPU (h_registers[3])
+/* TODO: Revisit. Might rename H_ALL_REGISTERS */
+#define PARM0 (GET_H_ALL_REGISTERS(H_REG_R0))
+#define PARM1 (GET_H_ALL_REGISTERS(H_REG_R1))
+#define PARM2 (GET_H_ALL_REGISTERS(H_REG_R2))
+#define PARM3 (GET_H_ALL_REGISTERS(H_REG_R3))
   USI result = -1;		/* Assume FAIL status */
   USI error = 0;
 
@@ -452,3 +453,4 @@ epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc)
     }
 }
 #endif /* WITH_SCACHE */
+
