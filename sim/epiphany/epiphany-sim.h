@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef EPIPHANY_SIM_H
 #define EPIPHANY_SIM_H
 
+#include "cgen-atomic.h"
+
 /* GDB register numbers.  */
 /* TBS */
 
