@@ -49,6 +49,8 @@ extern void async_remote_interrupt_twice (void *arg);
 
 void register_remote_g_packet_guess (struct gdbarch *gdbarch, int bytes,
 				     const struct target_desc *tdesc);
+void register_remote_client_data (const char *);
+
 void register_remote_support_xml (const char *);
 
 void remote_file_put (const char *local_file, const char *remote_file,

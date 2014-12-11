@@ -4004,6 +4004,26 @@ static struct protocol_feature remote_protocol_features[] = {
     PACKET_qXfer_btrace }
 };
 
+/* Feature string of client information to pass to remote target. */
+static char *remote_client_data;
+
+/* Register string appended to "clientData=" in qSupported query. Any
+   pre-existing string is blown away. This function is intended for "small"
+   data, and the calling entity is expected to manage any maintenance of that
+   data. */
+void
+register_remote_client_data (const char *client_data)
+{
+  if (remote_client_data != NULL)
+    {
+      xfree (remote_client_data);
+    }
+
+  remote_client_data = concat ("clientData=", client_data, NULL);
+
+}	/* register_remote_client_data () */
+
+
 static char *remote_support_xml;
 
 /* Register string appended to "xmlRegisters=" in qSupported query.  */
@@ -4069,6 +4089,9 @@ remote_query_supported (void)
       struct cleanup *old_chain = make_cleanup (free_current_contents, &q);
 
       q = remote_query_supported_append (q, "multiprocess+");
+
+      if (remote_client_data)
+	q = remote_query_supported_append (q, remote_client_data);
 
       if (remote_support_xml)
 	q = remote_query_supported_append (q, remote_support_xml);

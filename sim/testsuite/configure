@@ -1845,6 +1845,10 @@ case "${target}" in
    d10v-*-*)
        sim_arch=d10v
        ;;
+   epiphany-*-*)
+       sim_arch=epiphany
+       sim_testsuite=yes
+       ;;
    frv-*-*)
        sim_arch=frv
        sim_testsuite=yes

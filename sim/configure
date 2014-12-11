@@ -640,6 +640,7 @@ bfin
 cr16
 cris
 d10v
+epiphany
 frv
 h8300
 iq2000
@@ -3671,6 +3672,14 @@ subdirs="$subdirs arm"
   subdirs="$subdirs d10v"
 
 
+       ;;
+   epiphany-*-*)
+
+  sim_arch=epiphany
+  subdirs="$subdirs epiphany"
+
+
+       sim_testsuite=yes
        ;;
    frv-*-*)
 

@@ -46,7 +46,7 @@
 
 extern void _initialize_remote_sim (void);
 
-static void dump_mem (char *buf, int len);
+static void dump_mem (unsigned char *buf, int len);
 
 static void init_callbacks (void);
 
@@ -271,7 +271,7 @@ sim_inferior_data_cleanup (struct inferior *inf, void *data)
 }
 
 static void
-dump_mem (char *buf, int len)
+dump_mem (unsigned char *buf, int len)
 {
   printf_filtered ("\t");
 
