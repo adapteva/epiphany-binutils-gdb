@@ -1,7 +1,6 @@
 /* Standard language operator definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1989, 1992, 1994, 2000, 2003, 2005, 2007-2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -105,11 +104,6 @@ OP (TERNOP_COND)		/* ?: */
    OP1(OP2:OP3).  Return elements OP2 through OP3 of OP1.  */
 OP (TERNOP_SLICE)
 
-/* A sub-string/sub-array.  (The deleted) Chill syntax: OP1(OP2 UP
-   OP3).  Return OP3 elements of OP1, starting with element
-   OP2.  */
-OP (TERNOP_SLICE_COUNT)
-
 /* Multidimensional subscript operator, such as Modula-2 x[a,b,...].
    The dimensionality is encoded in the operator, like the number of
    function arguments in OP_FUNCALL, I.E. <OP><dimension><OP>.
@@ -193,12 +187,6 @@ OP (OP_COMPLEX)
    data is just made into a string constant when the operation
    is executed.  */
 OP (OP_STRING)
-
-/* OP_BITSTRING represents a packed bitstring constant.
-   Its format is the same as that of a STRUCTOP, but the bitstring
-   data is just made into a bitstring constant when the operation
-   is executed.  */
-OP (OP_BITSTRING)
 
 /* OP_ARRAY creates an array constant out of the following subexpressions.
    It is followed by two exp_elements, the first containing an integer
@@ -296,19 +284,6 @@ OP (OP_OBJC_SELECTOR)
    name is encoded as one element, but the field name stays as
    a string, which, of course, is variable length.  */
 OP (OP_SCOPE)
-
-/* Used to represent named structure field values in brace
-   initializers (or tuples as they are called in (the deleted)
-   Chill).
-
-   The gcc C syntax is NAME:VALUE or .NAME=VALUE, the (the
-   deleted) Chill syntax is .NAME:VALUE.  Multiple labels (as in
-   the (the deleted) Chill syntax .NAME1,.NAME2:VALUE) is
-   represented as if it were .NAME1:(.NAME2:VALUE) (though that is
-   not valid (the deleted) Chill syntax).
-
-   The NAME is represented as for STRUCTOP_STRUCT;  VALUE follows.  */
-OP (OP_LABELED)
 
 /* OP_TYPE is for parsing types, and used with the "ptype" command
    so we can look up types that are qualified by scope, either with

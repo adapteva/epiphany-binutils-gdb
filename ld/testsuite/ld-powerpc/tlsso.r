@@ -1,6 +1,6 @@
 #source: tls.s
 #as: -a64
-#ld: -shared -melf64ppc
+#ld: -shared
 #readelf: -WSsrl
 #target: powerpc64*-*-*
 
@@ -48,9 +48,9 @@ Relocation section '\.rela\.dyn' at offset .* contains 16 entries:
 [0-9a-f ]+R_PPC64_TPREL16 +0+60 le0 \+ 0
 [0-9a-f ]+R_PPC64_TPREL16_HA +0+68 le1 \+ 0
 [0-9a-f ]+R_PPC64_TPREL16_LO +0+68 le1 \+ 0
-[0-9a-f ]+R_PPC64_TPREL16_DS +0+105f8 \.tdata \+ 28
-[0-9a-f ]+R_PPC64_TPREL16_HA +0+105f8 \.tdata \+ 30
-[0-9a-f ]+R_PPC64_TPREL16_LO +0+105f8 \.tdata \+ 30
+[0-9a-f ]+R_PPC64_TPREL16_DS +[0-9a-f]+ \.tdata \+ 28
+[0-9a-f ]+R_PPC64_TPREL16_HA +[0-9a-f]+ \.tdata \+ 30
+[0-9a-f ]+R_PPC64_TPREL16_LO +[0-9a-f]+ \.tdata \+ 30
 [0-9a-f ]+R_PPC64_DTPMOD64 +0
 [0-9a-f ]+R_PPC64_DTPREL64 +0
 [0-9a-f ]+R_PPC64_DTPREL64 +18
@@ -111,7 +111,7 @@ Symbol table '\.symtab' contains [0-9]+ entries:
 .* NOTYPE +LOCAL +DEFAULT +UND \.__tls_get_addr
 .* FILE +LOCAL +DEFAULT +ABS .*
 .* OBJECT +LOCAL +DEFAULT +9 _DYNAMIC
-.* NOTYPE +LOCAL +DEFAULT +6 00000010\.plt_call\.__tls_get_addr\+0
+.* NOTYPE +LOCAL +DEFAULT +6 00000010\.plt_call\.__tls_get_addr
 .* NOTYPE +LOCAL +DEFAULT +6 __glink_PLTresolve
 .* TLS +GLOBAL +DEFAULT +UND gd
 .* TLS +GLOBAL +DEFAULT +8 le0

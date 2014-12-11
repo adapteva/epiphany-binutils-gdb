@@ -1,5 +1,5 @@
 /* SPU native-dependent code for GDB, the GNU debugger.
-   Copyright (C) 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2006-2013 Free Software Foundation, Inc.
 
    Contributed by Ulrich Weigand <uweigand@de.ibm.com>.
 
@@ -29,6 +29,7 @@
 #include "symfile.h"
 #include "gdb_wait.h"
 #include "gdbthread.h"
+#include "gdb_bfd.h"
 
 #include <sys/ptrace.h>
 #include <asm/ptrace.h>
@@ -205,7 +206,7 @@ store_ppc_memory (ULONGEST memaddr, const gdb_byte *myaddr, int len)
 static int 
 parse_spufs_run (int *fd, ULONGEST *addr)
 {
-  enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
   gdb_byte buf[4];
   ULONGEST pc = fetch_ppc_register (32);  /* nip */
 
@@ -492,7 +493,7 @@ spu_fetch_inferior_registers (struct target_ops *ops,
     {
       struct gdbarch *gdbarch = get_regcache_arch (regcache);
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-      char buf[4];
+      gdb_byte buf[4];
       store_unsigned_integer (buf, 4, byte_order, fd);
       regcache_raw_supply (regcache, SPU_ID_REGNUM, buf);
     }

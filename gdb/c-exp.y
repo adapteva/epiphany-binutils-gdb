@@ -1,6 +1,5 @@
 /* YACC parser for C expressions, for GDB.
-   Copyright (C) 1986, 1989-2000, 2003-2004, 2006-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -54,6 +53,8 @@
 #include "gdb_assert.h"
 #include "macroscope.h"
 #include "objc-lang.h"
+#include "typeprint.h"
+#include "cp-abi.h"
 
 #define parse_type builtin_type (parse_gdbarch)
 
@@ -870,7 +871,7 @@ block	:	BLOCKNAME
 block	:	block COLONCOLON name
 			{ struct symbol *tem
 			    = lookup_symbol (copy_name ($3), $1,
-					     VAR_DOMAIN, (int *) NULL);
+					     VAR_DOMAIN, NULL);
 			  if (!tem || SYMBOL_CLASS (tem) != LOC_BLOCK)
 			    error (_("No function \"%s\" in specified context."),
 				   copy_name ($3));
@@ -895,7 +896,7 @@ variable:	name_not_typename ENTRY
 variable:	block COLONCOLON name
 			{ struct symbol *sym;
 			  sym = lookup_symbol (copy_name ($3), $1,
-					       VAR_DOMAIN, (int *) NULL);
+					       VAR_DOMAIN, NULL);
 			  if (sym == 0)
 			    error (_("No symbol \"%s\" in specified context."),
 				   copy_name ($3));
@@ -922,7 +923,7 @@ qualified_name:	TYPENAME COLONCOLON name
 			      && TYPE_CODE (type) != TYPE_CODE_UNION
 			      && TYPE_CODE (type) != TYPE_CODE_NAMESPACE)
 			    error (_("`%s' is not defined as an aggregate type."),
-				   TYPE_NAME (type));
+				   TYPE_SAFE_NAME (type));
 
 			  write_exp_elt_opcode (OP_SCOPE);
 			  write_exp_elt_type (type);
@@ -938,7 +939,7 @@ qualified_name:	TYPENAME COLONCOLON name
 			      && TYPE_CODE (type) != TYPE_CODE_UNION
 			      && TYPE_CODE (type) != TYPE_CODE_NAMESPACE)
 			    error (_("`%s' is not defined as an aggregate type."),
-				   TYPE_NAME (type));
+				   TYPE_SAFE_NAME (type));
 
 			  tmp_token.ptr = (char*) alloca ($4.length + 2);
 			  tmp_token.length = $4.length + 1;
@@ -958,7 +959,7 @@ qualified_name:	TYPENAME COLONCOLON name
 			  char *copy = copy_name ($3);
 			  error (_("No type \"%s\" within class "
 				   "or namespace \"%s\"."),
-				 copy, TYPE_NAME ($1.type));
+				 copy, TYPE_SAFE_NAME ($1.type));
 			}
 	;
 
@@ -971,7 +972,7 @@ variable:	qualified_name
 
 			  sym =
 			    lookup_symbol (name, (const struct block *) NULL,
-					   VAR_DOMAIN, (int *) NULL);
+					   VAR_DOMAIN, NULL);
 			  if (sym)
 			    {
 			      write_exp_elt_opcode (OP_VAR_VALUE);
@@ -1267,15 +1268,59 @@ typebase  /* Implements (approximately): (type-qualifier)* type-specifier */
 	|	STRUCT name
 			{ $$ = lookup_struct (copy_name ($2),
 					      expression_context_block); }
+	|	STRUCT COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_STRUCT, "", 0);
+			  $$ = NULL;
+			}
+	|	STRUCT name COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_STRUCT, $2.ptr,
+					       $2.length);
+			  $$ = NULL;
+			}
 	|	CLASS name
 			{ $$ = lookup_struct (copy_name ($2),
 					      expression_context_block); }
+	|	CLASS COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_CLASS, "", 0);
+			  $$ = NULL;
+			}
+	|	CLASS name COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_CLASS, $2.ptr,
+					       $2.length);
+			  $$ = NULL;
+			}
 	|	UNION name
 			{ $$ = lookup_union (copy_name ($2),
 					     expression_context_block); }
+	|	UNION COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_UNION, "", 0);
+			  $$ = NULL;
+			}
+	|	UNION name COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_UNION, $2.ptr,
+					       $2.length);
+			  $$ = NULL;
+			}
 	|	ENUM name
 			{ $$ = lookup_enum (copy_name ($2),
 					    expression_context_block); }
+	|	ENUM COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_ENUM, "", 0);
+			  $$ = NULL;
+			}
+	|	ENUM name COMPLETE
+			{
+			  mark_completion_tag (TYPE_CODE_ENUM, $2.ptr,
+					       $2.length);
+			  $$ = NULL;
+			}
 	|	UNSIGNED typename
 			{ $$ = lookup_unsigned_typename (parse_language,
 							 parse_gdbarch,
@@ -1502,7 +1547,8 @@ operator:	OPERATOR NEW
 			  long length;
 			  struct ui_file *buf = mem_fileopen ();
 
-			  c_print_type ($2, NULL, buf, -1, 0);
+			  c_print_type ($2, NULL, buf, -1, 0,
+					&type_print_raw_options);
 			  name = ui_file_xstrdup (buf, &length);
 			  ui_file_delete (buf);
 			  $$ = operator_stoken (name);
@@ -1531,11 +1577,15 @@ name_not_typename :	NAME
  */
 	|	operator
 			{
+			  struct field_of_this_result is_a_field_of_this;
+
 			  $$.stoken = $1;
 			  $$.sym = lookup_symbol ($1.ptr,
 						  expression_context_block,
 						  VAR_DOMAIN,
-						  &$$.is_a_field_of_this);
+						  &is_a_field_of_this);
+			  $$.is_a_field_of_this
+			    = is_a_field_of_this.type != NULL;
 			}
 	|	UNKNOWN_CPP_NAME
 	;
@@ -2352,7 +2402,7 @@ lex_one_token (void)
 
 	lexptr += 2;
 	yylval.opcode = tokentab2[i].opcode;
-	if (in_parse_field && tokentab2[i].token == ARROW)
+	if (parse_completion && tokentab2[i].token == ARROW)
 	  last_was_structop = 1;
 	return tokentab2[i].token;
       }
@@ -2415,7 +2465,7 @@ lex_one_token (void)
       /* Might be a floating point number.  */
       if (lexptr[1] < '0' || lexptr[1] > '9')
 	{
-	  if (in_parse_field)
+	  if (parse_completion)
 	    last_was_structop = 1;
 	  goto symbol;		/* Nope, must be a symbol. */
 	}
@@ -2644,7 +2694,7 @@ lex_one_token (void)
 
 	if ((ident_tokens[i].flags & FLAG_SHADOW) != 0)
 	  {
-	    int is_a_field_of_this = 0;
+	    struct field_of_this_result is_a_field_of_this;
 
 	    if (lookup_symbol (copy, expression_context_block,
 			       VAR_DOMAIN,
@@ -2667,8 +2717,12 @@ lex_one_token (void)
   if (*tokstart == '$')
     return VARIABLE;
 
-  if (in_parse_field && *lexptr == '\0')
+  if (parse_completion && *lexptr == '\0')
     saw_name_at_eof = 1;
+
+  yylval.ssym.stoken = yylval.sval;
+  yylval.ssym.sym = NULL;
+  yylval.ssym.is_a_field_of_this = 0;
   return NAME;
 }
 
@@ -2697,22 +2751,26 @@ static struct obstack name_obstack;
    in which lookups start; this can be NULL to mean the global
    scope.  */
 static int
-classify_name (struct block *block)
+classify_name (const struct block *block)
 {
   struct symbol *sym;
   char *copy;
-  int is_a_field_of_this = 0;
+  struct field_of_this_result is_a_field_of_this;
 
   copy = copy_name (yylval.sval);
 
+  /* Initialize this in case we *don't* use it in this call; that way
+     we can refer to it unconditionally below.  */
+  memset (&is_a_field_of_this, 0, sizeof (is_a_field_of_this));
+
   sym = lookup_symbol (copy, block, VAR_DOMAIN, 
 		       parse_language->la_name_of_this
-		       ? &is_a_field_of_this : (int *) NULL);
+		       ? &is_a_field_of_this : NULL);
 
   if (sym && SYMBOL_CLASS (sym) == LOC_BLOCK)
     {
       yylval.ssym.sym = sym;
-      yylval.ssym.is_a_field_of_this = is_a_field_of_this;
+      yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
       return BLOCKNAME;
     }
   else if (!sym)
@@ -2725,6 +2783,26 @@ classify_name (struct block *block)
 	{
 	  yylval.bval = BLOCKVECTOR_BLOCK (BLOCKVECTOR (symtab), STATIC_BLOCK);
 	  return FILENAME;
+	}
+
+      /* If we found a field of 'this', we might have erroneously
+	 found a constructor where we wanted a type name.  Handle this
+	 case by noticing that we found a constructor and then look up
+	 the type tag instead.  */
+      if (is_a_field_of_this.type != NULL
+	  && is_a_field_of_this.fn_field != NULL
+	  && TYPE_FN_FIELD_CONSTRUCTOR (is_a_field_of_this.fn_field->fn_fields,
+					0))
+	{
+	  struct field_of_this_result inner_is_a_field_of_this;
+
+	  sym = lookup_symbol (copy, block, STRUCT_DOMAIN,
+			       &inner_is_a_field_of_this);
+	  if (sym != NULL)
+	    {
+	      yylval.tsym.type = SYMBOL_TYPE (sym);
+	      return TYPENAME;
+	    }
 	}
     }
 
@@ -2747,8 +2825,8 @@ classify_name (struct block *block)
       if (Class)
 	{
 	  yylval.class.class = Class;
-	  if ((sym = lookup_struct_typedef (copy, expression_context_block,
-					    1)))
+	  sym = lookup_struct_typedef (copy, expression_context_block, 1);
+	  if (sym)
 	    yylval.class.type = SYMBOL_TYPE (sym);
 	  return CLASSNAME;
 	}
@@ -2766,18 +2844,18 @@ classify_name (struct block *block)
       if (hextype == INT)
 	{
 	  yylval.ssym.sym = sym;
-	  yylval.ssym.is_a_field_of_this = is_a_field_of_this;
+	  yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
 	  return NAME_OR_INT;
 	}
     }
 
   /* Any other kind of symbol */
   yylval.ssym.sym = sym;
-  yylval.ssym.is_a_field_of_this = is_a_field_of_this;
+  yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
 
   if (sym == NULL
       && parse_language->la_language == language_cplus
-      && !is_a_field_of_this
+      && is_a_field_of_this.type == NULL
       && !lookup_minimal_symbol (copy, NULL, NULL))
     return UNKNOWN_CPP_NAME;
 
@@ -2785,26 +2863,26 @@ classify_name (struct block *block)
 }
 
 /* Like classify_name, but used by the inner loop of the lexer, when a
-   name might have already been seen.  FIRST_NAME is true if the token
-   in `yylval' is the first component of a name, false otherwise.  */
+   name might have already been seen.  CONTEXT is the context type, or
+   NULL if this is the first component of a name.  */
 
 static int
-classify_inner_name (struct block *block, int first_name)
+classify_inner_name (const struct block *block, struct type *context)
 {
-  struct type *type, *new_type;
+  struct type *type;
   char *copy;
 
-  if (first_name)
+  if (context == NULL)
     return classify_name (block);
 
-  type = check_typedef (yylval.tsym.type);
+  type = check_typedef (context);
   if (TYPE_CODE (type) != TYPE_CODE_STRUCT
       && TYPE_CODE (type) != TYPE_CODE_UNION
       && TYPE_CODE (type) != TYPE_CODE_NAMESPACE)
     return ERROR;
 
-  copy = copy_name (yylval.tsym.stoken);
-  yylval.ssym.sym = cp_lookup_nested_symbol (yylval.tsym.type, copy, block);
+  copy = copy_name (yylval.ssym.stoken);
+  yylval.ssym.sym = cp_lookup_nested_symbol (type, copy, block);
   if (yylval.ssym.sym == NULL)
     return ERROR;
 
@@ -2819,7 +2897,6 @@ classify_inner_name (struct block *block, int first_name)
       return TYPENAME;
 
     default:
-      yylval.ssym.is_a_field_of_this = 0;
       return NAME;
     }
   internal_error (__FILE__, __LINE__, _("not reached"));
@@ -2841,6 +2918,7 @@ yylex (void)
 {
   token_and_value current;
   int first_was_coloncolon, last_was_coloncolon, first_iter;
+  struct type *context_type = NULL;
 
   if (popping && !VEC_empty (token_and_value, token_fifo))
     {
@@ -2862,7 +2940,10 @@ yylex (void)
   last_was_coloncolon = first_was_coloncolon;
   obstack_free (&name_obstack, obstack_base (&name_obstack));
   if (!last_was_coloncolon)
-    obstack_grow (&name_obstack, yylval.sval.ptr, yylval.sval.length);
+    {
+      obstack_grow (&name_obstack, yylval.sval.ptr, yylval.sval.length);
+      context_type = yylval.tsym.type;
+    }
   current.value = yylval;
   first_iter = 1;
   while (1)
@@ -2879,7 +2960,7 @@ yylex (void)
 	  classification = classify_inner_name (first_was_coloncolon
 						? NULL
 						: expression_context_block,
-						first_iter);
+						context_type);
 	  /* We keep going until we either run out of names, or until
 	     we have a qualified name which is not a type.  */
 	  if (classification != TYPENAME && classification != NAME)
@@ -2890,7 +2971,7 @@ yylex (void)
 	    }
 
 	  /* Update the partial name we are constructing.  */
-	  if (!first_iter)
+	  if (context_type != NULL)
 	    {
 	      /* We don't want to put a leading "::" into the name.  */
 	      obstack_grow_str (&name_obstack, "::");
@@ -2904,6 +2985,11 @@ yylex (void)
 	  current.token = classification;
 
 	  last_was_coloncolon = 0;
+	  
+	  if (classification == NAME)
+	    break;
+
+	  context_type = yylval.tsym.type;
 	}
       else if (next.token == COLONCOLON && !last_was_coloncolon)
 	last_was_coloncolon = 1;

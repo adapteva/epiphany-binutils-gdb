@@ -67,11 +67,10 @@ m68hc11_elf_hash_table_create (bfd *abfd)
   struct m68hc11_elf_link_hash_table *ret;
   bfd_size_type amt = sizeof (struct m68hc11_elf_link_hash_table);
 
-  ret = (struct m68hc11_elf_link_hash_table *) bfd_malloc (amt);
+  ret = (struct m68hc11_elf_link_hash_table *) bfd_zmalloc (amt);
   if (ret == (struct m68hc11_elf_link_hash_table *) NULL)
     return NULL;
 
-  memset (ret, 0, amt);
   if (!_bfd_elf_link_hash_table_init (&ret->root, abfd,
 				      _bfd_elf_link_hash_newfunc,
 				      sizeof (struct elf_link_hash_entry),
@@ -93,11 +92,6 @@ m68hc11_elf_hash_table_create (bfd *abfd)
 			    sizeof (struct elf32_m68hc11_stub_hash_entry)))
     return NULL;
 
-  ret->stub_bfd = NULL;
-  ret->stub_section = 0;
-  ret->add_stub_section = NULL;
-  ret->sym_cache.abfd = NULL;
-
   return ret;
 }
 
@@ -111,7 +105,7 @@ m68hc11_elf_bfd_link_hash_table_free (struct bfd_link_hash_table *hash)
 
   bfd_hash_table_free (ret->stub_hash_table);
   free (ret->stub_hash_table);
-  _bfd_generic_link_hash_table_free (hash);
+  _bfd_elf_link_hash_table_free (hash);
 }
 
 /* Assorted hash table functions.  */
@@ -667,7 +661,7 @@ elf32_m68hc11_build_stubs (bfd *abfd, struct bfd_link_info *info)
   /* Build the stubs as directed by the stub hash table.  */
   table = htab->stub_hash_table;
   bfd_hash_traverse (table, m68hc11_elf_export_one_stub, info);
-  
+
   /* Scan the output sections to see if we use the memory banks.
      If so, export the symbols that define how the memory banks
      are mapped.  This is used by gdb and the simulator to obtain
@@ -918,9 +912,11 @@ elf32_m68hc11_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   struct m68hc11_page_info *pinfo;
   const struct elf_backend_data * const ebd = get_elf_backend_data (input_bfd);
   struct m68hc11_elf_link_hash_table *htab;
+  unsigned long e_flags;
 
   symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
   sym_hashes = elf_sym_hashes (input_bfd);
+  e_flags = elf_elfheader (input_bfd)->e_flags;
 
   htab = m68hc11_elf_hash_table (info);
   if (htab == NULL)
@@ -1048,7 +1044,7 @@ elf32_m68hc11_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
              a LO8XG. Does not actually check that it was a LO8XG.
 	     Adjusts high and low bytes.  */
           relocation = phys_addr;
-          if ((elf_elfheader (input_bfd)->e_flags & E_M68HC11_XGATE_RAMOFFSET)
+          if ((e_flags & E_M68HC11_XGATE_RAMOFFSET)
 	      && (relocation >= 0x2000))
 	    relocation += 0xc000; /* HARDCODED RAM offset for XGATE.  */
 
@@ -1115,7 +1111,7 @@ elf32_m68hc11_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
                       "relocation may result in incorrect execution");
               buf = alloca (strlen (msg) + strlen (name) + 10);
               sprintf (buf, msg, name);
-              
+
               (* info->callbacks->warning)
                 (info, buf, name, input_bfd, NULL, rel->r_offset);
             }
@@ -1162,7 +1158,7 @@ elf32_m68hc11_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 
           if (m68hc11_addr_is_banked (pinfo, relocation + rel->r_addend)
               && m68hc11_addr_is_banked (pinfo, insn_addr)
-              && phys_page != insn_page)
+              && phys_page != insn_page && !(e_flags & E_M68HC11_NO_BANK_WARNING))
             {
               const char * msg;
               char * buf;
@@ -1441,7 +1437,7 @@ _bfd_m68hc11_elf_print_private_bfd_data (bfd *abfd, void *ptr)
   else if (elf_elfheader (abfd)->e_flags & EF_M68HCS12_MACH)
     fprintf (file, _("cpu=HCS12]"));
   else
-    fprintf (file, _("cpu=HC12]"));    
+    fprintf (file, _("cpu=HC12]"));
 
   if (elf_elfheader (abfd)->e_flags & E_M68HC12_BANKS)
     fprintf (file, _(" [memory=bank-model]"));
@@ -1464,7 +1460,7 @@ static void scan_sections_for_abi (bfd *abfd ATTRIBUTE_UNUSED,
   if (asect->vma >= p->pinfo->bank_virtual)
     p->use_memory_banks = TRUE;
 }
-  
+
 /* Tweak the OSABI field of the elf header.  */
 
 void

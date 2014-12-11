@@ -1,4 +1,4 @@
-# Copyright 2010-2012 Free Software Foundation, Inc.
+# Copyright 2010-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +24,12 @@ load_lib gdbserver-support.exp
 load_lib prelink-support.exp
 
 if {[skip_gdbserver_tests] || [skip_shlib_tests]} {
+    return
+}
+
+# This test case (currently) does not support remote targets, since it
+# assumes the ELF interpreter can be found on the host system
+if [is_remote target] then {
     return
 }
 

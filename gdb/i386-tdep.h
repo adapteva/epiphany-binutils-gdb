@@ -1,6 +1,6 @@
 /* Target-dependent code for the i386.
 
-   Copyright (C) 2001-2004, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2001-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -148,14 +148,6 @@ struct gdbarch_tdep
   /* Register number for %eax.  Set this to -1 to indicate the absence
      of pseudo dword register support.  */
   int eax_regnum;
-
-  /* Register number for SP, relative to %eax.  Set this to -1 to
-     indicate the absence of pseudo SP register support.  */
-  int sp_regnum_from_eax;
-
-  /* Register number for PC, relative to %eax.  Set this to -1 to
-     indicate the absence of pseudo PC register support.  */
-  int pc_regnum_from_eax;
 
   /* Number of core registers.  */
   int num_core_regs;

@@ -1,6 +1,6 @@
 /* libthread_db assisted debugging support, generic parts.
 
-   Copyright (C) 1999-2001, 2003-2012 Free Software Foundation, Inc.
+   Copyright (C) 1999-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,7 +23,7 @@
 #include <dlfcn.h>
 #include "gdb_proc_service.h"
 #include "gdb_thread_db.h"
-
+#include "gdb_vecs.h"
 #include "bfd.h"
 #include "command.h"
 #include "exceptions.h"
@@ -42,6 +42,7 @@
 #include "linux-procfs.h"
 #include "linux-osdata.h"
 #include "auto-load.h"
+#include "cli/cli-utils.h"
 
 #include <signal.h>
 #include <ctype.h>
@@ -102,7 +103,7 @@ set_libthread_db_search_path (char *ignored, int from_tty,
 
 /* If non-zero, print details of libthread_db processing.  */
 
-static int libthread_db_debug;
+static unsigned int libthread_db_debug;
 
 static void
 show_libthread_db_debug (struct ui_file *file, int from_tty,
@@ -544,13 +545,13 @@ enable_thread_event (int event, CORE_ADDR *bp)
   /* Set up the breakpoint.  */
   gdb_assert (exec_bfd);
   (*bp) = (gdbarch_convert_from_func_ptr_addr
-	   (target_gdbarch,
+	   (target_gdbarch (),
 	    /* Do proper sign extension for the target.  */
 	    (bfd_get_sign_extend_vma (exec_bfd) > 0
 	     ? (CORE_ADDR) (intptr_t) notify.u.bptaddr
 	     : (CORE_ADDR) (uintptr_t) notify.u.bptaddr),
 	    &current_target));
-  create_thread_event_breakpoint (target_gdbarch, *bp);
+  create_thread_event_breakpoint (target_gdbarch (), *bp);
 
   return TD_OK;
 }
@@ -881,11 +882,12 @@ try_thread_db_load (const char *library)
 }
 
 /* Subroutine of try_thread_db_load_from_pdir to simplify it.
-   Try loading libthread_db from the same directory as OBJ.
+   Try loading libthread_db in directory(OBJ)/SUBDIR.
+   SUBDIR may be NULL.  It may also be something like "../lib64".
    The result is true for success.  */
 
 static int
-try_thread_db_load_from_pdir_1 (struct objfile *obj)
+try_thread_db_load_from_pdir_1 (struct objfile *obj, const char *subdir)
 {
   struct cleanup *cleanup;
   char *path, *cp;
@@ -898,14 +900,21 @@ try_thread_db_load_from_pdir_1 (struct objfile *obj)
       return 0;
     }
 
-  path = xmalloc (strlen (obj->name) + 1 + strlen (LIBTHREAD_DB_SO) + 1);
+  path = xmalloc (strlen (obj->name) + (subdir ? strlen (subdir) + 1 : 0)
+		  + 1 + strlen (LIBTHREAD_DB_SO) + 1);
   cleanup = make_cleanup (xfree, path);
 
   strcpy (path, obj->name);
   cp = strrchr (path, '/');
   /* This should at minimum hit the first character.  */
   gdb_assert (cp != NULL);
-  strcpy (cp + 1, LIBTHREAD_DB_SO);
+  cp[1] = '\0';
+  if (subdir != NULL)
+    {
+      strcat (cp, subdir);
+      strcat (cp, "/");
+    }
+  strcat (cp, LIBTHREAD_DB_SO);
 
   if (!file_is_auto_load_safe (path, _("auto-load: Loading libthread-db "
 				       "library \"%s\" from $pdir.\n"),
@@ -919,11 +928,12 @@ try_thread_db_load_from_pdir_1 (struct objfile *obj)
 }
 
 /* Handle $pdir in libthread-db-search-path.
-   Look for libthread_db in the directory of libpthread.
+   Look for libthread_db in directory(libpthread)/SUBDIR.
+   SUBDIR may be NULL.  It may also be something like "../lib64".
    The result is true for success.  */
 
 static int
-try_thread_db_load_from_pdir (void)
+try_thread_db_load_from_pdir (const char *subdir)
 {
   struct objfile *obj;
 
@@ -933,14 +943,15 @@ try_thread_db_load_from_pdir (void)
   ALL_OBJFILES (obj)
     if (libpthread_name_p (obj->name))
       {
-	if (try_thread_db_load_from_pdir_1 (obj))
+	if (try_thread_db_load_from_pdir_1 (obj, subdir))
 	  return 1;
 
 	/* We may have found the separate-debug-info version of
 	   libpthread, and it may live in a directory without a matching
 	   libthread_db.  */
 	if (obj->separate_debug_objfile_backlink != NULL)
-	  return try_thread_db_load_from_pdir_1 (obj->separate_debug_objfile_backlink);
+	  return try_thread_db_load_from_pdir_1 (obj->separate_debug_objfile_backlink,
+						 subdir);
 
 	return 0;
       }
@@ -998,37 +1009,41 @@ try_thread_db_load_from_dir (const char *dir, size_t dir_len)
 static int
 thread_db_load_search (void)
 {
-  const char *search_path = libthread_db_search_path;
-  int rc = 0;
+  VEC (char_ptr) *dir_vec;
+  struct cleanup *cleanups;
+  char *this_dir;
+  int i, rc = 0;
 
-  while (*search_path)
+  dir_vec = dirnames_to_char_ptr_vec (libthread_db_search_path);
+  cleanups = make_cleanup_free_char_ptr_vec (dir_vec);
+
+  for (i = 0; VEC_iterate (char_ptr, dir_vec, i, this_dir); ++i)
     {
-      const char *end = strchr (search_path, ':');
-      const char *this_dir = search_path;
+      const int pdir_len = sizeof ("$pdir") - 1;
       size_t this_dir_len;
 
-      if (end)
-	{
-	  this_dir_len = end - search_path;
-	  search_path += this_dir_len + 1;
-	}
-      else
-	{
-	  this_dir_len = strlen (this_dir);
-	  search_path += this_dir_len;
-	}
+      this_dir_len = strlen (this_dir);
 
-      if (this_dir_len == sizeof ("$pdir") - 1
-	  && strncmp (this_dir, "$pdir", this_dir_len) == 0)
+      if (strncmp (this_dir, "$pdir", pdir_len) == 0
+	  && (this_dir[pdir_len] == '\0'
+	      || this_dir[pdir_len] == '/'))
 	{
-	  if (try_thread_db_load_from_pdir ())
+	  char *subdir = NULL;
+	  struct cleanup *free_subdir_cleanup = NULL;
+
+	  if (this_dir[pdir_len] == '/')
 	    {
-	      rc = 1;
-	      break;
+	      subdir = xmalloc (strlen (this_dir));
+	      free_subdir_cleanup = make_cleanup (xfree, subdir);
+	      strcpy (subdir, this_dir + pdir_len + 1);
 	    }
+	  rc = try_thread_db_load_from_pdir (subdir);
+	  if (free_subdir_cleanup != NULL)
+	    do_cleanups (free_subdir_cleanup);
+	  if (rc)
+	    break;
 	}
-      else if (this_dir_len == sizeof ("$sdir") - 1
-	       && strncmp (this_dir, "$sdir", this_dir_len) == 0)
+      else if (strcmp (this_dir, "$sdir") == 0)
 	{
 	  if (try_thread_db_load_from_sdir ())
 	    {
@@ -1046,6 +1061,7 @@ thread_db_load_search (void)
 	}
     }
 
+  do_cleanups (cleanups);
   if (libthread_db_debug)
     printf_unfiltered (_("thread_db_load_search returning %d\n"), rc);
   return rc;
@@ -1646,7 +1662,6 @@ thread_db_find_new_threads_2 (ptid_t ptid, int until_no_new)
 {
   td_err_e err = TD_OK;
   struct thread_db_info *info;
-  int pid = ptid_get_pid (ptid);
   int i, loop;
 
   info = get_thread_db_info (GET_PID (ptid));
@@ -1912,8 +1927,7 @@ info_auto_load_libthread_db (char *args, int from_tty)
   char *pids;
   int i;
 
-  while (isspace (*cs))
-    cs++;
+  cs = skip_spaces_const (cs);
   if (*cs)
     error (_("'info auto-load libthread-db' does not accept any parameters"));
 
@@ -2076,14 +2090,14 @@ Setting the search path to an empty list resets it to its default value."),
 			    NULL,
 			    &setlist, &showlist);
 
-  add_setshow_zinteger_cmd ("libthread-db", class_maintenance,
-			    &libthread_db_debug, _("\
+  add_setshow_zuinteger_cmd ("libthread-db", class_maintenance,
+			     &libthread_db_debug, _("\
 Set libthread-db debugging."), _("\
 Show libthread-db debugging."), _("\
 When non-zero, libthread-db debugging is enabled."),
-			    NULL,
-			    show_libthread_db_debug,
-			    &setdebuglist, &showdebuglist);
+			     NULL,
+			     show_libthread_db_debug,
+			     &setdebuglist, &showdebuglist);
 
   add_setshow_boolean_cmd ("libthread-db", class_support,
 			   &auto_load_thread_db, _("\

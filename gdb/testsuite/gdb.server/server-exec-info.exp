@@ -1,4 +1,4 @@
-# Copyright (C) 2012 Free Software Foundation, Inc.
+# Copyright (C) 2012-2013 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,6 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 load_lib gdbserver-support.exp
+
+# We test for skip_shlib_tests in this test because without a main
+# exec file we only have the exec target loaded if shared libraries
+# are present.
+if {[skip_gdbserver_tests] || [skip_shlib_tests]} {
+    return
+}
 
 standard_testfile server.c
 if [prepare_for_testing ${testfile}.exp ${testfile} ${srcfile}] {

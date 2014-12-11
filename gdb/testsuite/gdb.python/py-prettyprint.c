@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2008-2012 Free Software Foundation, Inc.
+   Copyright 2008-2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -45,6 +45,10 @@ struct lazystring {
 };
 
 struct hint_error {
+  int x;
+};
+
+struct children_as_list {
   int x;
 };
 
@@ -192,6 +196,13 @@ add_item (zzz_type *c, int val)
   ++c->len;
 }
 
+void
+set_item(zzz_type *c, int i, int val)
+{
+  if (i < c->len)
+    c->elements[i] = val;
+}
+
 void init_s(struct s *s, int a)
 {
   s->a = a;
@@ -235,6 +246,15 @@ eval_sub (void)
   eval1.x++; /* eval-break */
 }
 
+static void
+bug_14741()
+{
+  zzz_type c = make_container ("bug_14741");
+  add_item (&c, 71);
+  set_item(&c, 0, 42); /* breakpoint bug 14741 */
+  set_item(&c, 0, 5);
+}
+
 int
 main ()
 {
@@ -252,6 +272,7 @@ main ()
   struct ns ns, ns2;
   struct lazystring estring, estring2;
   struct hint_error hint_error;
+  struct children_as_list children_as_list;
 
   nstype.elements = narray;
   nstype.len = 0;
@@ -327,5 +348,6 @@ main ()
 
   eval_sub ();
 
-  return 0;      /* break to inspect struct and union */
+  bug_14741();      /* break to inspect struct and union */
+  return 0;
 }

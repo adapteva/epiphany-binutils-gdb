@@ -1,6 +1,6 @@
 /* Remote debugging interface for MIPS remote debugging protocol.
 
-   Copyright (C) 1993-2004, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 1993-2013 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.  Written by Ian Lance Taylor
    <ian@cygnus.com>.
@@ -588,6 +588,7 @@ mips_expect_timeout (const char *string, int timeout)
     }
 
   immediate_quit++;
+  QUIT;
   while (1)
     {
       int c;
@@ -1241,7 +1242,7 @@ mips_request (int cmd,
 	      int timeout,
 	      char *buff)
 {
-  int addr_size = gdbarch_addr_bit (target_gdbarch) / 8;
+  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
   char myBuff[DATA_MAXLEN + 1];
   char response_string[17];
   int len;
@@ -1662,10 +1663,10 @@ static void
 mips_open (char *name, int from_tty)
 {
   const char *monitor_prompt = NULL;
-  if (gdbarch_bfd_arch_info (target_gdbarch) != NULL
-      && gdbarch_bfd_arch_info (target_gdbarch)->arch == bfd_arch_mips)
+  if (gdbarch_bfd_arch_info (target_gdbarch ()) != NULL
+      && gdbarch_bfd_arch_info (target_gdbarch ())->arch == bfd_arch_mips)
     {
-    switch (gdbarch_bfd_arch_info (target_gdbarch)->mach)
+    switch (gdbarch_bfd_arch_info (target_gdbarch ())->mach)
       {
       case bfd_mach_mips4100:
       case bfd_mach_mips4300:
@@ -1793,7 +1794,7 @@ mips_signal_from_protocol (int sig)
 static void
 mips_set_register (int regno, ULONGEST value)
 {
-  char buf[MAX_REGISTER_SIZE];
+  gdb_byte buf[MAX_REGISTER_SIZE];
   struct regcache *regcache = get_current_regcache ();
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -2146,7 +2147,7 @@ static int
 mips_xfer_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len, int write,
 		  struct mem_attrib *attrib, struct target_ops *target)
 {
-  enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
   int i;
   CORE_ADDR addr;
   int count;
@@ -2478,7 +2479,7 @@ static int
 mips_check_lsi_error (CORE_ADDR addr, int rerrflg)
 {
   struct lsi_error *err;
-  const char *saddr = paddress (target_gdbarch, addr);
+  const char *saddr = paddress (target_gdbarch (), addr);
 
   if (rerrflg == 0)		/* no error */
     return 0;
@@ -2546,13 +2547,13 @@ mips_common_breakpoint (%s): Unknown error: 0x%x\n",
 static int
 mips_common_breakpoint (int set, CORE_ADDR addr, int len, enum break_type type)
 {
-  int addr_size = gdbarch_addr_bit (target_gdbarch) / 8;
+  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
   char buf[DATA_MAXLEN + 1];
   char cmd, rcmd;
   int rpid, rerrflg, rresponse, rlen;
   int nfields;
 
-  addr = gdbarch_addr_bits_remove (target_gdbarch, addr);
+  addr = gdbarch_addr_bits_remove (target_gdbarch (), addr);
 
   if (mips_monitor == MON_LSI)
     {
@@ -2580,7 +2581,7 @@ mips_common_breakpoint (int set, CORE_ADDR addr, int len, enum break_type type)
 	    {
 	      warning (_("\
 mips_common_breakpoint: Attempt to clear bogus breakpoint at %s"),
-		       paddress (target_gdbarch, addr));
+		       paddress (target_gdbarch (), addr));
 	      return 1;
 	    }
 
@@ -2731,7 +2732,7 @@ mips_common_breakpoint: Attempt to clear bogus breakpoint at %s"),
 	  if (rresponse != 22)	/* invalid argument */
 	    fprintf_unfiltered (gdb_stderr, "\
 mips_common_breakpoint (%s):  Got error: 0x%x\n",
-				paddress (target_gdbarch, addr), rresponse);
+				paddress (target_gdbarch (), addr), rresponse);
 	  return 1;
 	}
     }
@@ -2764,7 +2765,7 @@ send_srec (char *srec, int len, CORE_ADDR addr)
 	case 0x15:		/* NACK */
 	  fprintf_unfiltered (gdb_stderr,
 			      "Download got a NACK at byte %s!  Retrying.\n",
-			      paddress (target_gdbarch, addr));
+			      paddress (target_gdbarch (), addr));
 	  continue;
 	default:
 	  error (_("Download got unexpected ack char: 0x%x, retrying."),
@@ -2789,7 +2790,7 @@ mips_load_srec (char *args)
 
   buffer = alloca (srec_frame * 2 + 256);
 
-  abfd = gdb_bfd_openr (args, 0);
+  abfd = gdb_bfd_open (args, NULL, -1);
   if (!abfd)
     {
       printf_filtered ("Unable to open file %s\n", args);
@@ -3376,7 +3377,7 @@ pmon_load_fast (char *file)
   buffer = (char *) xmalloc (MAXRECSIZE + 1);
   binbuf = (unsigned char *) xmalloc (BINCHUNK);
 
-  abfd = gdb_bfd_openr (file, 0);
+  abfd = gdb_bfd_open (file, NULL, -1);
   if (!abfd)
     {
       printf_filtered ("Unable to open file %s\n", file);

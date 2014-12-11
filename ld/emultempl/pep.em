@@ -5,6 +5,16 @@ if [ -z "$MACHINE" ]; then
 else
   OUTPUT_ARCH=${ARCH}:${MACHINE}
 fi
+
+case ${target} in
+  *-*-cygwin*)
+    move_default_addr_high=1
+    ;;
+  *)
+    move_default_addr_high=0;
+    ;;
+esac
+
 rm -f e${EMULATION_NAME}.c
 (echo;echo;echo;echo;echo)>e${EMULATION_NAME}.c # there, now line numbers match ;-)
 fragment <<EOF
@@ -89,9 +99,39 @@ fragment <<EOF
 
 #if defined(TARGET_IS_i386pep) || ! defined(DLL_SUPPORT)
 #define	PE_DEF_SUBSYSTEM		3
+#undef NT_EXE_IMAGE_BASE
+#define NT_EXE_IMAGE_BASE \
+  ((bfd_vma) (${move_default_addr_high} ? 0x100400000LL \
+					: 0x400000LL))
+#undef NT_DLL_IMAGE_BASE
+#define NT_DLL_IMAGE_BASE \
+  ((bfd_vma) (${move_default_addr_high} ? 0x400000000LL \
+					: 0x10000000LL))
+#undef NT_DLL_AUTO_IMAGE_BASE
+#define NT_DLL_AUTO_IMAGE_BASE \
+  ((bfd_vma) (${move_default_addr_high} ? 0x400000000LL \
+					: 0x61300000LL))
+#undef NT_DLL_AUTO_IMAGE_MASK
+#define NT_DLL_AUTO_IMAGE_MASK \
+  ((bfd_vma) (${move_default_addr_high} ? 0x1ffff0000LL \
+					: 0x0ffc0000LL))
 #else
 #undef  NT_EXE_IMAGE_BASE
-#define NT_EXE_IMAGE_BASE		0x00010000
+#define NT_EXE_IMAGE_BASE \
+  ((bfd_vma) (${move_default_addr_high} ? 0x100010000LL \
+					: 0x10000LL))
+#undef NT_DLL_IMAGE_BASE
+#define NT_DLL_IMAGE_BASE \
+  ((bfd_vma) (${move_default_addr_high} ? 0x110000000LL \
+					: 0x10000000LL))
+#undef NT_DLL_AUTO_IMAGE_BASE
+#define NT_DLL_AUTO_IMAGE_BASE \
+  ((bfd_vma) (${move_default_addr_high} ? 0x120000000LL \
+					: 0x61300000LL))
+#undef NT_DLL_AUTO_IMAGE_MASK
+#define NT_DLL_AUTO_IMAGE_MASK \
+  ((bfd_vma) (${move_default_addr_high} ? 0x0ffff0000LL \
+					: 0x0ffc0000LL))
 #undef  PE_DEF_SECTION_ALIGNMENT
 #define	PE_DEF_SUBSYSTEM		2
 #undef  PE_DEF_FILE_ALIGNMENT
@@ -773,7 +813,7 @@ gld${EMULATION_NAME}_handle_option (int optc)
 
   /*  Set DLLCharacteristics bits  */
   set_pep_name ("__dll_characteristics__", pe_dll_characteristics);
- 
+
   return TRUE;
 }
 
@@ -808,7 +848,7 @@ static bfd_vma
 compute_dll_image_base (const char *ofile)
 {
   bfd_vma hash = (bfd_vma) strhash (ofile);
-  return 0x61300000 + ((hash << 16) & 0x0FFC0000);
+  return NT_DLL_AUTO_IMAGE_BASE + ((hash << 16) & NT_DLL_AUTO_IMAGE_MASK);
 }
 #endif
 
@@ -856,7 +896,7 @@ gld_${EMULATION_NAME}_set_symbols (void)
       lang_assignment_statement_type *rv;
 
       rv = lang_add_assignment (exp_assign (GET_INIT_SYMBOL_NAME (j),
-					    exp_intop (val)));
+					    exp_intop (val), FALSE));
       if (init[j].size == sizeof (short))
 	*(short *) init[j].ptr = (short) val;
       else if (init[j].size == sizeof (int))
@@ -892,7 +932,7 @@ gld_${EMULATION_NAME}_after_parse (void)
       "targets, did you mean --export-all-symbols?\n"));
 
   set_entry_point ();
-  
+
   after_parse_default ();
 }
 
@@ -1136,7 +1176,7 @@ pr_sym (struct bfd_hash_entry *h, void *inf ATTRIBUTE_UNUSED)
 }
 #endif /* DLL_SUPPORT */
 
-static void 
+static void
 debug_section_p (bfd *abfd ATTRIBUTE_UNUSED, asection *sect, void *obj)
 {
   int *found = (int *) obj;
@@ -1522,8 +1562,9 @@ gld_${EMULATION_NAME}_unrecognized_file (lang_input_statement_type *entry ATTRIB
 		= pep_def_file->base_address;
 	      init[IMAGEBASEOFF].inited = 1;
 	      if (image_base_statement)
-		image_base_statement->exp = exp_assign ("__image_base__",
-							exp_intop (pep.ImageBase));
+		image_base_statement->exp
+		  = exp_assign ("__image_base__", exp_intop (pep.ImageBase),
+				FALSE);
 	    }
 
 	  if (pep_def_file->stack_reserve != -1

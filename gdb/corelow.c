@@ -1,7 +1,6 @@
 /* Core dump and executable file functions below target vector, for GDB.
 
-   Copyright (C) 1986-1987, 1989, 1991-2001, 2003-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -195,8 +194,6 @@ gdb_check_format (bfd *abfd)
 static void
 core_close (int quitting)
 {
-  char *name;
-
   if (core_bfd)
     {
       int pid = ptid_get_pid (inferior_ptid);
@@ -344,12 +341,6 @@ core_open (char *filename, int from_tty)
   core_bfd = temp_bfd;
   old_chain = make_cleanup (core_close_cleanup, 0 /*ignore*/);
 
-  /* FIXME: kettenis/20031023: This is very dangerous.  The
-     CORE_GDBARCH that results from this call may very well be
-     different from CURRENT_GDBARCH.  However, its methods may only
-     work if it is selected as the current architecture, because they
-     rely on swapped data (see gdbarch.c).  We should get rid of that
-     swapped data.  */
   core_gdbarch = gdbarch_from_bfd (core_bfd);
 
   /* Find a suitable core file handler to munch on core_bfd */
@@ -662,6 +653,35 @@ add_to_spuid_list (bfd *abfd, asection *asect, void *list_p)
   list->pos += 4;
 }
 
+/* Read siginfo data from the core, if possible.  Returns -1 on
+   failure.  Otherwise, returns the number of bytes read.  ABFD is the
+   core file's BFD; READBUF, OFFSET, and LEN are all as specified by
+   the to_xfer_partial interface.  */
+
+static LONGEST
+get_core_siginfo (bfd *abfd, gdb_byte *readbuf, ULONGEST offset, LONGEST len)
+{
+  asection *section;
+  char *section_name;
+  const char *name = ".note.linuxcore.siginfo";
+
+  if (ptid_get_lwp (inferior_ptid))
+    section_name = xstrprintf ("%s/%ld", name,
+			       ptid_get_lwp (inferior_ptid));
+  else
+    section_name = xstrdup (name);
+
+  section = bfd_get_section_by_name (abfd, section_name);
+  xfree (section_name);
+  if (section == NULL)
+    return -1;
+
+  if (!bfd_get_section_contents (abfd, section, readbuf, offset, len))
+    return -1;
+
+  return len;
+}
+
 static LONGEST
 core_xfer_partial (struct target_ops *ops, enum target_object object,
 		   const char *annex, gdb_byte *readbuf,
@@ -800,6 +820,11 @@ core_xfer_partial (struct target_ops *ops, enum target_object object,
 	}
       return -1;
 
+    case TARGET_OBJECT_SIGNAL_INFO:
+      if (readbuf)
+	return get_core_siginfo (core_bfd, readbuf, offset, len);
+      return -1;
+
     default:
       if (ops->beneath != NULL)
 	return ops->beneath->to_xfer_partial (ops->beneath, object,
@@ -898,6 +923,19 @@ core_has_registers (struct target_ops *ops)
   return (core_bfd != NULL);
 }
 
+/* Implement the to_info_proc method.  */
+
+static void
+core_info_proc (struct target_ops *ops, char *args, enum info_proc_what request)
+{
+  struct gdbarch *gdbarch = get_current_arch ();
+
+  /* Since this is the core file target, call the 'core_info_proc'
+     method on gdbarch, not 'info_proc'.  */
+  if (gdbarch_core_info_proc_p (gdbarch))
+    gdbarch_core_info_proc (gdbarch, args, request);
+}
+
 /* Fill in core_ops with its defined operations and properties.  */
 
 static void
@@ -924,6 +962,7 @@ init_core_ops (void)
   core_ops.to_has_memory = core_has_memory;
   core_ops.to_has_stack = core_has_stack;
   core_ops.to_has_registers = core_has_registers;
+  core_ops.to_info_proc = core_info_proc;
   core_ops.to_magic = OPS_MAGIC;
 
   if (core_target)

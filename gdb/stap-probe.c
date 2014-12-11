@@ -1,6 +1,6 @@
 /* SystemTap probe support for GDB.
 
-   Copyright (C) 2012 Free Software Foundation, Inc.
+   Copyright (C) 2012-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -53,7 +53,7 @@ static const struct probe_ops stap_probe_ops;
 /* Should we display debug information for the probe's argument expression
    parsing?  */
 
-static int stap_expression_debug = 0;
+static unsigned int stap_expression_debug = 0;
 
 /* The various possibilities of bitness defined for a probe's argument.
 
@@ -1303,7 +1303,7 @@ handle_stap_probe (struct objfile *objfile, struct sdt_note *el,
   ret->p.objfile = objfile;
 
   /* Provider and the name of the probe.  */
-  ret->p.provider = &el->data[3 * size];
+  ret->p.provider = (char *) &el->data[3 * size];
   ret->p.name = memchr (ret->p.provider, '\0',
 			(char *) el->data + el->size - ret->p.provider);
   /* Making sure there is a name.  */
@@ -1533,15 +1533,15 @@ _initialize_stap_probe (void)
 {
   VEC_safe_push (probe_ops_cp, all_probe_ops, &stap_probe_ops);
 
-  add_setshow_zinteger_cmd ("stap-expression", class_maintenance,
-			    &stap_expression_debug,
-			    _("Set SystemTap expression debugging."),
-			    _("Show SystemTap expression debugging."),
-			    _("When non-zero, the internal representation "
-			      "of SystemTap expressions will be printed."),
-			    NULL,
-			    show_stapexpressiondebug,
-			    &setdebuglist, &showdebuglist);
+  add_setshow_zuinteger_cmd ("stap-expression", class_maintenance,
+			     &stap_expression_debug,
+			     _("Set SystemTap expression debugging."),
+			     _("Show SystemTap expression debugging."),
+			     _("When non-zero, the internal representation "
+			       "of SystemTap expressions will be printed."),
+			     NULL,
+			     show_stapexpressiondebug,
+			     &setdebuglist, &showdebuglist);
 
   create_internalvar_type_lazy ("_probe_argc", &probe_funcs,
 				(void *) (uintptr_t) -1);

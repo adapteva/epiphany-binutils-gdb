@@ -1,4 +1,4 @@
-# Copyright 1999, 2001-2012 Free Software Foundation, Inc.
+# Copyright 1999-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -342,6 +342,7 @@ for {set i 1} {$i <= $nthreads} {incr i} {
 	set any_interesting 1
     }
 }
+unset seen
 
 if {$any_interesting} {
     pass "found an interesting thread"

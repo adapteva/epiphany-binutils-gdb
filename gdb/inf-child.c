@@ -1,8 +1,7 @@
 /* Default child (native) target interface, for GDB when running under
    Unix.
 
-   Copyright (C) 1988-1996, 1998-2002, 2004-2005, 2007-2012 Free
-   Software Foundation, Inc.
+   Copyright (C) 1988-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -265,10 +264,15 @@ inf_child_fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
 #ifdef HAVE_PWRITE
   ret = pwrite (fd, write_buf, len, (long) offset);
 #else
-  ret = lseek (fd, (long) offset, SEEK_SET);
-  if (ret != -1)
-    ret = write (fd, write_buf, len);
+  ret = -1;
 #endif
+  /* If we have no pwrite or it failed for this file, use lseek/write.  */
+  if (ret == -1)
+    {
+      ret = lseek (fd, (long) offset, SEEK_SET);
+      if (ret != -1)
+	ret = write (fd, write_buf, len);
+    }
 
   if (ret == -1)
     *target_errno = inf_child_errno_to_fileio_error (errno);
@@ -288,10 +292,15 @@ inf_child_fileio_pread (int fd, gdb_byte *read_buf, int len,
 #ifdef HAVE_PREAD
   ret = pread (fd, read_buf, len, (long) offset);
 #else
-  ret = lseek (fd, (long) offset, SEEK_SET);
-  if (ret != -1)
-    ret = read (fd, read_buf, len);
+  ret = -1;
 #endif
+  /* If we have no pread or it failed for this file, use lseek/read.  */
+  if (ret == -1)
+    {
+      ret = lseek (fd, (long) offset, SEEK_SET);
+      if (ret != -1)
+	ret = read (fd, read_buf, len);
+    }
 
   if (ret == -1)
     *target_errno = inf_child_errno_to_fileio_error (errno);
@@ -336,7 +345,7 @@ inf_child_fileio_readlink (const char *filename, int *target_errno)
   /* We support readlink only on systems that also provide a compile-time
      maximum path length (MAXPATHLEN), at least for now.  */
 #if defined (HAVE_READLINK) && defined (MAXPATHLEN)
-  char buf[MAXPATHLEN];
+  char buf[MAXPATHLEN - 1];
   int len;
   char *ret;
 

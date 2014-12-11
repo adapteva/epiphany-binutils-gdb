@@ -1,6 +1,6 @@
 /* Evaluate expressions for GDB.
 
-   Copyright (C) 1986-2003, 2005-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -56,8 +56,6 @@ static struct value *evaluate_subexp_for_sizeof (struct expression *, int *);
 static struct value *evaluate_subexp_for_address (struct expression *,
 						  int *, enum noside);
 
-static char *get_label (struct expression *, int *);
-
 static struct value *evaluate_struct_tuple (struct value *,
 					    struct expression *, int *,
 					    enum noside, int);
@@ -78,7 +76,7 @@ evaluate_subexp (struct type *expect_type, struct expression *exp,
    and return the result as a number.  */
 
 CORE_ADDR
-parse_and_eval_address (char *exp)
+parse_and_eval_address (const char *exp)
 {
   struct expression *expr = parse_expression (exp);
   CORE_ADDR addr;
@@ -106,7 +104,7 @@ parse_and_eval_long (char *exp)
 }
 
 struct value *
-parse_and_eval (char *exp)
+parse_and_eval (const char *exp)
 {
   struct expression *expr = parse_expression (exp);
   struct value *val;
@@ -123,7 +121,7 @@ parse_and_eval (char *exp)
    EXPP is advanced to point to the comma.  */
 
 struct value *
-parse_to_comma_and_eval (char **expp)
+parse_to_comma_and_eval (const char **expp)
 {
   struct expression *expr = parse_exp_1 (expp, 0, (struct block *) 0, 1);
   struct value *val;
@@ -280,27 +278,8 @@ extract_field_op (struct expression *exp, int *subexp)
   return result;
 }
 
-/* If the next expression is an OP_LABELED, skips past it,
-   returning the label.  Otherwise, does nothing and returns NULL.  */
-
-static char *
-get_label (struct expression *exp, int *pos)
-{
-  if (exp->elts[*pos].opcode == OP_LABELED)
-    {
-      int pc = (*pos)++;
-      char *name = &exp->elts[pc + 2].string;
-      int tem = longest_to_int (exp->elts[pc + 1].longconst);
-
-      (*pos) += 3 + BYTES_TO_EXP_ELEM (tem + 1);
-      return name;
-    }
-  else
-    return NULL;
-}
-
-/* This function evaluates tuples (in (the deleted) Chill) or
-   brace-initializers (in C/C++) for structure types.  */
+/* This function evaluates brace-initializers (in C/C++) for
+   structure types.  */
 
 static struct value *
 evaluate_struct_tuple (struct value *struct_val,
@@ -308,143 +287,57 @@ evaluate_struct_tuple (struct value *struct_val,
 		       int *pos, enum noside noside, int nargs)
 {
   struct type *struct_type = check_typedef (value_type (struct_val));
-  struct type *substruct_type = struct_type;
   struct type *field_type;
   int fieldno = -1;
-  int variantno = -1;
-  int subfieldno = -1;
 
   while (--nargs >= 0)
     {
-      int pc = *pos;
       struct value *val = NULL;
-      int nlabels = 0;
       int bitpos, bitsize;
       bfd_byte *addr;
 
-      /* Skip past the labels, and count them.  */
-      while (get_label (exp, pos) != NULL)
-	nlabels++;
+      fieldno++;
+      /* Skip static fields.  */
+      while (fieldno < TYPE_NFIELDS (struct_type)
+	     && field_is_static (&TYPE_FIELD (struct_type,
+					      fieldno)))
+	fieldno++;
+      if (fieldno >= TYPE_NFIELDS (struct_type))
+	error (_("too many initializers"));
+      field_type = TYPE_FIELD_TYPE (struct_type, fieldno);
+      if (TYPE_CODE (field_type) == TYPE_CODE_UNION
+	  && TYPE_FIELD_NAME (struct_type, fieldno)[0] == '0')
+	error (_("don't know which variant you want to set"));
 
-      do
-	{
-	  char *label = get_label (exp, &pc);
+      /* Here, struct_type is the type of the inner struct,
+	 while substruct_type is the type of the inner struct.
+	 These are the same for normal structures, but a variant struct
+	 contains anonymous union fields that contain substruct fields.
+	 The value fieldno is the index of the top-level (normal or
+	 anonymous union) field in struct_field, while the value
+	 subfieldno is the index of the actual real (named inner) field
+	 in substruct_type.  */
 
-	  if (label)
-	    {
-	      for (fieldno = 0; fieldno < TYPE_NFIELDS (struct_type);
-		   fieldno++)
-		{
-		  const char *field_name =
-		    TYPE_FIELD_NAME (struct_type, fieldno);
+      field_type = TYPE_FIELD_TYPE (struct_type, fieldno);
+      if (val == 0)
+	val = evaluate_subexp (field_type, exp, pos, noside);
 
-		  if (field_name != NULL && strcmp (field_name, label) == 0)
-		    {
-		      variantno = -1;
-		      subfieldno = fieldno;
-		      substruct_type = struct_type;
-		      goto found;
-		    }
-		}
-	      for (fieldno = 0; fieldno < TYPE_NFIELDS (struct_type);
-		   fieldno++)
-		{
-		  const char *field_name =
-		    TYPE_FIELD_NAME (struct_type, fieldno);
+      /* Now actually set the field in struct_val.  */
 
-		  field_type = TYPE_FIELD_TYPE (struct_type, fieldno);
-		  if ((field_name == 0 || *field_name == '\0')
-		      && TYPE_CODE (field_type) == TYPE_CODE_UNION)
-		    {
-		      variantno = 0;
-		      for (; variantno < TYPE_NFIELDS (field_type);
-			   variantno++)
-			{
-			  substruct_type
-			    = TYPE_FIELD_TYPE (field_type, variantno);
-			  if (TYPE_CODE (substruct_type) == TYPE_CODE_STRUCT)
-			    {
-			      for (subfieldno = 0;
-				 subfieldno < TYPE_NFIELDS (substruct_type);
-				   subfieldno++)
-				{
-				  if (strcmp(TYPE_FIELD_NAME (substruct_type,
-							      subfieldno),
-					     label) == 0)
-				    {
-				      goto found;
-				    }
-				}
-			    }
-			}
-		    }
-		}
-	      error (_("there is no field named %s"), label);
-	    found:
-	      ;
-	    }
-	  else
-	    {
-	      /* Unlabelled tuple element - go to next field.  */
-	      if (variantno >= 0)
-		{
-		  subfieldno++;
-		  if (subfieldno >= TYPE_NFIELDS (substruct_type))
-		    {
-		      variantno = -1;
-		      substruct_type = struct_type;
-		    }
-		}
-	      if (variantno < 0)
-		{
-		  fieldno++;
-		  /* Skip static fields.  */
-		  while (fieldno < TYPE_NFIELDS (struct_type)
-			 && field_is_static (&TYPE_FIELD (struct_type,
-							  fieldno)))
-		    fieldno++;
-		  subfieldno = fieldno;
-		  if (fieldno >= TYPE_NFIELDS (struct_type))
-		    error (_("too many initializers"));
-		  field_type = TYPE_FIELD_TYPE (struct_type, fieldno);
-		  if (TYPE_CODE (field_type) == TYPE_CODE_UNION
-		      && TYPE_FIELD_NAME (struct_type, fieldno)[0] == '0')
-		    error (_("don't know which variant you want to set"));
-		}
-	    }
+      /* Assign val to field fieldno.  */
+      if (value_type (val) != field_type)
+	val = value_cast (field_type, val);
 
-	  /* Here, struct_type is the type of the inner struct,
-	     while substruct_type is the type of the inner struct.
-	     These are the same for normal structures, but a variant struct
-	     contains anonymous union fields that contain substruct fields.
-	     The value fieldno is the index of the top-level (normal or
-	     anonymous union) field in struct_field, while the value
-	     subfieldno is the index of the actual real (named inner) field
-	     in substruct_type.  */
+      bitsize = TYPE_FIELD_BITSIZE (struct_type, fieldno);
+      bitpos = TYPE_FIELD_BITPOS (struct_type, fieldno);
+      addr = value_contents_writeable (struct_val) + bitpos / 8;
+      if (bitsize)
+	modify_field (struct_type, addr,
+		      value_as_long (val), bitpos % 8, bitsize);
+      else
+	memcpy (addr, value_contents (val),
+		TYPE_LENGTH (value_type (val)));
 
-	  field_type = TYPE_FIELD_TYPE (substruct_type, subfieldno);
-	  if (val == 0)
-	    val = evaluate_subexp (field_type, exp, pos, noside);
-
-	  /* Now actually set the field in struct_val.  */
-
-	  /* Assign val to field fieldno.  */
-	  if (value_type (val) != field_type)
-	    val = value_cast (field_type, val);
-
-	  bitsize = TYPE_FIELD_BITSIZE (substruct_type, subfieldno);
-	  bitpos = TYPE_FIELD_BITPOS (struct_type, fieldno);
-	  if (variantno >= 0)
-	    bitpos += TYPE_FIELD_BITPOS (substruct_type, subfieldno);
-	  addr = value_contents_writeable (struct_val) + bitpos / 8;
-	  if (bitsize)
-	    modify_field (struct_type, addr,
-			  value_as_long (val), bitpos % 8, bitsize);
-	  else
-	    memcpy (addr, value_contents (val),
-		    TYPE_LENGTH (value_type (val)));
-	}
-      while (--nlabels > 0);
     }
   return struct_val;
 }
@@ -810,7 +703,6 @@ evaluate_subexp_standard (struct type *expect_type,
   struct type *type;
   int nargs;
   struct value **argvec;
-  int lower;
   int code;
   int ix;
   long mem_offset;
@@ -969,16 +861,6 @@ evaluate_subexp_standard (struct type *expect_type,
 	  goto nosideret;
 	}
       return value_nsstring (exp->gdbarch, &exp->elts[pc + 2].string, tem + 1);
-
-    case OP_BITSTRING:
-      tem = longest_to_int (exp->elts[pc + 1].longconst);
-      (*pos)
-	+= 3 + BYTES_TO_EXP_ELEM ((tem + HOST_CHAR_BIT - 1) / HOST_CHAR_BIT);
-      if (noside == EVAL_SKIP)
-	goto nosideret;
-      return value_bitstring (&exp->elts[pc + 2].string, tem,
-			      builtin_type (exp->gdbarch)->builtin_int);
-      break;
 
     case OP_ARRAY:
       (*pos) += 3;
@@ -1148,17 +1030,6 @@ evaluate_subexp_standard (struct type *expect_type,
 	if (noside == EVAL_SKIP)
 	  goto nosideret;
 	return value_slice (array, lowbound, upper - lowbound + 1);
-      }
-
-    case TERNOP_SLICE_COUNT:
-      {
-	struct value *array = evaluate_subexp (NULL_TYPE, exp, pos, noside);
-	int lowbound
-	  = value_as_long (evaluate_subexp (NULL_TYPE, exp, pos, noside));
-	int length
-	  = value_as_long (evaluate_subexp (NULL_TYPE, exp, pos, noside));
-
-	return value_slice (array, lowbound, length);
       }
 
     case TERNOP_COND:
@@ -1493,7 +1364,6 @@ evaluate_subexp_standard (struct type *expect_type,
 	alloca (sizeof (struct value *) * (nargs + 3));
       if (op == STRUCTOP_MEMBER || op == STRUCTOP_MPTR)
 	{
-	  nargs++;
 	  /* First, evaluate the structure into arg2.  */
 	  pc2 = (*pos)++;
 
@@ -1517,22 +1387,39 @@ evaluate_subexp_standard (struct type *expect_type,
 
 	  arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
 
-	  if (TYPE_CODE (check_typedef (value_type (arg1)))
-	      != TYPE_CODE_METHODPTR)
-	    error (_("Non-pointer-to-member value used in pointer-to-member "
-		     "construct"));
-
-	  if (noside == EVAL_AVOID_SIDE_EFFECTS)
+	  type = check_typedef (value_type (arg1));
+	  if (TYPE_CODE (type) == TYPE_CODE_METHODPTR)
 	    {
-	      struct type *method_type = check_typedef (value_type (arg1));
+	      if (noside == EVAL_AVOID_SIDE_EFFECTS)
+		arg1 = value_zero (TYPE_TARGET_TYPE (type), not_lval);
+	      else
+		arg1 = cplus_method_ptr_to_value (&arg2, arg1);
 
-	      arg1 = value_zero (method_type, not_lval);
+	      /* Now, say which argument to start evaluating from.  */
+	      nargs++;
+	      tem = 2;
+	      argvec[1] = arg2;
+	    }
+	  else if (TYPE_CODE (type) == TYPE_CODE_MEMBERPTR)
+	    {
+	      struct type *type_ptr
+		= lookup_pointer_type (TYPE_DOMAIN_TYPE (type));
+	      struct type *target_type_ptr
+		= lookup_pointer_type (TYPE_TARGET_TYPE (type));
+
+	      /* Now, convert these values to an address.  */
+	      arg2 = value_cast (type_ptr, arg2);
+
+	      mem_offset = value_as_long (arg1);
+
+	      arg1 = value_from_pointer (target_type_ptr,
+					 value_as_long (arg2) + mem_offset);
+	      arg1 = value_ind (arg1);
+	      tem = 1;
 	    }
 	  else
-	    arg1 = cplus_method_ptr_to_value (&arg2, arg1);
-
-	  /* Now, say which argument to start evaluating from.  */
-	  tem = 2;
+	    error (_("Non-pointer-to-member value used in pointer-to-member "
+		     "construct"));
 	}
       else if (op == STRUCTOP_STRUCT || op == STRUCTOP_PTR)
 	{
@@ -1703,7 +1590,6 @@ evaluate_subexp_standard (struct type *expect_type,
 
           find_overload_match (&argvec[1], nargs, func_name,
                                NON_METHOD, /* not method */
-			       0,          /* strict match */
                                NULL, NULL, /* pass NULL symbol since
 					      symbol is unknown */
                                NULL, &symp, NULL, 0);
@@ -1739,7 +1625,6 @@ evaluate_subexp_standard (struct type *expect_type,
 
 	      (void) find_overload_match (&argvec[1], nargs, tstr,
 	                                  METHOD, /* method */
-					  0,      /* strict match */
 					  &arg2,  /* the object */
 					  NULL, &valp, NULL,
 					  &static_memfuncp, 0);
@@ -1783,7 +1668,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	}
       else if (op == STRUCTOP_MEMBER || op == STRUCTOP_MPTR)
 	{
-	  argvec[1] = arg2;
+	  /* Pointer to member.  argvec[1] is already set up.  */
 	  argvec[0] = arg1;
 	}
       else if (op == OP_VAR_VALUE || (op == OP_SCOPE && function != NULL))
@@ -1811,7 +1696,6 @@ evaluate_subexp_standard (struct type *expect_type,
 	      (void) find_overload_match (&argvec[1], nargs,
 					  NULL,        /* no need for name */
 	                                  NON_METHOD,  /* not method */
-					  0,           /* strict match */
 	                                  NULL, function, /* the function */
 					  NULL, &symp, NULL, no_adl);
 
@@ -2344,12 +2228,6 @@ evaluate_subexp_standard (struct type *expect_type,
 		  arg1 = value_subscript (arg1, value_as_long (arg2));
 		  break;
 
-		case TYPE_CODE_BITSTRING:
-		  type = language_bool_type (exp->language_defn, exp->gdbarch);
-		  arg1 = value_bitstring_subscript (type, arg1,
-						    value_as_long (arg2));
-		  break;
-
 		default:
 		  if (TYPE_NAME (type))
 		    error (_("cannot subscript something of type `%s'"),
@@ -2397,8 +2275,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	    struct type *array_type = check_typedef (value_type (array));
 	    LONGEST index = subscript_array[i - 1];
 
-	    lower = f77_get_lowerbound (array_type);
-	    array = value_subscripted_rvalue (array, index, lower);
+	    array = value_subscripted_rvalue (array, index,
+					      f77_get_lowerbound (array_type));
 	  }
 
 	return array;
@@ -2751,10 +2629,9 @@ evaluate_subexp_standard (struct type *expect_type,
       if (noside == EVAL_SKIP)
 	goto nosideret;
       if (noside == EVAL_AVOID_SIDE_EFFECTS)
-	return value_zero (exp->elts[pc + 1].type, lval_memory);
+	return value_zero (type, lval_memory);
       else
-	return value_at_lazy (exp->elts[pc + 1].type,
-			      value_as_address (arg1));
+	return value_at_lazy (type, value_as_address (arg1));
 
     case UNOP_MEMVAL_TLS:
       (*pos) += 3;
@@ -3052,11 +2929,11 @@ evaluate_subexp_for_address (struct expression *exp, int *pos,
 	{
 	  struct type *type = check_typedef (value_type (x));
 
-	  if (VALUE_LVAL (x) == lval_memory || value_must_coerce_to_target (x))
-	    return value_zero (lookup_pointer_type (value_type (x)),
-			       not_lval);
-	  else if (TYPE_CODE (type) == TYPE_CODE_REF)
+	  if (TYPE_CODE (type) == TYPE_CODE_REF)
 	    return value_zero (lookup_pointer_type (TYPE_TARGET_TYPE (type)),
+			       not_lval);
+	  else if (VALUE_LVAL (x) == lval_memory || value_must_coerce_to_target (x))
+	    return value_zero (lookup_pointer_type (value_type (x)),
 			       not_lval);
 	  else
 	    error (_("Attempt to take address of "

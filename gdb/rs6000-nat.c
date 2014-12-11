@@ -1,7 +1,6 @@
 /* IBM RS/6000 native-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986-1987, 1989, 1991-2004, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -53,6 +52,7 @@
 #include <a.out.h>
 #include <sys/file.h>
 #include "gdb_stat.h"
+#include "gdb_bfd.h"
 #include <sys/core.h>
 #define __LDINFO_PTRACE32__	/* for __ld_info32 */
 #define __LDINFO_PTRACE64__	/* for __ld_info64 */
@@ -75,7 +75,7 @@
 #ifndef ARCH3264
 # define ARCH64() 0
 #else
-# define ARCH64() (register_size (target_gdbarch, 0) == 8)
+# define ARCH64() (register_size (target_gdbarch (), 0) == 8)
 #endif
 
 /* Union of 32-bit and 64-bit versions of ld_info.  */
@@ -651,6 +651,71 @@ vmap_secs (struct vmap *vp, LdInfo *ldi, int arch64)
   vp->tstart += vp->toffs;
 }
 
+/* If the .bss section's VMA is set to an address located before
+   the end of the .data section, causing the two sections to overlap,
+   return the overlap in bytes.  Otherwise, return zero.
+
+   Motivation:
+
+   The GNU linker sometimes sets the start address of the .bss session
+   before the end of the .data section, making the 2 sections overlap.
+   The loader appears to handle this situation gracefully, by simply
+   loading the bss section right after the end of the .data section.
+
+   This means that the .data and the .bss sections are sometimes
+   no longer relocated by the same amount.  The problem is that
+   the ldinfo data does not contain any information regarding
+   the relocation of the .bss section, assuming that it would be
+   identical to the information provided for the .data section
+   (this is what would normally happen if the program was linked
+   correctly).
+
+   GDB therefore needs to detect those cases, and make the corresponding
+   adjustment to the .bss section offset computed from the ldinfo data
+   when necessary.  This function returns the adjustment amount  (or
+   zero when no adjustment is needed).  */
+
+static CORE_ADDR
+bss_data_overlap (struct objfile *objfile)
+{
+  struct obj_section *osect;
+  struct bfd_section *data = NULL;
+  struct bfd_section *bss = NULL;
+
+  /* First, find the .data and .bss sections.  */
+  ALL_OBJFILE_OSECTIONS (objfile, osect)
+    {
+      if (strcmp (bfd_section_name (objfile->obfd,
+				    osect->the_bfd_section),
+		  ".data") == 0)
+	data = osect->the_bfd_section;
+      else if (strcmp (bfd_section_name (objfile->obfd,
+					 osect->the_bfd_section),
+		       ".bss") == 0)
+	bss = osect->the_bfd_section;
+    }
+
+  /* If either section is not defined, there can be no overlap.  */
+  if (data == NULL || bss == NULL)
+    return 0;
+
+  /* Assume the problem only occurs with linkers that place the .bss
+     section after the .data section (the problem has only been
+     observed when using the GNU linker, and the default linker
+     script always places the .data and .bss sections in that order).  */
+  if (bfd_section_vma (objfile->obfd, bss)
+      < bfd_section_vma (objfile->obfd, data))
+    return 0;
+
+  if (bfd_section_vma (objfile->obfd, bss)
+      < bfd_section_vma (objfile->obfd, data) + bfd_get_section_size (data))
+    return ((bfd_section_vma (objfile->obfd, data)
+	     + bfd_get_section_size (data))
+	    - bfd_section_vma (objfile->obfd, bss));
+
+  return 0;
+}
+
 /* Handle symbol translation on vmapping.  */
 
 static void
@@ -686,6 +751,10 @@ vmap_symtab (struct vmap *vp)
   new_offsets->offsets[SECT_OFF_TEXT (objfile)] = vp->tstart - vp->tvma;
   new_offsets->offsets[SECT_OFF_DATA (objfile)] = vp->dstart - vp->dvma;
   new_offsets->offsets[SECT_OFF_BSS (objfile)] = vp->dstart - vp->dvma;
+
+  /* Perform the same adjustment as the loader if the .data and
+     .bss sections overlap.  */
+  new_offsets->offsets[SECT_OFF_BSS (objfile)] += bss_data_overlap (objfile);
 
   objfile_relocate (objfile, new_offsets);
 }
@@ -745,12 +814,7 @@ add_vmap (LdInfo *ldi)
   mem = xstrdup (mem);
 
   fd = LDI_FD (ldi, arch64);
-  if (fd < 0)
-    /* Note that this opens it once for every member; a possible
-       enhancement would be to only open it once for every object.  */
-    abfd = gdb_bfd_openr (filename, gnutarget);
-  else
-    abfd = gdb_bfd_fdopenr (filename, gnutarget, fd);
+  abfd = gdb_bfd_open (filename, gnutarget, fd < 0 ? -1 : fd);
   if (!abfd)
     {
       warning (_("Could not open `%s' as an executable file: %s"),
@@ -775,6 +839,7 @@ add_vmap (LdInfo *ldi)
 
 	  next = gdb_bfd_openr_next_archived_file (abfd, last);
 	  gdb_bfd_unref (last);
+	  last = next;
 	}
 
       if (!last)

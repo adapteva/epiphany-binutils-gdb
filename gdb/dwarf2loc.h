@@ -1,6 +1,6 @@
 /* DWARF 2 location expression support for GDB.
 
-   Copyright (C) 2003, 2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -33,7 +33,7 @@ struct axs_value;
    dwarf2read.c and dwarf2loc.c.  */
 
 /* `set debug entry-values' setting.  */
-extern int entry_values_debug;
+extern unsigned int entry_values_debug;
 
 /* Return the OBJFILE associated with the compilation unit CU.  If CU
    came from a separate debuginfo file, then the master objfile is
@@ -62,7 +62,12 @@ const gdb_byte *dwarf2_find_location_expression
    size_t *locexpr_length,
    CORE_ADDR pc);
 
-struct dwarf2_locexpr_baton dwarf2_fetch_die_location_block
+struct dwarf2_locexpr_baton dwarf2_fetch_die_loc_sect_off
+  (sect_offset offset_in_cu, struct dwarf2_per_cu_data *per_cu,
+   CORE_ADDR (*get_frame_pc) (void *baton),
+   void *baton);
+
+struct dwarf2_locexpr_baton dwarf2_fetch_die_loc_cu_off
   (cu_offset offset_in_cu, struct dwarf2_per_cu_data *per_cu,
    CORE_ADDR (*get_frame_pc) (void *baton),
    void *baton);

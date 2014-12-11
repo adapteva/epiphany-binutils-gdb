@@ -1,7 +1,6 @@
 /* Floating point routines for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1988-2001, 2003-2005, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -483,7 +482,7 @@ convert_doublest_to_floatformat (CONST struct floatformat *fmt,
       goto finalize_byteorder;
     }
 
-  if (exponent + fmt->exp_bias >= (1 << fmt->exp_len) - 1)
+  if (exponent + fmt->exp_bias >= (1 << fmt->exp_len))
     {
       /* The value is too large to fit into the destination.
 	 Treat as infinity.  */

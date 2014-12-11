@@ -1,6 +1,6 @@
 /* Frame unwinder for frames with DWARF Call Frame Information.
 
-   Copyright (C) 2003-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    Contributed by Mark Kettenis.
 
@@ -888,8 +888,6 @@ dwarf2_compile_cfa_to_ax (struct agent_expr *expr, struct axs_value *loc,
 			  CORE_ADDR pc,
 			  struct dwarf2_per_cu_data *data)
 {
-  const int num_regs = gdbarch_num_regs (gdbarch)
-		       + gdbarch_num_pseudo_regs (gdbarch);
   struct dwarf2_fde *fde;
   CORE_ADDR text_offset;
   struct dwarf2_frame_state fs;
@@ -994,10 +992,20 @@ struct dwarf2_frame_cache
   void *tailcall_cache;
 };
 
+/* A cleanup that sets a pointer to NULL.  */
+
+static void
+clear_pointer_cleanup (void *arg)
+{
+  void **ptr = arg;
+
+  *ptr = NULL;
+}
+
 static struct dwarf2_frame_cache *
 dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
-  struct cleanup *old_chain;
+  struct cleanup *reset_cache_cleanup, *old_chain;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   const int num_regs = gdbarch_num_regs (gdbarch)
 		       + gdbarch_num_pseudo_regs (gdbarch);
@@ -1017,6 +1025,7 @@ dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
   cache = FRAME_OBSTACK_ZALLOC (struct dwarf2_frame_cache);
   cache->reg = FRAME_OBSTACK_CALLOC (num_regs, struct dwarf2_frame_state_reg);
   *this_cache = cache;
+  reset_cache_cleanup = make_cleanup (clear_pointer_cleanup, this_cache);
 
   /* Allocate and initialize the frame state.  */
   fs = XZALLOC (struct dwarf2_frame_state);
@@ -1054,7 +1063,8 @@ dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   /* First decode all the insns in the CIE.  */
   execute_cfa_program (fde, fde->cie->initial_instructions,
-		       fde->cie->end, gdbarch, get_frame_pc (this_frame), fs);
+		       fde->cie->end, gdbarch,
+		       get_frame_address_in_block (this_frame), fs);
 
   /* Save the initialized register set.  */
   fs->initial = fs->regs;
@@ -1079,7 +1089,7 @@ dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   /* Then decode the insns in the FDE up to our target PC.  */
   execute_cfa_program (fde, instr, fde->end, gdbarch,
-		       get_frame_pc (this_frame), fs);
+		       get_frame_address_in_block (this_frame), fs);
 
   TRY_CATCH (ex, RETURN_MASK_ERROR)
     {
@@ -1110,6 +1120,8 @@ dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
       if (ex.error == NOT_AVAILABLE_ERROR)
 	{
 	  cache->unavailable_retaddr = 1;
+	  do_cleanups (old_chain);
+	  discard_cleanups (reset_cache_cleanup);
 	  return cache;
 	}
 
@@ -1225,6 +1237,7 @@ incomplete CFI data; unspecified registers (e.g., %s) at %s"),
 				 (entry_cfa_sp_offset_p
 				  ? &entry_cfa_sp_offset : NULL));
 
+  discard_cleanups (reset_cache_cleanup);
   return cache;
 }
 
@@ -1790,11 +1803,7 @@ add_fde (struct dwarf2_fde_table *fde_table, struct dwarf2_fde *fde)
   fde_table->entries[fde_table->num_entries - 1] = fde;
 }
 
-#ifdef CC_HAS_LONG_LONG
 #define DW64_CIE_ID 0xffffffffffffffffULL
-#else
-#define DW64_CIE_ID ~0
-#endif
 
 /* Defines the type of eh_frames that are expected to be decoded: CIE, FDE
    or any of them.  */

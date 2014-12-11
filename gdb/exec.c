@@ -1,6 +1,6 @@
 /* Work with executable files, for GDB. 
 
-   Copyright (C) 1988-2003, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 1988-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -107,7 +107,7 @@ exec_close (void)
       exec_bfd = NULL;
       exec_bfd_mtime = 0;
 
-      remove_target_sections (abfd);
+      remove_target_sections (&exec_bfd, abfd);
     }
 }
 
@@ -117,7 +117,6 @@ exec_close (void)
 static void
 exec_close_1 (int quitting)
 {
-  int need_symtab_cleanup = 0;
   struct vmap *vp, *nxt;
 
   using_exec_ops = 0;
@@ -128,10 +127,7 @@ exec_close_1 (int quitting)
       nxt = vp->nxt;
 
       if (vp->objfile)
-	{
-	  free_objfile (vp->objfile);
-	  need_symtab_cleanup = 1;
-	}
+	free_objfile (vp->objfile);
 
       gdb_bfd_unref (vp->bfd);
 
@@ -225,14 +221,16 @@ exec_file_attach (char *filename, int from_tty)
 	     &scratch_pathname);
 	}
 #endif
+      if (scratch_chan < 0)
+	perror_with_name (filename);
 
       cleanups = make_cleanup (xfree, scratch_pathname);
 
-      if (scratch_chan < 0)
-	perror_with_name (filename);
-      exec_bfd = gdb_bfd_fopen (scratch_pathname, gnutarget,
-				write_files ? FOPEN_RUB : FOPEN_RB,
-				scratch_chan);
+      if (write_files)
+	exec_bfd = gdb_bfd_fopen (scratch_pathname, gnutarget,
+				  FOPEN_RUB, scratch_chan);
+      else
+	exec_bfd = gdb_bfd_open (scratch_pathname, gnutarget, scratch_chan);
 
       if (!exec_bfd)
 	{
@@ -284,7 +282,7 @@ exec_file_attach (char *filename, int from_tty)
       /* Add the executable's sections to the current address spaces'
 	 list of sections.  This possibly pushes the exec_ops
 	 target.  */
-      add_target_sections (sections, sections_end);
+      add_target_sections (&exec_bfd, sections, sections_end);
       xfree (sections);
 
       /* Tell display code (if any) about the changed file name.  */
@@ -378,6 +376,7 @@ add_to_section_table (bfd *abfd, struct bfd_section *asect,
   if (!(aflag & SEC_ALLOC))
     return;
 
+  (*table_pp)->key = NULL;
   (*table_pp)->bfd = abfd;
   (*table_pp)->the_bfd_section = asect;
   (*table_pp)->addr = bfd_section_vma (abfd, asect);
@@ -388,11 +387,9 @@ add_to_section_table (bfd *abfd, struct bfd_section *asect,
 int
 resize_section_table (struct target_section_table *table, int num_added)
 {
-  struct target_section *old_value;
   int old_count;
   int new_count;
 
-  old_value = table->sections;
   old_count = table->sections_end - table->sections;
 
   new_count = num_added + old_count;
@@ -438,7 +435,8 @@ build_section_table (struct bfd *some_bfd, struct target_section **start,
    current set of target sections.  */
 
 void
-add_target_sections (struct target_section *sections,
+add_target_sections (void *key,
+		     struct target_section *sections,
 		     struct target_section *sections_end)
 {
   int count;
@@ -449,9 +447,13 @@ add_target_sections (struct target_section *sections,
   if (count > 0)
     {
       int space = resize_section_table (table, count);
+      int i;
 
-      memcpy (table->sections + space,
-	      sections, count * sizeof (sections[0]));
+      for (i = 0; i < count; ++i)
+	{
+	  table->sections[space + i] = sections[i];
+	  table->sections[space + i].key = key;
+	}
 
       /* If these are the first file sections we can provide memory
 	 from, push the file_stratum target.  */
@@ -466,14 +468,14 @@ add_target_sections (struct target_section *sections,
 /* Remove all target sections taken from ABFD.  */
 
 void
-remove_target_sections (bfd *abfd)
+remove_target_sections (void *key, bfd *abfd)
 {
   struct target_section *src, *dest;
   struct target_section_table *table = current_target_sections;
 
   dest = table->sections;
   for (src = table->sections; src < table->sections_end; src++)
-    if (src->bfd != abfd)
+    if (src->key != key || src->bfd != abfd)
       {
 	/* Keep this section.  */
 	if (dest < src)
@@ -759,7 +761,7 @@ exec_files_info (struct target_ops *t)
 
   if (vmap)
     {
-      int addr_size = gdbarch_addr_bit (target_gdbarch) / 8;
+      int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
       struct vmap *vp;
 
       printf_unfiltered (_("\tMapping info for file `%s'.\n"), vmap->name);

@@ -1,4 +1,4 @@
-/* Copyright 2012 Free Software Foundation, Inc.
+/* Copyright 2012-2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@
 	.file	"pr13961.cc"
 
 	.globl	baz
-	.bss
+	.data	/* Previously this used .bss, but it's not portable.  */
 	.align 4
 	.type	baz, @object
 	.size	baz, 4

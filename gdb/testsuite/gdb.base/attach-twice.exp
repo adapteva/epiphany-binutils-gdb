@@ -1,4 +1,4 @@
-# Copyright (C) 2012 Free Software Foundation, Inc.
+# Copyright (C) 2012-2013 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,7 +45,6 @@ gdb_test_multiple "attach $testpid" $test {
     }
 }
 
-eval exec ps xfw
 if {$parentpid != 0} {
   eval exec kill -9 $parentpid
 }

@@ -1,7 +1,6 @@
 /* Reading symbol files from memory.
 
-   Copyright (C) 1986-1987, 1989, 1991, 1994-1996, 1998, 2000-2005,
-   2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -220,7 +219,7 @@ add_vsyscall_page (struct target_ops *target, int from_tty)
       args.bfd = bfd;
       args.sysinfo_ehdr = sysinfo_ehdr;
       args.name = xstrprintf ("system-supplied DSO at %s",
-			      paddress (target_gdbarch, sysinfo_ehdr));
+			      paddress (target_gdbarch (), sysinfo_ehdr));
       /* Pass zero for FROM_TTY, because the action of loading the
 	 vsyscall DSO was not triggered by the user, even if the user
 	 typed "run" at the TTY.  */

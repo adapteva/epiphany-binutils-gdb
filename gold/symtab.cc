@@ -577,14 +577,7 @@ Symbol_table::gc_mark_undef_symbols(Layout* layout)
       if (sym->source() == Symbol::FROM_OBJECT 
           && !sym->object()->is_dynamic())
         {
-          Relobj* obj = static_cast<Relobj*>(sym->object());
-          bool is_ordinary;
-          unsigned int shndx = sym->shndx(&is_ordinary);
-          if (is_ordinary)
-            {
-              gold_assert(this->gc_ != NULL);
-              this->gc_->worklist().push(Section_id(obj, shndx));
-            }
+	  this->gc_mark_symbol(sym);
         }
     }
 
@@ -595,18 +588,13 @@ Symbol_table::gc_mark_undef_symbols(Layout* layout)
     {
       const char* name = p->c_str();
       Symbol* sym = this->lookup(name);
-      gold_assert(sym != NULL);
-      if (sym->source() == Symbol::FROM_OBJECT 
+      // It's not an error if a symbol named by --export-dynamic-symbol
+      // is undefined.
+      if (sym != NULL
+	  && sym->source() == Symbol::FROM_OBJECT 
           && !sym->object()->is_dynamic())
         {
-          Relobj* obj = static_cast<Relobj*>(sym->object());
-          bool is_ordinary;
-          unsigned int shndx = sym->shndx(&is_ordinary);
-          if (is_ordinary)
-            {
-              gold_assert(this->gc_ != NULL);
-              this->gc_->worklist().push(Section_id(obj, shndx));
-            }
+	  this->gc_mark_symbol(sym);
         }
     }
 
@@ -620,14 +608,7 @@ Symbol_table::gc_mark_undef_symbols(Layout* layout)
       if (sym->source() == Symbol::FROM_OBJECT
 	  && !sym->object()->is_dynamic())
 	{
-	  Relobj* obj = static_cast<Relobj*>(sym->object());
-	  bool is_ordinary;
-	  unsigned int shndx = sym->shndx(&is_ordinary);
-	  if (is_ordinary)
-	    {
-	      gold_assert(this->gc_ != NULL);
-	      this->gc_->worklist().push(Section_id(obj, shndx));
-	    }
+	  this->gc_mark_symbol(sym);
 	}
     }
 }
@@ -636,14 +617,14 @@ void
 Symbol_table::gc_mark_symbol(Symbol* sym)
 {
   // Add the object and section to the work list.
-  Relobj* obj = static_cast<Relobj*>(sym->object());
   bool is_ordinary;
   unsigned int shndx = sym->shndx(&is_ordinary);
   if (is_ordinary && shndx != elfcpp::SHN_UNDEF)
     {
       gold_assert(this->gc_!= NULL);
-      this->gc_->worklist().push(Section_id(obj, shndx));
+      this->gc_->worklist().push(Section_id(sym->object(), shndx));
     }
+  parameters->target().gc_mark_symbol(this, sym);
 }
 
 // When doing garbage collection, keep symbols that have been seen in
@@ -3194,9 +3175,11 @@ Symbol_table::linenos_from_loc(const Task* task,
   Task_lock_obj<Object> tl(task, loc.object);
 
   std::vector<std::string> result;
+  Symbol_location code_loc = loc;
+  parameters->target().function_location(&code_loc);
   // 16 is the size of the object-cache that one_addr2line should use.
   std::string canonical_result = Dwarf_line_info::one_addr2line(
-      loc.object, loc.shndx, loc.offset, 16, &result);
+      code_loc.object, code_loc.shndx, code_loc.offset, 16, &result);
   if (!canonical_result.empty())
     result.push_back(canonical_result);
   return result;
