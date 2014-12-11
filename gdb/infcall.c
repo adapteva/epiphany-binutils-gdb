@@ -159,7 +159,7 @@ value_arg_coerce (struct gdbarch *gdbarch, struct value *arg,
 	struct value *new_value;
 
 	if (TYPE_CODE (arg_type) == TYPE_CODE_REF)
-	  return value_cast_pointers (type, arg);
+	  return value_cast_pointers (type, arg, 0);
 
 	/* Cast the value to the reference's target type, and then
 	   convert it back to a reference.  This will issue an error
@@ -399,7 +399,7 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
 
   TRY_CATCH (e, RETURN_MASK_ALL)
     {
-      proceed (real_pc, TARGET_SIGNAL_0, 0);
+      proceed (real_pc, GDB_SIGNAL_0, 0);
 
       /* Inferior function calls are always synchronous, even if the
 	 target supports asynchronous execution.  Do here what
@@ -637,33 +637,6 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
 	dummy_addr = entry_point_address ();
 	/* A call dummy always consists of just a single breakpoint, so
 	   its address is the same as the address of the dummy.  */
-	bp_addr = dummy_addr;
-	break;
-      }
-    case AT_SYMBOL:
-      /* Some executables define a symbol __CALL_DUMMY_ADDRESS whose
-	 address is the location where the breakpoint should be
-	 placed.  Once all targets are using the overhauled frame code
-	 this can be deleted - ON_STACK is a better option.  */
-      {
-	struct minimal_symbol *sym;
-	CORE_ADDR dummy_addr;
-
-	sym = lookup_minimal_symbol ("__CALL_DUMMY_ADDRESS", NULL, NULL);
-	real_pc = funaddr;
-	if (sym)
-	  {
-	    dummy_addr = SYMBOL_VALUE_ADDRESS (sym);
-	    /* Make certain that the address points at real code, and not
-	       a function descriptor.  */
-	    dummy_addr = gdbarch_convert_from_func_ptr_addr (gdbarch,
-							     dummy_addr,
-							     &current_target);
-	  }
-	else
-	  dummy_addr = entry_point_address ();
-	/* A call dummy always consists of just a single breakpoint,
-	   so it's address is the same as the address of the dummy.  */
 	bp_addr = dummy_addr;
 	break;
       }
