@@ -266,7 +266,7 @@ elf_file_symbol (const char *s, int appfile)
       || (symbol_rootP->bsym->flags & BSF_FILE) == 0)
     {
       symbolS *sym;
-      unsigned int name_length;
+      size_t name_length;
 
       sym = symbol_new (s, absolute_section, 0, NULL);
       symbol_set_frag (sym, &zero_address_frag);
@@ -2120,7 +2120,9 @@ elf_frob_symbol (symbolS *symp, int *puntp)
       char *p;
 
       p = strchr (sy_obj->versioned_name, ELF_VER_CHR);
-      know (p != NULL);
+      if (p == NULL)
+	/* We will have already reported an error about a missing version.  */
+	*puntp = TRUE;
 
       /* This symbol was given a new name with the .symver directive.
 
@@ -2133,14 +2135,15 @@ elf_frob_symbol (symbolS *symp, int *puntp)
 	 symbol.  However, it's not clear whether it is the best
 	 approach.  */
 
-      if (! S_IS_DEFINED (symp))
+      else if (! S_IS_DEFINED (symp))
 	{
 	  /* Verify that the name isn't using the @@ syntax--this is
 	     reserved for definitions of the default version to link
 	     against.  */
 	  if (p[1] == ELF_VER_CHR)
 	    {
-	      as_bad (_("invalid attempt to declare external version name as default in symbol `%s'"),
+	      as_bad (_("invalid attempt to declare external version name"
+			" as default in symbol `%s'"),
 		      sy_obj->versioned_name);
 	      *puntp = TRUE;
 	    }
@@ -2403,8 +2406,7 @@ elf_frob_file_before_adjust (void)
 
 		p = strchr (symbol_get_obj (symp)->versioned_name,
 			    ELF_VER_CHR);
-		know (p != NULL);
-		if (p[1] == ELF_VER_CHR && p[2] == ELF_VER_CHR)
+		if (p != NULL && p[1] == ELF_VER_CHR && p[2] == ELF_VER_CHR)
 		  {
 		    size_t l = strlen (&p[3]) + 1;
 		    memmove (&p[1], &p[3], l);

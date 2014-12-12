@@ -17,18 +17,19 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "common-defs.h"
+
 #ifdef GDBSERVER
+/* FIXME: server.h is required for the definition of debug_threads
+   which is used in the gdbserver-specific debug printing in
+   linux_debug.  This code should be made available to GDB also,
+   but the lack of a suitable flag to enable it prevents this.  */
 #include "server.h"
-#else
-#include "defs.h"
-#include "signal.h"
 #endif
 
-#include "nat/linux-nat.h"
-#include "nat/linux-waitpid.h"
+#include "linux-nat.h"
+#include "linux-waitpid.h"
 #include "gdb_wait.h"
-
-#include <string.h>
 
 /* Print debugging output based on the format string FORMAT and
    its parameters.  */
@@ -44,8 +45,6 @@ linux_debug (const char *format, ...)
       vfprintf (stderr, format, args);
       va_end (args);
     }
-#else
-  /* GDB-specific debugging output.  */
 #endif
 }
 

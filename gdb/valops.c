@@ -36,12 +36,8 @@
 #include "cp-support.h"
 #include "dfp.h"
 #include "tracepoint.h"
-#include <errno.h>
-#include <string.h>
-#include "gdb_assert.h"
 #include "observer.h"
 #include "objfiles.h"
-#include "exceptions.h"
 #include "extension.h"
 
 extern unsigned int overload_debug;
@@ -143,7 +139,7 @@ find_function_in_inferior (const char *name, struct objfile **objf_p)
 	}
 
       if (objf_p)
-	*objf_p = SYMBOL_SYMTAB (sym)->objfile;
+	*objf_p = SYMBOL_OBJFILE (sym);
 
       return value_of_variable (sym, NULL);
     }
@@ -336,7 +332,7 @@ value_cast_pointers (struct type *type, struct value *arg2,
 	  deprecated_set_value_type (v, type);
 	  return v;
 	}
-   }
+    }
 
   /* No superclass found, just change the pointer type.  */
   arg2 = value_copy (arg2);
@@ -739,7 +735,7 @@ value_dynamic_cast (struct type *type, struct value *arg)
       && TYPE_CODE (resolved_type) != TYPE_CODE_REF)
     error (_("Argument to dynamic_cast must be a pointer or reference type"));
   if (TYPE_CODE (TYPE_TARGET_TYPE (resolved_type)) != TYPE_CODE_VOID
-      && TYPE_CODE (TYPE_TARGET_TYPE (resolved_type)) != TYPE_CODE_CLASS)
+      && TYPE_CODE (TYPE_TARGET_TYPE (resolved_type)) != TYPE_CODE_STRUCT)
     error (_("Argument to dynamic_cast must be pointer to class or `void *'"));
 
   class_type = check_typedef (TYPE_TARGET_TYPE (resolved_type));
@@ -752,7 +748,7 @@ value_dynamic_cast (struct type *type, struct value *arg)
       if (TYPE_CODE (arg_type) == TYPE_CODE_PTR)
 	{
 	  arg_type = check_typedef (TYPE_TARGET_TYPE (arg_type));
-	  if (TYPE_CODE (arg_type) != TYPE_CODE_CLASS)
+	  if (TYPE_CODE (arg_type) != TYPE_CODE_STRUCT)
 	    error (_("Argument to dynamic_cast does "
 		     "not have pointer to class type"));
 	}
@@ -765,7 +761,7 @@ value_dynamic_cast (struct type *type, struct value *arg)
     }
   else
     {
-      if (TYPE_CODE (arg_type) != TYPE_CODE_CLASS)
+      if (TYPE_CODE (arg_type) != TYPE_CODE_STRUCT)
 	error (_("Argument to dynamic_cast does not have class type"));
     }
 
@@ -1115,52 +1111,54 @@ value_assign (struct value *toval, struct value *fromval)
 	  error (_("Value being assigned to is no longer active."));
 
 	gdbarch = get_frame_arch (frame);
-	if (gdbarch_convert_register_p (gdbarch, VALUE_REGNUM (toval), type))
+
+	if (value_bitsize (toval))
 	  {
-	    /* If TOVAL is a special machine register requiring
-	       conversion of program values to a special raw
-	       format.  */
-	    gdbarch_value_to_register (gdbarch, frame,
-				       VALUE_REGNUM (toval), type,
-				       value_contents (fromval));
+	    struct value *parent = value_parent (toval);
+	    int offset = value_offset (parent) + value_offset (toval);
+	    int changed_len;
+	    gdb_byte buffer[sizeof (LONGEST)];
+	    int optim, unavail;
+
+	    changed_len = (value_bitpos (toval)
+			   + value_bitsize (toval)
+			   + HOST_CHAR_BIT - 1)
+			  / HOST_CHAR_BIT;
+
+	    if (changed_len > (int) sizeof (LONGEST))
+	      error (_("Can't handle bitfields which "
+		       "don't fit in a %d bit word."),
+		     (int) sizeof (LONGEST) * HOST_CHAR_BIT);
+
+	    if (!get_frame_register_bytes (frame, value_reg, offset,
+					   changed_len, buffer,
+					   &optim, &unavail))
+	      {
+		if (optim)
+		  throw_error (OPTIMIZED_OUT_ERROR,
+			       _("value has been optimized out"));
+		if (unavail)
+		  throw_error (NOT_AVAILABLE_ERROR,
+			       _("value is not available"));
+	      }
+
+	    modify_field (type, buffer, value_as_long (fromval),
+			  value_bitpos (toval), value_bitsize (toval));
+
+	    put_frame_register_bytes (frame, value_reg, offset,
+				      changed_len, buffer);
 	  }
 	else
 	  {
-	    if (value_bitsize (toval))
+	    if (gdbarch_convert_register_p (gdbarch, VALUE_REGNUM (toval),
+					    type))
 	      {
-		struct value *parent = value_parent (toval);
-		int offset = value_offset (parent) + value_offset (toval);
-		int changed_len;
-		gdb_byte buffer[sizeof (LONGEST)];
-		int optim, unavail;
-
-		changed_len = (value_bitpos (toval)
-			       + value_bitsize (toval)
-			       + HOST_CHAR_BIT - 1)
-		  / HOST_CHAR_BIT;
-
-		if (changed_len > (int) sizeof (LONGEST))
-		  error (_("Can't handle bitfields which "
-			   "don't fit in a %d bit word."),
-			 (int) sizeof (LONGEST) * HOST_CHAR_BIT);
-
-		if (!get_frame_register_bytes (frame, value_reg, offset,
-					       changed_len, buffer,
-					       &optim, &unavail))
-		  {
-		    if (optim)
-		      throw_error (OPTIMIZED_OUT_ERROR,
-				   _("value has been optimized out"));
-		    if (unavail)
-		      throw_error (NOT_AVAILABLE_ERROR,
-				   _("value is not available"));
-		  }
-
-		modify_field (type, buffer, value_as_long (fromval),
-			      value_bitpos (toval), value_bitsize (toval));
-
-		put_frame_register_bytes (frame, value_reg, offset,
-					  changed_len, buffer);
+		/* If TOVAL is a special machine register requiring
+		   conversion of program values to a special raw
+		   format.  */
+		gdbarch_value_to_register (gdbarch, frame,
+					   VALUE_REGNUM (toval), type,
+					   value_contents (fromval));
 	      }
 	    else
 	      {
@@ -1171,6 +1169,7 @@ value_assign (struct value *toval, struct value *fromval)
 	      }
 	  }
 
+	observer_notify_register_changed (frame, value_reg);
 	if (deprecated_register_changed_hook)
 	  deprecated_register_changed_hook (-1);
 	break;
@@ -1722,7 +1721,7 @@ typecmp (int staticp, int varargs, int nargs,
       tt2 = check_typedef (value_type (t2[i]));
 
       if (TYPE_CODE (tt1) == TYPE_CODE_REF
-      /* We should be doing hairy argument matching, as below.  */
+	  /* We should be doing hairy argument matching, as below.  */
 	  && (TYPE_CODE (check_typedef (TYPE_TARGET_TYPE (tt1)))
 	      == TYPE_CODE (tt2)))
 	{
@@ -1826,9 +1825,7 @@ do_search_struct_field (const char *name, struct value *arg1, int offset,
 	  }
 
 	if (t_field_name
-	    && (t_field_name[0] == '\0'
-		|| (TYPE_CODE (type) == TYPE_CODE_UNION
-		    && (strcmp_iw (t_field_name, "else") == 0))))
+	    && t_field_name[0] == '\0')
 	  {
 	    struct type *field_type = TYPE_FIELD_TYPE (type, i);
 
@@ -2056,7 +2053,7 @@ search_struct_method (const char *name, struct value **arg1p,
 
 	  /* The virtual base class pointer might have been
 	     clobbered by the user program.  Make sure that it
-	    still points to a valid memory location.  */
+	     still points to a valid memory location.  */
 
 	  if (offset < 0 || offset >= TYPE_LENGTH (type))
 	    {
@@ -2186,8 +2183,8 @@ value_struct_elt (struct value **argp, struct value **args,
       return v;
     }
 
-    v = search_struct_method (name, argp, args, 0, 
-			      static_memfuncp, t);
+  v = search_struct_method (name, argp, args, 0, 
+			    static_memfuncp, t);
   
   if (v == (struct value *) - 1)
     {
@@ -2452,6 +2449,12 @@ value_find_oload_method_list (struct value **argp, const char *method,
    ADL overload candidates when performing overload resolution for a fully
    qualified name.
 
+   If NOSIDE is EVAL_AVOID_SIDE_EFFECTS, then OBJP's memory cannot be
+   read while picking the best overload match (it may be all zeroes and thus
+   not have a vtable pointer), in which case skip virtual function lookup.
+   This is ok as typically EVAL_AVOID_SIDE_EFFECTS is only used to determine
+   the result type.
+
    Note: This function does *not* check the value of
    overload_resolution.  Caller must check it to see whether overload
    resolution is permitted.  */
@@ -2461,7 +2464,8 @@ find_overload_match (struct value **args, int nargs,
 		     const char *name, enum oload_search_type method,
 		     struct value **objp, struct symbol *fsym,
 		     struct value **valp, struct symbol **symp, 
-		     int *staticp, const int no_adl)
+		     int *staticp, const int no_adl,
+		     const enum noside noside)
 {
   struct value *obj = (objp ? *objp : NULL);
   struct type *obj_type = obj ? value_type (obj) : NULL;
@@ -2767,9 +2771,13 @@ find_overload_match (struct value **args, int nargs,
     {
       if (src_method_oload_champ >= 0)
 	{
-	  if (TYPE_FN_FIELD_VIRTUAL_P (fns_ptr, method_oload_champ))
-	    *valp = value_virtual_fn_field (&temp, fns_ptr, method_oload_champ,
-					    basetype, boffset);
+	  if (TYPE_FN_FIELD_VIRTUAL_P (fns_ptr, method_oload_champ)
+	      && noside != EVAL_AVOID_SIDE_EFFECTS)
+	    {
+	      *valp = value_virtual_fn_field (&temp, fns_ptr,
+					      method_oload_champ, basetype,
+					      boffset);
+	    }
 	  else
 	    *valp = value_fn_field (&temp, fns_ptr, method_oload_champ,
 				    basetype, boffset);
@@ -3040,7 +3048,7 @@ find_oload_champ (struct value **args, int nargs,
 	    parm_types[jj] = (fns_ptr != NULL
 			      ? (TYPE_FN_FIELD_ARGS (fns_ptr, ix)[jj].type)
 			      : TYPE_FIELD_TYPE (SYMBOL_TYPE (oload_syms[ix]),
-			      jj));
+						 jj));
 	}
 
       /* Compare parameter types to supplied argument types.  Skip
@@ -3567,7 +3575,7 @@ value_maybe_namespace_elt (const struct type *curtype,
 					+ strlen (name) + 1);
 
       sprintf (concatenated_name, "%s::%s", namespace_name, name);
-      sym = lookup_static_symbol_aux (concatenated_name, VAR_DOMAIN);
+      sym = lookup_static_symbol (concatenated_name, VAR_DOMAIN);
     }
 
   if (sym == NULL)
@@ -3712,7 +3720,7 @@ struct value *
 value_of_this (const struct language_defn *lang)
 {
   struct symbol *sym;
-  struct block *b;
+  const struct block *b;
   struct frame_info *frame;
 
   if (!lang->la_name_of_this)

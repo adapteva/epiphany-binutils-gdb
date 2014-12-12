@@ -26,7 +26,6 @@
 #include "target.h"
 #include "trad-frame.h"
 #include "frame-base.h"
-#include "gdb_assert.h"
 
 struct frame_data
 {
@@ -86,6 +85,10 @@ tramp_frame_start (const struct tramp_frame *tramp,
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int ti;
+
+  /* Check if we can use this trampoline.  */
+  if (tramp->validate && !tramp->validate (tramp, this_frame, &pc))
+    return 0;
 
   /* Search through the trampoline for one that matches the
      instruction sequence around PC.  */

@@ -446,9 +446,11 @@ aout_adobe_sizeof_headers (bfd *ignore_abfd ATTRIBUTE_UNUSED,
 
 /* Build the transfer vector for Adobe A.Out files.  */
 
-#define aout_32_bfd_make_debug_symbol ((asymbol *(*) (bfd *, void *, unsigned long)) bfd_nullvoidptr)
-#define aout_32_bfd_reloc_type_lookup ((reloc_howto_type *(*) (bfd *, bfd_reloc_code_real_type)) bfd_nullvoidptr)
-#define aout_32_bfd_reloc_name_lookup ((reloc_howto_type *(*) (bfd *, const char *)) bfd_nullvoidptr)
+#define aout_32_find_line			    _bfd_nosymbols_find_line
+#define aout_32_get_symbol_version_string	    _bfd_nosymbols_get_symbol_version_string
+#define aout_32_bfd_make_debug_symbol		    _bfd_nosymbols_bfd_make_debug_symbol
+#define aout_32_bfd_reloc_type_lookup		    _bfd_norelocs_bfd_reloc_type_lookup
+#define aout_32_bfd_reloc_name_lookup		    _bfd_norelocs_bfd_reloc_name_lookup
 #define aout_32_close_and_cleanup                   aout_32_bfd_free_cached_info
 #define	aout_32_set_arch_mach		            aout_adobe_set_arch_mach
 #define	aout_32_set_section_contents	            aout_adobe_set_section_contents
@@ -464,7 +466,6 @@ aout_adobe_sizeof_headers (bfd *ignore_abfd ATTRIBUTE_UNUSED,
 #define aout_32_section_already_linked              _bfd_generic_section_already_linked
 #define aout_32_bfd_define_common_symbol            bfd_generic_define_common_symbol
 #define aout_32_bfd_link_hash_table_create          _bfd_generic_link_hash_table_create
-#define aout_32_bfd_link_hash_table_free            _bfd_generic_link_hash_table_free
 #define aout_32_bfd_link_add_symbols	            _bfd_generic_link_add_symbols
 #define aout_32_bfd_link_just_syms	            _bfd_generic_link_just_syms
 #define aout_32_bfd_copy_link_hash_symbol_type \

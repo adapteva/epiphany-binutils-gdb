@@ -72,7 +72,7 @@ am__aclocal_m4_deps = $(top_srcdir)/../bfd/acinclude.m4 \
 	$(top_srcdir)/../libtool.m4 $(top_srcdir)/../ltoptions.m4 \
 	$(top_srcdir)/../ltsugar.m4 $(top_srcdir)/../ltversion.m4 \
 	$(top_srcdir)/../lt~obsolete.m4 $(top_srcdir)/acinclude.m4 \
-	$(top_srcdir)/configure.in
+	$(top_srcdir)/../bfd/version.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/../mkinstalldirs
@@ -333,8 +333,9 @@ CPU_DOCS = \
         c-tic6x.texi \
 	c-tilegx.texi \
 	c-tilepro.texi \
-	c-vax.texi \
 	c-v850.texi \
+	c-vax.texi \
+	c-visium.texi \
 	c-xgate.texi \
 	c-xstormy16.texi \
 	c-xtensa.texi \
@@ -347,7 +348,6 @@ noinst_TEXINFOS = internals.texi
 MAINTAINERCLEANFILES = asconfig.texi as.info
 BASEDIR = $(srcdir)/../..
 BFDDIR = $(BASEDIR)/bfd
-CONFIG_STATUS_DEPENDENCIES = $(BFDDIR)/configure.in
 
 # Automake 1.9 will only build info files in the objdir if they are
 # mentioned in DISTCLEANFILES.  It doesn't have to be unconditional,

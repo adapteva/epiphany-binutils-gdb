@@ -18,7 +18,6 @@
 
 
 #include "defs.h"
-#include <string.h>
 #include "inferior.h"
 #include "gdbcore.h"
 #include "solib.h"
@@ -29,7 +28,6 @@
 #include "command.h"
 #include "gdbcmd.h"
 #include "elf-bfd.h"
-#include "exceptions.h"
 #include "gdb_bfd.h"
 
 #define GOT_MODULE_OFFSET 4

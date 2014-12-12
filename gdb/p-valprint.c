@@ -37,7 +37,6 @@
 #include "p-lang.h"
 #include "cp-abi.h"
 #include "cp-support.h"
-#include "exceptions.h"
 #include "objfiles.h"
 
 
@@ -626,11 +625,6 @@ pascal_object_print_value_fields (struct type *type, const gdb_byte *valaddr,
 									 i)))
 		{
 		  fputs_filtered (_("<synthetic pointer>"), stream);
-		}
-	      else if (!value_bits_valid (val, TYPE_FIELD_BITPOS (type, i),
-					  TYPE_FIELD_BITSIZE (type, i)))
-		{
-		  val_print_optimized_out (val, stream);
 		}
 	      else
 		{

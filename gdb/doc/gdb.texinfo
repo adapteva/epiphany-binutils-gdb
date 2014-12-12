@@ -1977,10 +1977,10 @@ format in @value{GDBN}.
 @item run
 @itemx r
 Use the @code{run} command to start your program under @value{GDBN}.
-You must first specify the program name (except on VxWorks) with an
-argument to @value{GDBN} (@pxref{Invocation, ,Getting In and Out of
-@value{GDBN}}), or by using the @code{file} or @code{exec-file} command
-(@pxref{Files, ,Commands to Specify Files}).
+You must first specify the program name with an argument to
+@value{GDBN} (@pxref{Invocation, ,Getting In and Out of
+@value{GDBN}}), or by using the @code{file} or @code{exec-file}
+command (@pxref{Files, ,Commands to Specify Files}).
 
 @end table
 
@@ -3850,21 +3850,13 @@ This behavior can be controlled with the following commands::
 @item set breakpoint always-inserted off
 All breakpoints, including newly added by the user, are inserted in
 the target only when the target is resumed.  All breakpoints are
-removed from the target when it stops.
+removed from the target when it stops.  This is the default mode.
 
 @item set breakpoint always-inserted on
 Causes all breakpoints to be inserted in the target at all times.  If
 the user adds a new breakpoint, or changes an existing breakpoint, the
 breakpoints in the target are updated immediately.  A breakpoint is
-removed from the target only when breakpoint itself is removed.
-
-@cindex non-stop mode, and @code{breakpoint always-inserted}
-@item set breakpoint always-inserted auto
-This is the default mode.  If @value{GDBN} is controlling the inferior
-in non-stop mode (@pxref{Non-Stop Mode}), gdb behaves as if
-@code{breakpoint always-inserted} mode is on.  If @value{GDBN} is
-controlling the inferior in all-stop mode, @value{GDBN} behaves as if
-@code{breakpoint always-inserted} mode is off.
+removed from the target only when breakpoint itself is deleted.
 @end table
 
 @value{GDBN} handles conditional breakpoints by evaluating these conditions
@@ -5087,7 +5079,9 @@ line of source code, or one machine instruction (depending on what
 particular command you use).  Either when continuing or when stepping,
 your program may stop even sooner, due to a breakpoint or a signal.  (If
 it stops due to a signal, you may want to use @code{handle}, or use
-@samp{signal 0} to resume execution.  @xref{Signals, ,Signals}.)
+@samp{signal 0} to resume execution (@pxref{Signals, ,Signals}),
+or you may step into the signal's handler (@pxref{stepping and signal
+handlers}).)
 
 @table @code
 @kindex continue
@@ -5580,6 +5574,66 @@ execution; but your program would probably terminate immediately as
 a result of the fatal signal once it saw the signal.  To prevent this,
 you can continue with @samp{signal 0}.  @xref{Signaling, ,Giving your
 Program a Signal}.
+
+@cindex stepping and signal handlers
+@anchor{stepping and signal handlers}
+
+@value{GDBN} optimizes for stepping the mainline code.  If a signal
+that has @code{handle nostop} and @code{handle pass} set arrives while
+a stepping command (e.g., @code{stepi}, @code{step}, @code{next}) is
+in progress, @value{GDBN} lets the signal handler run and then resumes
+stepping the mainline code once the signal handler returns.  In other
+words, @value{GDBN} steps over the signal handler.  This prevents
+signals that you've specified as not interesting (with @code{handle
+nostop}) from changing the focus of debugging unexpectedly.  Note that
+the signal handler itself may still hit a breakpoint, stop for another
+signal that has @code{handle stop} in effect, or for any other event
+that normally results in stopping the stepping command sooner.  Also
+note that @value{GDBN} still informs you that the program received a
+signal if @code{handle print} is set.
+
+@anchor{stepping into signal handlers}
+
+If you set @code{handle pass} for a signal, and your program sets up a
+handler for it, then issuing a stepping command, such as @code{step}
+or @code{stepi}, when your program is stopped due to the signal will
+step @emph{into} the signal handler (if the target supports that).
+
+Likewise, if you use the @code{queue-signal} command to queue a signal
+to be delivered to the current thread when execution of the thread
+resumes (@pxref{Signaling, ,Giving your Program a Signal}), then a
+stepping command will step into the signal handler.
+
+Here's an example, using @code{stepi} to step to the first instruction
+of @code{SIGUSR1}'s handler:
+
+@smallexample
+(@value{GDBP}) handle SIGUSR1
+Signal        Stop      Print   Pass to program Description
+SIGUSR1       Yes       Yes     Yes             User defined signal 1
+(@value{GDBP}) c
+Continuing.
+
+Program received signal SIGUSR1, User defined signal 1.
+main () sigusr1.c:28
+28        p = 0;
+(@value{GDBP}) si
+sigusr1_handler () at sigusr1.c:9
+9       @{
+@end smallexample
+
+The same, but using @code{queue-signal} instead of waiting for the
+program to receive the signal first:
+
+@smallexample
+(@value{GDBP}) n
+28        p = 0;
+(@value{GDBP}) queue-signal SIGUSR1
+(@value{GDBP}) si
+sigusr1_handler () at sigusr1.c:9
+9       @{
+(@value{GDBP})
+@end smallexample
 
 @cindex extra signal information
 @anchor{extra signal information}
@@ -10097,6 +10151,70 @@ Otherwise it returns zero.
 @item $_strlen(@var{str})
 @findex $_strlen@r{, convenience function}
 Returns the length of string @var{str}.
+
+@item $_caller_is(@var{name}@r{[}, @var{number_of_frames}@r{]})
+@findex $_caller_is@r{, convenience function}
+Returns one if the calling function's name is equal to @var{name}.
+Otherwise it returns zero.
+
+If the optional argument @var{number_of_frames} is provided,
+it is the number of frames up in the stack to look.
+The default is 1.
+
+Example:
+
+@smallexample
+(gdb) backtrace
+#0  bottom_func ()
+    at testsuite/gdb.python/py-caller-is.c:21
+#1  0x00000000004005a0 in middle_func ()
+    at testsuite/gdb.python/py-caller-is.c:27
+#2  0x00000000004005ab in top_func ()
+    at testsuite/gdb.python/py-caller-is.c:33
+#3  0x00000000004005b6 in main ()
+    at testsuite/gdb.python/py-caller-is.c:39
+(gdb) print $_caller_is ("middle_func")
+$1 = 1
+(gdb) print $_caller_is ("top_func", 2)
+$1 = 1
+@end smallexample
+
+@item $_caller_matches(@var{regexp}@r{[}, @var{number_of_frames}@r{]})
+@findex $_caller_matches@r{, convenience function}
+Returns one if the calling function's name matches the regular expression
+@var{regexp}.  Otherwise it returns zero.
+
+If the optional argument @var{number_of_frames} is provided,
+it is the number of frames up in the stack to look.
+The default is 1.
+
+@item $_any_caller_is(@var{name}@r{[}, @var{number_of_frames}@r{]})
+@findex $_any_caller_is@r{, convenience function}
+Returns one if any calling function's name is equal to @var{name}.
+Otherwise it returns zero.
+
+If the optional argument @var{number_of_frames} is provided,
+it is the number of frames up in the stack to look.
+The default is 1.
+
+This function differs from @code{$_caller_is} in that this function
+checks all stack frames from the immediate caller to the frame specified
+by @var{number_of_frames}, whereas @code{$_caller_is} only checks the
+frame specified by @var{number_of_frames}.
+
+@item $_any_caller_matches(@var{regexp}@r{[}, @var{number_of_frames}@r{]})
+@findex $_any_caller_matches@r{, convenience function}
+Returns one if any calling function's name matches the regular expression
+@var{regexp}.  Otherwise it returns zero.
+
+If the optional argument @var{number_of_frames} is provided,
+it is the number of frames up in the stack to look.
+The default is 1.
+
+This function differs from @code{$_caller_matches} in that this function
+checks all stack frames from the immediate caller to the frame specified
+by @var{number_of_frames}, whereas @code{$_caller_matches} only checks the
+frame specified by @var{number_of_frames}.
 
 @end table
 
@@ -15669,10 +15787,9 @@ When inspecting a core file, as opposed to debugging a live program,
 tasking support may be limited or even unavailable, depending on
 the platform being used.
 For instance, on x86-linux, the list of tasks is available, but task
-switching is not supported.  On Tru64, however, task switching will work
-as usual.
+switching is not supported.
 
-On certain platforms, including Tru64, the debugger needs to perform some
+On certain platforms, the debugger needs to perform some
 memory writes in order to provide Ada tasking support.  When inspecting
 a core file, this means that the core file must be opened with read-write
 privileges, using the command @samp{"set write on"} (@pxref{Patching}).
@@ -16546,7 +16663,7 @@ detail.
 @table @code
 @kindex signal
 @item signal @var{signal}
-Resume execution where your program stopped, but immediately give it the
+Resume execution where your program is stopped, but immediately give it the
 signal @var{signal}.  The @var{signal} can be the name or the number of a
 signal.  For example, on many systems @code{signal 2} and @code{signal
 SIGINT} are both ways of sending an interrupt signal.
@@ -16557,10 +16674,14 @@ a signal and would ordinarily see the signal when resumed with the
 @code{continue} command; @samp{signal 0} causes it to resume without a
 signal.
 
-@code{signal} does not repeat when you press @key{RET} a second time
-after executing the command.
-@end table
-@c @end group
+@emph{Note:} When resuming a multi-threaded program, @var{signal} is
+delivered to the currently selected thread, not the thread that last
+reported a stop.  This includes the situation where a thread was
+stopped due to a signal.  So if you want to continue execution
+suppressing the signal that stopped a thread, you should select that
+same thread before issuing the @samp{signal 0} command.  If you issue
+the @samp{signal 0} command with another thread as the selected one,
+@value{GDBN} detects that and asks for confirmation.
 
 Invoking the @code{signal} command is not the same as invoking the
 @code{kill} utility from the shell.  Sending a signal with @code{kill}
@@ -16568,6 +16689,35 @@ causes @value{GDBN} to decide what to do with the signal depending on
 the signal handling tables (@pxref{Signals}).  The @code{signal} command
 passes the signal directly to your program.
 
+@code{signal} does not repeat when you press @key{RET} a second time
+after executing the command.
+
+@kindex queue-signal
+@item queue-signal @var{signal}
+Queue @var{signal} to be delivered immediately to the current thread
+when execution of the thread resumes.  The @var{signal} can be the name or
+the number of a signal.  For example, on many systems @code{signal 2} and
+@code{signal SIGINT} are both ways of sending an interrupt signal.
+The handling of the signal must be set to pass the signal to the program,
+otherwise @value{GDBN} will report an error.
+You can control the handling of signals from @value{GDBN} with the
+@code{handle} command (@pxref{Signals}).
+
+Alternatively, if @var{signal} is zero, any currently queued signal
+for the current thread is discarded and when execution resumes no signal
+will be delivered.  This is useful when your program stopped on account
+of a signal and would ordinarily see the signal when resumed with the
+@code{continue} command.
+
+This command differs from the @code{signal} command in that the signal
+is just queued, execution is not resumed.  And @code{queue-signal} cannot
+be used to pass a signal whose handling state has been set to @code{nopass}
+(@pxref{Signals}).
+@end table
+@c @end group
+
+@xref{stepping into signal handlers}, for information on how stepping
+commands behave when the thread has a signal queued.
 
 @node Returning
 @section Returning from a Function
@@ -19640,8 +19790,7 @@ If @value{GDBN} is configured for an operating system with this
 facility, the command @code{info proc} is available to report
 information about the process running your program, or about any
 process running on your system.  This includes, as of this writing,
-@sc{gnu}/Linux, OSF/1 (Digital Unix), Solaris, and Irix, but
-not HP-UX, for example.
+@sc{gnu}/Linux and Solaris, but not HP-UX, for example.
 
 This command may also work on core files that were created on a system
 that has the @samp{/proc} facility.
@@ -20419,174 +20568,8 @@ This section describes configurations involving the debugging of
 embedded operating systems that are available for several different
 architectures.
 
-@menu
-* VxWorks::                     Using @value{GDBN} with VxWorks
-@end menu
-
 @value{GDBN} includes the ability to debug programs running on
 various real-time operating systems.
-
-@node VxWorks
-@subsection Using @value{GDBN} with VxWorks
-
-@cindex VxWorks
-
-@table @code
-
-@kindex target vxworks
-@item target vxworks @var{machinename}
-A VxWorks system, attached via TCP/IP.  The argument @var{machinename}
-is the target system's machine name or IP address.
-
-@end table
-
-On VxWorks, @code{load} links @var{filename} dynamically on the
-current target system as well as adding its symbols in @value{GDBN}.
-
-@value{GDBN} enables developers to spawn and debug tasks running on networked
-VxWorks targets from a Unix host.  Already-running tasks spawned from
-the VxWorks shell can also be debugged.  @value{GDBN} uses code that runs on
-both the Unix host and on the VxWorks target.  The program
-@code{@value{GDBP}} is installed and executed on the Unix host.  (It may be
-installed with the name @code{vxgdb}, to distinguish it from a
-@value{GDBN} for debugging programs on the host itself.)
-
-@table @code
-@item VxWorks-timeout @var{args}
-@kindex vxworks-timeout
-All VxWorks-based targets now support the option @code{vxworks-timeout}.
-This option is set by the user, and @var{args} represents the number of
-seconds @value{GDBN} waits for responses to rpc's.  You might use this if
-your VxWorks target is a slow software simulator or is on the far side
-of a thin network line.
-@end table
-
-The following information on connecting to VxWorks was current when
-this manual was produced; newer releases of VxWorks may use revised
-procedures.
-
-@findex INCLUDE_RDB
-To use @value{GDBN} with VxWorks, you must rebuild your VxWorks kernel
-to include the remote debugging interface routines in the VxWorks
-library @file{rdb.a}.  To do this, define @code{INCLUDE_RDB} in the
-VxWorks configuration file @file{configAll.h} and rebuild your VxWorks
-kernel.  The resulting kernel contains @file{rdb.a}, and spawns the
-source debugging task @code{tRdbTask} when VxWorks is booted.  For more
-information on configuring and remaking VxWorks, see the manufacturer's
-manual.
-@c VxWorks, see the @cite{VxWorks Programmer's Guide}.
-
-Once you have included @file{rdb.a} in your VxWorks system image and set
-your Unix execution search path to find @value{GDBN}, you are ready to
-run @value{GDBN}.  From your Unix host, run @code{@value{GDBP}} (or
-@code{vxgdb}, depending on your installation).
-
-@value{GDBN} comes up showing the prompt:
-
-@smallexample
-(vxgdb)
-@end smallexample
-
-@menu
-* VxWorks Connection::          Connecting to VxWorks
-* VxWorks Download::            VxWorks download
-* VxWorks Attach::              Running tasks
-@end menu
-
-@node VxWorks Connection
-@subsubsection Connecting to VxWorks
-
-The @value{GDBN} command @code{target} lets you connect to a VxWorks target on the
-network.  To connect to a target whose host name is ``@code{tt}'', type:
-
-@smallexample
-(vxgdb) target vxworks tt
-@end smallexample
-
-@need 750
-@value{GDBN} displays messages like these:
-
-@smallexample
-Attaching remote machine across net...
-Connected to tt.
-@end smallexample
-
-@need 1000
-@value{GDBN} then attempts to read the symbol tables of any object modules
-loaded into the VxWorks target since it was last booted.  @value{GDBN} locates
-these files by searching the directories listed in the command search
-path (@pxref{Environment, ,Your Program's Environment}); if it fails
-to find an object file, it displays a message such as:
-
-@smallexample
-prog.o: No such file or directory.
-@end smallexample
-
-When this happens, add the appropriate directory to the search path with
-the @value{GDBN} command @code{path}, and execute the @code{target}
-command again.
-
-@node VxWorks Download
-@subsubsection VxWorks Download
-
-@cindex download to VxWorks
-If you have connected to the VxWorks target and you want to debug an
-object that has not yet been loaded, you can use the @value{GDBN}
-@code{load} command to download a file from Unix to VxWorks
-incrementally.  The object file given as an argument to the @code{load}
-command is actually opened twice: first by the VxWorks target in order
-to download the code, then by @value{GDBN} in order to read the symbol
-table.  This can lead to problems if the current working directories on
-the two systems differ.  If both systems have NFS mounted the same
-filesystems, you can avoid these problems by using absolute paths.
-Otherwise, it is simplest to set the working directory on both systems
-to the directory in which the object file resides, and then to reference
-the file by its name, without any path.  For instance, a program
-@file{prog.o} may reside in @file{@var{vxpath}/vw/demo/rdb} in VxWorks
-and in @file{@var{hostpath}/vw/demo/rdb} on the host.  To load this
-program, type this on VxWorks:
-
-@smallexample
--> cd "@var{vxpath}/vw/demo/rdb"
-@end smallexample
-
-@noindent
-Then, in @value{GDBN}, type:
-
-@smallexample
-(vxgdb) cd @var{hostpath}/vw/demo/rdb
-(vxgdb) load prog.o
-@end smallexample
-
-@value{GDBN} displays a response similar to this:
-
-@smallexample
-Reading symbol data from wherever/vw/demo/rdb/prog.o... done.
-@end smallexample
-
-You can also use the @code{load} command to reload an object module
-after editing and recompiling the corresponding source file.  Note that
-this makes @value{GDBN} delete all currently-defined breakpoints,
-auto-displays, and convenience variables, and to clear the value
-history.  (This is necessary in order to preserve the integrity of
-debugger's data structures that reference the target system's symbol
-table.)
-
-@node VxWorks Attach
-@subsubsection Running Tasks
-
-@cindex running VxWorks tasks
-You can also attach to an existing task using the @code{attach} command as
-follows:
-
-@smallexample
-(vxgdb) attach @var{task}
-@end smallexample
-
-@noindent
-where @var{task} is the VxWorks hexadecimal task ID.  The task can be running
-or suspended when you attach to it.  Running tasks are suspended at
-the time of attachment.
 
 @node Embedded Processors
 @section Embedded Processors
@@ -22152,6 +22135,9 @@ Print ten commands just after the commands last printed.
 @node Screen Size
 @section Screen Size
 @cindex size of screen
+@cindex screen size
+@cindex pagination
+@cindex page size
 @cindex pauses in output
 
 Certain commands to @value{GDBN} may produce large amounts of
@@ -22478,6 +22464,8 @@ These are @value{GDBN} control commands for the auto-loading:
 @tab Control for @value{GDBN} auto-loaded scripts location.
 @item @xref{show auto-load scripts-directory}.
 @tab Show @value{GDBN} auto-loaded scripts location.
+@item @xref{add-auto-load-scripts-directory}.
+@tab Add directory for auto-loaded scripts location list.
 @item @xref{set auto-load local-gdbinit}.
 @tab Control for init file in the current directory.
 @item @xref{show auto-load local-gdbinit}.
@@ -22626,9 +22614,9 @@ scripts.
 @anchor{add-auto-load-safe-path}
 @kindex add-auto-load-safe-path
 @item add-auto-load-safe-path
-Add an entry (or list of entries) the list of directories trusted for automatic
-loading and execution of scripts.  Multiple entries may be delimited by the
-host platform path separator in use.
+Add an entry (or list of entries) to the list of directories trusted for
+automatic loading and execution of scripts.  Multiple entries may be delimited
+by the host platform path separator in use.
 @end table
 
 This variable defaults to what @code{--with-auto-load-dir} has been configured
@@ -23034,8 +23022,7 @@ Show the current state of symbol table creation debugging.
 Turns on or off display of @value{GDBN} target debugging info. This info
 includes what is going on at the target level of GDB, as it happens. The
 default is 0.  Set it to 1 to track events, and to 2 to also track the
-value of large memory transfers.  Changes to this flag do not take effect
-until the next time you connect to a target or use the @code{run} command.
+value of large memory transfers.
 @item show debug target
 Displays the current state of displaying @value{GDBN} target debugging
 info.
@@ -23778,6 +23765,12 @@ to the @env{PATH} environment variable.
 @kindex show auto-load scripts-directory
 @item show auto-load scripts-directory
 Show @value{GDBN} auto-loaded scripts location.
+
+@anchor{add-auto-load-scripts-directory}
+@kindex add-auto-load-scripts-directory
+@item add-auto-load-scripts-directory @r{[}@var{directories}@dots{}@r{]}
+Add an entry (or list of entries) to the list of auto-loaded scripts locations.
+Multiple entries may be delimited by the host platform path separator in use.
 @end table
 
 @value{GDBN} does not track which files it has already auto-loaded this way.
@@ -31280,6 +31273,11 @@ valid type.
 The target-specific process identifier.  This field is only present
 for thread groups of type @samp{process} and only if the process exists.
 
+@item exit-code
+The exit code of this group's last exited thread, formatted in octal.
+This field is only present for thread groups of type @samp{process} and
+only if the process is not running.
+
 @item num_children
 The number of children this thread group has.  This field may be
 absent for an available thread group.
@@ -33286,6 +33284,17 @@ Expand symbol tables.
 If @var{regexp} is specified, only expand symbol tables for file
 names matching @var{regexp}.
 
+@kindex maint set catch-demangler-crashes
+@kindex maint show catch-demangler-crashes
+@cindex demangler crashes
+@item maint set catch-demangler-crashes [on|off]
+@itemx maint show catch-demangler-crashes
+Control whether @value{GDBN} should attempt to catch crashes in the
+symbol name demangler.  The default is to attempt to catch crashes.
+If enabled, the first time a crash is caught, a core file is created,
+the offending symbol is displayed and the user is presented with the
+option to terminate the current session.
+
 @kindex maint cplus first_component
 @item maint cplus first_component @var{name}
 Print the first C@t{++} class/namespace component of @var{name}.
@@ -33318,13 +33327,18 @@ with the @code{SIGQUIT} signal.
 
 @kindex maint internal-error
 @kindex maint internal-warning
+@kindex maint demangler-warning
+@cindex demangler crashes
 @item maint internal-error @r{[}@var{message-text}@r{]}
 @itemx maint internal-warning @r{[}@var{message-text}@r{]}
-Cause @value{GDBN} to call the internal function @code{internal_error}
-or @code{internal_warning} and hence behave as though an internal error
-or internal warning has been detected.  In addition to reporting the
-internal problem, these functions give the user the opportunity to
-either quit @value{GDBN} or create a core file of the current
+@itemx maint demangler-warning @r{[}@var{message-text}@r{]}
+
+Cause @value{GDBN} to call the internal function @code{internal_error},
+@code{internal_warning} or @code{demangler_warning} and hence behave
+as though an internal problam has been detected.  In addition to
+reporting the internal problem, these functions give the user the
+opportunity to either quit @value{GDBN} or (for @code{internal_error}
+and @code{internal_warning}) create a core file of the current
 @value{GDBN} session.
 
 These commands take an optional parameter @var{message-text} that is
@@ -33344,15 +33358,20 @@ Create a core file? (y or n) @kbd{n}
 
 @cindex @value{GDBN} internal error
 @cindex internal errors, control of @value{GDBN} behavior
+@cindex demangler crashes
 
 @kindex maint set internal-error
 @kindex maint show internal-error
 @kindex maint set internal-warning
 @kindex maint show internal-warning
+@kindex maint set demangler-warning
+@kindex maint show demangler-warning
 @item maint set internal-error @var{action} [ask|yes|no]
 @itemx maint show internal-error @var{action}
 @itemx maint set internal-warning @var{action} [ask|yes|no]
 @itemx maint show internal-warning @var{action}
+@itemx maint set demangler-warning @var{action} [ask|yes|no]
+@itemx maint show demangler-warning @var{action}
 When @value{GDBN} reports an internal problem (error or warning) it
 gives the user the opportunity to both quit @value{GDBN} and create a
 core file of the current @value{GDBN} session.  These commands let you
@@ -33366,7 +33385,10 @@ quit.  The default is to ask the user what to do.
 
 @item corefile
 You can specify that @value{GDBN} should always (yes) or never (no)
-create a core file.  The default is to ask the user what to do.
+create a core file.  The default is to ask the user what to do.  Note
+that there is no @code{corefile} option for @code{demangler-warning}:
+demangler warnings always create a core file and this cannot be
+disabled.
 @end table
 
 @kindex maint packet
@@ -33401,9 +33423,7 @@ Breakpoint 2, add (a=2, b=3) at @dots{}
 The program being debugged stopped while in a function called from GDB.
 @dots{}
 (@value{GDBP}) @kbd{maint print dummy-frames}
-0x1a57c80: pc=0x01014068 fp=0x0200bddc sp=0x0200bdd6
- top=0x0200bdd4 id=@{stack=0x200bddc,code=0x101405c@}
- call_lo=0x01014000 call_hi=0x01014001
+0xa8206d8: id=@{stack=0xbfffe734,code=0xbfffe73f,!special@}, ptid=process 9353
 (@value{GDBP})
 @end smallexample
 
@@ -39129,6 +39149,7 @@ registers using the capitalization used in the description.
 * AArch64 Features::
 * ARM Features::
 * i386 Features::
+* MicroBlaze Features::
 * MIPS Features::
 * M68K Features::
 * Nios II Features::
@@ -39278,6 +39299,19 @@ describe the additional @sc{zmm} registers:
 @item
 @samp{zmm16h} through @samp{zmm31h}, only valid for amd64.
 @end itemize
+
+@node MicroBlaze Features
+@subsection MicroBlaze Features
+@cindex target descriptions, MicroBlaze features
+
+The @samp{org.gnu.gdb.microblaze.core} feature is required for MicroBlaze
+targets.  It should contain registers @samp{r0} through @samp{r31},
+@samp{rpc}, @samp{rmsr}, @samp{rear}, @samp{resr}, @samp{rfsr}, @samp{rbtr},
+@samp{rpvr}, @samp{rpvr1} through @samp{rpvr11}, @samp{redr}, @samp{rpid},
+@samp{rzpr}, @samp{rtlbx}, @samp{rtlbsx}, @samp{rtlblo}, and @samp{rtlbhi}.
+
+The @samp{org.gnu.gdb.microblaze.stack-protect} feature is optional.
+If present, it should contain registers @samp{rshr} and @samp{rslr}
 
 @node MIPS Features
 @subsection @acronym{MIPS} Features

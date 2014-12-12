@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2014 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
@@ -57,6 +57,10 @@ static const CGEN_IFMT ifmt_l_jr ATTRIBUTE_UNUSED = {
 
 static const CGEN_IFMT ifmt_l_trap ATTRIBUTE_UNUSED = {
   32, 32, 0xffff0000, { { F (F_OPCODE) }, { F (F_OP_25_5) }, { F (F_RESV_20_5) }, { F (F_UIMM16) }, { 0 } }
+};
+
+static const CGEN_IFMT ifmt_l_msync ATTRIBUTE_UNUSED = {
+  32, 32, 0xffffffff, { { F (F_OPCODE) }, { F (F_OP_25_5) }, { F (F_RESV_20_21) }, { 0 } }
 };
 
 static const CGEN_IFMT ifmt_l_rfe ATTRIBUTE_UNUSED = {
@@ -225,6 +229,24 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (UIMM16), 0 } },
     & ifmt_l_trap, { 0x20000000 }
+  },
+/* l.msync */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, 0 } },
+    & ifmt_l_msync, { 0x22000000 }
+  },
+/* l.psync */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, 0 } },
+    & ifmt_l_msync, { 0x22800000 }
+  },
+/* l.csync */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, 0 } },
+    & ifmt_l_msync, { 0x23000000 }
   },
 /* l.rfe */
   {

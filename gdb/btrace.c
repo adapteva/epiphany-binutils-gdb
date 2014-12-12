@@ -19,9 +19,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "defs.h"
 #include "btrace.h"
 #include "gdbthread.h"
-#include "exceptions.h"
 #include "inferior.h"
 #include "target.h"
 #include "record.h"
@@ -958,7 +958,7 @@ btrace_free_objfile (struct objfile *objfile)
 
   DEBUG ("free objfile");
 
-  ALL_THREADS (tp)
+  ALL_NON_EXITED_THREADS (tp)
     btrace_clear (tp);
 }
 

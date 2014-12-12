@@ -107,6 +107,7 @@ case ${cpu} in
   tilegx*be)		cpu_type=tilegx endian=big ;;
   tilegx*)		cpu_type=tilegx endian=little ;;
   v850*)		cpu_type=v850 ;;
+  visium)		cpu_type=visium endian=big ;;
   x86_64*)		cpu_type=i386 arch=x86_64;;
   xgate)		cpu_type=xgate ;;
   xtensa*)		cpu_type=xtensa arch=xtensa ;;
@@ -138,6 +139,10 @@ case ${generic_target} in
   arm-*-symbianelf*)			fmt=elf em=symbian ;;
   arm-*-kaos*)				fmt=elf ;;
   arm-*-conix*)				fmt=elf ;;
+  arm-*-freebsd[89].* | armeb-*-freebsd[89].*)
+					fmt=elf  em=freebsd ;;
+  arm-*-freebsd* | armeb-*-freebsd*)	fmt=elf  em=armfbsdeabi ;;
+  arm*-*-freebsd*)			fmt=elf  em=armfbsdvfp ;;
   arm-*-linux*aout*)			fmt=aout em=linux ;;
   arm-*-linux-*eabi*)			fmt=elf  em=armlinuxeabi ;;
   arm-*-linux-*)			fmt=elf  em=linux ;;
@@ -326,7 +331,8 @@ case ${generic_target} in
   mips*-*-freebsd* | mips*-*-kfreebsd*-gnu)
 					fmt=elf em=freebsd ;;
   mips-*-sysv4*MP* | mips-*-gnu*)	fmt=elf em=tmips ;;
-  mips*-sde-elf* | mips*-mti-elf*)	fmt=elf em=tmips ;;
+  mips*-sde-elf* | mips*-mti-elf* | mips*-img-elf*)
+					fmt=elf em=tmips ;;
   mips-*-elf* | mips-*-rtems*)		fmt=elf ;;
   mips-*-netbsd*)			fmt=elf em=tmips ;;
   mips-*-openbsd*)			fmt=elf em=tmips ;;
@@ -339,9 +345,10 @@ case ${generic_target} in
   mn10300-*-linux*)			fmt=elf em=linux ;;
   mn10300-*-*)				fmt=elf ;;
 
-  moxie-*-uclinux)			fmt=elf em=linux;;
+  moxie-*-uclinux)			fmt=elf em=linux ;;
+  moxie-*-moxiebox*)                    fmt=elf endian=little ;;
   moxie-*-*)				fmt=elf ;;
-
+    
   mt-*-elf)				fmt=elf bfd_gas=yes ;;
 
   msp430-*-*)				fmt=elf ;;
@@ -357,8 +364,8 @@ case ${generic_target} in
   ns32k-pc532-lites*)			fmt=aout em=nbsd532 ;;
   ns32k-*-*n*bsd*)			fmt=aout em=nbsd532 ;;
 
-  or1k-*-elf | or1knd-*-elf)		fmt=elf endian=big ;;
-  or1k-*-linux* | or1knd-*-linux*)	fmt=elf em=linux endian=big ;;
+  or1k*-*-elf | or1k*-*-rtems*) 	fmt=elf endian=big ;;
+  or1k*-*-linux*)			fmt=elf em=linux endian=big ;;
 
   pj*)					fmt=elf ;;
 
@@ -446,6 +453,8 @@ case ${generic_target} in
 
   vax-*-netbsdelf*)			fmt=elf em=nbsd ;;
   vax-*-linux-*)			fmt=elf em=linux ;;
+
+  visium-*-elf)				fmt=elf ;;
 
   xstormy16-*-*)			fmt=elf ;;
   

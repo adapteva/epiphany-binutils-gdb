@@ -26,7 +26,6 @@
 #include "inferior.h"
 #include "infrun.h"
 #include "target.h"
-#include "exceptions.h"
 #include "gdbcore.h"
 #include "command.h"
 #include "completer.h"
@@ -35,7 +34,6 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <windows.h>
 #include <imagehlp.h>
 #include <psapi.h>
@@ -51,7 +49,6 @@
 #include "objfiles.h"
 #include "gdb_bfd.h"
 #include "gdb_obstack.h"
-#include <string.h>
 #include "gdbthread.h"
 #include "gdbcmd.h"
 #include <unistd.h>
@@ -65,7 +62,7 @@
 
 #include "windows-tdep.h"
 #include "windows-nat.h"
-#include "i386-nat.h"
+#include "x86-nat.h"
 #include "complaints.h"
 #include "inf-child.h"
 
@@ -1731,7 +1728,7 @@ do_initial_windows_stuff (struct target_ops *ops, DWORD pid, int attaching)
     push_target (ops);
   disable_breakpoints_in_shlibs ();
   windows_clear_solib ();
-  clear_proceed_status ();
+  clear_proceed_status (0);
   init_wait_for_inferior ();
 
   inf = current_inferior ();
@@ -1744,7 +1741,7 @@ do_initial_windows_stuff (struct target_ops *ops, DWORD pid, int attaching)
      current thread until we report an event out of windows_wait.  */
   inferior_ptid = pid_to_ptid (pid);
 
-  child_terminal_init_with_pgrp (pid);
+  target_terminal_init ();
   target_terminal_inferior ();
 
   windows_initialization_done = 0;
@@ -1912,7 +1909,7 @@ windows_detach (struct target_ops *ops, const char *args, int from_tty)
       gdb_flush (gdb_stdout);
     }
 
-  i386_cleanup_dregs ();
+  x86_cleanup_dregs ();
   inferior_ptid = null_ptid;
   detach_inferior (current_event.dwProcessId);
 
@@ -2363,7 +2360,7 @@ static void
 windows_mourn_inferior (struct target_ops *ops)
 {
   (void) windows_continue (DBG_CONTINUE, -1, 0);
-  i386_cleanup_dregs();
+  x86_cleanup_dregs();
   if (open_process_used)
     {
       CHECK (CloseHandle (current_process_handle));
@@ -2519,11 +2516,9 @@ windows_xfer_partial (struct target_ops *ops, enum target_object object,
 					    writebuf, offset, len, xfered_len);
 
     default:
-      if (ops->beneath != NULL)
-	return ops->beneath->to_xfer_partial (ops->beneath, object, annex,
-					      readbuf, writebuf, offset, len,
-					      xfered_len);
-      return TARGET_XFER_E_IO;
+      return ops->beneath->to_xfer_partial (ops->beneath, object, annex,
+					    readbuf, writebuf, offset, len,
+					    xfered_len);
     }
 }
 
@@ -2597,16 +2592,16 @@ _initialize_windows_nat (void)
 
   t = windows_target ();
 
-  i386_use_watchpoints (t);
+  x86_use_watchpoints (t);
 
-  i386_dr_low.set_control = cygwin_set_dr7;
-  i386_dr_low.set_addr = cygwin_set_dr;
-  i386_dr_low.get_addr = cygwin_get_dr;
-  i386_dr_low.get_status = cygwin_get_dr6;
-  i386_dr_low.get_control = cygwin_get_dr7;
+  x86_dr_low.set_control = cygwin_set_dr7;
+  x86_dr_low.set_addr = cygwin_set_dr;
+  x86_dr_low.get_addr = cygwin_get_dr;
+  x86_dr_low.get_status = cygwin_get_dr6;
+  x86_dr_low.get_control = cygwin_get_dr7;
 
-  /* i386_dr_low.debug_register_length field is set by
-     calling i386_set_debug_register_length function
+  /* x86_dr_low.debug_register_length field is set by
+     calling x86_set_debug_register_length function
      in processor windows specific native file.  */
 
   add_target (t);

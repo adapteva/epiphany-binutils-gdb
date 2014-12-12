@@ -21,7 +21,6 @@
 
 #include "defs.h"
 #include "bfd.h"
-#include <string.h>
 #include "elf-bfd.h"
 #include "elf/common.h"
 #include "elf/internal.h"
@@ -329,7 +328,10 @@ elf_symtab_read (struct objfile *objfile, int type,
 	    (sym->name, strlen (sym->name), copy_names,
 	     symaddr, mst_solib_trampoline, sect, objfile);
 	  if (msym != NULL)
-	    msym->filename = filesymname;
+	    {
+	      msym->filename = filesymname;
+	      gdbarch_elf_make_msymbol_special (gdbarch, sym, msym);
+	    }
 	  continue;
 	}
 

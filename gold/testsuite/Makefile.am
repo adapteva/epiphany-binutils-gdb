@@ -520,6 +520,7 @@ two_file_pie_test: two_file_test_1_pie.o two_file_test_1b_pie.o \
 check_PROGRAMS += pie_copyrelocs_test
 pie_copyrelocs_test_SOURCES = pie_copyrelocs_test.cc
 pie_copyrelocs_test_DEPENDENCIES = gcctestdir/ld pie_copyrelocs_shared_test.so
+pie_copyrelocs_test_CXXFLAGS = -fno-exceptions -fno-asynchronous-unwind-tables
 pie_copyrelocs_test_LDFLAGS = -Bgcctestdir/ -Wl,-R,. -pie
 pie_copyrelocs_test_LDADD = pie_copyrelocs_shared_test.so
 pie_copyrelocs_shared_test.o: pie_copyrelocs_shared_test.cc
@@ -1657,6 +1658,17 @@ MOSTLYCLEANFILES += two_file_test_1c.o
 two_file_test_1c.o: two_file_test_1.o
 	cp two_file_test_1.o $@
 
+check_PROGRAMS += plugin_test_10
+check_SCRIPTS += plugin_test_10.sh
+check_DATA += plugin_test_10.sections
+MOSTLYCLEANFILES += plugin_test_10.sections
+plugin_test_10: plugin_common_test_1.syms plugin_common_test_2.o  gcctestdir/ld plugin_test.so
+	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so" plugin_common_test_1.syms plugin_common_test_2.o
+plugin_test_10.sections: plugin_test_10
+	$(TEST_READELF) -SW $< >$@ 2>/dev/null
+
+
+
 plugin_test.so: plugin_test.o
 	$(LINK) -Bgcctestdir/ -shared plugin_test.o
 plugin_test.o: plugin_test.c
@@ -2253,6 +2265,17 @@ ehdr_start_test_5_CXXFLAGS = -DEHDR_START_USER_DEF
 ehdr_start_test_5_LDFLAGS = -Bgcctestdir/
 ehdr_start_test_5_LDADD =
 
+# Test that the --defsym option copies the symbol type and visibility.
+check_SCRIPTS += defsym_test.sh
+check_DATA += defsym_test.syms
+MOSTLYCLEANFILES += defsym_test.syms
+defsym_test.syms: defsym_test
+	$(TEST_READELF) -sW $< > $@
+defsym_test: defsym_test.o gcctestdir/ld
+	$(LINK) -Bgcctestdir/ -Wl,--defsym=bar=foo defsym_test.o
+defsym_test.o: defsym_test.c
+	$(COMPILE) -c -o $@ $<
+
 # End-to-end incremental linking tests.
 # Incremental linking is currently supported only on the x86_64 target.
 
@@ -2358,10 +2381,9 @@ endif DEFAULT_TARGET_X86_64
 if DEFAULT_TARGET_X86_64
 check_PROGRAMS += exception_x86_64_bnd_test
 exception_x86_64_bnd_test_SOURCES = exception_test_main.cc
-exception_x86_64_bnd_test_DEPENDENCIES = exception_x86_64_bnd_1.o \
-					 exception_x86_64_bnd_2.o
+exception_x86_64_bnd_test_DEPENDENCIES = gcctestdir/ld exception_x86_64_bnd_1.o exception_x86_64_bnd_2.o
 exception_x86_64_bnd_test_LDFLAGS = $(exception_test_LDFLAGS)
-exception_x86_64_bnd_test_LDADD = $(exception_x86_64_bnd_test_DEPENDENCIES)
+exception_x86_64_bnd_test_LDADD = exception_x86_64_bnd_1.o exception_x86_64_bnd_2.o
 exception_x86_64_bnd_1.o: exception_test_1.cc gcctestdir/as
 	$(CXXCOMPILE) -c -fpic -Bgcctestdir/ -Wa,-madd-bnd-prefix -o $@ $<
 exception_x86_64_bnd_2.o: exception_test_2.cc gcctestdir/as

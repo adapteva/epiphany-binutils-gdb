@@ -37,7 +37,7 @@ if {![is_remote host] && ![is_remote target]} {
 standard_testfile
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	  executable \
-	  [list debug nowarnings \
+	  [list debug \
 	       "additional_flags=-DTFILE_DIR=\"$tfile_dir\""]] \
 	 != "" } {
     untested ${testfile}.exp
@@ -52,6 +52,7 @@ remote_file target delete $tfile_error
 
 if { ![generate_tracefile $binfile] } {
     unsupported "Unable to generate trace file"
+    return -1
 }
 
 if {!$purely_local} {

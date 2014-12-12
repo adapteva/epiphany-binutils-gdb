@@ -23,15 +23,11 @@
 #include "inferior.h"
 #include "symfile.h"
 #include "gdbcore.h"
-
-#include "exceptions.h"
 #include "getopt.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ctype.h>
-
-#include <string.h>
 #include "event-loop.h"
 #include "ui-out.h"
 
@@ -45,6 +41,9 @@
 
 #include "filenames.h"
 #include "filestuff.h"
+#include <signal.h>
+#include "event-top.h"
+#include "infrun.h"
 
 /* The selected interpreter.  This will be used as a set command
    variable, so it should always be malloc'ed - since
@@ -288,6 +287,27 @@ get_init_files (const char **system_gdbinit,
   *local_gdbinit = localinit;
 }
 
+/* Try to set up an alternate signal stack for SIGSEGV handlers.
+   This allows us to handle SIGSEGV signals generated when the
+   normal process stack is exhausted.  If this stack is not set
+   up (sigaltstack is unavailable or fails) and a SIGSEGV is
+   generated when the normal stack is exhausted then the program
+   will behave as though no SIGSEGV handler was installed.  */
+
+static void
+setup_alternate_signal_stack (void)
+{
+#ifdef HAVE_SIGALTSTACK
+  stack_t ss;
+
+  ss.ss_sp = xmalloc (SIGSTKSZ);
+  ss.ss_size = SIGSTKSZ;
+  ss.ss_flags = 0;
+
+  sigaltstack(&ss, NULL);
+#endif
+}
+
 /* Call command_loop.  If it happens to return, pass that through as a
    non-zero return status.  */
 
@@ -313,6 +333,71 @@ captured_command_loop (void *data)
      loop.  */
   quit_command (NULL, instream == stdin);
   return 1;
+}
+
+/* Handle command errors thrown from within
+   catch_command_errors/catch_command_errors_const.  */
+
+static int
+handle_command_errors (volatile struct gdb_exception e)
+{
+  if (e.reason < 0)
+    {
+      exception_print (gdb_stderr, e);
+
+      /* If any exception escaped to here, we better enable stdin.
+	 Otherwise, any command that calls async_disable_stdin, and
+	 then throws, will leave stdin inoperable.  */
+      async_enable_stdin ();
+      return 0;
+    }
+  return 1;
+}
+
+/* Type of the command callback passed to catch_command_errors.  */
+
+typedef void (catch_command_errors_ftype) (char *, int);
+
+/* Wrap calls to commands run before the event loop is started.  */
+
+static int
+catch_command_errors (catch_command_errors_ftype *command,
+		      char *arg, int from_tty, return_mask mask)
+{
+  volatile struct gdb_exception e;
+
+  TRY_CATCH (e, mask)
+    {
+      int was_sync = sync_execution;
+
+      command (arg, from_tty);
+
+      maybe_wait_sync_command_done (was_sync);
+    }
+  return handle_command_errors (e);
+}
+
+/* Type of the command callback passed to catch_command_errors_const.  */
+
+typedef void (catch_command_errors_const_ftype) (const char *, int);
+
+/* Like catch_command_errors, but works with const command and args.  */
+
+static int
+catch_command_errors_const (catch_command_errors_const_ftype *command,
+			    const char *arg, int from_tty, return_mask mask)
+{
+  volatile struct gdb_exception e;
+
+  TRY_CATCH (e, mask)
+    {
+      int was_sync = sync_execution;
+
+      command (arg, from_tty);
+
+      maybe_wait_sync_command_done (was_sync);
+    }
+  return handle_command_errors (e);
 }
 
 /* Arguments of --command option and its counterpart.  */
@@ -439,14 +524,12 @@ captured_main (void *data)
   gdb_program_name = xstrdup (argv[0]);
 #endif
 
+  /* Prefix warning messages with the command name.  */
+  warning_pre_print = xstrprintf ("%s: warning: ", gdb_program_name);
+
   if (! getcwd (gdb_dirbuf, sizeof (gdb_dirbuf)))
-    /* Don't use *_filtered or warning() (which relies on
-       current_target) until after initialize_all_files().  */
-    fprintf_unfiltered (gdb_stderr,
-			_("%s: warning: error finding "
-			  "working directory: %s\n"),
-                        argv[0], safe_strerror (errno));
-    
+    perror_warning_with_name (_("error finding working directory"));
+
   current_directory = gdb_dirbuf;
 
   /* Set the sysroot path.  */
@@ -609,10 +692,7 @@ captured_main (void *data)
 	    xfree (interpreter_p);
 	    interpreter_p = xstrdup (INTERP_TUI);
 #else
-	    fprintf_unfiltered (gdb_stderr,
-				_("%s: TUI mode is not supported\n"),
-				argv[0]);
-	    exit (1);
+	    error (_("%s: TUI mode is not supported"), gdb_program_name);
 #endif
 	    break;
 	  case OPT_WINDOWS:
@@ -678,13 +758,8 @@ captured_main (void *data)
 	    break;
 	  case 'D':
 	    if (optarg[0] == '\0')
-	      {
-		fprintf_unfiltered (gdb_stderr,
-				    _("%s: empty path for"
-				      " `--data-directory'\n"),
-				    argv[0]);
-		exit (1);
-	      }
+	      error (_("%s: empty path for `--data-directory'"),
+		     gdb_program_name);
 	    set_gdb_data_directory (optarg);
 	    gdb_datadir_provided = 1;
 	    break;
@@ -694,13 +769,8 @@ captured_main (void *data)
 	      extern int gdbtk_test (char *);
 
 	      if (!gdbtk_test (optarg))
-		{
-		  fprintf_unfiltered (gdb_stderr,
-				      _("%s: unable to load "
-					"tclcommand file \"%s\""),
-				      argv[0], optarg);
-		  exit (1);
-		}
+		error (_("%s: unable to load tclcommand file \"%s\""),
+		       gdb_program_name, optarg);
 	      break;
 	    }
 	  case 'y':
@@ -742,13 +812,8 @@ captured_main (void *data)
 
 	      i = strtol (optarg, &p, 0);
 	      if (i == 0 && p == optarg)
-
-		/* Don't use *_filtered or warning() (which relies on
-		   current_target) until after initialize_all_files().  */
-
-		fprintf_unfiltered
-		  (gdb_stderr,
-		   _("warning: could not set baud rate to `%s'.\n"), optarg);
+		warning (_("could not set baud rate to `%s'."),
+			 optarg);
 	      else
 		baud_rate = i;
 	    }
@@ -760,30 +825,25 @@ captured_main (void *data)
 
 	      i = strtol (optarg, &p, 0);
 	      if (i == 0 && p == optarg)
-
-		/* Don't use *_filtered or warning() (which relies on
-		   current_target) until after initialize_all_files().  */
-
-		fprintf_unfiltered (gdb_stderr,
-				    _("warning: could not set "
-				      "timeout limit to `%s'.\n"), optarg);
+		warning (_("could not set timeout limit to `%s'."),
+			 optarg);
 	      else
 		remote_timeout = i;
 	    }
 	    break;
 
 	  case '?':
-	    fprintf_unfiltered (gdb_stderr,
-				_("Use `%s --help' for a "
-				  "complete list of options.\n"),
-				argv[0]);
-	    exit (1);
+	    error (_("Use `%s --help' for a complete list of options."),
+		   gdb_program_name);
 	  }
       }
 
     if (batch_flag)
       quiet = 1;
   }
+
+  /* Try to set up an alternate signal stack for SIGSEGV handlers.  */
+  setup_alternate_signal_stack ();
 
   /* Initialize all files.  Give the interpreter a chance to take
      control of the console via the deprecated_init_ui_hook ().  */
@@ -797,13 +857,9 @@ captured_main (void *data)
 	 inferior.  The first one is the sym/exec file, and the rest
 	 are arguments.  */
       if (optind >= argc)
-	{
-	  fprintf_unfiltered (gdb_stderr,
-			      _("%s: `--args' specified but "
-				"no program specified\n"),
-			      argv[0]);
-	  exit (1);
-	}
+	error (_("%s: `--args' specified but no program specified"),
+	       gdb_program_name);
+
       symarg = argv[optind];
       execarg = argv[optind];
       ++optind;
@@ -903,12 +959,7 @@ captured_main (void *data)
       error (_("Interpreter `%s' unrecognized"), interpreter_p);
     /* Install it.  */
     if (!interp_set (interp, 1))
-      {
-        fprintf_unfiltered (gdb_stderr,
-			    "Interpreter `%s' failed to initialize.\n",
-                            interpreter_p);
-        exit (1);
-      }
+      error (_("Interpreter `%s' failed to initialize."), interpreter_p);
   }
 
   /* FIXME: cagney/2003-02-03: The big hack (part 2 of 2) that lets
@@ -929,6 +980,7 @@ captured_main (void *data)
     }
 
   /* Set off error and warning messages with a blank line.  */
+  xfree (warning_pre_print);
   warning_pre_print = _("\nwarning: ");
 
   /* Read and execute the system-wide gdbinit file, if it exists.
@@ -985,16 +1037,16 @@ captured_main (void *data)
       /* The exec file and the symbol-file are the same.  If we can't
          open it, better only print one error message.
          catch_command_errors returns non-zero on success!  */
-      if (catch_command_errors (exec_file_attach, execarg,
-				!batch_flag, RETURN_MASK_ALL))
+      if (catch_command_errors_const (exec_file_attach, execarg,
+				      !batch_flag, RETURN_MASK_ALL))
 	catch_command_errors_const (symbol_file_add_main, symarg,
 				    !batch_flag, RETURN_MASK_ALL);
     }
   else
     {
       if (execarg != NULL)
-	catch_command_errors (exec_file_attach, execarg,
-			      !batch_flag, RETURN_MASK_ALL);
+	catch_command_errors_const (exec_file_attach, execarg,
+				    !batch_flag, RETURN_MASK_ALL);
       if (symarg != NULL)
 	catch_command_errors_const (symbol_file_add_main, symarg,
 				    !batch_flag, RETURN_MASK_ALL);

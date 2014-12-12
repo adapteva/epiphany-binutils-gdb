@@ -24,8 +24,6 @@
 #include "gdbtypes.h"
 #include "gdbcmd.h"
 #include "gdbcore.h"
-#include <string.h>
-#include "gdb_assert.h"
 #include "frame.h"
 #include "frame-unwind.h"
 #include "frame-base.h"
@@ -46,7 +44,6 @@
 #include "dwarf2.h"
 #include "dwarf2-frame.h"
 #include "ax.h"
-#include "exceptions.h"
 #include "spu-tdep.h"
 
 
@@ -1956,7 +1953,7 @@ static void
 spu_catch_start (struct objfile *objfile)
 {
   struct bound_minimal_symbol minsym;
-  struct symtab *symtab;
+  struct compunit_symtab *cust;
   CORE_ADDR pc;
   char buf[32];
 
@@ -1981,16 +1978,17 @@ spu_catch_start (struct objfile *objfile)
   /* If we have debugging information, try to use it -- this
      will allow us to properly skip the prologue.  */
   pc = BMSYMBOL_VALUE_ADDRESS (minsym);
-  symtab = find_pc_sect_symtab (pc, MSYMBOL_OBJ_SECTION (minsym.objfile,
-							 minsym.minsym));
-  if (symtab != NULL)
+  cust
+    = find_pc_sect_compunit_symtab (pc, MSYMBOL_OBJ_SECTION (minsym.objfile,
+							     minsym.minsym));
+  if (cust != NULL)
     {
-      struct blockvector *bv = BLOCKVECTOR (symtab);
+      const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (cust);
       struct block *block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
       struct symbol *sym;
       struct symtab_and_line sal;
 
-      sym = lookup_block_symbol (block, "main", VAR_DOMAIN);
+      sym = block_lookup_symbol (block, "main", VAR_DOMAIN);
       if (sym)
 	{
 	  fixup_symbol_section (sym, objfile);
@@ -2649,7 +2647,7 @@ info_spu_command (char *args, int from_tty)
 {
   printf_unfiltered (_("\"info spu\" must be followed by "
 		       "the name of an SPU facility.\n"));
-  help_list (infospucmdlist, "info spu ", -1, gdb_stdout);
+  help_list (infospucmdlist, "info spu ", all_commands, gdb_stdout);
 }
 
 

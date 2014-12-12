@@ -81,9 +81,11 @@ arm-*-pe)		targ_emul=armpe ; targ_extra_ofiles="deffilep.o pe-dll.o" ;;
 arm-*-aout | armel-*-aout) targ_emul=armaoutl ;;
 armeb-*-aout)		targ_emul=armaoutb ;;
 arm-*-coff)		targ_emul=armcoff ;;
-arm-*-freebsd* | arm-*-kfreebsd*-gnu)
+arm*b-*-freebsd*)	targ_emul=armelfb_fbsd
+			targ_extra_emuls="armelf_fbsd armelf" ;;
+arm*-*-freebsd* | arm-*-kfreebsd*-gnu)
 	       		targ_emul=armelf_fbsd
-			targ_extra_emuls="armelf" ;;
+			targ_extra_emuls="armelfb_fbsd armelf" ;;
 armeb-*-netbsdelf*)	targ_emul=armelfb_nbsd;
 			targ_extra_emuls="armelf_nbsd armelf armnbsd" ;;
 arm-*-netbsdelf*)	targ_emul=armelf_nbsd;
@@ -93,7 +95,8 @@ arm-*-netbsd*)		targ_emul=armnbsd;
 arm-*-nto*)		targ_emul=armnto ;;
 arm-*-openbsd*)		targ_emul=armnbsd ;;
 arm-*-rtems*)		targ_emul=armelf ;;
-armeb-*-elf)		targ_emul=armelfb ;;
+armeb-*-elf | armeb-*-eabi*)
+			targ_emul=armelfb ;;
 arm-*-elf | arm*-*-eabi*)
 	  		targ_emul=armelf ;;
 arm*-*-symbianelf*)     targ_emul=armsymbian;;
@@ -138,7 +141,7 @@ arm*-*-uclinux*)	targ_emul=armelf_linux
 arm-*-vxworks)		targ_emul=armelf_vxworks ;;
 arm*-*-conix*)		targ_emul=armelf ;;
 avr-*-*)		targ_emul=avr2
-			targ_extra_emuls="avr1 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega1 avrxmega2 avrxmega3 avrxmega4 avrxmega5 avrxmega6 avrxmega7"
+			targ_extra_emuls="avr1 avr25 avr3 avr31 avr35 avr4 avr5 avr51 avr6 avrxmega1 avrxmega2 avrxmega3 avrxmega4 avrxmega5 avrxmega6 avrxmega7 avrtiny"
 			;;
 bfin-*-elf)		targ_emul=elf32bfin;
 			targ_extra_emuls="elf32bfinfd"
@@ -185,6 +188,8 @@ fr30-*-*)		targ_emul=elf32fr30
 			;;
 frv-*-*linux*)		targ_emul=elf32frvfd ;;
 frv-*-*)		targ_emul=elf32frv ; targ_extra_emuls="elf32frvfd"
+			;;
+moxie-*-moxiebox*)	targ_emul=moxiebox
 			;;
 moxie-*-*)		targ_emul=elf32moxie
 			;;
@@ -454,7 +459,7 @@ mips*vr5000el-*-elf*)	targ_emul=elf32l4300 ;;
 mips*vr5000-*-elf*)	targ_emul=elf32b4300 ;;
 mips*el-sde-elf*)	targ_emul=elf32ltsmip
 			targ_extra_emuls="elf32btsmip elf32ltsmipn32 elf64ltsmip elf32btsmipn32 elf64btsmip" ;;
-mips*-sde-elf* | mips*-mti-elf*)
+mips*-sde-elf* | mips*-mti-elf* | mips*-img-elf*)
 			targ_emul=elf32btsmip
 			targ_extra_emuls="elf32ltsmip elf32btsmipn32 elf64btsmip elf32ltsmipn32 elf64ltsmip" ;;
 mips64*el-ps2-elf*)	targ_emul=elf32lr5900n32
@@ -749,6 +754,8 @@ vax-*-netbsdaout* | vax-*-netbsd*)
 			targ_emul=vaxnbsd
 			targ_extra_emuls=elf32vax ;;
 vax-*-linux-*)  	targ_emul=elf32vax
+			;;
+visium-*-elf)		targ_emul=elf32visium
 			;;
 w65-*-*)		targ_emul=w65
 			;;

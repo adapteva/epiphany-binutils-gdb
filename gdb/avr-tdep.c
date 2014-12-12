@@ -34,7 +34,6 @@
 #include "symfile.h"
 #include "arch-utils.h"
 #include "regcache.h"
-#include <string.h>
 #include "dis-asm.h"
 #include "objfiles.h"
 
@@ -70,6 +69,16 @@
    decode which memory space the address is referring to.  */
 
 /* Constants: prefixed with AVR_ to avoid name space clashes */
+
+/* Address space flags */
+
+/* We are assigning the TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 to the flash address
+   space.  */
+
+#define AVR_TYPE_ADDRESS_CLASS_FLASH TYPE_ADDRESS_CLASS_1
+#define AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH  \
+  TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1
+
 
 enum
 {
@@ -295,10 +304,19 @@ avr_address_to_pointer (struct gdbarch *gdbarch,
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
-  /* Is it a code address?  */
-  if (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_FUNC
-      || TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_METHOD)
+  /* Is it a data address in flash?  */
+  if (AVR_TYPE_ADDRESS_CLASS_FLASH (type))
     {
+      /* A data pointer in flash is byte addressed.  */
+      store_unsigned_integer (buf, TYPE_LENGTH (type), byte_order,
+			      avr_convert_iaddr_to_raw (addr));
+    }
+  /* Is it a code address?  */
+  else if (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_FUNC
+	   || TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_METHOD)
+    {
+      /* A code pointer is word (16 bits) addressed.  We shift the address down
+	 by 1 bit to convert it to a pointer.  */
       store_unsigned_integer (buf, TYPE_LENGTH (type), byte_order,
 			      avr_convert_iaddr_to_raw (addr >> 1));
     }
@@ -318,11 +336,21 @@ avr_pointer_to_address (struct gdbarch *gdbarch,
   CORE_ADDR addr
     = extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
 
+  /* Is it a data address in flash?  */
+  if (AVR_TYPE_ADDRESS_CLASS_FLASH (type))
+    {
+      /* A data pointer in flash is already byte addressed.  */
+      return avr_make_iaddr (addr);
+    }
   /* Is it a code address?  */
-  if (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_FUNC
-      || TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_METHOD
-      || TYPE_CODE_SPACE (TYPE_TARGET_TYPE (type)))
-    return avr_make_iaddr (addr << 1);
+  else if (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_FUNC
+	   || TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_METHOD
+	   || TYPE_CODE_SPACE (TYPE_TARGET_TYPE (type)))
+    {
+      /* A code pointer is word (16 bits) addressed so we shift it up
+	 by 1 bit to convert it to an address.  */
+      return avr_make_iaddr (addr << 1);
+    }
   else
     return avr_make_saddr (addr);
 }
@@ -1342,6 +1370,54 @@ avr_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   return -1;
 }
 
+/* Implementation of `address_class_type_flags' gdbarch method.
+
+   This method maps DW_AT_address_class attributes to a
+   type_instance_flag_value.  */
+
+static int
+avr_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+{
+  /* The value 1 of the DW_AT_address_class attribute corresponds to the
+     __flash qualifier.  Note that this attribute is only valid with
+     pointer types and therefore the flag is set to the pointer type and
+     not its target type.  */
+  if (dwarf2_addr_class == 1 && byte_size == 2)
+    return AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH;
+  return 0;
+}
+
+/* Implementation of `address_class_type_flags_to_name' gdbarch method.
+
+   Convert a type_instance_flag_value to an address space qualifier.  */
+
+static const char*
+avr_address_class_type_flags_to_name (struct gdbarch *gdbarch, int type_flags)
+{
+  if (type_flags & AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH)
+    return "flash";
+  else
+    return NULL;
+}
+
+/* Implementation of `address_class_name_to_type_flags' gdbarch method.
+
+   Convert an address space qualifier to a type_instance_flag_value.  */
+
+static int
+avr_address_class_name_to_type_flags (struct gdbarch *gdbarch,
+                                      const char* name,
+                                      int *type_flags_ptr)
+{
+  if (strcmp (name, "flash") == 0)
+    {
+      *type_flags_ptr = AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH;
+      return 1;
+    }
+  else
+    return 0;
+}
+
 /* Initialize the gdbarch structure for the AVR's.  */
 
 static struct gdbarch *
@@ -1451,6 +1527,12 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_unwind_pc (gdbarch, avr_unwind_pc);
   set_gdbarch_unwind_sp (gdbarch, avr_unwind_sp);
+
+  set_gdbarch_address_class_type_flags (gdbarch, avr_address_class_type_flags);
+  set_gdbarch_address_class_name_to_type_flags
+    (gdbarch, avr_address_class_name_to_type_flags);
+  set_gdbarch_address_class_type_flags_to_name
+    (gdbarch, avr_address_class_type_flags_to_name);
 
   return gdbarch;
 }

@@ -90,12 +90,13 @@ struct value *dwarf2_evaluate_loc_desc (struct type *type,
 					size_t size,
 					struct dwarf2_per_cu_data *per_cu);
 
-/* Converts a dynamic property into a static one.  ADDR is the address of
-   the object currently being evaluated and might be nedded.
+/* Converts a dynamic property into a static one.  ADDRESS is the address
+   of the object currently being evaluated and might be nedded.
    Returns 1 if PROP could be converted and the static value is passed back
    into VALUE, otherwise returns 0.  */
 
 int dwarf2_evaluate_property (const struct dynamic_prop *prop,
+			      CORE_ADDR address,
 			      CORE_ADDR *value);
 
 CORE_ADDR dwarf2_read_addr_index (struct dwarf2_per_cu_data *per_cu,

@@ -29,12 +29,10 @@
 #include "varobj.h"
 #include "c-lang.h"
 #include "objc-lang.h"
-#include "exceptions.h"
 #include "complaints.h"
 #include "value.h"
 #include "symfile.h"
 #include "objfiles.h"
-#include <string.h>		/* for strchr */
 #include "target.h"		/* for target_has_execution */
 #include "gdbcore.h"
 #include "gdbcmd.h"
@@ -44,7 +42,6 @@
 #include "block.h"
 #include "infcall.h"
 #include "valprint.h"
-#include "gdb_assert.h"
 #include "cli/cli-utils.h"
 
 #include <ctype.h>
@@ -1474,11 +1471,6 @@ find_implementation_from_class (struct gdbarch *gdbarch,
 	      struct objc_method meth_str;
 
 	      read_objc_methlist_method (gdbarch, mlist, i, &meth_str);
-#if 0
-	      fprintf (stderr, 
-		       "checking method 0x%lx against selector 0x%lx\n", 
-		       meth_str.name, sel);
-#endif
 
 	      if (meth_str.name == sel) 
 		/* FIXME: hppa arch was doing a pointer dereference

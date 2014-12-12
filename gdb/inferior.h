@@ -31,8 +31,6 @@ struct ui_out;
 struct terminal_info;
 struct target_desc_info;
 
-#include "ptid.h"
-
 /* For bpstat.  */
 #include "breakpoint.h"
 
@@ -111,8 +109,6 @@ extern void default_print_registers_info (struct gdbarch *gdbarch,
 extern void child_terminal_info (struct target_ops *self, const char *, int);
 
 extern void term_info (char *, int);
-
-extern void child_terminal_save_ours (struct target_ops *self);
 
 extern void child_terminal_ours (struct target_ops *self);
 
@@ -254,11 +250,9 @@ enum stop_kind
 
 /* Number of traps that happen between exec'ing the shell to run an
    inferior and when we finally get to the inferior code, not counting
-   the exec for the shell.  This is 1 on most implementations.
-   Overridden in nm.h files.  */
-#if !defined(START_INFERIOR_TRAPS_EXPECTED)
+   the exec for the shell.  This is 1 on all supported
+   implementations.  */
 #define START_INFERIOR_TRAPS_EXPECTED	1
-#endif
 
 struct private_inferior;
 
@@ -474,7 +468,8 @@ extern struct inferior *find_inferior_pid (int pid);
 /* Search function to lookup an inferior by GDB 'num'.  */
 extern struct inferior *find_inferior_id (int num);
 
-/* Find an inferior bound to PSPACE.  */
+/* Find an inferior bound to PSPACE, giving preference to the current
+   inferior.  */
 extern struct inferior *
   find_inferior_for_program_space (struct program_space *pspace);
 

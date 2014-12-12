@@ -702,10 +702,10 @@ sh_elf_relax_section (bfd *abfd, asection *sec,
       elf_section_data (sec)->this_hdr.contents = contents;
       symtab_hdr->contents = (unsigned char *) isymbuf;
 
-      /* Replace the jsr with a bsr.  */
+      /* Replace the jmp/jsr with a bra/bsr.  */
 
       /* Change the R_SH_USES reloc into an R_SH_IND12W reloc, and
-	 replace the jsr with a bsr.  */
+	 replace the jmp/jsr with a bra/bsr.  */
       irel->r_info = ELF32_R_INFO (ELF32_R_SYM (irelfn->r_info), R_SH_IND12W);
       /* We used to test (ELF32_R_SYM (irelfn->r_info) < symtab_hdr->sh_info)
 	 here, but that only checks if the symbol is an external symbol,
@@ -716,7 +716,10 @@ sh_elf_relax_section (bfd *abfd, asection *sec,
       /* We can't fully resolve this yet, because the external
 	 symbol value may be changed by future relaxing.  We let
 	 the final link phase handle it.  */
-      bfd_put_16 (abfd, (bfd_vma) 0xb000, contents + irel->r_offset);
+      if (bfd_get_16 (abfd, contents + irel->r_offset) & 0x0020)
+	bfd_put_16 (abfd, (bfd_vma) 0xa000, contents + irel->r_offset);
+      else
+	bfd_put_16 (abfd, (bfd_vma) 0xb000, contents + irel->r_offset);
 
       irel->r_addend = -4;
 
@@ -3341,7 +3344,7 @@ sh_elf_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 
   /* Set up .got offsets for local syms, and space for local dynamic
      relocs.  */
-  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link_next)
+  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
     {
       bfd_signed_vma *local_got;
       bfd_signed_vma *end_local_got;
@@ -3676,7 +3679,9 @@ sh_elf_osec_to_segment (bfd *output_bfd, asection *osec)
 {
   Elf_Internal_Phdr *p = NULL;
 
-  if (output_bfd->xvec->flavour == bfd_target_elf_flavour)
+  if (output_bfd->xvec->flavour == bfd_target_elf_flavour
+      /* PR ld/17110: Do not look for output segments in an input bfd.  */
+      && output_bfd->direction != read_direction)
     p = _bfd_elf_find_segment_containing_section (output_bfd, osec);
 
   /* FIXME: Nothing ever says what this index is relative to.  The kernel

@@ -173,16 +173,17 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
 
 static bfd_boolean
 elf32_sparc_add_symbol_hook (bfd * abfd,
-			     struct bfd_link_info * info ATTRIBUTE_UNUSED,
+			     struct bfd_link_info * info,
 			     Elf_Internal_Sym * sym,
 			     const char ** namep ATTRIBUTE_UNUSED,
 			     flagword * flagsp ATTRIBUTE_UNUSED,
 			     asection ** secp ATTRIBUTE_UNUSED,
 			     bfd_vma * valp ATTRIBUTE_UNUSED)
 {
-  if ((abfd->flags & DYNAMIC) == 0
-      && (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
-	  || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE))
+  if ((ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+       || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE)
+      && (abfd->flags & DYNAMIC) == 0
+      && bfd_get_flavour (info->output_bfd) == bfd_target_elf_flavour)
     elf_tdata (info->output_bfd)->has_gnu_symbols = TRUE;
   return TRUE;
 }
@@ -209,8 +210,6 @@ elf32_sparc_add_symbol_hook (bfd * abfd,
   _bfd_sparc_elf_reloc_name_lookup
 #define bfd_elf32_bfd_link_hash_table_create \
 					_bfd_sparc_elf_link_hash_table_create
-#define bfd_elf32_bfd_link_hash_table_free \
-					_bfd_sparc_elf_link_hash_table_free
 #define bfd_elf32_bfd_relax_section	_bfd_sparc_elf_relax_section
 #define bfd_elf32_new_section_hook	_bfd_sparc_elf_new_section_hook
 #define elf_backend_copy_indirect_symbol \

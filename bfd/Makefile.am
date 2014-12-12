@@ -20,9 +20,6 @@
 AUTOMAKE_OPTIONS = 1.11 no-dist foreign
 ACLOCAL_AMFLAGS = -I . -I .. -I ../config
 
-# Uncomment the following line when doing a release.
-# RELEASE=y
-
 INCDIR = $(srcdir)/../include
 CSEARCH = -I. -I$(srcdir) -I$(INCDIR)
 
@@ -67,21 +64,19 @@ BFD_H = bfd.h
 # debugger).
 BFD32_LIBS = \
 	archive.lo archures.lo bfd.lo bfdio.lo bfdwin.lo \
-	cache.lo coffgen.lo corefile.lo \
-	format.lo init.lo libbfd.lo opncls.lo reloc.lo \
-	section.lo syms.lo targets.lo hash.lo linker.lo \
-	srec.lo binary.lo tekhex.lo ihex.lo stabs.lo stab-syms.lo \
-	merge.lo dwarf2.lo simple.lo compress.lo verilog.lo
+	cache.lo coff-bfd.lo compress.lo corefile.lo format.lo hash.lo \
+	init.lo libbfd.lo linker.lo merge.lo opncls.lo reloc.lo \
+	section.lo simple.lo stab-syms.lo stabs.lo syms.lo targets.lo \
+	binary.lo ihex.lo srec.lo tekhex.lo verilog.lo
 
 BFD64_LIBS = archive64.lo
 
 BFD32_LIBS_CFILES = \
 	archive.c archures.c bfd.c bfdio.c bfdwin.c \
-	cache.c coffgen.c corefile.c \
-	format.c init.c libbfd.c opncls.c reloc.c \
-	section.c syms.c targets.c hash.c linker.c \
-	srec.c binary.c tekhex.c ihex.c stabs.c stab-syms.c \
-	merge.c dwarf2.c simple.c compress.c verilog.c
+	cache.c coff-bfd.c compress.c corefile.c format.c hash.c \
+	init.c libbfd.c linker.c merge.c opncls.c reloc.c \
+	section.c simple.c stab-syms.c stabs.c syms.c targets.c \
+	binary.c ihex.c srec.c tekhex.c verilog.c
 
 BFD64_LIBS_CFILES = archive64.c
 
@@ -162,6 +157,7 @@ ALL_MACHINES = \
 	cpu-v850.lo \
 	cpu-v850_rh850.lo \
 	cpu-vax.lo \
+	cpu-visium.lo \
 	cpu-w65.lo \
 	cpu-we32k.lo \
 	cpu-xc16x.lo \
@@ -246,6 +242,7 @@ ALL_MACHINES_CFILES = \
 	cpu-v850.c \
 	cpu-v850_rh850.c \
 	cpu-vax.c \
+	cpu-visium.c \
 	cpu-w65.c \
 	cpu-we32k.c \
 	cpu-xc16x.c \
@@ -296,8 +293,10 @@ BFD32_BACKENDS = \
 	coff-we32k.lo \
 	coff-z80.lo \
 	coff-z8k.lo \
+	coffgen.lo \
 	cofflink.lo \
 	dwarf1.lo \
+	dwarf2.lo \
 	ecoff.lo \
 	ecofflink.lo \
 	elf-attrs.lo \
@@ -367,6 +366,7 @@ BFD32_BACKENDS = \
 	elf32-tilepro.lo \
 	elf32-v850.lo \
 	elf32-vax.lo \
+	elf32-visium.lo \
 	elf32-xc16x.lo \
 	elf32-xgate.lo \
 	elf32-xstormy16.lo \
@@ -483,8 +483,10 @@ BFD32_BACKENDS_CFILES = \
 	coff-we32k.c \
 	coff-z80.c \
 	coff-z8k.c \
+	coffgen.c \
 	cofflink.c \
 	dwarf1.c \
+	dwarf2.c \
 	ecoff.c \
 	ecofflink.c \
 	elf-attrs.c \
@@ -554,6 +556,7 @@ BFD32_BACKENDS_CFILES = \
 	elf32-tilepro.c \
 	elf32-v850.c \
 	elf32-vax.c \
+	elf32-visium.c \
 	elf32-xc16x.c \
 	elf32-xgate.c \
 	elf32-xstormy16.c \
@@ -735,16 +738,14 @@ OPTIONAL_BACKENDS_CFILES = \
 	sco5-core.c \
 	trad-core.c
 
-# We want to rerun configure if configure.in, config.bfd or
-# configure.host change. configure.in is needed since the version
-# number in Makefile comes from configure.in.
+# Reconfigure if config.bfd or configure.host changes.
+# development.sh is used to determine -Werror default.
 CONFIG_STATUS_DEPENDENCIES = \
-	$(srcdir)/configure.in \
 	$(srcdir)/config.bfd \
 	$(srcdir)/configure.host \
 	$(srcdir)/development.sh
 
-# These are defined by configure.in:
+# These are defined by configure:
 WORDSIZE = @wordsize@
 ALL_BACKENDS = @all_backends@
 BFD_BACKENDS = @bfd_backends@
@@ -1027,14 +1028,15 @@ CLEANFILES = bfd.h dep.sed stmp-bfd-h DEP DEPA DEP1 DEP2 libbfd.a stamp-lib \
 
 DISTCLEANFILES = $(BUILD_CFILES) $(BUILD_HFILES) libtool-soversion
 
-bfdver.h: $(srcdir)/version.h $(srcdir)/Makefile.in
+bfdver.h: $(srcdir)/version.h $(srcdir)/development.sh $(srcdir)/Makefile.in
 	@echo "creating $@"
 	@bfd_version=`echo "$(VERSION)" | sed -e 's/\([^\.]*\)\.*\([^\.]*\)\.*\([^\.]*\)\.*\([^\.]*\)\.*\([^\.]*\).*/\1.00\2.00\3.00\4.00\5/' -e 's/\([^\.]*\)\..*\(..\)\..*\(..\)\..*\(..\)\..*\(..\)$$/\1\2\3\4\5/'` ;\
 	bfd_version_string="\"$(VERSION)\"" ;\
 	bfd_soversion="$(VERSION)" ;\
 	bfd_version_package="\"$(PKGVERSION)\"" ;\
 	report_bugs_to="\"$(REPORT_BUGS_TO)\"" ;\
-	if test "x$(RELEASE)" = x ; then \
+	. $(srcdir)/development.sh ;\
+	if test "$$development" = true ; then \
 	  bfd_version_date=`sed -n -e 's/.*DATE //p' < $(srcdir)/version.h` ;\
 	  bfd_version_string="\"$(VERSION).$${bfd_version_date}\"" ;\
 	  bfd_soversion="$(VERSION).$${bfd_version_date}" ;\

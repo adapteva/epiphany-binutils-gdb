@@ -185,8 +185,9 @@ TARGET_CPU_CFILES = \
 	config/tc-tic6x.c \
 	config/tc-tilegx.c \
 	config/tc-tilepro.c \
-	config/tc-vax.c \
 	config/tc-v850.c \
+	config/tc-vax.c \
+	config/tc-visium.c \
 	config/tc-xstormy16.c \
 	config/tc-xc16x.c \
 	config/tc-xgate.c \
@@ -256,8 +257,9 @@ TARGET_CPU_HFILES = \
 	config/tc-tic6x.h \
 	config/tc-tilegx.h \
 	config/tc-tilepro.h \
-	config/tc-vax.h \
 	config/tc-v850.h \
+	config/tc-vax.h \
+	config/tc-visium.h \
 	config/tc-xstormy16.h \
 	config/tc-xc16x.h \
 	config/tc-xgate.h \
@@ -296,6 +298,8 @@ TARG_ENV_HFILES = \
 	config/te-386bsd.h \
 	config/te-aix5.h \
 	config/te-armeabi.h \
+	config/te-armfbsdeabi.h \
+	config/te-armfbsdvfp.h \
 	config/te-armlinuxeabi.h \
 	config/te-dynix.h \
 	config/te-epoc-pe.h \
@@ -693,6 +697,6 @@ de-stage3:
 	- (cd stage3 ; rm -f as$(EXEEXT) ; mv -f * ..)
 	- rmdir stage3
 
-CONFIG_STATUS_DEPENDENCIES = $(BFDDIR)/configure.in \
-	$(srcdir)/configure.tgt \
-	$(BFDDIR)/development.sh
+# Reconfigure if configure.tgt changes.
+# development.sh is used to determine -Werror default.
+CONFIG_STATUS_DEPENDENCIES = $(srcdir)/configure.tgt $(BFDDIR)/development.sh

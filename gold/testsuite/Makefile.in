@@ -350,14 +350,16 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_5 \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6 \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7 \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_8
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_8 \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_10
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@am__append_34 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_1.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_2.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_3.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6.sh \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.sh
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_10.sh
 
 # Test that symbols known in the IR file but not in the replacement file
 # produce an unresolved symbol error.
@@ -369,7 +371,8 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.syms \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_9.err
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_9.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_10.sections
 # Make a copy of two_file_test_1.o, which does not define the symbol _Z4t16av.
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@am__append_36 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_1.err \
@@ -380,7 +383,8 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_9.err \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	two_file_test_1c.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	two_file_test_1c.o \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_10.sections
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@@TLS_TRUE@am__append_37 = plugin_test_tls
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@@TLS_TRUE@am__append_38 = plugin_test_tls.sh
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@@TLS_TRUE@am__append_39 = plugin_test_tls.err
@@ -568,9 +572,14 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 
 # Test that __ehdr_start is left undefined when the text segment is not
 # appropriately aligned.
-@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_70 = ehdr_start_test_4.sh
-@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_71 = ehdr_start_test_4.syms
-@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_72 = ehdr_start_test_4
+
+# Test that the --defsym option copies the symbol type and visibility.
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_70 = ehdr_start_test_4.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	defsym_test.sh
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_71 = ehdr_start_test_4.syms \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	defsym_test.syms
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_72 = ehdr_start_test_4 \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	defsym_test.syms
 @GCC_FALSE@ehdr_start_test_5_DEPENDENCIES =
 @NATIVE_LINKER_FALSE@ehdr_start_test_5_DEPENDENCIES =
 
@@ -869,7 +878,8 @@ libgoldtest_a_OBJECTS = $(am_libgoldtest_a_OBJECTS)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_5$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7$(EXEEXT) \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_8$(EXEEXT)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_8$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_10$(EXEEXT)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@@TLS_TRUE@am__EXEEXT_24 = plugin_test_tls$(EXEEXT)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am__EXEEXT_25 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exclude_libs_test$(EXEEXT) \
@@ -1409,15 +1419,20 @@ permission_test_LDADD = $(LDADD)
 permission_test_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-@GCC_TRUE@@NATIVE_LINKER_TRUE@am_pie_copyrelocs_test_OBJECTS =  \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@	pie_copyrelocs_test.$(OBJEXT)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am_pie_copyrelocs_test_OBJECTS = pie_copyrelocs_test-pie_copyrelocs_test.$(OBJEXT)
 pie_copyrelocs_test_OBJECTS = $(am_pie_copyrelocs_test_OBJECTS)
-pie_copyrelocs_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
-	$(pie_copyrelocs_test_LDFLAGS) $(LDFLAGS) -o $@
+pie_copyrelocs_test_LINK = $(CXXLD) $(pie_copyrelocs_test_CXXFLAGS) \
+	$(CXXFLAGS) $(pie_copyrelocs_test_LDFLAGS) $(LDFLAGS) -o $@
 plugin_test_1_SOURCES = plugin_test_1.c
 plugin_test_1_OBJECTS = plugin_test_1.$(OBJEXT)
 plugin_test_1_LDADD = $(LDADD)
 plugin_test_1_DEPENDENCIES = libgoldtest.a ../libgold.a \
+	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+plugin_test_10_SOURCES = plugin_test_10.c
+plugin_test_10_OBJECTS = plugin_test_10.$(OBJEXT)
+plugin_test_10_LDADD = $(LDADD)
+plugin_test_10_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 plugin_test_2_SOURCES = plugin_test_2.c
@@ -1883,14 +1898,14 @@ SOURCES = $(libgoldtest_a_SOURCES) basic_pic_test.c basic_pie_test.c \
 	local_labels_test.c many_sections_r_test.c \
 	$(many_sections_test_SOURCES) $(object_unittest_SOURCES) \
 	permission_test.c $(pie_copyrelocs_test_SOURCES) \
-	plugin_test_1.c plugin_test_2.c plugin_test_3.c \
-	plugin_test_4.c plugin_test_5.c plugin_test_6.c \
-	plugin_test_7.c plugin_test_8.c plugin_test_tls.c \
-	$(protected_1_SOURCES) $(protected_2_SOURCES) \
-	$(relro_now_test_SOURCES) $(relro_script_test_SOURCES) \
-	$(relro_strip_test_SOURCES) $(relro_test_SOURCES) \
-	$(script_test_1_SOURCES) script_test_11.c \
-	$(script_test_2_SOURCES) script_test_3.c \
+	plugin_test_1.c plugin_test_10.c plugin_test_2.c \
+	plugin_test_3.c plugin_test_4.c plugin_test_5.c \
+	plugin_test_6.c plugin_test_7.c plugin_test_8.c \
+	plugin_test_tls.c $(protected_1_SOURCES) \
+	$(protected_2_SOURCES) $(relro_now_test_SOURCES) \
+	$(relro_script_test_SOURCES) $(relro_strip_test_SOURCES) \
+	$(relro_test_SOURCES) $(script_test_1_SOURCES) \
+	script_test_11.c $(script_test_2_SOURCES) script_test_3.c \
 	$(searched_file_test_SOURCES) start_lib_test.c \
 	$(thin_archive_test_1_SOURCES) $(thin_archive_test_2_SOURCES) \
 	$(tls_phdrs_script_test_SOURCES) $(tls_pic_test_SOURCES) \
@@ -2322,6 +2337,7 @@ LDADD = libgoldtest.a ../libgold.a ../../libiberty/libiberty.a $(LIBINTL) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@two_file_relocatable_test_LDADD = two_file_relocatable.o
 @GCC_TRUE@@NATIVE_LINKER_TRUE@pie_copyrelocs_test_SOURCES = pie_copyrelocs_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@pie_copyrelocs_test_DEPENDENCIES = gcctestdir/ld pie_copyrelocs_shared_test.so
+@GCC_TRUE@@NATIVE_LINKER_TRUE@pie_copyrelocs_test_CXXFLAGS = -fno-exceptions -fno-asynchronous-unwind-tables
 @GCC_TRUE@@NATIVE_LINKER_TRUE@pie_copyrelocs_test_LDFLAGS = -Bgcctestdir/ -Wl,-R,. -pie
 @GCC_TRUE@@NATIVE_LINKER_TRUE@pie_copyrelocs_test_LDADD = pie_copyrelocs_shared_test.so
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@two_file_shared_1_nonpic_test_SOURCES = \
@@ -2716,11 +2732,9 @@ LDADD = libgoldtest.a ../libgold.a ../../libiberty/libiberty.a $(LIBINTL) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@ehdr_start_test_5_LDFLAGS = -Bgcctestdir/
 @GCC_TRUE@@NATIVE_LINKER_TRUE@ehdr_start_test_5_LDADD = 
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@exception_x86_64_bnd_test_SOURCES = exception_test_main.cc
-@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@exception_x86_64_bnd_test_DEPENDENCIES = exception_x86_64_bnd_1.o \
-@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@					 exception_x86_64_bnd_2.o
-
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@exception_x86_64_bnd_test_DEPENDENCIES = gcctestdir/ld exception_x86_64_bnd_1.o exception_x86_64_bnd_2.o
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@exception_x86_64_bnd_test_LDFLAGS = $(exception_test_LDFLAGS)
-@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@exception_x86_64_bnd_test_LDADD = $(exception_x86_64_bnd_test_DEPENDENCIES)
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@exception_x86_64_bnd_test_LDADD = exception_x86_64_bnd_1.o exception_x86_64_bnd_2.o
 @DEFAULT_TARGET_I386_TRUE@@NATIVE_OR_CROSS_LINKER_TRUE@SPLIT_DEFSYMS = --defsym __morestack=0x100 --defsym __morestack_non_split=0x200
 @DEFAULT_TARGET_X86_64_TRUE@@NATIVE_OR_CROSS_LINKER_TRUE@SPLIT_DEFSYMS = --defsym __morestack=0x100 --defsym __morestack_non_split=0x200
 all: $(BUILT_SOURCES)
@@ -3269,6 +3283,15 @@ pie_copyrelocs_test$(EXEEXT): $(pie_copyrelocs_test_OBJECTS) $(pie_copyrelocs_te
 @PLUGINS_FALSE@plugin_test_1$(EXEEXT): $(plugin_test_1_OBJECTS) $(plugin_test_1_DEPENDENCIES) 
 @PLUGINS_FALSE@	@rm -f plugin_test_1$(EXEEXT)
 @PLUGINS_FALSE@	$(LINK) $(plugin_test_1_OBJECTS) $(plugin_test_1_LDADD) $(LIBS)
+@GCC_FALSE@plugin_test_10$(EXEEXT): $(plugin_test_10_OBJECTS) $(plugin_test_10_DEPENDENCIES) 
+@GCC_FALSE@	@rm -f plugin_test_10$(EXEEXT)
+@GCC_FALSE@	$(LINK) $(plugin_test_10_OBJECTS) $(plugin_test_10_LDADD) $(LIBS)
+@NATIVE_LINKER_FALSE@plugin_test_10$(EXEEXT): $(plugin_test_10_OBJECTS) $(plugin_test_10_DEPENDENCIES) 
+@NATIVE_LINKER_FALSE@	@rm -f plugin_test_10$(EXEEXT)
+@NATIVE_LINKER_FALSE@	$(LINK) $(plugin_test_10_OBJECTS) $(plugin_test_10_LDADD) $(LIBS)
+@PLUGINS_FALSE@plugin_test_10$(EXEEXT): $(plugin_test_10_OBJECTS) $(plugin_test_10_DEPENDENCIES) 
+@PLUGINS_FALSE@	@rm -f plugin_test_10$(EXEEXT)
+@PLUGINS_FALSE@	$(LINK) $(plugin_test_10_OBJECTS) $(plugin_test_10_LDADD) $(LIBS)
 @GCC_FALSE@plugin_test_2$(EXEEXT): $(plugin_test_2_OBJECTS) $(plugin_test_2_DEPENDENCIES) 
 @GCC_FALSE@	@rm -f plugin_test_2$(EXEEXT)
 @GCC_FALSE@	$(LINK) $(plugin_test_2_OBJECTS) $(plugin_test_2_LDADD) $(LIBS)
@@ -3650,8 +3673,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/many_sections_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/object_unittest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/permission_test.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pie_copyrelocs_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pie_copyrelocs_test-pie_copyrelocs_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_10.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_4.Po@am__quote@
@@ -3809,6 +3833,20 @@ ehdr_start_test_5-ehdr_start_def.obj: ehdr_start_def.cc
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='ehdr_start_def.cc' object='ehdr_start_test_5-ehdr_start_def.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ehdr_start_test_5_CXXFLAGS) $(CXXFLAGS) -c -o ehdr_start_test_5-ehdr_start_def.obj `if test -f 'ehdr_start_def.cc'; then $(CYGPATH_W) 'ehdr_start_def.cc'; else $(CYGPATH_W) '$(srcdir)/ehdr_start_def.cc'; fi`
+
+pie_copyrelocs_test-pie_copyrelocs_test.o: pie_copyrelocs_test.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pie_copyrelocs_test_CXXFLAGS) $(CXXFLAGS) -MT pie_copyrelocs_test-pie_copyrelocs_test.o -MD -MP -MF $(DEPDIR)/pie_copyrelocs_test-pie_copyrelocs_test.Tpo -c -o pie_copyrelocs_test-pie_copyrelocs_test.o `test -f 'pie_copyrelocs_test.cc' || echo '$(srcdir)/'`pie_copyrelocs_test.cc
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/pie_copyrelocs_test-pie_copyrelocs_test.Tpo $(DEPDIR)/pie_copyrelocs_test-pie_copyrelocs_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='pie_copyrelocs_test.cc' object='pie_copyrelocs_test-pie_copyrelocs_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pie_copyrelocs_test_CXXFLAGS) $(CXXFLAGS) -c -o pie_copyrelocs_test-pie_copyrelocs_test.o `test -f 'pie_copyrelocs_test.cc' || echo '$(srcdir)/'`pie_copyrelocs_test.cc
+
+pie_copyrelocs_test-pie_copyrelocs_test.obj: pie_copyrelocs_test.cc
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pie_copyrelocs_test_CXXFLAGS) $(CXXFLAGS) -MT pie_copyrelocs_test-pie_copyrelocs_test.obj -MD -MP -MF $(DEPDIR)/pie_copyrelocs_test-pie_copyrelocs_test.Tpo -c -o pie_copyrelocs_test-pie_copyrelocs_test.obj `if test -f 'pie_copyrelocs_test.cc'; then $(CYGPATH_W) 'pie_copyrelocs_test.cc'; else $(CYGPATH_W) '$(srcdir)/pie_copyrelocs_test.cc'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/pie_copyrelocs_test-pie_copyrelocs_test.Tpo $(DEPDIR)/pie_copyrelocs_test-pie_copyrelocs_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='pie_copyrelocs_test.cc' object='pie_copyrelocs_test-pie_copyrelocs_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pie_copyrelocs_test_CXXFLAGS) $(CXXFLAGS) -c -o pie_copyrelocs_test-pie_copyrelocs_test.obj `if test -f 'pie_copyrelocs_test.cc'; then $(CYGPATH_W) 'pie_copyrelocs_test.cc'; else $(CYGPATH_W) '$(srcdir)/pie_copyrelocs_test.cc'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -4102,6 +4140,8 @@ plugin_test_6.sh.log: plugin_test_6.sh
 	@p='plugin_test_6.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 plugin_test_7.sh.log: plugin_test_7.sh
 	@p='plugin_test_7.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_10.sh.log: plugin_test_10.sh
+	@p='plugin_test_10.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 plugin_test_tls.sh.log: plugin_test_tls.sh
 	@p='plugin_test_tls.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 plugin_final_layout.sh.log: plugin_final_layout.sh
@@ -4132,6 +4172,8 @@ gdb_index_test_4.sh.log: gdb_index_test_4.sh
 	@p='gdb_index_test_4.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 ehdr_start_test_4.sh.log: ehdr_start_test_4.sh
 	@p='ehdr_start_test_4.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+defsym_test.sh.log: defsym_test.sh
+	@p='defsym_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 script_test_10.sh.log: script_test_10.sh
 	@p='script_test_10.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 split_i386.sh.log: split_i386.sh
@@ -4380,6 +4422,8 @@ plugin_test_7.log: plugin_test_7$(EXEEXT)
 	@p='plugin_test_7$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 plugin_test_8.log: plugin_test_8$(EXEEXT)
 	@p='plugin_test_8$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_10.log: plugin_test_10$(EXEEXT)
+	@p='plugin_test_10$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 plugin_test_tls.log: plugin_test_tls$(EXEEXT)
 	@p='plugin_test_tls$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
 exclude_libs_test.log: exclude_libs_test$(EXEEXT)
@@ -5317,6 +5361,10 @@ uninstall-am:
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	mv -f $@.tmp $@
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@two_file_test_1c.o: two_file_test_1.o
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	cp two_file_test_1.o $@
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_10: plugin_common_test_1.syms plugin_common_test_2.o  gcctestdir/ld plugin_test.so
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so" plugin_common_test_1.syms plugin_common_test_2.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_10.sections: plugin_test_10
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_READELF) -SW $< >$@ 2>/dev/null
 
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test.so: plugin_test.o
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(LINK) -Bgcctestdir/ -shared plugin_test.o
@@ -5600,6 +5648,12 @@ uninstall-am:
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,-Ttext=0x100100 $<
 @GCC_TRUE@@NATIVE_LINKER_TRUE@ehdr_start_test_4.o: ehdr_start_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -c -DEHDR_START_WEAK -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@defsym_test.syms: defsym_test
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_READELF) -sW $< > $@
+@GCC_TRUE@@NATIVE_LINKER_TRUE@defsym_test: defsym_test.o gcctestdir/ld
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(LINK) -Bgcctestdir/ -Wl,--defsym=bar=foo defsym_test.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@defsym_test.o: defsym_test.c
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(COMPILE) -c -o $@ $<
 
 # End-to-end incremental linking tests.
 # Incremental linking is currently supported only on the x86_64 target.

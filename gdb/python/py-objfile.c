@@ -22,6 +22,8 @@
 #include "charset.h"
 #include "objfiles.h"
 #include "language.h"
+#include "build-id.h"
+#include "elf-bfd.h"
 
 typedef struct
 {
@@ -29,6 +31,10 @@ typedef struct
 
   /* The corresponding objfile.  */
   struct objfile *objfile;
+
+  /* Dictionary holding user-added attributes.
+     This is the __dict__ attribute of the object.  */
+  PyObject *dict;
 
   /* The pretty-printer list of functions.  */
   PyObject *printers;
@@ -47,9 +53,21 @@ static PyTypeObject objfile_object_type
 
 static const struct objfile_data *objfpy_objfile_data_key;
 
+/* Require that OBJF be a valid objfile.  */
+#define OBJFPY_REQUIRE_VALID(obj)				\
+  do {								\
+    if (!(obj)->objfile)					\
+      {								\
+	PyErr_SetString (PyExc_RuntimeError,			\
+			 _("Objfile no longer exists."));	\
+	return NULL;						\
+      }								\
+  } while (0)
+
 
 
 /* An Objfile method which returns the objfile's file name, or None.  */
+
 static PyObject *
 objfpy_get_filename (PyObject *self, void *closure)
 {
@@ -62,16 +80,118 @@ objfpy_get_filename (PyObject *self, void *closure)
   Py_RETURN_NONE;
 }
 
+/* If SELF is a separate debug-info file, return the "backlink" field.
+   Otherwise return None.  */
+
+static PyObject *
+objfpy_get_owner (PyObject *self, void *closure)
+{
+  objfile_object *obj = (objfile_object *) self;
+  struct objfile *objfile = obj->objfile;
+  struct objfile *owner;
+
+  OBJFPY_REQUIRE_VALID (obj);
+
+  owner = objfile->separate_debug_objfile_backlink;
+  if (owner != NULL)
+    {
+      PyObject *result = objfile_to_objfile_object (owner);
+
+      Py_XINCREF (result);
+      return result;
+    }
+  Py_RETURN_NONE;
+}
+
+/* An Objfile method which returns the objfile's build id, or None.  */
+
+static PyObject *
+objfpy_get_build_id (PyObject *self, void *closure)
+{
+  objfile_object *obj = (objfile_object *) self;
+  struct objfile *objfile = obj->objfile;
+  const struct elf_build_id *build_id = NULL;
+  volatile struct gdb_exception except;
+
+  OBJFPY_REQUIRE_VALID (obj);
+
+  TRY_CATCH (except, RETURN_MASK_ALL)
+    {
+      build_id = build_id_bfd_get (objfile->obfd);
+    }
+  GDB_PY_HANDLE_EXCEPTION (except);
+
+  if (build_id != NULL)
+    {
+      char *hex_form = make_hex_string (build_id->data, build_id->size);
+      PyObject *result;
+
+      result = PyString_Decode (hex_form, strlen (hex_form),
+				host_charset (), NULL);
+      xfree (hex_form);
+      return result;
+    }
+
+  Py_RETURN_NONE;
+}
+
+/* An Objfile method which returns the objfile's progspace, or None.  */
+
+static PyObject *
+objfpy_get_progspace (PyObject *self, void *closure)
+{
+  objfile_object *obj = (objfile_object *) self;
+
+  if (obj->objfile)
+    {
+      PyObject *pspace =  pspace_to_pspace_object (obj->objfile->pspace);
+
+      Py_XINCREF (pspace);
+      return pspace;
+    }
+
+  Py_RETURN_NONE;
+}
+
 static void
 objfpy_dealloc (PyObject *o)
 {
   objfile_object *self = (objfile_object *) o;
 
+  Py_XDECREF (self->dict);
   Py_XDECREF (self->printers);
   Py_XDECREF (self->frame_filters);
   Py_XDECREF (self->type_printers);
   Py_XDECREF (self->xmethods);
   Py_TYPE (self)->tp_free (self);
+}
+
+/* Initialize an objfile_object.
+   The result is a boolean indicating success.  */
+
+static int
+objfpy_initialize (objfile_object *self)
+{
+  self->objfile = NULL;
+  self->dict = NULL;
+
+  self->printers = PyList_New (0);
+  if (self->printers == NULL)
+    return 0;
+
+  self->frame_filters = PyDict_New ();
+  if (self->frame_filters == NULL)
+    return 0;
+
+  self->type_printers = PyList_New (0);
+  if (self->type_printers == NULL)
+    return 0;
+
+  self->xmethods = PyList_New (0);
+  if (self->xmethods == NULL)
+    return 0;
+
+  return 1;
 }
 
 static PyObject *
@@ -81,36 +201,13 @@ objfpy_new (PyTypeObject *type, PyObject *args, PyObject *keywords)
 
   if (self)
     {
-      self->objfile = NULL;
-
-      self->printers = PyList_New (0);
-      if (!self->printers)
-	{
-	  Py_DECREF (self);
-	  return NULL;
-	}
-
-      self->frame_filters = PyDict_New ();
-      if (!self->frame_filters)
-	{
-	  Py_DECREF (self);
-	  return NULL;
-	}
-
-      self->type_printers = PyList_New (0);
-      if (!self->type_printers)
-	{
-	  Py_DECREF (self);
-	  return NULL;
-	}
-
-      self->xmethods = PyList_New (0);
-      if (self->xmethods == NULL)
+      if (!objfpy_initialize (self))
 	{
 	  Py_DECREF (self);
 	  return NULL;
 	}
     }
+
   return (PyObject *) self;
 }
 
@@ -260,6 +357,33 @@ objfpy_is_valid (PyObject *self, PyObject *args)
   Py_RETURN_TRUE;
 }
 
+/* Implementation of gdb.Objfile.add_separate_debug_file (self) -> Boolean.  */
+
+static PyObject *
+objfpy_add_separate_debug_file (PyObject *self, PyObject *args, PyObject *kw)
+{
+  static char *keywords[] = { "file_name", NULL };
+  objfile_object *obj = (objfile_object *) self;
+  const char *file_name;
+  int symfile_flags = 0;
+  volatile struct gdb_exception except;
+
+  OBJFPY_REQUIRE_VALID (obj);
+
+  if (!PyArg_ParseTupleAndKeywords (args, kw, "s", keywords, &file_name))
+    return NULL;
+
+  TRY_CATCH (except, RETURN_MASK_ALL)
+    {
+      bfd *abfd = symfile_bfd_open (file_name);
+
+      symbol_file_add_separate (abfd, file_name, symfile_flags, obj->objfile);
+    }
+  GDB_PY_HANDLE_EXCEPTION (except);
+
+  Py_RETURN_NONE;
+}
+
 
 
 /* Clear the OBJFILE pointer in an Objfile object and remove the
@@ -280,6 +404,7 @@ py_free_objfile (struct objfile *objfile, void *datum)
    representing OBJFILE.  If the object has already been created,
    return it.  Otherwise, create it.  Return NULL and set the Python
    error on failure.  */
+
 PyObject *
 objfile_to_objfile_object (struct objfile *objfile)
 {
@@ -291,36 +416,13 @@ objfile_to_objfile_object (struct objfile *objfile)
       object = PyObject_New (objfile_object, &objfile_object_type);
       if (object)
 	{
+	  if (!objfpy_initialize (object))
+	    {
+	      Py_DECREF (object);
+	      return NULL;
+	    }
+
 	  object->objfile = objfile;
-
-	  object->printers = PyList_New (0);
-	  if (!object->printers)
-	    {
-	      Py_DECREF (object);
-	      return NULL;
-	    }
-
-	  object->frame_filters = PyDict_New ();
-	  if (!object->frame_filters)
-	    {
-	      Py_DECREF (object);
-	      return NULL;
-	    }
-
-	  object->type_printers = PyList_New (0);
-	  if (!object->type_printers)
-	    {
-	      Py_DECREF (object);
-	      return NULL;
-	    }
-
-	  object->xmethods = PyList_New (0);
-	  if (object->xmethods == NULL)
-	    {
-	      Py_DECREF (object);
-	      return NULL;
-	    }
-
 	  set_objfile_data (objfile, objfpy_objfile_data_key, object);
 	}
     }
@@ -349,13 +451,27 @@ static PyMethodDef objfile_object_methods[] =
     "is_valid () -> Boolean.\n\
 Return true if this object file is valid, false if not." },
 
+  { "add_separate_debug_file", (PyCFunction) objfpy_add_separate_debug_file,
+    METH_VARARGS | METH_KEYWORDS,
+    "add_separate_debug_file (file_name).\n\
+Add FILE_NAME to the list of files containing debug info for the objfile." },
+
   { NULL }
 };
 
 static PyGetSetDef objfile_getset[] =
 {
+  { "__dict__", gdb_py_generic_dict, NULL,
+    "The __dict__ for this objfile.", &objfile_object_type },
   { "filename", objfpy_get_filename, NULL,
     "The objfile's filename, or None.", NULL },
+  { "owner", objfpy_get_owner, NULL,
+    "The objfile owner of separate debug info objfiles, or None.",
+    NULL },
+  { "build_id", objfpy_get_build_id, NULL,
+    "The objfile's build id, or None.", NULL },
+  { "progspace", objfpy_get_progspace, NULL,
+    "The objfile's progspace, or None.", NULL },
   { "pretty_printers", objfpy_get_printers, objfpy_set_printers,
     "Pretty printers.", NULL },
   { "frame_filters", objfpy_get_frame_filters,
@@ -403,7 +519,7 @@ static PyTypeObject objfile_object_type =
   0,				  /* tp_dict */
   0,				  /* tp_descr_get */
   0,				  /* tp_descr_set */
-  0,				  /* tp_dictoffset */
+  offsetof (objfile_object, dict), /* tp_dictoffset */
   0,				  /* tp_init */
   0,				  /* tp_alloc */
   objfpy_new,			  /* tp_new */

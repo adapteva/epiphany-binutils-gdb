@@ -101,7 +101,7 @@ DESCRIPTION
 |	TDEFAULTS = -DDEFAULT_VECTOR=host_aout_big_vec
 |	TDEPFILES= host-aout.o trad-core.o
 
-	in the @file{config/@var{XXX}.mt} file, and modify @file{configure.in}
+	in the @file{config/@var{XXX}.mt} file, and modify @file{configure.ac}
 	to use the
 	@file{@var{XXX}.mt} file (by setting "<<bfd_target=XXX>>") when your
 	configuration is selected.  */
@@ -793,11 +793,13 @@ NAME (aout, machine_type) (enum bfd_architecture arch,
 	case bfd_mach_mipsisa32r2:
 	case bfd_mach_mipsisa32r3:
 	case bfd_mach_mipsisa32r5:
+	case bfd_mach_mipsisa32r6:
 	case bfd_mach_mips5:
 	case bfd_mach_mipsisa64:
 	case bfd_mach_mipsisa64r2:
 	case bfd_mach_mipsisa64r3:
 	case bfd_mach_mipsisa64r5:
+	case bfd_mach_mipsisa64r6:
 	case bfd_mach_mips_sb1:
 	case bfd_mach_mips_xlr:
 	  /* FIXME: These should be MIPS3, MIPS4, MIPS16, MIPS32, etc.  */
@@ -1298,14 +1300,14 @@ aout_get_external_symbols (bfd *abfd)
     {
       bfd_size_type count;
       struct external_nlist *syms;
+      bfd_size_type amt = exec_hdr (abfd)->a_syms;
 
-      count = exec_hdr (abfd)->a_syms / EXTERNAL_NLIST_SIZE;
+      count = amt / EXTERNAL_NLIST_SIZE;
       if (count == 0)
 	return TRUE;		/* Nothing to do.  */
 
 #ifdef USE_MMAP
-      if (! bfd_get_file_window (abfd, obj_sym_filepos (abfd),
-				 exec_hdr (abfd)->a_syms,
+      if (! bfd_get_file_window (abfd, obj_sym_filepos (abfd), amt,
 				 &obj_aout_sym_window (abfd), TRUE))
 	return FALSE;
       syms = (struct external_nlist *) obj_aout_sym_window (abfd).data;
@@ -1313,20 +1315,16 @@ aout_get_external_symbols (bfd *abfd)
       /* We allocate using malloc to make the values easy to free
 	 later on.  If we put them on the objalloc it might not be
 	 possible to free them.  */
-      syms = (struct external_nlist *) bfd_malloc (count * EXTERNAL_NLIST_SIZE);
+      syms = (struct external_nlist *) bfd_malloc (amt);
       if (syms == NULL)
 	return FALSE;
 
-      {
-	bfd_size_type amt;
-	amt = exec_hdr (abfd)->a_syms;
-	if (bfd_seek (abfd, obj_sym_filepos (abfd), SEEK_SET) != 0
-	    || bfd_bread (syms, amt, abfd) != amt)
-	  {
-	    free (syms);
-	    return FALSE;
-	  }
-      }
+      if (bfd_seek (abfd, obj_sym_filepos (abfd), SEEK_SET) != 0
+	  || bfd_bread (syms, amt, abfd) != amt)
+	{
+	  free (syms);
+	  return FALSE;
+	}
 #endif
 
       obj_aout_external_syms (abfd) = syms;
@@ -2638,12 +2636,13 @@ NAME (aout, minisymbol_to_symbol) (bfd *abfd,
 
 bfd_boolean
 NAME (aout, find_nearest_line) (bfd *abfd,
-				asection *section,
 				asymbol **symbols,
+				asection *section,
 				bfd_vma offset,
 				const char **filename_ptr,
 				const char **functionname_ptr,
-				unsigned int *line_ptr)
+				unsigned int *line_ptr,
+				unsigned int *disriminator_ptr)
 {
   /* Run down the file looking for the filename, function and linenumber.  */
   asymbol **p;
@@ -2661,6 +2660,8 @@ NAME (aout, find_nearest_line) (bfd *abfd,
   *filename_ptr = abfd->filename;
   *functionname_ptr = 0;
   *line_ptr = 0;
+  if (disriminator_ptr)
+    *disriminator_ptr = 0;
 
   if (symbols != NULL)
     {
@@ -3404,6 +3405,8 @@ aout_link_check_ar_symbols (bfd *abfd,
 static bfd_boolean
 aout_link_check_archive_element (bfd *abfd,
 				 struct bfd_link_info *info,
+				 struct bfd_link_hash_entry *h ATTRIBUTE_UNUSED,
+				 const char *name ATTRIBUTE_UNUSED,
 				 bfd_boolean *pneeded)
 {
   bfd *oldbfd;
@@ -5309,7 +5312,7 @@ aout_link_input_bfd (struct aout_final_link_info *flaginfo, bfd *input_bfd)
 
 /* Do the final link step.  This is called on the output BFD.  The
    INFO structure should point to a list of BFDs linked through the
-   link_next field which can be used to find each BFD which takes part
+   link.next field which can be used to find each BFD which takes part
    in the output.  Also, each section in ABFD should point to a list
    of bfd_link_order structures which list all the input sections for
    the output section.  */
@@ -5356,7 +5359,7 @@ NAME (aout, final_link) (bfd *abfd,
   max_contents_size = 0;
   max_relocs_size = 0;
   max_sym_count = 0;
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link_next)
+  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
     {
       bfd_size_type sz;
 
@@ -5495,7 +5498,7 @@ NAME (aout, final_link) (bfd *abfd,
 
      We use the output_has_begun field of the input BFDs to see
      whether we have already handled it.  */
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link_next)
+  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
     sub->output_has_begun = FALSE;
 
   /* Mark all sections which are to be included in the link.  This

@@ -27,6 +27,7 @@ if {$tool == ""} {
 
 load_lib libgloss.exp
 load_lib cache.exp
+load_lib gdb-utils.exp
 
 global GDB
 
@@ -63,11 +64,16 @@ if ![info exists INTERNAL_GDBFLAGS] {
 }
 
 # The variable gdb_prompt is a regexp which matches the gdb prompt.
-# Set it if it is not already set.
+# Set it if it is not already set.  This is also set by default_gdb_init
+# but it's not clear what removing one of them will break.
+# See with_gdb_prompt for more details on prompt handling.
 global gdb_prompt
 if ![info exists gdb_prompt] then {
-    set gdb_prompt "\[(\]gdb\[)\]"
+    set gdb_prompt "\\(gdb\\)"
 }
+
+# A regexp that matches the pagination prompt.
+set pagination_prompt [string_to_regexp "---Type <return> to continue, or q <return> to quit---"]
 
 # The variable fullname_syntax_POSIX is a regexp which matches a POSIX 
 # absolute path ie. /foo/ 
@@ -209,8 +215,8 @@ proc delete_breakpoints {} {
 proc gdb_run_cmd {args} {
     global gdb_prompt use_gdb_stub
 
-    if [target_info exists gdb_init_command] {
-	send_gdb "[target_info gdb_init_command]\n"
+    foreach command [gdb_init_commands] {
+	send_gdb "$command\n"
 	gdb_expect 30 {
 	    -re "$gdb_prompt $" { }
 	    default {
@@ -311,8 +317,8 @@ proc gdb_run_cmd {args} {
 proc gdb_start_cmd {args} {
     global gdb_prompt use_gdb_stub
 
-    if [target_info exists gdb_init_command] {
-	send_gdb "[target_info gdb_init_command]\n"
+    foreach command [gdb_init_commands] {
+	send_gdb "$command\n"
 	gdb_expect 30 {
 	    -re "$gdb_prompt $" { }
 	    default {
@@ -645,7 +651,7 @@ proc gdb_internal_error_resync {} {
 #
 proc gdb_test_multiple { command message user_code } {
     global verbose use_gdb_stub
-    global gdb_prompt
+    global gdb_prompt pagination_prompt
     global GDB
     global inferior_exited_re
     upvar timeout timeout
@@ -788,21 +794,6 @@ proc gdb_test_multiple { command message user_code } {
 	}
     }
 
-    if [target_info exists gdb,timeout] {
-	set tmt [target_info gdb,timeout]
-    } else {
-	if [info exists timeout] {
-	    set tmt $timeout
-	} else {
-	    global timeout
-	    if [info exists timeout] {
-		set tmt $timeout
-	    } else {
-		set tmt 60
-	    }
-	}
-    }
-
     set code {
 	-re ".*A problem internal to GDB has been detected" {
 	    fail "$message (GDB internal error)"
@@ -869,7 +860,7 @@ proc gdb_test_multiple { command message user_code } {
 	    }
 	    set result 1
 	}
-	"<return>" {
+	-re "$pagination_prompt" {
 	    send_gdb "\n"
 	    perror "Window too small."
 	    fail "$message"
@@ -908,7 +899,7 @@ proc gdb_test_multiple { command message user_code } {
     }
 
     set result 0
-    set code [catch {gdb_expect $tmt $code} string]
+    set code [catch {gdb_expect $code} string]
     if {$code == 1} {
 	global errorInfo errorCode
 	return -code error -errorinfo $errorInfo -errorcode $errorCode $string
@@ -1105,14 +1096,6 @@ proc test_print_reject { args } {
     }
 }
 
-# Given an input string, adds backslashes as needed to create a
-# regexp that will match the string.
-
-proc string_to_regexp {str} {
-    set result $str
-    regsub -all {[]*+.|()^$\[\\]} $str {\\&} result
-    return $result
-}
 
 # Same as gdb_test, but the second parameter is not a regexp,
 # but a string that must match exactly.
@@ -1204,6 +1187,27 @@ proc gdb_test_list_exact { cmd name elm_find_regexp elm_extract_regexp result_ma
     }
 }
 
+
+# Issue a PASS and return true if evaluating CONDITION in the caller's
+# frame returns true, and issue a FAIL and return false otherwise.
+# MESSAGE is the pass/fail message to be printed.  If MESSAGE is
+# omitted or is empty, then the pass/fail messages use the condition
+# string as the message.
+
+proc gdb_assert { condition {message ""} } {
+    if { $message == ""} {
+	set message $condition
+    }
+
+    set res [uplevel 1 expr $condition]
+    if {!$res} {
+	fail $message
+    } else {
+	pass $message
+    }
+    return $res
+}
+
 proc gdb_reinitialize_dir { subdir } {
     global gdb_prompt
 
@@ -1404,19 +1408,12 @@ proc gdb_file_cmd { arg } {
     }
 }
 
-#
-# start gdb -- start gdb running, default procedure
-#
-# When running over NFS, particularly if running many simultaneous
-# tests on different hosts all using the same server, things can
-# get really slow.  Give gdb at least 3 minutes to start up.
-#
-proc default_gdb_start { } {
-    global verbose use_gdb_stub
+# Default gdb_spawn procedure.
+
+proc default_gdb_spawn { } {
+    global use_gdb_stub
     global GDB
     global INTERNAL_GDBFLAGS GDBFLAGS
-    global gdb_prompt
-    global timeout
     global gdb_spawn_id
 
     gdb_stop_suppressing_tests
@@ -1447,21 +1444,45 @@ proc default_gdb_start { } {
 	perror "Spawning $GDB failed."
 	return 1
     }
+    set gdb_spawn_id -1
+    return 0
+}
+
+# Default gdb_start procedure.
+
+proc default_gdb_start { } {
+    global gdb_prompt
+    global gdb_spawn_id
+
+    if [info exists gdb_spawn_id] {
+	return 0
+    }
+
+    set res [gdb_spawn]
+    if { $res != 0} {
+	return $res
+    }
+
+    # When running over NFS, particularly if running many simultaneous
+    # tests on different hosts all using the same server, things can
+    # get really slow.  Give gdb at least 3 minutes to start up.
     gdb_expect 360 {
 	-re "\[\r\n\]$gdb_prompt $" {
 	    verbose "GDB initialized."
 	}
 	-re "$gdb_prompt $"	{
 	    perror "GDB never initialized."
+	    unset gdb_spawn_id
 	    return -1
 	}
 	timeout	{
 	    perror "(timeout) GDB never initialized after 10 seconds."
 	    remote_close host
+	    unset gdb_spawn_id
 	    return -1
 	}
     }
-    set gdb_spawn_id -1
+
     # force the height to "unlimited", so no pagers get used
 
     send_gdb "set height 0\n"
@@ -1719,17 +1740,42 @@ proc with_test_prefix { prefix body } {
 # PROMPT.  When BODY is finished, restore GDB prompt and variable
 # $gdb_prompt.
 # Returns the result of BODY.
+#
+# Notes:
+#
+# 1) If you want to use, for example, "(foo)" as the prompt you must pass it
+# as "(foo)", and not the regexp form "\(foo\)" (expressed as "\\(foo\\)" in
+# TCL).  PROMPT is internally converted to a suitable regexp for matching.
+# We do the conversion from "(foo)" to "\(foo\)" here for a few reasons:
+#   a) It's more intuitive for callers to pass the plain text form.
+#   b) We need two forms of the prompt:
+#      - a regexp to use in output matching,
+#      - a value to pass to the "set prompt" command.
+#   c) It's easier to convert the plain text form to its regexp form.
+#
+# 2) Don't add a trailing space, we do that here.
 
 proc with_gdb_prompt { prompt body } {
     global gdb_prompt
 
+    # Convert "(foo)" to "\(foo\)".
+    # We don't use string_to_regexp because while it works today it's not
+    # clear it will work tomorrow: the value we need must work as both a
+    # regexp *and* as the argument to the "set prompt" command, at least until
+    # we start recording both forms separately instead of just $gdb_prompt.
+    # The testsuite is pretty-much hardwired to interpret $gdb_prompt as the
+    # regexp form.
+    regsub -all {[]*+.|()^$\[\\]} $prompt {\\&} prompt
+
     set saved $gdb_prompt
 
+    verbose -log "Setting gdb prompt to \"$prompt \"."
     set gdb_prompt $prompt
     gdb_test_no_output "set prompt $prompt " ""
 
     set code [catch {uplevel 1 $body} result]
 
+    verbose -log "Restoring gdb prompt to \"$saved \"."
     set gdb_prompt $saved
     gdb_test_no_output "set prompt $saved " ""
 
@@ -1910,6 +1956,24 @@ gdb_caching_proc is_elf_target {
 
     verbose "$me:  returning 1" 2
     return 1
+}
+
+# Return 1 if the memory at address zero is readable.
+
+gdb_caching_proc is_address_zero_readable {
+    global gdb_prompt
+
+    set ret 0
+    gdb_test_multiple "x 0" "" {
+	-re "Cannot access memory at address 0x0.*$gdb_prompt $" {
+	    set ret 0
+	}
+	-re ".*$gdb_prompt $" {
+	    set ret 1
+	}
+    }
+
+    return $ret
 }
 
 # Produce source file NAME and write SOURCES into it.
@@ -2473,6 +2537,31 @@ proc gdb_is_target_remote {} {
     return 0
 }
 
+# Return 1 if the current remote target is an instance of our GDBserver, 0
+# otherwise.  Return -1 if there was an error and we can't tell.
+
+gdb_caching_proc target_is_gdbserver {
+    global gdb_prompt
+
+    set is_gdbserver -1
+    set test "Probing for GDBserver"
+
+    gdb_test_multiple "monitor help" $test {
+	-re "The following monitor commands are supported.*Quit GDBserver.*$gdb_prompt $" {
+	    set is_gdbserver 1
+	}
+	-re "$gdb_prompt $" {
+	    set is_gdbserver 0
+	}
+    }
+
+    if { $is_gdbserver == -1 } {
+	verbose -log "Unable to tell whether we are using GDBserver or not."
+    }
+
+    return $is_gdbserver
+}
+
 set compiler_info		"unknown"
 set gcc_compiled		0
 set hp_cc_compiler		0
@@ -2499,8 +2588,8 @@ set hp_aCC_compiler		0
 #   if the build machine is the same as the host machine, which is
 #   usually true of the targets which are not gcc.  But this code does
 #   not figure which compiler to call, and it always ends up using the C
-#   compiler.  Not good for setting hp_aCC_compiler.  Targets
-#   hppa*-*-hpux* and mips*-*-irix* used to do this.
+#   compiler.  Not good for setting hp_aCC_compiler.  Target
+#   hppa*-*-hpux* used to do this.
 #
 # [ gdb_compile -E $ifile > $binfile.ci ]
 # source $binfile.ci
@@ -2745,10 +2834,6 @@ proc gdb_compile {source dest type options} {
     }
     set options $new_options
 
-    if [target_info exists is_vxworks] {
-	set options2 { "additional_flags=-Dvxworks" }
-	set options [concat $options2 $options]
-    }
     if [info exists GDB_TESTCASE_OPTIONS] {
 	lappend options "additional_flags=$GDB_TESTCASE_OPTIONS"
     }
@@ -2895,6 +2980,12 @@ proc gdb_compile_shlib {sources dest options} {
         "xlc-*" {
             lappend obj_options "additional_flags=-qpic"
         }
+	"clang-*" {
+	    if { !([istarget "*-*-cygwin*"]
+		   || [istarget "*-*-mingw*"]) } {
+		lappend obj_options "additional_flags=-fpic"
+	    }
+	}
         "gcc-*" {
             if { !([istarget "powerpc*-*-aix*"]
                    || [istarget "rs6000*-*-aix*"]
@@ -2909,10 +3000,6 @@ proc gdb_compile_shlib {sources dest options} {
                 "hppa*-hp-hpux*" {
                     lappend obj_options "additional_flags=+z"
                 }
-                "mips-sgi-irix*" {
-                    # Disable SGI compiler's implicit -Dsgi
-                    lappend obj_options "additional_flags=-Usgi"
-                } 
                 default {
                     # don't know what the compiler is...
                 }
@@ -3069,35 +3156,27 @@ proc gdb_expect { args } {
 	set expcode $args
     }
 
+    # A timeout argument takes precedence, otherwise of all the timeouts
+    # select the largest.
+    upvar #0 timeout gtimeout
     upvar timeout timeout
-
-    if [target_info exists gdb,timeout] {
-	if [info exists timeout] {
-	    if { $timeout < [target_info gdb,timeout] } {
-		set gtimeout [target_info gdb,timeout]
-	    } else {
-		set gtimeout $timeout
-	    }
-	} else {
-	    set gtimeout [target_info gdb,timeout]
-	}
-    }
-
-    if ![info exists gtimeout] {
-	global timeout
-	if [info exists timeout] {
-	    set gtimeout $timeout
-	}
-    }
-
     if [info exists atimeout] {
-	if { ![info exists gtimeout] || $gtimeout < $atimeout } {
-	    set gtimeout $atimeout
-	}
+	set tmt $atimeout
     } else {
-	if ![info exists gtimeout] {
+	set tmt 0
+	if [info exists timeout] {
+	    set tmt $timeout
+	}
+	if { [info exists gtimeout] && $gtimeout > $tmt } {
+	    set tmt $gtimeout
+	}
+	if { [target_info exists gdb,timeout]
+	     && [target_info gdb,timeout] > $tmt } {
+	    set tmt [target_info gdb,timeout]
+	}
+	if { $tmt == 0 } {
 	    # Eeeeew.
-	    set gtimeout 60
+	    set tmt 60
 	}
     }
 
@@ -3112,7 +3191,7 @@ proc gdb_expect { args } {
 	}
     }
     set code [catch \
-	{uplevel remote_expect host $gtimeout $expcode} string]
+	{uplevel remote_expect host $tmt $expcode} string]
     if [info exists old_val] {
 	set remote_suppress_flag $old_val
     } else {
@@ -3264,12 +3343,70 @@ proc gdb_clear_suppressed { } {
     set suppress_flag 0
 }
 
+# Spawn the gdb process.
+#
+# This doesn't expect any output or do any other initialization,
+# leaving those to the caller.
+#
+# Overridable function -- you can override this function in your
+# baseboard file.
+
+proc gdb_spawn { } {
+    default_gdb_spawn
+}
+
+# Spawn GDB with CMDLINE_FLAGS appended to the GDBFLAGS global.
+
+proc gdb_spawn_with_cmdline_opts { cmdline_flags } {
+    global GDBFLAGS
+
+    set saved_gdbflags $GDBFLAGS
+
+    append GDBFLAGS $cmdline_flags
+
+    set res [gdb_spawn]
+
+    set GDBFLAGS $saved_gdbflags
+
+    return $res
+}
+
+# Start gdb running, wait for prompt, and disable the pagers.
+
+# Overridable function -- you can override this function in your
+# baseboard file.
+
 proc gdb_start { } {
     default_gdb_start
 }
 
 proc gdb_exit { } {
     catch default_gdb_exit
+}
+
+# Start a set of programs running and then wait for a bit, to be sure
+# that they can be attached to.  Return a list of the processes' PIDs.
+
+proc spawn_wait_for_attach { executable_list } {
+    set pid_list {}
+
+    foreach {executable} $executable_list {
+	lappend pid_list [eval exec $executable &]
+    }
+
+    sleep 2
+
+    if { [istarget "*-*-cygwin*"] } {
+	for {set i 0} {$i < [llength $pid_list]} {incr i} {
+	    # testpid is the Cygwin PID, GDB uses the Windows PID,
+	    # which might be different due to the way fork/exec works.
+	    set testpid [lindex $pid_list $i]
+	    set testpid [ exec ps -e | gawk "{ if (\$1 == $testpid) print \$4; }" ]
+	    set pid_list [lreplace $pid_list $i $i $testpid]
+	}
+    }
+
+    return $pid_list
 }
 
 #
@@ -3332,12 +3469,6 @@ proc gdb_gcore_cmd {core test} {
 	    pass $test
 	    set result 1
 	}
-
-	-re "Undefined command.*$gdb_prompt $" {
-	    unsupported $test
-	    verbose -log "'gcore' command undefined in gdb_gcore_cmd"
-	}
-
 	-re "(?:Can't create a corefile|Target does not support core file generation\\.)\[\r\n\]+$gdb_prompt $" {
 	    unsupported $test
 	}
@@ -4096,9 +4227,11 @@ gdb_caching_proc gdb_skip_xml_test {
     global gdb_prompt
     global srcdir
 
+    set xml_file [gdb_remote_download host "${srcdir}/gdb.xml/trivial.xml"]
+
     gdb_start
     set xml_missing 0
-    gdb_test_multiple "set tdesc filename ${srcdir}/gdb.xml/trivial.xml" "" {
+    gdb_test_multiple "set tdesc filename $xml_file" "" {
 	-re ".*XML support was disabled at compile time.*$gdb_prompt $" {
 	    set xml_missing 1
 	}
@@ -4106,6 +4239,104 @@ gdb_caching_proc gdb_skip_xml_test {
     }
     gdb_exit
     return $xml_missing
+}
+
+# Return true if argv[0] is available.
+
+gdb_caching_proc gdb_has_argv0 {
+    set result 0
+
+    # Set up, compile, and execute a test program to check whether
+    # argv[0] is available.
+    set src [standard_temp_file has_argv0[pid].c]
+    set exe [standard_temp_file has_argv0[pid].x]
+
+    gdb_produce_source $src {
+	int main (int argc, char **argv) {
+	    return 0;
+	}
+    }
+
+    gdb_compile $src $exe executable {debug}
+
+    # Helper proc.
+    proc gdb_has_argv0_1 { exe } {
+	global srcdir subdir
+	global gdb_prompt hex
+
+	gdb_exit
+	gdb_start
+	gdb_reinitialize_dir $srcdir/$subdir
+	gdb_load "$exe"
+
+	# Set breakpoint on main.
+	gdb_test_multiple "break main" "break main" {
+	    -re "Breakpoint.*${gdb_prompt} $" {
+	    }
+	    -re "${gdb_prompt} $" {
+		return 0
+	    }
+	}
+
+	# Run to main.
+	gdb_run_cmd
+	gdb_test_multiple "" "run to main" {
+	    -re "Breakpoint.*${gdb_prompt} $" {
+	    }
+	    -re "${gdb_prompt} $" {
+		return 0
+	    }
+	}
+
+	# Check whether argc is 1.
+	gdb_test_multiple "p argc" "p argc" {
+	    -re " = 1\r\n${gdb_prompt} $" {
+
+		gdb_test_multiple "p argv\[0\]" "p argv\[0\]" {
+		    -re " = $hex \".*[file tail $exe]\"\r\n${gdb_prompt} $" {
+			return 1
+		    }
+		    -re "${gdb_prompt} $" {
+			return 0
+		    }
+		}
+	    }
+	    -re "${gdb_prompt} $" {
+		return 0
+	    }
+	}
+	return 0
+    }
+
+    set result [gdb_has_argv0_1 $exe]
+
+    gdb_exit
+    file delete $src
+    file delete $exe
+
+    if { !$result
+      && ([istarget *-*-linux*]
+	  || [istarget *-*-freebsd*] || [istarget *-*-kfreebsd*]
+	  || [istarget *-*-netbsd*] || [istarget *-*-knetbsd*]
+	  || [istarget *-*-openbsd*]
+	  || [istarget *-*-darwin*]
+	  || [istarget *-*-solaris*]
+	  || [istarget *-*-aix*]
+	  || [istarget *-*-gnu*]
+	  || [istarget *-*-cygwin*] || [istarget *-*-mingw32*]
+	  || [istarget *-*-*djgpp*] || [istarget *-*-go32*]
+	  || [istarget *-wince-pe] || [istarget *-*-mingw32ce*]
+	  || [istarget *-*-symbianelf*]
+	  || [istarget *-*-osf*]
+	  || [istarget *-*-hpux*]
+	  || [istarget *-*-dicos*]
+	  || [istarget *-*-nto*]
+	  || [istarget *-*-*vms*]
+	  || [istarget *-*-lynx*178]) } {
+	fail "argv\[0\] should be available on this target"
+    }
+
+    return $result
 }
 
 # Note: the procedure gdb_gnu_strip_debug will produce an executable called
@@ -4124,14 +4355,14 @@ gdb_caching_proc gdb_skip_xml_test {
 # foo.debug --> foo's debug info
 # foo --> like foo, but with a new .gnu_debuglink section pointing to foo.debug.
 
-# Return the build-id hex string (usually 160 bits as 40 hex characters)
-# converted to the form: .build-id/ab/cdef1234...89.debug
-# Return "" if no build-id found.
-proc build_id_debug_filename_get { exec } {
-    set tmp [standard_output_file "${exec}-tmp"]
+# Fetch the build id from the file.
+# Returns "" if there is none.
+
+proc get_build_id { filename } {
+    set tmp [standard_output_file "${filename}-tmp"]
     set objcopy_program [gdb_find_objcopy]
 
-    set result [catch "exec $objcopy_program -j .note.gnu.build-id -O binary $exec $tmp" output]
+    set result [catch "exec $objcopy_program -j .note.gnu.build-id -O binary $filename $tmp" output]
     verbose "result is $result"
     verbose "output is $output"
     if {$result == 1} {
@@ -4149,6 +4380,17 @@ proc build_id_debug_filename_get { exec } {
     }
     # Convert it to hex.
     binary scan $data H* data
+    return $data
+}
+
+# Return the build-id hex string (usually 160 bits as 40 hex characters)
+# converted to the form: .build-id/ab/cdef1234...89.debug
+# Return "" if no build-id found.
+proc build_id_debug_filename_get { filename } {
+    set data [get_build_id $filename]
+    if { $data == "" } {
+	return ""
+    }
     regsub {^..} $data {\0/} data
     return ".build-id/${data}.debug"
 }

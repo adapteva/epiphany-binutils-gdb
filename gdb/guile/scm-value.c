@@ -24,7 +24,6 @@
 #include "arch-utils.h"
 #include "charset.h"
 #include "cp-abi.h"
-#include "gdb_assert.h"
 #include "infcall.h"
 #include "symtab.h" /* Needed by language.h.  */
 #include "language.h"
@@ -566,7 +565,7 @@ gdbscm_value_dynamic_type (SCM self)
 
       if (((TYPE_CODE (type) == TYPE_CODE_PTR)
 	   || (TYPE_CODE (type) == TYPE_CODE_REF))
-	  && (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_CLASS))
+	  && (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_STRUCT))
 	{
 	  struct value *target;
 	  int was_pointer = TYPE_CODE (type) == TYPE_CODE_PTR;
@@ -585,7 +584,7 @@ gdbscm_value_dynamic_type (SCM self)
 		type = lookup_reference_type (type);
 	    }
 	}
-      else if (TYPE_CODE (type) == TYPE_CODE_CLASS)
+      else if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
 	type = value_rtti_type (value, NULL, NULL, NULL);
       else
 	{

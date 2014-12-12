@@ -424,9 +424,10 @@ elf64_sparc_add_symbol_hook (bfd *abfd, struct bfd_link_info *info,
 {
   static const char *const stt_types[] = { "NOTYPE", "OBJECT", "FUNCTION" };
 
-  if ((abfd->flags & DYNAMIC) == 0
-      && (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
-	  || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE))
+  if ((ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+       || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE)
+      && (abfd->flags & DYNAMIC) == 0
+      && bfd_get_flavour (info->output_bfd) == bfd_target_elf_flavour)
     elf_tdata (info->output_bfd)->has_gnu_symbols = TRUE;
 
   if (ELF_ST_TYPE (sym->st_info) == STT_REGISTER)
@@ -864,8 +865,6 @@ const struct elf_size_info elf64_sparc_size_info =
   _bfd_sparc_elf_plt_sym_val
 #define bfd_elf64_bfd_link_hash_table_create \
   _bfd_sparc_elf_link_hash_table_create
-#define bfd_elf64_bfd_link_hash_table_free \
-  _bfd_sparc_elf_link_hash_table_free
 #define elf_info_to_howto \
   _bfd_sparc_elf_info_to_howto
 #define elf_backend_copy_indirect_symbol \

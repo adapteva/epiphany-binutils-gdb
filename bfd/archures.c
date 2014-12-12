@@ -179,15 +179,18 @@ DESCRIPTION
 .#define bfd_mach_mips_octeon		6501
 .#define bfd_mach_mips_octeonp		6601
 .#define bfd_mach_mips_octeon2		6502
+.#define bfd_mach_mips_octeon3          6503
 .#define bfd_mach_mips_xlr              887682   {* decimal 'XLR'  *}
 .#define bfd_mach_mipsisa32             32
 .#define bfd_mach_mipsisa32r2           33
 .#define bfd_mach_mipsisa32r3           34
 .#define bfd_mach_mipsisa32r5           36
+.#define bfd_mach_mipsisa32r6           37
 .#define bfd_mach_mipsisa64             64
 .#define bfd_mach_mipsisa64r2           65
 .#define bfd_mach_mipsisa64r3           66
 .#define bfd_mach_mipsisa64r5           68
+.#define bfd_mach_mipsisa64r6           69
 .#define bfd_mach_mips_micromips        96
 .  bfd_arch_i386,      {* Intel 386 *}
 .#define bfd_mach_i386_intel_syntax	(1 << 0)
@@ -410,6 +413,7 @@ DESCRIPTION
 .#define bfd_mach_avr5		5
 .#define bfd_mach_avr51		51
 .#define bfd_mach_avr6		6
+.#define bfd_mach_avrtiny   100
 .#define bfd_mach_avrxmega1 101
 .#define bfd_mach_avrxmega2 102
 .#define bfd_mach_avrxmega3 103
@@ -493,6 +497,8 @@ DESCRIPTION
 .#define bfd_mach_aarch64_ilp32	32
 .  bfd_arch_nios2,
 .#define bfd_mach_nios2	0
+.  bfd_arch_visium,	{* Visium *}
+.#define bfd_mach_visium	1
 .  bfd_arch_last
 .  };
 */
@@ -612,6 +618,7 @@ extern const bfd_arch_info_type bfd_tilepro_arch;
 extern const bfd_arch_info_type bfd_v850_arch;
 extern const bfd_arch_info_type bfd_v850_rh850_arch;
 extern const bfd_arch_info_type bfd_vax_arch;
+extern const bfd_arch_info_type bfd_visium_arch;
 extern const bfd_arch_info_type bfd_w65_arch;
 extern const bfd_arch_info_type bfd_we32k_arch;
 extern const bfd_arch_info_type bfd_xstormy16_arch;
@@ -698,6 +705,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_v850_arch,
     &bfd_v850_rh850_arch,
     &bfd_vax_arch,
+    &bfd_visium_arch,
     &bfd_w65_arch,
     &bfd_we32k_arch,
     &bfd_xstormy16_arch,

@@ -85,7 +85,7 @@
 
 #include <fcntl.h>
 
-#include "i386-nat.h"
+#include "x86-nat.h"
 #include "inferior.h"
 #include "infrun.h"
 #include "gdbthread.h"
@@ -97,18 +97,14 @@
 #include "buildsym.h"
 #include "i387-tdep.h"
 #include "i386-tdep.h"
-#include "i386-cpuid.h"
+#include "nat/x86-cpuid.h"
 #include "value.h"
 #include "regcache.h"
-#include <string.h>
 #include "top.h"
 #include "cli/cli-utils.h"
 #include "inf-child.h"
 
-#include <stdio.h>		/* might be required for __DJGPP_MINOR__ */
-#include <stdlib.h>
 #include <ctype.h>
-#include <errno.h>
 #include <unistd.h>
 #include <sys/utsname.h>
 #include <io.h>
@@ -642,6 +638,7 @@ go32_create_inferior (struct target_ops *ops, char *exec_file,
   char **env_save = environ;
   size_t cmdlen;
   struct inferior *inf;
+  int result;
 
   /* If no exec file handed to us, get it from the exec-file command -- with
      a good, common error message if none is specified.  */
@@ -693,14 +690,13 @@ go32_create_inferior (struct target_ops *ops, char *exec_file,
 
   environ = env;
 
-  if (v2loadimage (exec_file, cmdline, start_state))
-    {
-      environ = env_save;
-      printf_unfiltered ("Load failed for image %s\n", exec_file);
-      exit (1);
-    }
+  result = v2loadimage (exec_file, cmdline, start_state);
+
   environ = env_save;
   xfree (cmdline);
+
+  if (result != 0)
+    error (_("Load failed for image %s"), exec_file);
 
   edi_init (start_state);
 #if __DJGPP_MINOR__ < 3
@@ -716,7 +712,7 @@ go32_create_inferior (struct target_ops *ops, char *exec_file,
 
   add_thread_silent (inferior_ptid);
 
-  clear_proceed_status ();
+  clear_proceed_status (0);
   insert_breakpoints ();
   prog_has_started = 1;
 }
@@ -739,7 +735,7 @@ go32_mourn_inferior (struct target_ops *ops)
      be nice if GDB itself would take care to remove all breakpoints
      at all times, but it doesn't, probably under an assumption that
      the OS cleans up when the debuggee exits.  */
-  i386_cleanup_dregs ();
+  x86_cleanup_dregs ();
 
   ptid = inferior_ptid;
   inferior_ptid = null_ptid;
@@ -1087,12 +1083,12 @@ go32_sysinfo (char *arg, int from_tty)
     {
       /* CPUID with EAX = 0 returns the Vendor ID.  */
 #if 0
-      /* Ideally we would use i386_cpuid(), but it needs someone to run
+      /* Ideally we would use x86_cpuid(), but it needs someone to run
          native tests first to make sure things actually work.  They should.
          http://sourceware.org/ml/gdb-patches/2013-05/msg00164.html  */
       unsigned int eax, ebx, ecx, edx;
 
-      if (i386_cpuid (0, &eax, &ebx, &ecx, &edx))
+      if (x86_cpuid (0, &eax, &ebx, &ecx, &edx))
 	{
 	  cpuid_max = eax;
 	  memcpy (&vendor[0], &ebx, 4);
@@ -1145,7 +1141,7 @@ go32_sysinfo (char *arg, int from_tty)
 
 #if 0
       /* See comment above about cpuid usage.  */
-      i386_cpuid (1, &cpuid_eax, &cpuid_ebx, NULL, &cpuid_edx);
+      x86_cpuid (1, &cpuid_eax, &cpuid_ebx, NULL, &cpuid_edx);
 #else
       __asm__ __volatile__ ("movl   $1, %%eax;"
 			    "cpuid;"
@@ -2066,14 +2062,14 @@ _initialize_go32_nat (void)
 {
   struct target_ops *t = go32_target ();
 
-  i386_dr_low.set_control = go32_set_dr7;
-  i386_dr_low.set_addr = go32_set_dr;
-  i386_dr_low.get_status = go32_get_dr6;
-  i386_dr_low.get_control = go32_get_dr7;
-  i386_dr_low.get_addr = go32_get_dr;
-  i386_set_debug_register_length (4);
+  x86_dr_low.set_control = go32_set_dr7;
+  x86_dr_low.set_addr = go32_set_dr;
+  x86_dr_low.get_status = go32_get_dr6;
+  x86_dr_low.get_control = go32_get_dr7;
+  x86_dr_low.get_addr = go32_get_dr;
+  x86_set_debug_register_length (4);
 
-  i386_use_watchpoints (t);
+  x86_use_watchpoints (t);
   add_target (t);
 
   /* Initialize child's cwd as empty to be initialized when starting

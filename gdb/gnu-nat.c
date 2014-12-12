@@ -23,12 +23,9 @@
 #include "defs.h"
 
 #include <ctype.h>
-#include <errno.h>
 #include <limits.h>
 #include <setjmp.h>
 #include <signal.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/ptrace.h>
 
 #include <mach.h>
@@ -61,7 +58,6 @@
 #include "gdbcmd.h"
 #include "gdbcore.h"
 #include "gdbthread.h"
-#include "gdb_assert.h"
 #include "gdb_obstack.h"
 
 #include "gnu-nat.h"
@@ -808,7 +804,8 @@ inf_validate_procinfo (struct inf *inf)
       inf->nomsg = !!(pi->state & PI_NOMSG);
       if (inf->nomsg)
 	inf->traced = !!(pi->state & PI_TRACED);
-      vm_deallocate (mach_task_self (), (vm_address_t) pi, pi_len);
+      vm_deallocate (mach_task_self (), (vm_address_t) pi,
+		     pi_len * sizeof (*(procinfo_t) 0));
       if (noise_len > 0)
 	vm_deallocate (mach_task_self (), (vm_address_t) noise, noise_len);
     }
@@ -848,9 +845,10 @@ inf_validate_task_sc (struct inf *inf)
 
   suspend_count = pi->taskinfo.suspend_count;
 
-  vm_deallocate (mach_task_self (), (vm_address_t) pi, pi_len);
+  vm_deallocate (mach_task_self (), (vm_address_t) pi,
+		 pi_len * sizeof (*(procinfo_t) 0));
   if (noise_len > 0)
-    vm_deallocate (mach_task_self (), (vm_address_t) pi, pi_len);
+    vm_deallocate (mach_task_self (), (vm_address_t) noise, noise_len);
 
   if (inf->task->cur_sc < suspend_count)
     {
@@ -985,6 +983,17 @@ inf_port_to_thread (struct inf *inf, mach_port_t port)
     else
       thread = thread->next;
   return 0;
+}
+
+/* See gnu-nat.h.  */
+
+void
+inf_threads (struct inf *inf, inf_threads_ftype *f, void *arg)
+{
+  struct proc *thread;
+
+  for (thread = inf->threads; thread; thread = thread->next)
+    f (thread, arg);
 }
 
 

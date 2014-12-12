@@ -45,7 +45,6 @@
 #include "bcache.h"
 #include "hashtab.h"
 #include "readline/readline.h"
-#include "gdb_assert.h"
 #include "block.h"
 #include "observer.h"
 #include "exec.h"
@@ -60,7 +59,6 @@
 
 #include <sys/types.h>
 #include <fcntl.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <ctype.h>
 #include <time.h>
@@ -1593,7 +1591,6 @@ find_separate_debug_file_by_debuglink (struct objfile *objfile)
 
   if (debugfile == NULL)
     {
-#ifdef HAVE_LSTAT
       /* For PR gdb/9538, try again with realpath (if different from the
 	 original).  */
 
@@ -1620,7 +1617,6 @@ find_separate_debug_file_by_debuglink (struct objfile *objfile)
 		}
 	    }
 	}
-#endif  /* HAVE_LSTAT  */
     }
 
   do_cleanups (cleanups);
@@ -2090,7 +2086,7 @@ clear_memory_write_data (void *arg)
 }
 
 void
-generic_load (char *args, int from_tty)
+generic_load (const char *args, int from_tty)
 {
   bfd *loadfile_bfd;
   struct timeval start_time, end_time;
@@ -2262,7 +2258,7 @@ add_symbol_file_command (char *args, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
   char *filename = NULL;
-  int flags = OBJF_USERLOADED;
+  int flags = OBJF_USERLOADED | OBJF_SHARED;
   char *arg;
   int section_index = 0;
   int argcnt = 0;
@@ -2445,8 +2441,8 @@ remove_symbol_file_command (char *args, int from_tty)
 
       ALL_OBJFILES (objf)
 	{
-	  if (objf != 0
-	      && objf->flags & OBJF_USERLOADED
+	  if ((objf->flags & OBJF_USERLOADED) != 0
+	      && (objf->flags & OBJF_SHARED) != 0
 	      && objf->pspace == pspace && is_addr_in_objfile (addr, objf))
 	    break;
 	}
@@ -2464,8 +2460,8 @@ remove_symbol_file_command (char *args, int from_tty)
 
       ALL_OBJFILES (objf)
 	{
-	  if (objf != 0
-	      && objf->flags & OBJF_USERLOADED
+	  if ((objf->flags & OBJF_USERLOADED) != 0
+	      && (objf->flags & OBJF_SHARED) != 0
 	      && objf->pspace == pspace
 	      && filename_cmp (filename, objfile_name (objf)) == 0)
 	    break;
@@ -2643,7 +2639,7 @@ reread_symbols (void)
 	  objfile->psymbol_cache = psymbol_bcache_init ();
 	  obstack_free (&objfile->objfile_obstack, 0);
 	  objfile->sections = NULL;
-	  objfile->symtabs = NULL;
+	  objfile->compunit_symtabs = NULL;
 	  objfile->psymtabs = NULL;
 	  objfile->psymtabs_addrmap = NULL;
 	  objfile->free_psymtabs = NULL;
@@ -2920,38 +2916,20 @@ deduce_language_from_filename (const char *filename)
   return language_unknown;
 }
 
-/* allocate_symtab:
-
-   Allocate and partly initialize a new symbol table.  Return a pointer
-   to it.  error() if no space.
-
-   Caller must set these fields:
-   LINETABLE(symtab)
-   symtab->blockvector
-   symtab->dirname
-   symtab->free_code
-   symtab->free_ptr
- */
+/* Allocate and initialize a new symbol table.
+   CUST is from the result of allocate_compunit_symtab.  */
 
 struct symtab *
-allocate_symtab (const char *filename, struct objfile *objfile)
+allocate_symtab (struct compunit_symtab *cust, const char *filename)
 {
-  struct symtab *symtab;
+  struct objfile *objfile = cust->objfile;
+  struct symtab *symtab
+    = OBSTACK_ZALLOC (&objfile->objfile_obstack, struct symtab);
 
-  symtab = (struct symtab *)
-    obstack_alloc (&objfile->objfile_obstack, sizeof (struct symtab));
-  memset (symtab, 0, sizeof (*symtab));
   symtab->filename = bcache (filename, strlen (filename) + 1,
 			     objfile->per_bfd->filename_cache);
   symtab->fullname = NULL;
   symtab->language = deduce_language_from_filename (filename);
-  symtab->debugformat = "unknown";
-
-  /* Hook it to the objfile it comes from.  */
-
-  symtab->objfile = objfile;
-  symtab->next = objfile->symtabs;
-  objfile->symtabs = symtab;
 
   /* This can be very verbose with lots of headers.
      Only print at higher debug levels.  */
@@ -2975,7 +2953,64 @@ allocate_symtab (const char *filename, struct objfile *objfile)
 			  host_address_to_string (symtab), filename);
     }
 
-  return (symtab);
+  /* Add it to CUST's list of symtabs.  */
+  if (cust->filetabs == NULL)
+    {
+      cust->filetabs = symtab;
+      cust->last_filetab = symtab;
+    }
+  else
+    {
+      cust->last_filetab->next = symtab;
+      cust->last_filetab = symtab;
+    }
+
+  /* Backlink to the containing compunit symtab.  */
+  symtab->compunit_symtab = cust;
+
+  return symtab;
+}
+
+/* Allocate and initialize a new compunit.
+   NAME is the name of the main source file, if there is one, or some
+   descriptive text if there are no source files.  */
+
+struct compunit_symtab *
+allocate_compunit_symtab (struct objfile *objfile, const char *name)
+{
+  struct compunit_symtab *cu = OBSTACK_ZALLOC (&objfile->objfile_obstack,
+					       struct compunit_symtab);
+  const char *saved_name;
+
+  cu->objfile = objfile;
+
+  /* The name we record here is only for display/debugging purposes.
+     Just save the basename to avoid path issues (too long for display,
+     relative vs absolute, etc.).  */
+  saved_name = lbasename (name);
+  cu->name = obstack_copy0 (&objfile->objfile_obstack, saved_name,
+			    strlen (saved_name));
+
+  COMPUNIT_DEBUGFORMAT (cu) = "unknown";
+
+  if (symtab_create_debug)
+    {
+      fprintf_unfiltered (gdb_stdlog,
+			  "Created compunit symtab %s for %s.\n",
+			  host_address_to_string (cu),
+			  cu->name);
+    }
+
+  return cu;
+}
+
+/* Hook CU to the objfile it comes from.  */
+
+void
+add_compunit_symtab_to_objfile (struct compunit_symtab *cu)
+{
+  cu->next = cu->objfile->compunit_symtabs;
+  cu->objfile->compunit_symtabs = cu;
 }
 
 
@@ -3487,7 +3522,7 @@ overlay_command (char *args, int from_tty)
 {
   printf_unfiltered
     ("\"overlay\" must be followed by the name of an overlay command.\n");
-  help_list (overlaylist, "overlay ", -1, gdb_stdout);
+  help_list (overlaylist, "overlay ", all_commands, gdb_stdout);
 }
 
 /* Target Overlays for the "Simplest" overlay manager:

@@ -334,7 +334,9 @@ Relobj::is_section_name_included(const char* name)
       || (is_prefix_of(".sdata", name)
 	  && strstr(name, "personality"))
       || (is_prefix_of(".gnu.linkonce.d", name)
-	  && strstr(name, "personality")))
+	  && strstr(name, "personality"))
+      || (is_prefix_of(".rodata", name)
+	  && strstr(name, "nptl_version")))
     {
       return true;
     }
@@ -428,6 +430,7 @@ Sized_relobj_file<size, big_endian>::Sized_relobj_file(
     kept_comdat_sections_(),
     has_eh_frame_(false),
     discarded_eh_frame_shndx_(-1U),
+    is_deferred_layout_(false),
     deferred_layout_(),
     deferred_layout_relocs_(),
     compressed_sections_()
@@ -754,6 +757,16 @@ Sized_relobj_file<size, big_endian>::do_find_special_sections(
 template<int size, bool big_endian>
 void
 Sized_relobj_file<size, big_endian>::do_read_symbols(Read_symbols_data* sd)
+{
+  this->base_read_symbols(sd);
+}
+
+// Read the sections and symbols from an object file.  This is common
+// code for all target-specific overrides of do_read_symbols().
+
+template<int size, bool big_endian>
+void
+Sized_relobj_file<size, big_endian>::base_read_symbols(Read_symbols_data* sd)
 {
   this->read_section_data(&this->elf_file_, sd);
 
@@ -1418,6 +1431,7 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
     {
       parameters->options().plugins()->add_deferred_layout_object(this);
       this->deferred_layout_.reserve(num_sections_to_defer);
+      this->is_deferred_layout_ = true;
     }
 
   // Whether we've seen a .note.GNU-stack section.
@@ -1578,10 +1592,13 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
 	{
 	  if (is_pass_one)
 	    {
-	      out_sections[i] = reinterpret_cast<Output_section*>(1);
+	      if (this->is_deferred_layout())
+		out_sections[i] = reinterpret_cast<Output_section*>(2);
+	      else
+		out_sections[i] = reinterpret_cast<Output_section*>(1);
 	      out_section_offsets[i] = invalid_address;
 	    }
-	  else if (should_defer_layout)
+	  else if (this->is_deferred_layout())
 	    this->deferred_layout_.push_back(Deferred_layout(i, name,
 							     pshdrs,
 							     reloc_shndx[i],
@@ -1646,11 +1663,12 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
 	}
 
       // Defer layout here if input files are claimed by plugins.  When gc
-      // is turned on this function is called twice.  For the second call
-      // should_defer_layout should be false.
-      if (should_defer_layout && (shdr.get_sh_flags() & elfcpp::SHF_ALLOC))
+      // is turned on this function is called twice; we only want to do this
+      // on the first pass.
+      if (!is_pass_two
+          && this->is_deferred_layout()
+          && (shdr.get_sh_flags() & elfcpp::SHF_ALLOC))
 	{
-	  gold_assert(!is_pass_two);
 	  this->deferred_layout_.push_back(Deferred_layout(i, name,
 							   pshdrs,
 							   reloc_shndx[i],
@@ -1752,6 +1770,8 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
       Output_section* data_section = out_sections[data_shndx];
       if (data_section == reinterpret_cast<Output_section*>(2))
 	{
+	  if (is_pass_two)
+	    continue;
 	  // The layout for the data section was deferred, so we need
 	  // to defer the relocation section, too.
 	  const char* name = pnames + shdr.get_sh_name();
@@ -1848,7 +1868,7 @@ Sized_relobj_file<size, big_endian>::do_layout_deferred_sections(Layout* layout)
 
 	  // Reading the symbols again here may be slow.
 	  Read_symbols_data sd;
-	  this->read_symbols(&sd);
+	  this->base_read_symbols(&sd);
 	  this->layout_eh_frame_section(layout,
 					sd.symbols->data(),
 					sd.symbols_size,
@@ -2347,7 +2367,9 @@ Sized_relobj_file<size, big_endian>::compute_final_local_value_internal(
 	      lv_out->set_merged_symbol_value(msv);
 	    }
 	}
-      else if (lv_in->is_tls_symbol())
+      else if (lv_in->is_tls_symbol()
+               || (lv_in->is_section_symbol()
+                   && (os->flags() & elfcpp::SHF_TLS)))
 	lv_out->set_output_value(os->tls_offset()
 				 + secoffset
 				 + lv_in->input_value());

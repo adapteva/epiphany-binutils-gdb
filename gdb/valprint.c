@@ -18,7 +18,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include <string.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "value.h"
@@ -30,15 +29,12 @@
 #include "valprint.h"
 #include "floatformat.h"
 #include "doublest.h"
-#include "exceptions.h"
 #include "dfp.h"
 #include "extension.h"
 #include "ada-lang.h"
 #include "gdb_obstack.h"
 #include "charset.h"
 #include <ctype.h>
-
-#include <errno.h>
 
 /* Maximum number of wchars returned from wchar_iterate.  */
 #define MAX_WCHARS 4
@@ -311,8 +307,9 @@ valprint_check_validity (struct ui_file *stream,
       && TYPE_CODE (type) != TYPE_CODE_STRUCT
       && TYPE_CODE (type) != TYPE_CODE_ARRAY)
     {
-      if (!value_bits_valid (val, TARGET_CHAR_BIT * embedded_offset,
-			     TARGET_CHAR_BIT * TYPE_LENGTH (type)))
+      if (value_bits_any_optimized_out (val,
+					TARGET_CHAR_BIT * embedded_offset,
+					TARGET_CHAR_BIT * TYPE_LENGTH (type)))
 	{
 	  val_print_optimized_out (val, stream);
 	  return 0;
@@ -983,8 +980,9 @@ val_print_scalar_formatted (struct type *type,
 
   /* A scalar object that does not have all bits available can't be
      printed, because all bits contribute to its representation.  */
-  if (!value_bits_valid (val, TARGET_CHAR_BIT * embedded_offset,
-			      TARGET_CHAR_BIT * TYPE_LENGTH (type)))
+  if (value_bits_any_optimized_out (val,
+				    TARGET_CHAR_BIT * embedded_offset,
+				    TARGET_CHAR_BIT * TYPE_LENGTH (type)))
     val_print_optimized_out (val, stream);
   else if (!value_bytes_available (val, embedded_offset, TYPE_LENGTH (type)))
     val_print_unavailable (stream);
@@ -1685,12 +1683,12 @@ val_print_array_elements (struct type *type,
       if (options->repeat_count_threshold < UINT_MAX)
 	{
 	  while (rep1 < len
-		 && value_available_contents_eq (val,
-						 embedded_offset + i * eltlen,
-						 val,
-						 (embedded_offset
-						  + rep1 * eltlen),
-						 eltlen))
+		 && value_contents_eq (val,
+				       embedded_offset + i * eltlen,
+				       val,
+				       (embedded_offset
+					+ rep1 * eltlen),
+				       eltlen))
 	    {
 	      ++reps;
 	      ++rep1;
@@ -1795,36 +1793,23 @@ int
 read_string (CORE_ADDR addr, int len, int width, unsigned int fetchlimit,
 	     enum bfd_endian byte_order, gdb_byte **buffer, int *bytes_read)
 {
-  int found_nul;		/* Non-zero if we found the nul char.  */
   int errcode;			/* Errno returned from bad reads.  */
   unsigned int nfetch;		/* Chars to fetch / chars fetched.  */
-  unsigned int chunksize;	/* Size of each fetch, in chars.  */
   gdb_byte *bufptr;		/* Pointer to next available byte in
 				   buffer.  */
-  gdb_byte *limit;		/* First location past end of fetch buffer.  */
   struct cleanup *old_chain = NULL;	/* Top of the old cleanup chain.  */
-
-  /* Decide how large of chunks to try to read in one operation.  This
-     is also pretty simple.  If LEN >= zero, then we want fetchlimit chars,
-     so we might as well read them all in one operation.  If LEN is -1, we
-     are looking for a NUL terminator to end the fetching, so we might as
-     well read in blocks that are large enough to be efficient, but not so
-     large as to be slow if fetchlimit happens to be large.  So we choose the
-     minimum of 8 and fetchlimit.  We used to use 200 instead of 8 but
-     200 is way too big for remote debugging over a serial line.  */
-
-  chunksize = (len == -1 ? min (8, fetchlimit) : fetchlimit);
 
   /* Loop until we either have all the characters, or we encounter
      some error, such as bumping into the end of the address space.  */
 
-  found_nul = 0;
   *buffer = NULL;
 
   old_chain = make_cleanup (free_current_contents, buffer);
 
   if (len > 0)
     {
+      /* We want fetchlimit chars, so we might as well read them all in
+	 one operation.  */
       unsigned int fetchlen = min (len, fetchlimit);
 
       *buffer = (gdb_byte *) xmalloc (fetchlen * width);
@@ -1838,6 +1823,18 @@ read_string (CORE_ADDR addr, int len, int width, unsigned int fetchlimit,
   else if (len == -1)
     {
       unsigned long bufsize = 0;
+      unsigned int chunksize;	/* Size of each fetch, in chars.  */
+      int found_nul;		/* Non-zero if we found the nul char.  */
+      gdb_byte *limit;		/* First location past end of fetch buffer.  */
+
+      found_nul = 0;
+      /* We are looking for a NUL terminator to end the fetching, so we
+	 might as well read in blocks that are large enough to be efficient,
+	 but not so large as to be slow if fetchlimit happens to be large.
+	 So we choose the minimum of 8 and fetchlimit.  We used to use 200
+	 instead of 8 but 200 is way too big for remote debugging over a
+	  serial line.  */
+      chunksize = min (8, fetchlimit);
 
       do
 	{
@@ -2513,8 +2510,10 @@ val_print_string (struct type *elttype, const char *encoding,
      LEN is -1.  */
 
   /* Determine found_nul by looking at the last character read.  */
-  found_nul = extract_unsigned_integer (buffer + bytes_read - width, width,
-					byte_order) == 0;
+  found_nul = 0;
+  if (bytes_read >= width)
+    found_nul = extract_unsigned_integer (buffer + bytes_read - width, width,
+					  byte_order) == 0;
   if (len == -1 && !found_nul)
     {
       gdb_byte *peekbuf;
@@ -2704,7 +2703,7 @@ set_print (char *arg, int from_tty)
 {
   printf_unfiltered (
      "\"set print\" must be followed by the name of a print subcommand.\n");
-  help_list (setprintlist, "set print ", -1, gdb_stdout);
+  help_list (setprintlist, "set print ", all_commands, gdb_stdout);
 }
 
 static void
@@ -2718,7 +2717,7 @@ set_print_raw (char *arg, int from_tty)
 {
   printf_unfiltered (
      "\"set print raw\" must be followed by the name of a \"print raw\" subcommand.\n");
-  help_list (setprintrawlist, "set print raw ", -1, gdb_stdout);
+  help_list (setprintrawlist, "set print raw ", all_commands, gdb_stdout);
 }
 
 static void

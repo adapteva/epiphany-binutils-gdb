@@ -22,7 +22,6 @@
 
 #include "defs.h"
 #include "block.h"
-#include "exceptions.h"
 #include "frame.h"
 #include "symtab.h"
 #include "objfiles.h"
@@ -82,7 +81,7 @@ syscm_eq_symbol_smob (const void *ap, const void *bp)
 static htab_t
 syscm_objfile_symbol_map (struct symbol *symbol)
 {
-  struct objfile *objfile = SYMBOL_SYMTAB (symbol)->objfile;
+  struct objfile *objfile = SYMBOL_OBJFILE (symbol);
   htab_t htab = objfile_data (objfile, syscm_objfile_data_key);
 
   if (htab == NULL)
@@ -608,7 +607,7 @@ gdbscm_lookup_global_symbol (SCM name_scm, SCM rest)
 
   TRY_CATCH (except, RETURN_MASK_ALL)
     {
-      symbol = lookup_symbol_global (name, NULL, domain);
+      symbol = lookup_global_symbol (name, NULL, domain);
     }
   do_cleanups (cleanups);
   GDBSCM_HANDLE_GDB_EXCEPTION (except);

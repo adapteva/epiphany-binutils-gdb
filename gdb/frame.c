@@ -23,8 +23,6 @@
 #include "value.h"
 #include "inferior.h"	/* for inferior_ptid */
 #include "regcache.h"
-#include "gdb_assert.h"
-#include <string.h>
 #include "user-regs.h"
 #include "gdb_obstack.h"
 #include "dummy-frame.h"
@@ -38,7 +36,6 @@
 #include "gdbcmd.h"
 #include "observer.h"
 #include "objfiles.h"
-#include "exceptions.h"
 #include "gdbthread.h"
 #include "block.h"
 #include "inline-frame.h"
@@ -617,7 +614,7 @@ frame_id_eq (struct frame_id l, struct frame_id r)
        outer_frame_id.  */
     eq = 1;
   else if (l.stack_status == FID_STACK_INVALID
-	   || l.stack_status == FID_STACK_INVALID)
+	   || r.stack_status == FID_STACK_INVALID)
     /* Like a NaN, if either ID is invalid, the result is false.
        Note that a frame ID is invalid iff it is the null frame ID.  */
     eq = 0;
@@ -699,7 +696,7 @@ frame_id_inner (struct gdbarch *gdbarch, struct frame_id l, struct frame_id r)
 	   && l.special_addr == r.special_addr)
     {
       /* Same function, different inlined functions.  */
-      struct block *lb, *rb;
+      const struct block *lb, *rb;
 
       gdb_assert (l.code_addr_p && r.code_addr_p);
 
@@ -960,7 +957,7 @@ frame_pop (struct frame_info *this_frame)
     {
       /* Popping a dummy frame involves restoring more than just registers.
 	 dummy_frame_pop does all the work.  */
-      dummy_frame_pop (get_frame_id (this_frame));
+      dummy_frame_pop (get_frame_id (this_frame), inferior_ptid);
       return;
     }
 
@@ -1603,13 +1600,13 @@ select_frame (struct frame_info *fi)
 	 block.  */
       if (get_frame_address_in_block_if_available (fi, &pc))
 	{
-	  struct symtab *s = find_pc_symtab (pc);
+	  struct compunit_symtab *cust = find_pc_compunit_symtab (pc);
 
-	  if (s
-	      && s->language != current_language->la_language
-	      && s->language != language_unknown
+	  if (cust != NULL
+	      && compunit_language (cust) != current_language->la_language
+	      && compunit_language (cust) != language_unknown
 	      && language_mode == language_mode_auto)
-	    set_language (s->language);
+	    set_language (compunit_language (cust));
 	}
     }
 }
@@ -2707,7 +2704,8 @@ static struct cmd_list_element *show_backtrace_cmdlist;
 static void
 set_backtrace_cmd (char *args, int from_tty)
 {
-  help_list (set_backtrace_cmdlist, "set backtrace ", -1, gdb_stdout);
+  help_list (set_backtrace_cmdlist, "set backtrace ", all_commands,
+	     gdb_stdout);
 }
 
 static void

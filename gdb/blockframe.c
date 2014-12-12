@@ -29,7 +29,6 @@
 #include "inferior.h"
 #include "annotate.h"
 #include "regcache.h"
-#include "gdb_assert.h"
 #include "dummy-frame.h"
 #include "command.h"
 #include "gdbcmd.h"
@@ -52,11 +51,11 @@
    --- hopefully pointing us at the call instruction, or its delay
    slot instruction.  */
 
-struct block *
+const struct block *
 get_frame_block (struct frame_info *frame, CORE_ADDR *addr_in_block)
 {
   CORE_ADDR pc;
-  struct block *bl;
+  const struct block *bl;
   int inline_count;
 
   if (!get_frame_address_in_block_if_available (frame, &pc))
@@ -86,7 +85,7 @@ get_frame_block (struct frame_info *frame, CORE_ADDR *addr_in_block)
 CORE_ADDR
 get_pc_function_start (CORE_ADDR pc)
 {
-  struct block *bl;
+  const struct block *bl;
   struct bound_minimal_symbol msymbol;
 
   bl = block_for_pc (pc);
@@ -118,7 +117,7 @@ get_pc_function_start (CORE_ADDR pc)
 struct symbol *
 get_frame_function (struct frame_info *frame)
 {
-  struct block *bl = get_frame_block (frame, 0);
+  const struct block *bl = get_frame_block (frame, 0);
 
   if (bl == NULL)
     return NULL;
@@ -136,7 +135,7 @@ get_frame_function (struct frame_info *frame)
 struct symbol *
 find_pc_sect_function (CORE_ADDR pc, struct obj_section *section)
 {
-  struct block *b = block_for_pc_sect (pc, section);
+  const struct block *b = block_for_pc_sect (pc, section);
 
   if (b == 0)
     return 0;
@@ -196,7 +195,7 @@ find_pc_partial_function_gnu_ifunc (CORE_ADDR pc, const char **name,
   struct obj_section *section;
   struct symbol *f;
   struct bound_minimal_symbol msymbol;
-  struct symtab *symtab = NULL;
+  struct compunit_symtab *compunit_symtab = NULL;
   struct objfile *objfile;
   int i;
   CORE_ADDR mapped_pc;
@@ -221,13 +220,17 @@ find_pc_partial_function_gnu_ifunc (CORE_ADDR pc, const char **name,
   ALL_OBJFILES (objfile)
   {
     if (objfile->sf)
-      symtab = objfile->sf->qf->find_pc_sect_symtab (objfile, msymbol,
-						     mapped_pc, section, 0);
-    if (symtab)
+      {
+	compunit_symtab
+	  = objfile->sf->qf->find_pc_sect_compunit_symtab (objfile, msymbol,
+							   mapped_pc, section,
+							   0);
+      }
+    if (compunit_symtab != NULL)
       break;
   }
 
-  if (symtab)
+  if (compunit_symtab != NULL)
     {
       /* Checking whether the msymbol has a larger value is for the
 	 "pathological" case mentioned in print_frame_info.  */
@@ -338,7 +341,7 @@ block_innermost_frame (const struct block *block)
     frame = get_current_frame ();
   while (frame != NULL)
     {
-      struct block *frame_block = get_frame_block (frame, NULL);
+      const struct block *frame_block = get_frame_block (frame, NULL);
       if (frame_block != NULL && contained_in (frame_block, block))
 	return frame;
 

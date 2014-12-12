@@ -38,7 +38,6 @@
 #include "target.h"
 #include "gdb-dlfcn.h"
 #include <sys/stat.h>
-#include "exceptions.h"
 #include "gdb_bfd.h"
 
 static const char *jit_reader_dir = NULL;
@@ -634,44 +633,46 @@ jit_symtab_close_impl (struct gdb_symbol_callbacks *cb,
 static void
 finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 {
-  struct symtab *symtab;
+  struct compunit_symtab *cust;
   struct gdb_block *gdb_block_iter, *gdb_block_iter_tmp;
   struct block *block_iter;
-  int actual_nblocks, i, blockvector_size;
+  int actual_nblocks, i;
+  size_t blockvector_size;
   CORE_ADDR begin, end;
+  struct blockvector *bv;
 
   actual_nblocks = FIRST_LOCAL_BLOCK + stab->nblocks;
 
-  symtab = allocate_symtab (stab->file_name, objfile);
+  cust = allocate_compunit_symtab (objfile, stab->file_name);
+  allocate_symtab (cust, stab->file_name);
+  add_compunit_symtab_to_objfile (cust);
+
   /* JIT compilers compile in memory.  */
-  symtab->dirname = NULL;
+  COMPUNIT_DIRNAME (cust) = NULL;
 
   /* Copy over the linetable entry if one was provided.  */
   if (stab->linetable)
     {
-      int size = ((stab->linetable->nitems - 1)
-                  * sizeof (struct linetable_entry)
-                  + sizeof (struct linetable));
-      LINETABLE (symtab) = obstack_alloc (&objfile->objfile_obstack, size);
-      memcpy (LINETABLE (symtab), stab->linetable, size);
-    }
-  else
-    {
-      LINETABLE (symtab) = NULL;
+      size_t size = ((stab->linetable->nitems - 1)
+		     * sizeof (struct linetable_entry)
+		     + sizeof (struct linetable));
+      SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust))
+	= obstack_alloc (&objfile->objfile_obstack, size);
+      memcpy (SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust)), stab->linetable,
+	      size);
     }
 
   blockvector_size = (sizeof (struct blockvector)
                       + (actual_nblocks - 1) * sizeof (struct block *));
-  symtab->blockvector = obstack_alloc (&objfile->objfile_obstack,
-                                       blockvector_size);
+  bv = obstack_alloc (&objfile->objfile_obstack, blockvector_size);
+  COMPUNIT_BLOCKVECTOR (cust) = bv;
 
   /* (begin, end) will contain the PC range this entire blockvector
      spans.  */
-  set_symtab_primary (symtab, 1);
-  BLOCKVECTOR_MAP (symtab->blockvector) = NULL;
+  BLOCKVECTOR_MAP (bv) = NULL;
   begin = stab->blocks->begin;
   end = stab->blocks->end;
-  BLOCKVECTOR_NBLOCKS (symtab->blockvector) = actual_nblocks;
+  BLOCKVECTOR_NBLOCKS (bv) = actual_nblocks;
 
   /* First run over all the gdb_block objects, creating a real block
      object for each.  Simultaneously, keep setting the real_block
@@ -696,7 +697,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       /* The name.  */
       SYMBOL_DOMAIN (block_name) = VAR_DOMAIN;
       SYMBOL_ACLASS_INDEX (block_name) = LOC_BLOCK;
-      SYMBOL_SYMTAB (block_name) = symtab;
+      SYMBOL_SYMTAB (block_name) = COMPUNIT_FILETABS (cust);
       SYMBOL_TYPE (block_name) = lookup_function_type (block_type);
       SYMBOL_BLOCK_VALUE (block_name) = new_block;
 
@@ -706,7 +707,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 
       BLOCK_FUNCTION (new_block) = block_name;
 
-      BLOCKVECTOR_BLOCK (symtab->blockvector, i) = new_block;
+      BLOCKVECTOR_BLOCK (bv, i) = new_block;
       if (begin > BLOCK_START (new_block))
         begin = BLOCK_START (new_block);
       if (end < BLOCK_END (new_block))
@@ -732,10 +733,10 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       BLOCK_START (new_block) = (CORE_ADDR) begin;
       BLOCK_END (new_block) = (CORE_ADDR) end;
 
-      BLOCKVECTOR_BLOCK (symtab->blockvector, i) = new_block;
+      BLOCKVECTOR_BLOCK (bv, i) = new_block;
 
       if (i == GLOBAL_BLOCK)
-	set_block_symtab (new_block, symtab);
+	set_block_compunit_symtab (new_block, cust);
     }
 
   /* Fill up the superblock fields for the real blocks, using the
@@ -755,7 +756,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 	{
 	  /* And if not, we set a default parent block.  */
 	  BLOCK_SUPERBLOCK (gdb_block_iter->real_block) =
-	    BLOCKVECTOR_BLOCK (symtab->blockvector, STATIC_BLOCK);
+	    BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK);
 	}
     }
 

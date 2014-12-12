@@ -507,7 +507,7 @@ class Object
 
   // Return the name of a section given a section index.
   std::string
-  section_name(unsigned int shndx)
+  section_name(unsigned int shndx) const
   { return this->do_section_name(shndx); }
 
   // Return the section flags given a section index.
@@ -822,7 +822,7 @@ class Object
 
   // Get the name of a section--implemented by child class.
   virtual std::string
-  do_section_name(unsigned int shndx) = 0;
+  do_section_name(unsigned int shndx) const = 0;
 
   // Get section flags--implemented by child class.
   virtual uint64_t
@@ -2202,6 +2202,10 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
 			    Symbol_value<size>* lv_out,
 			    const Symbol_table* symtab);
 
+  // Return true if the layout for this object was deferred.
+  bool is_deferred_layout() const
+  { return this->is_deferred_layout_; }
+
  protected:
   typedef typename Sized_relobj<size, big_endian>::Output_sections
       Output_sections;
@@ -2213,6 +2217,11 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
   // Read the symbols.
   void
   do_read_symbols(Read_symbols_data*);
+
+  // Read the symbols.  This is common code for all target-specific
+  // overrides of do_read_symbols.
+  void
+  base_read_symbols(Read_symbols_data*);
 
   // Return the value of a local symbol.
   uint64_t
@@ -2310,7 +2319,7 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
 
   // Get the name of a section.
   std::string
-  do_section_name(unsigned int shndx)
+  do_section_name(unsigned int shndx) const
   { return this->elf_file_.section_name(shndx); }
 
   // Return the location of the contents of a section.
@@ -2735,6 +2744,9 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
   // If this object has a GNU style .eh_frame section that is discarded in
   // output, record the index here.  Otherwise it is -1U.
   unsigned int discarded_eh_frame_shndx_;
+  // True if the layout of this object was deferred, waiting for plugin
+  // replacement files.
+  bool is_deferred_layout_;
   // The list of sections whose layout was deferred.
   std::vector<Deferred_layout> deferred_layout_;
   // The list of relocation sections whose layout was deferred.

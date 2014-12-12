@@ -26,7 +26,6 @@
 #include "command.h"
 #include "ravenscar-thread.h"
 #include "observer.h"
-#include <string.h>
 #include "gdbcmd.h"
 #include "top.h"
 #include "regcache.h"
@@ -53,7 +52,7 @@ static const char first_task_name[] = "system__tasking__debug__first_task";
 static const char ravenscar_runtime_initializer[] =
   "system__bb__threads__initialize";
 
-static void ravenscar_find_new_threads (struct target_ops *ops);
+static void ravenscar_update_thread_list (struct target_ops *ops);
 static ptid_t ravenscar_running_thread (void);
 static char *ravenscar_extra_thread_info (struct target_ops *self,
 					  struct thread_info *tp);
@@ -92,7 +91,7 @@ ravenscar_update_inferior_ptid (void)
   gdb_assert (!ptid_equal (inferior_ptid, null_ptid));
 
   /* The running thread may not have been added to
-     system.tasking.debug's list yet; so ravenscar_find_new_threads
+     system.tasking.debug's list yet; so ravenscar_update_thread_list
      may not always add it to the thread list.  Add it here.  */
   if (!find_thread_ptid (inferior_ptid))
     add_thread (inferior_ptid);
@@ -202,7 +201,7 @@ ravenscar_wait (struct target_ops *ops, ptid_t ptid,
   if (status->kind != TARGET_WAITKIND_EXITED
       && status->kind != TARGET_WAITKIND_SIGNALLED)
     {
-      ravenscar_find_new_threads (ops);
+      ravenscar_update_thread_list (ops);
       ravenscar_update_inferior_ptid ();
     }
   return inferior_ptid;
@@ -219,7 +218,7 @@ ravenscar_add_thread (struct ada_task_info *task)
 }
 
 static void
-ravenscar_find_new_threads (struct target_ops *ops)
+ravenscar_update_thread_list (struct target_ops *ops)
 {
   ada_build_task_list ();
 
@@ -308,7 +307,7 @@ static void
 ravenscar_prepare_to_store (struct target_ops *self,
 			    struct regcache *regcache)
 {
-  struct target_ops *beneath = find_target_beneath (&ravenscar_ops);
+  struct target_ops *beneath = find_target_beneath (self);
 
   if (!ravenscar_runtime_initialized ()
       || ptid_equal (inferior_ptid, base_magic_null_ptid)
@@ -327,7 +326,7 @@ ravenscar_prepare_to_store (struct target_ops *self,
 static void
 ravenscar_mourn_inferior (struct target_ops *ops)
 {
-  struct target_ops *beneath = find_target_beneath (&ravenscar_ops);
+  struct target_ops *beneath = find_target_beneath (ops);
 
   base_ptid = null_ptid;
   beneath->to_mourn_inferior (beneath);
@@ -369,7 +368,7 @@ init_ravenscar_thread_ops (void)
   ravenscar_ops.to_store_registers = ravenscar_store_registers;
   ravenscar_ops.to_prepare_to_store = ravenscar_prepare_to_store;
   ravenscar_ops.to_thread_alive = ravenscar_thread_alive;
-  ravenscar_ops.to_find_new_threads = ravenscar_find_new_threads;
+  ravenscar_ops.to_update_thread_list = ravenscar_update_thread_list;
   ravenscar_ops.to_pid_to_str = ravenscar_pid_to_str;
   ravenscar_ops.to_extra_thread_info = ravenscar_extra_thread_info;
   ravenscar_ops.to_get_ada_task_ptid = ravenscar_get_ada_task_ptid;
@@ -394,7 +393,7 @@ set_ravenscar_command (char *arg, int from_tty)
 {
   printf_unfiltered (_(\
 "\"set ravenscar\" must be followed by the name of a setting.\n"));
-  help_list (set_ravenscar_list, "set ravenscar ", -1, gdb_stdout);
+  help_list (set_ravenscar_list, "set ravenscar ", all_commands, gdb_stdout);
 }
 
 /* Implement the "show ravenscar" prefix command.  */

@@ -26,7 +26,6 @@
 #include "regcache.h"
 #include "completer.h"
 #include "osabi.h"
-#include "gdb_assert.h"
 #include "arch-utils.h"
 /* For argument passing to the inferior.  */
 #include "symtab.h"
@@ -221,7 +220,7 @@ record_text_segment_lowaddr (bfd *abfd, asection *section, void *data)
 static void
 internalize_unwinds (struct objfile *objfile, struct unwind_table_entry *table,
 		     asection *section, unsigned int entries,
-		     unsigned int size, CORE_ADDR text_offset)
+		     size_t size, CORE_ADDR text_offset)
 {
   /* We will read the unwind entries into temporary memory, then
      fill in the actual unwind table.  */
@@ -320,7 +319,7 @@ static void
 read_unwind_info (struct objfile *objfile)
 {
   asection *unwind_sec, *stub_unwind_sec;
-  unsigned unwind_size, stub_unwind_size, total_size;
+  size_t unwind_size, stub_unwind_size, total_size;
   unsigned index, unwind_entries;
   unsigned stub_entries, total_entries;
   CORE_ADDR text_offset;

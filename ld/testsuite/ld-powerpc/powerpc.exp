@@ -102,10 +102,13 @@ set ppcelftests {
      {{objdump -hw reloc.d}} "reloc.so"}
     {"APUinfo section processing" "-melf32ppc" ""
      "-a32 -me500" {apuinfo1.s apuinfo-nul.s apuinfo2.s}
-    {{readelf -x2 apuinfo.rd}} "apuinfo"}
+     {{readelf -x2 apuinfo.rd}} "apuinfo"}
+    {"APUinfo VLE section processing" "-melf32ppc" ""
+     "-a32 -me500 -mvle" {apuinfo1.s apuinfo-vle.s apuinfo2.s}
+     {{readelf -x2 apuinfo-vle.rd}} "apuinfo-vle"}
     {"APUinfo NULL section processing" "-melf32ppc" ""
      "-a32 -me500" {apuinfo-nul1.s apuinfo-nul.s}
-    {{readelf -x2 apuinfo-nul.rd}} "apuinfo"}
+     {{readelf -x2 apuinfo-nul.rd}} "apuinfo"}
     {"TLS32 static exec" "-melf32ppc" "" "-a32"  {tls32.s tlslib32.s}
      {{objdump -dr tls32.d} {objdump -sj.got tls32.g}
       {objdump -sj.tdata tls32.t}}
@@ -275,7 +278,10 @@ if [ supports_ppc64 ] then {
     run_dump_test "elfv2-2so"
     run_dump_test "elfv2-2exe"
     run_dump_test "ambiguousv1"
+    run_dump_test "ambiguousv1b"
     run_dump_test "ambiguousv2"
+    run_dump_test "ambiguousv2b"
+    run_dump_test "defsym"
 }
 
 if { [istarget "powerpc*-eabi*"] } {

@@ -399,10 +399,12 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
    [@b{-g}[@var{debug level}]] [@b{-G} @var{num}] [@b{-KPIC}] [@b{-call_shared}]
    [@b{-non_shared}] [@b{-xgot} [@b{-mvxworks-pic}]
    [@b{-mabi}=@var{ABI}] [@b{-32}] [@b{-n32}] [@b{-64}] [@b{-mfp32}] [@b{-mgp32}]
+   [@b{-mfp64}] [@b{-mgp64}] [@b{-mfpxx}]
+   [@b{-modd-spreg}] [@b{-mno-odd-spreg}]
    [@b{-march}=@var{CPU}] [@b{-mtune}=@var{CPU}] [@b{-mips1}] [@b{-mips2}]
    [@b{-mips3}] [@b{-mips4}] [@b{-mips5}] [@b{-mips32}] [@b{-mips32r2}]
-   [@b{-mips32r3}] [@b{-mips32r5}] [@b{-mips64}] [@b{-mips64r2}]
-   [@b{-mips64r3}] [@b{-mips64r5}] 
+   [@b{-mips32r3}] [@b{-mips32r5}] [@b{-mips32r6}] [@b{-mips64}] [@b{-mips64r2}]
+   [@b{-mips64r3}] [@b{-mips64r5}] [@b{-mips64r6}]
    [@b{-construct-floats}] [@b{-no-construct-floats}]
    [@b{-mnan=@var{encoding}}]
    [@b{-trap}] [@b{-no-break}] [@b{-break}] [@b{-no-trap}]
@@ -527,7 +529,6 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
  [@b{-mcpu=54[123589]}|@b{-mcpu=54[56]lp}] [@b{-mfar-mode}|@b{-mf}]
  [@b{-merrors-to-file} @var{<filename>}|@b{-me} @var{<filename>}]
 @end ifset
-
 @ifset TIC6X
 
 @emph{Target TIC6X options:}
@@ -543,7 +544,11 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
 @ifset TILEPRO
 @c TILEPro has no machine-dependent assembler options
 @end ifset
+@ifset VISIUM
 
+@emph{Target Visium options:}
+   [@b{-mtune=@var{arch}}]
+@end ifset
 @ifset XTENSA
 
 @emph{Target Xtensa options:}
@@ -553,7 +558,6 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
  [@b{--rename-section} @var{oldname}=@var{newname}]
  [@b{--[no-]trampolines}]
 @end ifset
-
 @ifset Z80
 
 @emph{Target Z80 options:}
@@ -565,8 +569,8 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
   [@b{ -forbid-undocumented-instructions}] [@b{-Fud}]
   [@b{ -forbid-unportable-instructions}] [@b{-Fup}]
 @end ifset
-
 @ifset Z8000
+
 @c Z8000 has no machine-dependent assembler options
 @end ifset
 
@@ -1275,19 +1279,22 @@ Generate ``little endian'' format output.
 @itemx -mips32r2
 @itemx -mips32r3
 @itemx -mips32r5
+@itemx -mips32r6
 @itemx -mips64
 @itemx -mips64r2
 @itemx -mips64r3
 @itemx -mips64r5
+@itemx -mips64r6
 Generate code for a particular MIPS Instruction Set Architecture level.
 @samp{-mips1} is an alias for @samp{-march=r3000}, @samp{-mips2} is an
 alias for @samp{-march=r6000}, @samp{-mips3} is an alias for
 @samp{-march=r4000} and @samp{-mips4} is an alias for @samp{-march=r8000}.
 @samp{-mips5}, @samp{-mips32}, @samp{-mips32r2}, @samp{-mips32r3},
-@samp{-mips32r5}, @samp{-mips64}, @samp{-mips64r2}, @samp{-mips64r3}, and
-@samp{-mips64r5} correspond to generic MIPS V, MIPS32, MIPS32 Release 2,
-MIPS32 Release 3, MIPS32 Release 5, MIPS64, MIPS64 Release 2, 
-MIPS64 Release 3, and MIPS64 Release 5 ISA processors, respectively.
+@samp{-mips32r5}, @samp{-mips32r6}, @samp{-mips64}, @samp{-mips64r2},
+@samp{-mips64r3}, @samp{-mips64r5}, and @samp{-mips64r6} correspond to generic
+MIPS V, MIPS32, MIPS32 Release 2, MIPS32 Release 3, MIPS32 Release 5, MIPS32
+Release 6, MIPS64, MIPS64 Release 2, MIPS64 Release 3, MIPS64 Release 5, and
+MIPS64 Release 6 ISA processors, respectively.
 
 @item -march=@var{cpu}
 Generate code for a particular MIPS CPU.
@@ -1320,6 +1327,25 @@ The register sizes are normally inferred from the ISA and ABI, but these
 flags force a certain group of registers to be treated as 32 bits wide at
 all times.  @samp{-mgp32} controls the size of general-purpose registers
 and @samp{-mfp32} controls the size of floating-point registers.
+
+@item -mgp64
+@itemx -mfp64
+The register sizes are normally inferred from the ISA and ABI, but these
+flags force a certain group of registers to be treated as 64 bits wide at
+all times.  @samp{-mgp64} controls the size of general-purpose registers
+and @samp{-mfp64} controls the size of floating-point registers.
+
+@item -mfpxx
+The register sizes are normally inferred from the ISA and ABI, but using
+this flag in combination with @samp{-mabi=32} enables an ABI variant
+which will operate correctly with floating-point registers which are
+32 or 64 bits wide.
+
+@item -modd-spreg
+@itemx -mno-odd-spreg
+Enable use of floating-point operations on odd-numbered single-precision
+registers when supported by the ISA.  @samp{-mfpxx} implies
+@samp{-mno-odd-spreg}, otherwise the default is @samp{-modd-spreg}.
 
 @item -mips16
 @itemx -no-mips16
@@ -1609,6 +1635,25 @@ processor.
 @c man end
 @c man begin INCLUDE
 @include c-tilegx.texi
+@c ended inside the included file
+@end ifset
+
+@end ifset
+
+@ifset VISIUM
+
+@ifclear man
+@xref{Visium Options}, for the options available when @value{AS} is configured
+for a Visium processor.
+@end ifclear
+
+@ifset man
+@c man begin OPTIONS
+The following option is available when @value{AS} is configured for a Visium
+processor.
+@c man end
+@c man begin INCLUDE
+@include c-visium.texi
 @c ended inside the included file
 @end ifset
 
@@ -7006,16 +7051,27 @@ The floating-point ABI used by this object file.  The value will be:
 @item
 0 for files not affected by the floating-point ABI.
 @item
-1 for files using the hardware floating-point with a standard double-precision
-FPU.
+1 for files using the hardware floating-point ABI with a standard
+double-precision FPU.
 @item
 2 for files using the hardware floating-point ABI with a single-precision FPU.
 @item
 3 for files using the software floating-point ABI.
 @item
-4 for files using the hardware floating-point ABI with 64-bit wide
-double-precision floating-point registers and 32-bit wide general
-purpose registers.
+4 for files using the deprecated hardware floating-point ABI which used 64-bit
+floating-point registers, 32-bit general-purpose registers and increased the
+number of callee-saved floating-point registers.
+@item
+5 for files using the hardware floating-point ABI with a double-precision FPU
+with either 32-bit or 64-bit floating-point registers and 32-bit
+general-purpose registers.
+@item
+6 for files using the hardware floating-point ABI with 64-bit floating-point
+registers and 32-bit general-purpose registers.
+@item
+7 for files using the hardware floating-point ABI with 64-bit floating-point
+registers, 32-bit general-purpose registers and a rule that forbids the
+direct use of odd-numbered single-precision floating-point registers.
 @end itemize
 @end table
 
@@ -7233,6 +7289,12 @@ subject, see the hardware manufacturer's manual.
 @ifset V850
 * V850-Dependent::              V850 Dependent Features
 @end ifset
+@ifset VAX
+* Vax-Dependent::               VAX Dependent Features
+@end ifset
+@ifset VISIUM
+* Visium-Dependent::            Visium Dependent Features
+@end ifset
 @ifset XGATE
 * XGATE-Dependent::             XGATE Features
 @end ifset
@@ -7247,9 +7309,6 @@ subject, see the hardware manufacturer's manual.
 @end ifset
 @ifset Z8000
 * Z8000-Dependent::             Z8000 Dependent Features
-@end ifset
-@ifset VAX
-* Vax-Dependent::               VAX Dependent Features
 @end ifset
 @end menu
 
@@ -7463,20 +7522,16 @@ family.
 @include c-tilepro.texi
 @end ifset
 
-@ifset Z80
-@include c-z80.texi
-@end ifset
-
-@ifset Z8000
-@include c-z8k.texi
+@ifset V850
+@include c-v850.texi
 @end ifset
 
 @ifset VAX
 @include c-vax.texi
 @end ifset
 
-@ifset V850
-@include c-v850.texi
+@ifset VISIUM
+@include c-visium.texi
 @end ifset
 
 @ifset XGATE
@@ -7489,6 +7544,14 @@ family.
 
 @ifset XTENSA
 @include c-xtensa.texi
+@end ifset
+
+@ifset Z80
+@include c-z80.texi
+@end ifset
+
+@ifset Z8000
+@include c-z8k.texi
 @end ifset
 
 @ifset GENERIC

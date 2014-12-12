@@ -1,3 +1,28 @@
+2014-12-06  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* binutils-all/objcopy.exp: Skip strip-10 for Visium.
+
+2014-09-12  Andrew Bennett  <andrew.bennett@imgtec.com>
+
+	* binutils-all/objcopy.exp: Add mips*-img-elf* target triple.
+	* binutils-all/readelf.exp: Likewise
+
+2014-09-06  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	* binutils-all/readelf.ss-mips: Account for new sections.
+
+2014-07-29  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	* binutils-all/readelf.s: Account for .MIPS.abiflags and
+	.gnu.attributes.
+	* binutils-all/readelf.ss-tmips: Likewise.
+	* binutils-all/strip-3.d: Likewise.
+
+2014-07-10  Will Newton  <will.newton@linaro.org>
+
+	* binutils-all/objcopy.exp: Disable the strip-10 test on
+	non-EABI ARM configurations.
+
 2014-06-03  Nick Clifton  <nickc@redhat.com>
 
 	* binutils-all/ar.exp: Skip tests involving bfdtest1 and bfdtest2

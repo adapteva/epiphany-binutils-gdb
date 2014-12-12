@@ -326,11 +326,14 @@ ppcboot_get_symbol_info (bfd *ignore_abfd ATTRIBUTE_UNUSED,
   bfd_symbol_info (symbol, ret);
 }
 
+#define ppcboot_get_symbol_version_string \
+  _bfd_nosymbols_get_symbol_version_string
 #define ppcboot_bfd_is_target_special_symbol \
   ((bfd_boolean (*) (bfd *, asymbol *)) bfd_false)
 #define ppcboot_bfd_is_local_label_name bfd_generic_is_local_label_name
 #define ppcboot_get_lineno _bfd_nosymbols_get_lineno
 #define ppcboot_find_nearest_line _bfd_nosymbols_find_nearest_line
+#define ppcboot_find_line _bfd_nosymbols_find_line
 #define ppcboot_find_inliner_info _bfd_nosymbols_find_inliner_info
 #define ppcboot_bfd_make_debug_symbol _bfd_nosymbols_bfd_make_debug_symbol
 #define ppcboot_read_minisymbols _bfd_generic_read_minisymbols
@@ -454,7 +457,6 @@ ppcboot_bfd_print_private_bfd_data (bfd *abfd, void * farg)
   _bfd_generic_section_already_linked
 #define ppcboot_bfd_define_common_symbol bfd_generic_define_common_symbol
 #define ppcboot_bfd_link_hash_table_create _bfd_generic_link_hash_table_create
-#define ppcboot_bfd_link_hash_table_free _bfd_generic_link_hash_table_free
 #define ppcboot_bfd_link_add_symbols _bfd_generic_link_add_symbols
 #define ppcboot_bfd_link_just_syms _bfd_generic_link_just_syms
 #define ppcboot_bfd_copy_link_hash_symbol_type \

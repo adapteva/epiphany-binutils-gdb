@@ -28,7 +28,6 @@
 #include "symtab.h"
 #include "target.h"
 #include "inferior.h"
-#include <string.h>
 #include <sys/stat.h>
 #include "inf-child.h"
 #include "gdb/fileio.h"
@@ -122,7 +121,8 @@ static int inf_child_explicitly_opened;
 /* See inf-child.h.  */
 
 void
-inf_child_open_target (struct target_ops *target, char *arg, int from_tty)
+inf_child_open_target (struct target_ops *target, const char *arg,
+		       int from_tty)
 {
   target_preopen (from_tty);
   push_target (target);
@@ -132,7 +132,7 @@ inf_child_open_target (struct target_ops *target, char *arg, int from_tty)
 }
 
 static void
-inf_child_open (char *arg, int from_tty)
+inf_child_open (const char *arg, int from_tty)
 {
   inf_child_open_target (inf_child_ops, arg, from_tty);
 }
@@ -140,7 +140,7 @@ inf_child_open (char *arg, int from_tty)
 /* Implement the to_disconnect target_ops method.  */
 
 static void
-inf_child_disconnect (struct target_ops *target, char *args, int from_tty)
+inf_child_disconnect (struct target_ops *target, const char *args, int from_tty)
 {
   if (args != NULL)
     error (_("Argument given to \"disconnect\"."));
@@ -412,7 +412,7 @@ inf_child_fileio_readlink (struct target_ops *self,
 {
   /* We support readlink only on systems that also provide a compile-time
      maximum path length (PATH_MAX), at least for now.  */
-#if defined (HAVE_READLINK) && defined (PATH_MAX)
+#if defined (PATH_MAX)
   char buf[PATH_MAX];
   int len;
   char *ret;
@@ -481,7 +481,6 @@ inf_child_target (void)
   t->to_terminal_init = child_terminal_init;
   t->to_terminal_inferior = child_terminal_inferior;
   t->to_terminal_ours_for_output = child_terminal_ours_for_output;
-  t->to_terminal_save_ours = child_terminal_save_ours;
   t->to_terminal_ours = child_terminal_ours;
   t->to_terminal_info = child_terminal_info;
   t->to_post_startup_inferior = inf_child_post_startup_inferior;

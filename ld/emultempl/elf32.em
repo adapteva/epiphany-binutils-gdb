@@ -1014,7 +1014,7 @@ gld${EMULATION_NAME}_after_open (void)
 
       /* Find an ELF input.  */
       for (abfd = link_info.input_bfds;
-	   abfd != (bfd *) NULL; abfd = abfd->link_next)
+	   abfd != (bfd *) NULL; abfd = abfd->link.next)
 	if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
 	  break;
 
@@ -1051,7 +1051,7 @@ gld${EMULATION_NAME}_after_open (void)
       bfd_boolean warn_eh_frame = FALSE;
       asection *s;
 
-      for (abfd = link_info.input_bfds; abfd; abfd = abfd->link_next)
+      for (abfd = link_info.input_bfds; abfd; abfd = abfd->link.next)
 	{
 	  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
 	    elfbfd = abfd;
@@ -1459,7 +1459,7 @@ gld${EMULATION_NAME}_before_allocation (void)
   if (rpath == NULL)
     rpath = (const char *) getenv ("LD_RUN_PATH");
 
-  for (abfd = link_info.input_bfds; abfd; abfd = abfd->link_next)
+  for (abfd = link_info.input_bfds; abfd; abfd = abfd->link.next)
     if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
       {
 	const char *audit_libs = elf_dt_audit (abfd);
@@ -1942,9 +1942,12 @@ fragment <<EOF
 static void
 gld${EMULATION_NAME}_after_allocation (void)
 {
-  bfd_boolean need_layout = bfd_elf_discard_info (link_info.output_bfd,
-						  &link_info);
-  gld${EMULATION_NAME}_map_segments (need_layout);
+  int need_layout = bfd_elf_discard_info (link_info.output_bfd, &link_info);
+
+  if (need_layout < 0)
+    einfo ("%X%P: .eh_frame/.stab edit: %E\n");
+  else
+    gld${EMULATION_NAME}_map_segments (need_layout);
 }
 EOF
 fi
@@ -2274,6 +2277,14 @@ fragment <<EOF
 	  link_info.execstack = FALSE;
 	}
 EOF
+
+if test x"$BNDPLT" = xyes; then
+fragment <<EOF
+      else if (strcmp (optarg, "bndplt") == 0)
+	link_info.bndplt = TRUE;
+EOF
+fi
+
 if test x"$GENERATE_SHLIB_SCRIPT" = xyes; then
 fragment <<EOF
       else if (strcmp (optarg, "global") == 0)
@@ -2450,6 +2461,13 @@ fragment <<EOF
   -z relro                    Create RELRO program header\n"));
   fprintf (file, _("\
   -z stacksize=SIZE           Set size of stack segment\n"));
+EOF
+fi
+
+if test x"$BNDPLT" = xyes; then
+fragment <<EOF
+  fprintf (file, _("\
+  -z bndplt                   Always generate BND prefix in PLT entries\n"));
 EOF
 fi
 

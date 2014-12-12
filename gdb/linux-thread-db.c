@@ -18,15 +18,12 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-
-#include "gdb_assert.h"
 #include <dlfcn.h>
 #include "gdb_proc_service.h"
-#include "gdb_thread_db.h"
+#include "nat/gdb_thread_db.h"
 #include "gdb_vecs.h"
 #include "bfd.h"
 #include "command.h"
-#include "exceptions.h"
 #include "gdbcmd.h"
 #include "gdbthread.h"
 #include "inferior.h"
@@ -40,8 +37,8 @@
 #include "gdbcore.h"
 #include "observer.h"
 #include "linux-nat.h"
-#include "linux-procfs.h"
-#include "linux-osdata.h"
+#include "nat/linux-procfs.h"
+#include "nat/linux-osdata.h"
 #include "auto-load.h"
 #include "cli/cli-utils.h"
 
@@ -1220,12 +1217,41 @@ thread_db_new_objfile (struct objfile *objfile)
     check_for_thread_db ();
 }
 
+static void
+check_pid_namespace_match (void)
+{
+  /* Check is only relevant for local targets targets.  */
+  if (target_can_run (&current_target))
+    {
+      /* If the child is in a different PID namespace, its idea of its
+	 PID will differ from our idea of its PID.  When we scan the
+	 child's thread list, we'll mistakenly think it has no threads
+	 since the thread PID fields won't match the PID we give to
+	 libthread_db.  */
+      char *our_pid_ns = linux_proc_pid_get_ns (getpid (), "pid");
+      char *inferior_pid_ns = linux_proc_pid_get_ns (
+	ptid_get_pid (inferior_ptid), "pid");
+
+      if (our_pid_ns != NULL && inferior_pid_ns != NULL
+	  && strcmp (our_pid_ns, inferior_pid_ns) != 0)
+	{
+	  warning (_ ("Target and debugger are in different PID "
+		      "namespaces; thread lists and other data are "
+		      "likely unreliable"));
+	}
+
+      xfree (our_pid_ns);
+      xfree (inferior_pid_ns);
+    }
+}
+
 /* This function is called via the inferior_created observer.
    This handles the case of debugging statically linked executables.  */
 
 static void
 thread_db_inferior_created (struct target_ops *target, int from_tty)
 {
+  check_pid_namespace_match ();
   check_for_thread_db ();
 }
 
@@ -1720,10 +1746,12 @@ update_thread_core (struct lwp_info *info, void *closure)
 }
 
 static void
-thread_db_find_new_threads (struct target_ops *ops)
+thread_db_update_thread_list (struct target_ops *ops)
 {
   struct thread_db_info *info;
   struct inferior *inf;
+
+  prune_threads ();
 
   ALL_INFERIORS (inf)
     {
@@ -1767,10 +1795,7 @@ thread_db_pid_to_str (struct target_ops *ops, ptid_t ptid)
     }
 
   beneath = find_target_beneath (ops);
-  if (beneath->to_pid_to_str (beneath, ptid))
-    return beneath->to_pid_to_str (beneath, ptid);
-
-  return normal_pid_to_str (ptid);
+  return beneath->to_pid_to_str (beneath, ptid);
 }
 
 /* Return a string describing the state of the thread specified by
@@ -1874,11 +1899,7 @@ thread_db_get_thread_local_address (struct target_ops *ops,
     }
 
   beneath = find_target_beneath (ops);
-  if (beneath->to_get_thread_local_address)
-    return beneath->to_get_thread_local_address (beneath, ptid, lm, offset);
-  else
-    throw_error (TLS_GENERIC_ERROR,
-	         _("TLS not supported on this target"));
+  return beneath->to_get_thread_local_address (beneath, ptid, lm, offset);
 }
 
 /* Callback routine used to find a thread based on the TID part of
@@ -2084,7 +2105,7 @@ init_thread_db_ops (void)
   thread_db_ops.to_wait = thread_db_wait;
   thread_db_ops.to_resume = thread_db_resume;
   thread_db_ops.to_mourn_inferior = thread_db_mourn_inferior;
-  thread_db_ops.to_find_new_threads = thread_db_find_new_threads;
+  thread_db_ops.to_update_thread_list = thread_db_update_thread_list;
   thread_db_ops.to_pid_to_str = thread_db_pid_to_str;
   thread_db_ops.to_stratum = thread_stratum;
   thread_db_ops.to_has_thread_control = tc_schedlock;

@@ -132,10 +132,9 @@ enum type_code
     TYPE_CODE_RANGE,		/**< Range (integers within spec'd bounds).  */
 
     /* * A string type which is like an array of character but prints
-       differently (at least for (the deleted) CHILL).  It does not
-       contain a length field as Pascal strings (for many Pascals,
-       anyway) do; if we want to deal with such strings, we should use
-       a new type code.  */
+       differently.  It does not contain a length field as Pascal
+       strings (for many Pascals, anyway) do; if we want to deal with
+       such strings, we should use a new type code.  */
     TYPE_CODE_STRING,
 
     /* * Unknown type.  The length field is valid if we were able to
@@ -184,15 +183,6 @@ enum type_code
     /* * Methods implemented in extension languages.  */
     TYPE_CODE_XMETHOD
   };
-
-/* * For now allow source to use TYPE_CODE_CLASS for C++ classes, as
-   an alias for TYPE_CODE_STRUCT.  This is for DWARF, which has a
-   distinct "class" attribute.  Perhaps we should actually have a
-   separate TYPE_CODE so that we can print "class" or "struct"
-   depending on what the debug info said.  It's not clear we should
-   bother.  */
-
-#define TYPE_CODE_CLASS TYPE_CODE_STRUCT
 
 /* * Some constants representing each bit field in the main_type.  See
    the bit-field-specific macros, below, for documentation of each
@@ -725,6 +715,11 @@ struct main_type
 
     struct func_type *func_stuff;
   } type_specific;
+
+  /* * Contains a location description value for the current type. Evaluating
+     this field yields to the location of the data for an object.  */
+
+  struct dynamic_prop *data_location;
 };
 
 /* * A ``struct type'' describes a particular instance of a type, with
@@ -1203,6 +1198,16 @@ extern void allocate_gnat_aux_type (struct type *);
   TYPE_RANGE_DATA(range_type)->high.kind
 #define TYPE_LOW_BOUND_KIND(range_type) \
   TYPE_RANGE_DATA(range_type)->low.kind
+
+/* Attribute accessors for the type data location.  */
+#define TYPE_DATA_LOCATION(thistype) \
+  TYPE_MAIN_TYPE(thistype)->data_location
+#define TYPE_DATA_LOCATION_BATON(thistype) \
+  TYPE_DATA_LOCATION (thistype)->data.baton
+#define TYPE_DATA_LOCATION_ADDR(thistype) \
+  TYPE_DATA_LOCATION (thistype)->data.const_val
+#define TYPE_DATA_LOCATION_KIND(thistype) \
+  TYPE_DATA_LOCATION (thistype)->kind
 
 /* Moto-specific stuff for FORTRAN arrays.  */
 
@@ -1817,6 +1822,8 @@ extern int can_dereference (struct type *);
 extern int is_integral_type (struct type *);
 
 extern int is_scalar_type_recursive (struct type *);
+
+extern int class_or_union_p (const struct type *);
 
 extern void maintenance_print_type (char *, int);
 

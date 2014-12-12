@@ -1516,11 +1516,16 @@ Output_data_plt_x86_64_standard<size>::do_fill_plt_entry(
     unsigned int plt_offset,
     unsigned int plt_index)
 {
+  // Check PC-relative offset overflow in PLT entry.
+  uint64_t plt_got_pcrel_offset = (got_address + got_offset
+				   - (plt_address + plt_offset + 6));
+  if (Bits<32>::has_overflow(plt_got_pcrel_offset))
+    gold_error(_("PC-relative offset overflow in PLT entry %d"),
+	       plt_index + 1);
+
   memcpy(pov, plt_entry, plt_entry_size);
   elfcpp::Swap_unaligned<32, false>::writeval(pov + 2,
-					      (got_address + got_offset
-					       - (plt_address + plt_offset
-						  + 6)));
+					      plt_got_pcrel_offset);
 
   elfcpp::Swap_unaligned<32, false>::writeval(pov + 7, plt_index);
   elfcpp::Swap<32, false>::writeval(pov + 12,
@@ -2923,11 +2928,6 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 		  }
 	      }
 	  }
-	// For GOTPLT64, we also need a PLT entry (but only if the
-	// symbol is not fully resolved).
-	if (r_type == elfcpp::R_X86_64_GOTPLT64
-	    && !gsym->final_value_is_known())
-	  target->make_plt_entry(symtab, layout, gsym);
       }
       break;
 
@@ -3454,9 +3454,9 @@ Target_x86_64<size>::Relocate::relocate(
       break;
 
     case elfcpp::R_X86_64_GOT64:
-      // The ABI doc says "Like GOT64, but indicates a PLT entry is needed."
-      // Since we always add a PLT entry, this is equivalent.
     case elfcpp::R_X86_64_GOTPLT64:
+      // R_X86_64_GOTPLT64 is obsolete and treated the the same as
+      // GOT64.
       gold_assert(have_got_offset);
       Relocate_functions<size, false>::rela64(view, got_offset, addend);
       break;

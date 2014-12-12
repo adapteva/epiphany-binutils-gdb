@@ -25,8 +25,6 @@
 #include "gdbcmd.h"
 #include "infcall.h"
 #include "objfiles.h"
-#include "gdb_assert.h"
-#include <string.h>
 #include "linux-fork.h"
 #include "linux-nat.h"
 #include "gdbthread.h"
@@ -692,12 +690,15 @@ checkpoint_command (char *args, int from_tty)
 
   retpid = value_as_long (ret);
   get_last_target_status (&last_target_ptid, &last_target_waitstatus);
+
+  fp = find_fork_pid (retpid);
+
   if (from_tty)
     {
       int parent_pid;
 
-      printf_filtered (_("checkpoint: fork returned pid %ld.\n"),
-		       (long) retpid);
+      printf_filtered (_("checkpoint %d: fork returned pid %ld.\n"),
+		       fp != NULL ? fp->num : -1, (long) retpid);
       if (info_verbose)
 	{
 	  parent_pid = ptid_get_lwp (last_target_ptid);
@@ -708,7 +709,6 @@ checkpoint_command (char *args, int from_tty)
 	}
     }
 
-  fp = find_fork_pid (retpid);
   if (!fp)
     error (_("Failed to find new fork"));
   fork_save_infrun_state (fp, 1);

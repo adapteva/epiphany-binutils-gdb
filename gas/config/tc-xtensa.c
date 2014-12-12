@@ -6963,7 +6963,7 @@ xg_assemble_vliw_tokens (vliw_insn *vinsn)
   if (frag_now_fix () != 0
       && (! frag_now->tc_frag_data.is_insn
  	  || (vinsn_has_specific_opcodes (vinsn) && use_transform ())
- 	  || !use_transform () != frag_now->tc_frag_data.is_no_transform
+ 	  || (!use_transform ()) != frag_now->tc_frag_data.is_no_transform
  	  || (directive_state[directive_longcalls]
 	      != frag_now->tc_frag_data.use_longcalls)
  	  || (directive_state[directive_absolute_literals]
@@ -9514,11 +9514,11 @@ search_trampolines (TInsn *tinsn, fragS *fragP, bfd_boolean unreachable_only)
 	      if (next_addr == 0 || addr - next_addr > J_RANGE)
 		break;
 	    }
-	  if (abs (addr - this_addr) < J_RANGE)
-	    return tf;
-
-	  return NULL;
 	}
+      if (abs (addr - this_addr) < J_RANGE)
+	return tf;
+
+      return NULL;
     }
   for ( ; tf; tf = tf->next)
     {

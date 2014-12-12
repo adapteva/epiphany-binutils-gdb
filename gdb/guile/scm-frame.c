@@ -23,7 +23,6 @@
 #include "defs.h"
 #include "block.h"
 #include "frame.h"
-#include "exceptions.h"
 #include "inferior.h"
 #include "objfiles.h"
 #include "symfile.h"
@@ -576,7 +575,7 @@ static SCM
 gdbscm_frame_block (SCM self)
 {
   frame_smob *f_smob;
-  struct block *block = NULL, *fn_block;
+  const struct block *block = NULL, *fn_block;
   struct frame_info *frame = NULL;
   volatile struct gdb_exception except;
 
@@ -613,7 +612,7 @@ gdbscm_frame_block (SCM self)
       SCM block_scm;
 
       st = SYMBOL_SYMTAB (BLOCK_FUNCTION (fn_block));
-      return bkscm_scm_from_block (block, st->objfile);
+      return bkscm_scm_from_block (block, SYMTAB_OBJFILE (st));
     }
 
   return SCM_BOOL_F;

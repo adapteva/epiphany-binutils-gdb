@@ -1,7 +1,7 @@
 // mips.h -- ELF definitions specific to EM_MIPS  -*- C++ -*-
 
 // Copyright (C) 2012-2014 Free Software Foundation, Inc.
-// Written by Sasa Stankovic <sasa.stankovic@rt-rk.com>
+// Written by Sasa Stankovic <sasa.stankovic@imgtec.com>
 //        and Aleksandar Simeonov <aleksandar.simeonov@rt-rk.com>.
 
 // This file is part of elfcpp.
@@ -250,6 +250,10 @@ enum
   E_MIPS_ARCH_32R2 = 0x70000000,
   // -mips64r2 code.
   E_MIPS_ARCH_64R2 = 0x80000000,
+  // -mips32r6 code.
+  E_MIPS_ARCH_32R6 = 0x90000000,
+  // -mips64r6 code.
+  E_MIPS_ARCH_64R6 = 0xa0000000,
 };
 
 enum

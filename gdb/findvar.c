@@ -25,8 +25,6 @@
 #include "gdbcore.h"
 #include "inferior.h"
 #include "target.h"
-#include <string.h>
-#include "gdb_assert.h"
 #include "floatformat.h"
 #include "symfile.h"		/* for overlay functions */
 #include "regcache.h"
@@ -575,9 +573,9 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
 	lookup_data.name = SYMBOL_LINKAGE_NAME (var);
 
 	gdbarch_iterate_over_objfiles_in_search_order
-	  (get_objfile_arch (SYMBOL_SYMTAB (var)->objfile),
+	  (get_objfile_arch (SYMBOL_OBJFILE (var)),
 	   minsym_lookup_iterator_cb, &lookup_data,
-	   SYMBOL_SYMTAB (var)->objfile);
+	   SYMBOL_OBJFILE (var));
 	msym = lookup_data.result.minsym;
 
 	if (msym == NULL)
@@ -681,12 +679,6 @@ read_frame_register_value (struct value *value, struct frame_info *frame)
       struct value *regval = get_frame_register_value (frame, regnum);
       int reg_len = TYPE_LENGTH (value_type (regval)) - reg_offset;
 
-      if (value_optimized_out (regval))
-	{
-	  set_value_optimized_out (value, 1);
-	  break;
-	}
-
       /* If the register length is larger than the number of bytes
          remaining to copy, then only copy the appropriate bytes.  */
       if (reg_len > len)
@@ -732,7 +724,7 @@ value_from_register (struct type *type, int regnum, struct frame_info *frame)
       if (!ok)
 	{
 	  if (optim)
-	    set_value_optimized_out (v, 1);
+	    mark_value_bytes_optimized_out (v, 0, TYPE_LENGTH (type));
 	  if (unavail)
 	    mark_value_bytes_unavailable (v, 0, TYPE_LENGTH (type));
 	}
@@ -766,11 +758,28 @@ address_from_register (int regnum, struct frame_info *frame)
      would therefore abort in get_frame_id.  However, since we only need
      a temporary value that is never used as lvalue, we actually do not
      really need to set its VALUE_FRAME_ID.  Therefore, we re-implement
-     the core of value_from_register, but use the null_frame_id.
+     the core of value_from_register, but use the null_frame_id.  */
 
-     This works only if we do not require a special conversion routine,
-     which is true for plain pointer types for all current targets.  */
-  gdb_assert (!gdbarch_convert_register_p (gdbarch, regnum, type));
+  /* Some targets require a special conversion routine even for plain
+     pointer types.  Avoid constructing a value object in those cases.  */
+  if (gdbarch_convert_register_p (gdbarch, regnum, type))
+    {
+      gdb_byte *buf = alloca (TYPE_LENGTH (type));
+      int optim, unavail, ok;
+
+      ok = gdbarch_register_to_value (gdbarch, frame, regnum, type,
+				      buf, &optim, &unavail);
+      if (!ok)
+	{
+	  /* This function is used while computing a location expression.
+	     Complain about the value being optimized out, rather than
+	     letting value_as_address complain about some random register
+	     the expression depends on not being saved.  */
+	  error_value_optimized_out ();
+	}
+
+      return unpack_long (type, buf);
+    }
 
   value = gdbarch_value_from_register (gdbarch, type, regnum, null_frame_id);
   read_frame_register_value (value, frame);

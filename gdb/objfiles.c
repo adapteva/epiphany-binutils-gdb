@@ -33,12 +33,10 @@
 #include "expression.h"
 #include "parser-defs.h"
 
-#include "gdb_assert.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "gdb_obstack.h"
-#include <string.h>
 #include "hashtab.h"
 
 #include "breakpoint.h"
@@ -316,10 +314,6 @@ allocate_objfile (bfd *abfd, const char *name, int flags)
      that any data that is reference is saved in the per-objfile data
      region.  */
 
-  /* Update the per-objfile information that comes from the bfd, ensuring
-     that any data that is reference is saved in the per-objfile data
-     region.  */
-
   objfile->obfd = abfd;
   gdb_bfd_ref (abfd);
   if (abfd != NULL)
@@ -368,8 +362,9 @@ allocate_objfile (bfd *abfd, const char *name, int flags)
 }
 
 /* Retrieve the gdbarch associated with OBJFILE.  */
+
 struct gdbarch *
-get_objfile_arch (struct objfile *objfile)
+get_objfile_arch (const struct objfile *objfile)
 {
   return objfile->per_bfd->gdbarch;
 }
@@ -642,7 +637,7 @@ free_objfile (struct objfile *objfile)
   {
     struct symtab_and_line cursal = get_current_source_symtab_and_line ();
 
-    if (cursal.symtab && cursal.symtab->objfile == objfile)
+    if (cursal.symtab && SYMTAB_OBJFILE (cursal.symtab) == objfile)
       clear_current_source_symtab_and_line ();
   }
 
@@ -741,30 +736,33 @@ objfile_relocate1 (struct objfile *objfile,
 
   /* OK, get all the symtabs.  */
   {
+    struct compunit_symtab *cust;
     struct symtab *s;
 
-    ALL_OBJFILE_SYMTABS (objfile, s)
+    ALL_OBJFILE_FILETABS (objfile, cust, s)
     {
       struct linetable *l;
-      struct blockvector *bv;
       int i;
 
       /* First the line table.  */
-      l = LINETABLE (s);
+      l = SYMTAB_LINETABLE (s);
       if (l)
 	{
 	  for (i = 0; i < l->nitems; ++i)
-	    l->item[i].pc += ANOFFSET (delta, s->block_line_section);
+	    l->item[i].pc += ANOFFSET (delta,
+				       COMPUNIT_BLOCK_LINE_SECTION
+					 (cust));
 	}
+    }
 
-      /* Don't relocate a shared blockvector more than once.  */
-      if (!s->primary)
-	continue;
+    ALL_OBJFILE_COMPUNITS (objfile, cust)
+    {
+      const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (cust);
+      int block_line_section = COMPUNIT_BLOCK_LINE_SECTION (cust);
 
-      bv = BLOCKVECTOR (s);
       if (BLOCKVECTOR_MAP (bv))
 	addrmap_relocate (BLOCKVECTOR_MAP (bv),
-			  ANOFFSET (delta, s->block_line_section));
+			  ANOFFSET (delta, block_line_section));
 
       for (i = 0; i < BLOCKVECTOR_NBLOCKS (bv); ++i)
 	{
@@ -773,8 +771,8 @@ objfile_relocate1 (struct objfile *objfile,
 	  struct dict_iterator iter;
 
 	  b = BLOCKVECTOR_BLOCK (bv, i);
-	  BLOCK_START (b) += ANOFFSET (delta, s->block_line_section);
-	  BLOCK_END (b) += ANOFFSET (delta, s->block_line_section);
+	  BLOCK_START (b) += ANOFFSET (delta, block_line_section);
+	  BLOCK_END (b) += ANOFFSET (delta, block_line_section);
 
 	  /* We only want to iterate over the local symbols, not any
 	     symbols in included symtabs.  */
@@ -940,7 +938,7 @@ objfile_has_partial_symbols (struct objfile *objfile)
 int
 objfile_has_full_symbols (struct objfile *objfile)
 {
-  return objfile->symtabs != NULL;
+  return objfile->compunit_symtabs != NULL;
 }
 
 /* Return non-zero if OBJFILE has full or partial symbols, either directly
@@ -1454,14 +1452,14 @@ is_addr_in_objfile (CORE_ADDR addr, const struct objfile *objfile)
 }
 
 int
-userloaded_objfile_contains_address_p (struct program_space *pspace,
-				       CORE_ADDR address)
+shared_objfile_contains_address_p (struct program_space *pspace,
+				   CORE_ADDR address)
 {
   struct objfile *objfile;
 
   ALL_PSPACE_OBJFILES (pspace, objfile)
     {
-      if ((objfile->flags & OBJF_USERLOADED) != 0
+      if ((objfile->flags & OBJF_SHARED) != 0
 	  && is_addr_in_objfile (address, objfile))
 	return 1;
     }

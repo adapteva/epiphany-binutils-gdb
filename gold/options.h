@@ -972,9 +972,11 @@ class General_options
 	      N_("(ARM only) Ignore for backward compatibility"), NULL);
 
   DEFINE_bool(pie, options::ONE_DASH, '\0', false,
-	      N_("Create a position independent executable"), NULL);
+	      N_("Create a position independent executable"),
+	      N_("Do not create a position independent executable"));
   DEFINE_bool_alias(pic_executable, pie, options::TWO_DASHES, '\0',
-		    N_("Create a position independent executable"), NULL,
+		    N_("Create a position independent executable"),
+		    N_("Do not create a position independent executable"),
 		    false);
 
   DEFINE_bool(pipeline_knowledge, options::ONE_DASH, '\0', false,
@@ -1270,6 +1272,9 @@ class General_options
 	      NULL);
   DEFINE_bool(execstack, options::DASH_Z, '\0', false,
 	      N_("Mark output as requiring executable stack"), NULL);
+  DEFINE_bool(global, options::DASH_Z, '\0', false,
+	      N_("Make symbols in DSO available for subsequently loaded "
+	         "objects"), NULL);
   DEFINE_bool(initfirst, options::DASH_Z, '\0', false,
 	      N_("Mark DSO to be initialized first at runtime"),
 	      NULL);

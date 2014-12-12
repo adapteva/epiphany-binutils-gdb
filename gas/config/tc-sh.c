@@ -811,7 +811,7 @@ sh_cons_fix_new (fragS *frag, int off, int size, expressionS *exp,
 /* Clobbers input_line_pointer, checks end-of-line.  */
 /* NBYTES 1=.byte, 2=.word, 4=.long */
 static void
-sh_elf_cons (register int nbytes)
+sh_elf_cons (int nbytes)
 {
   expressionS exp;
 
@@ -4435,7 +4435,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
   if (SWITCH_TABLE (fixp))
     {
       *rel->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_subsy);
-      rel->addend = 0;
+      rel->addend = rel->address - S_GET_VALUE(fixp->fx_subsy);
       if (r_type == BFD_RELOC_16)
 	r_type = BFD_RELOC_SH_SWITCH16;
       else if (r_type == BFD_RELOC_8)

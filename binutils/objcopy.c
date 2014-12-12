@@ -1148,13 +1148,13 @@ is_nondebug_keep_contents_section (bfd *ibfd, asection *isection)
   if (ibfd->xvec->flavour == bfd_target_elf_flavour)
     return (elf_section_type (isection) == SHT_NOTE);
 
-  /* Always keep the .build-id section for PE/COFF.
+  /* Always keep the .buildid section for PE/COFF.
 
      Strictly, this should be written "always keep the section storing the debug
      directory", but that may be the .text section for objects produced by some
      tools, which it is not sensible to keep.  */
   if (ibfd->xvec->flavour == bfd_target_coff_flavour)
-    return (strcmp (bfd_get_section_name (ibfd, isection), ".build-id") == 0);
+    return (strcmp (bfd_get_section_name (ibfd, isection), ".buildid") == 0);
 
   return FALSE;
 }
@@ -2295,6 +2295,16 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
       bfd_boolean del = TRUE;
       bfd_boolean ok_object;
 
+      /* PR binutils/17533: Do not allow directory traversal
+	 outside of the current directory tree by archive members.  */
+      if (! is_valid_archive_path (bfd_get_filename (this_element)))
+	{
+	  non_fatal (_("illegal pathname found in archive member: %s"),
+		     bfd_get_filename (this_element));
+	  status = 1;
+	  goto cleanup_and_exit;
+	}
+
       /* Create an output file for this member.  */
       output_name = concat (dir, "/",
 			    bfd_get_filename (this_element), (char *) 0);
@@ -2304,8 +2314,12 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
 	{
 	  output_name = make_tempdir (output_name);
 	  if (output_name == NULL)
-	    fatal (_("cannot create tempdir for archive copying (error: %s)"),
-		   strerror (errno));
+	    {
+	      non_fatal (_("cannot create tempdir for archive copying (error: %s)"),
+			 strerror (errno));
+	      status = 1;
+	      goto cleanup_and_exit;
+	    }
 
 	  l = (struct name_list *) xmalloc (sizeof (struct name_list));
 	  l->name = output_name;
@@ -2347,7 +2361,7 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
 	{
 	  bfd_nonfatal_message (output_name, NULL, NULL, NULL);
 	  status = 1;
-	  return;
+	  goto cleanup_and_exit;
 	}
 
       if (ok_object)
@@ -2408,7 +2422,6 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
     {
       status = 1;
       bfd_nonfatal_message (filename, NULL, NULL, NULL);
-      return;
     }
 
   filename = bfd_get_filename (ibfd);
@@ -2416,9 +2429,9 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
     {
       status = 1;
       bfd_nonfatal_message (filename, NULL, NULL, NULL);
-      return;
     }
 
+ cleanup_and_exit:
   /* Delete all the files that we opened.  */
   for (l = list; l != NULL; l = l->next)
     {

@@ -190,6 +190,8 @@ binary_canonicalize_symtab (bfd *abfd, asymbol **alocation)
 
 #define binary_make_empty_symbol  _bfd_generic_make_empty_symbol
 #define binary_print_symbol       _bfd_nosymbols_print_symbol
+#define binary_get_symbol_version_string \
+  _bfd_nosymbols_get_symbol_version_string
 
 /* Get information about a symbol.  */
 
@@ -204,6 +206,7 @@ binary_get_symbol_info (bfd *ignore_abfd ATTRIBUTE_UNUSED,
 #define binary_bfd_is_local_label_name      bfd_generic_is_local_label_name
 #define binary_get_lineno                  _bfd_nosymbols_get_lineno
 #define binary_find_nearest_line           _bfd_nosymbols_find_nearest_line
+#define binary_find_line                   _bfd_nosymbols_find_line
 #define binary_find_inliner_info           _bfd_nosymbols_find_inliner_info
 #define binary_bfd_make_debug_symbol       _bfd_nosymbols_bfd_make_debug_symbol
 #define binary_read_minisymbols            _bfd_generic_read_minisymbols
@@ -305,7 +308,6 @@ binary_sizeof_headers (bfd *abfd ATTRIBUTE_UNUSED,
 #define binary_section_already_linked             _bfd_generic_section_already_linked
 #define binary_bfd_define_common_symbol            bfd_generic_define_common_symbol
 #define binary_bfd_link_hash_table_create         _bfd_generic_link_hash_table_create
-#define binary_bfd_link_hash_table_free           _bfd_generic_link_hash_table_free
 #define binary_bfd_link_just_syms                 _bfd_generic_link_just_syms
 #define binary_bfd_copy_link_hash_symbol_type \
   _bfd_generic_copy_link_hash_symbol_type

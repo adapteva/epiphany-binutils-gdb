@@ -25,7 +25,6 @@
 #include "gdbtypes.h"
 #include "gdbcmd.h"
 #include "gdbcore.h"
-#include <string.h>
 #include "value.h"
 #include "inferior.h"
 #include "symfile.h"
@@ -37,8 +36,6 @@
 #include "trad-frame.h"
 #include "dis-asm.h"
 #include "objfiles.h"
-
-#include "gdb_assert.h"
 
 #include "m32r-tdep.h"
 
@@ -82,7 +79,7 @@ static int
 m32r_memory_insert_breakpoint (struct gdbarch *gdbarch,
 			       struct bp_target_info *bp_tgt)
 {
-  CORE_ADDR addr = bp_tgt->placed_address;
+  CORE_ADDR addr = bp_tgt->placed_address = bp_tgt->reqstd_address;
   int val;
   gdb_byte buf[4];
   gdb_byte contents_cache[4];

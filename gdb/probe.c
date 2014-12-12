@@ -26,7 +26,6 @@
 #include "symtab.h"
 #include "progspace.h"
 #include "filenames.h"
-#include "exceptions.h"
 #include "linespec.h"
 #include "gdb_regex.h"
 #include "frame.h"
@@ -486,7 +485,8 @@ get_number_extra_fields (const struct probe_ops *pops)
 /* See comment in probe.h.  */
 
 void
-info_probes_for_ops (char *arg, int from_tty, const struct probe_ops *pops)
+info_probes_for_ops (const char *arg, int from_tty,
+		     const struct probe_ops *pops)
 {
   char *provider, *probe_name = NULL, *objname = NULL;
   struct cleanup *cleanup = make_cleanup (null_cleanup, NULL);
@@ -501,17 +501,17 @@ info_probes_for_ops (char *arg, int from_tty, const struct probe_ops *pops)
   struct gdbarch *gdbarch = get_current_arch ();
 
   /* Do we have a `provider:probe:objfile' style of linespec?  */
-  provider = extract_arg (&arg);
+  provider = extract_arg_const (&arg);
   if (provider)
     {
       make_cleanup (xfree, provider);
 
-      probe_name = extract_arg (&arg);
+      probe_name = extract_arg_const (&arg);
       if (probe_name)
 	{
 	  make_cleanup (xfree, probe_name);
 
-	  objname = extract_arg (&arg);
+	  objname = extract_arg_const (&arg);
 	  if (objname)
 	    make_cleanup (xfree, objname);
 	}

@@ -32,7 +32,6 @@
 #include "defs.h"
 #include <ctype.h>
 #include "arch-utils.h"
-#include <string.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "frame.h"
@@ -46,11 +45,9 @@
 #include "symfile.h"		/* for overlay functions */
 #include "inferior.h"
 #include "doublest.h"
-#include "gdb_assert.h"
 #include "block.h"
 #include "source.h"
 #include "objfiles.h"
-#include "exceptions.h"
 #include "user-regs.h"
 
 /* Standard set of definitions for printing, dumping, prefixifying,
@@ -586,7 +583,6 @@ mark_completion_tag (enum type_code tag, const char *ptr, int length)
 	      && expout_last_struct == -1);
   gdb_assert (tag == TYPE_CODE_UNION
 	      || tag == TYPE_CODE_STRUCT
-	      || tag == TYPE_CODE_CLASS
 	      || tag == TYPE_CODE_ENUM);
   expout_tag_completion_type = tag;
   expout_completion_name = xmalloc (length + 1);
@@ -1178,7 +1174,8 @@ parse_exp_in_context_1 (const char **stringptr, CORE_ADDR pc,
       struct symtab_and_line cursal = get_current_source_symtab_and_line ();
       if (cursal.symtab)
 	expression_context_block
-	  = BLOCKVECTOR_BLOCK (BLOCKVECTOR (cursal.symtab), STATIC_BLOCK);
+	  = BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (cursal.symtab),
+			       STATIC_BLOCK);
       if (expression_context_block)
 	expression_context_pc = BLOCK_START (expression_context_block);
     }
@@ -1813,7 +1810,7 @@ operator_check_standard (struct expression *exp, int pos,
 
 	/* Check objfile where the variable itself is placed.
 	   SYMBOL_OBJ_SECTION (symbol) may be NULL.  */
-	if ((*objfile_func) (SYMBOL_SYMTAB (symbol)->objfile, data))
+	if ((*objfile_func) (SYMBOL_OBJFILE (symbol), data))
 	  return 1;
 
 	/* Check objfile where is placed the code touching the variable.  */
@@ -1835,12 +1832,12 @@ operator_check_standard (struct expression *exp, int pos,
   return 0;
 }
 
-/* Call OBJFILE_FUNC for any TYPE and OBJFILE found being referenced by EXP.
-   The functions are never called with NULL OBJFILE.  Functions get passed an
-   arbitrary caller supplied DATA pointer.  If any of the functions returns
-   non-zero value then (any other) non-zero value is immediately returned to
-   the caller.  Otherwise zero is returned after iterating through whole EXP.
-   */
+/* Call OBJFILE_FUNC for any objfile found being referenced by EXP.
+   OBJFILE_FUNC is never called with NULL OBJFILE.  OBJFILE_FUNC get
+   passed an arbitrary caller supplied DATA pointer.  If OBJFILE_FUNC
+   returns non-zero value then (any other) non-zero value is immediately
+   returned to the caller.  Otherwise zero is returned after iterating
+   through whole EXP.  */
 
 static int
 exp_iterate (struct expression *exp,

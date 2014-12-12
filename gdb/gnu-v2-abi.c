@@ -20,7 +20,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include <string.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "value.h"
@@ -28,8 +27,6 @@
 #include "gdb-demangle.h"
 #include "cp-abi.h"
 #include "cp-support.h"
-#include "exceptions.h"
-
 #include <ctype.h>
 
 struct cp_abi_ops gnu_v2_abi_ops;
@@ -209,7 +206,7 @@ gnuv2_value_rtti_type (struct value *v, int *full, int *top, int *using_enc)
   known_type = value_type (v);
   CHECK_TYPEDEF (known_type);
   /* RTTI works only or class objects.  */
-  if (TYPE_CODE (known_type) != TYPE_CODE_CLASS)
+  if (TYPE_CODE (known_type) != TYPE_CODE_STRUCT)
     return NULL;
 
   /* Plan on this changing in the future as i get around to setting

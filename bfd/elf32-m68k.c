@@ -940,6 +940,23 @@ elf_m68k_link_hash_newfunc (struct bfd_hash_entry *entry,
   return ret;
 }
 
+/* Destroy an m68k ELF linker hash table.  */
+
+static void
+elf_m68k_link_hash_table_free (bfd *obfd)
+{
+  struct elf_m68k_link_hash_table *htab;
+
+  htab = (struct elf_m68k_link_hash_table *) obfd->link.hash;
+
+  if (htab->multi_got_.bfd2got != NULL)
+    {
+      htab_delete (htab->multi_got_.bfd2got);
+      htab->multi_got_.bfd2got = NULL;
+    }
+  _bfd_elf_link_hash_table_free (obfd);
+}
+
 /* Create an m68k ELF linker hash table.  */
 
 static struct bfd_link_hash_table *
@@ -960,27 +977,11 @@ elf_m68k_link_hash_table_create (bfd *abfd)
       free (ret);
       return NULL;
     }
+  ret->root.root.hash_table_free = elf_m68k_link_hash_table_free;
 
   ret->multi_got_.global_symndx = 1;
 
   return &ret->root.root;
-}
-
-/* Destruct local data.  */
-
-static void
-elf_m68k_link_hash_table_free (struct bfd_link_hash_table *_htab)
-{
-  struct elf_m68k_link_hash_table *htab;
-
-  htab = (struct elf_m68k_link_hash_table *) _htab;
-
-  if (htab->multi_got_.bfd2got != NULL)
-    {
-      htab_delete (htab->multi_got_.bfd2got);
-      htab->multi_got_.bfd2got = NULL;
-    }
-  _bfd_elf_link_hash_table_free (_htab);
 }
 
 /* Set the right machine number.  */
@@ -4841,9 +4842,10 @@ elf_m68k_add_symbol_hook (bfd *abfd,
 			  asection **secp ATTRIBUTE_UNUSED,
 			  bfd_vma *valp ATTRIBUTE_UNUSED)
 {
-  if ((abfd->flags & DYNAMIC) == 0
-      && (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
-	  || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE))
+  if ((ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+       || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE)
+      && (abfd->flags & DYNAMIC) == 0
+      && bfd_get_flavour (info->output_bfd) == bfd_target_elf_flavour)
     elf_tdata (info->output_bfd)->has_gnu_symbols = TRUE;
 
   return TRUE;
@@ -4857,9 +4859,6 @@ elf_m68k_add_symbol_hook (bfd *abfd,
 					_bfd_elf_create_dynamic_sections
 #define bfd_elf32_bfd_link_hash_table_create \
 					elf_m68k_link_hash_table_create
-/* ??? Should it be this macro or bfd_elfNN_bfd_link_hash_table_create?  */
-#define bfd_elf32_bfd_link_hash_table_free \
-					elf_m68k_link_hash_table_free
 #define bfd_elf32_bfd_final_link	bfd_elf_final_link
 
 #define elf_backend_check_relocs	elf_m68k_check_relocs

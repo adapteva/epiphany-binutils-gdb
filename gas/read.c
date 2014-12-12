@@ -557,10 +557,11 @@ pobegin (void)
   cfi_pop_insert ();
 }
 
-#define HANDLE_CONDITIONAL_ASSEMBLY()					\
+#define HANDLE_CONDITIONAL_ASSEMBLY(num_read)				\
   if (ignore_input ())							\
     {									\
-      char *eol = find_end_of_line (input_line_pointer, flag_m68k_mri); \
+      char *eol = find_end_of_line (input_line_pointer - (num_read),	\
+				    flag_m68k_mri);			\
       input_line_pointer = (input_line_pointer <= buffer_limit		\
 			    && eol >= buffer_limit)			\
 			   ? buffer_limit				\
@@ -834,7 +835,7 @@ read_a_source_file (char *name)
 		      char *line_start = input_line_pointer;
 		      int mri_line_macro;
 
-		      HANDLE_CONDITIONAL_ASSEMBLY ();
+		      HANDLE_CONDITIONAL_ASSEMBLY (0);
 
 		      c = get_symbol_end ();
 
@@ -905,7 +906,7 @@ read_a_source_file (char *name)
 	  if (is_name_beginner (c))
 	    {
 	      /* Want user-defined label or pseudo/opcode.  */
-	      HANDLE_CONDITIONAL_ASSEMBLY ();
+	      HANDLE_CONDITIONAL_ASSEMBLY (1);
 
 	      s = --input_line_pointer;
 	      c = get_symbol_end ();	/* name's delimiter.  */
@@ -1119,7 +1120,7 @@ read_a_source_file (char *name)
 	      /* local label  ("4:")  */
 	      char *backup = input_line_pointer;
 
-	      HANDLE_CONDITIONAL_ASSEMBLY ();
+	      HANDLE_CONDITIONAL_ASSEMBLY (1);
 
 	      temp = c - '0';
 
@@ -1266,7 +1267,7 @@ read_a_source_file (char *name)
 	      continue;
 	    }
 
-	  HANDLE_CONDITIONAL_ASSEMBLY ();
+	  HANDLE_CONDITIONAL_ASSEMBLY (1);
 
 #ifdef tc_unrecognized_line
 	  if (tc_unrecognized_line (c))
@@ -1704,7 +1705,7 @@ s_comm_internal (int param,
 
   temp = get_absolute_expr (&exp);
   size = temp;
-  size &= ((offsetT) 2 << (stdoutput->arch_info->bits_per_address - 1)) - 1;
+  size &= ((addressT) 2 << (stdoutput->arch_info->bits_per_address - 1)) - 1;
   if (exp.X_op == O_absent)
     {
       as_bad (_("missing size expression"));
@@ -3187,7 +3188,7 @@ assign_symbol (char *name, int mode)
 	  symbol_set_frag (symbolP, dummy_frag);
 	}
 #endif
-#ifdef OBJ_COFF
+#if defined (OBJ_COFF) && !defined (TE_PE)
       /* "set" symbols are local unless otherwise specified.  */
       SF_SET_LOCAL (symbolP);
 #endif
@@ -4605,7 +4606,7 @@ parse_mri_cons (expressionS *exp, unsigned int nbytes)
       && (input_line_pointer[1] != '\''
 	  || (*input_line_pointer != 'A'
 	      && *input_line_pointer != 'E')))
-    TC_PARSE_CONS_EXPRESSION (exp, nbytes);
+    (void) TC_PARSE_CONS_EXPRESSION (exp, nbytes);
   else
     {
       unsigned int scan;
@@ -6138,7 +6139,7 @@ _find_end_of_line (char *s, int mri_string, int insn ATTRIBUTE_UNUSED,
     }
   if (inquote)
     as_warn (_("missing closing `%c'"), inquote);
-  if (inescape)
+  if (inescape && !ignore_input ())
     as_warn (_("stray `\\'"));
   return s;
 }

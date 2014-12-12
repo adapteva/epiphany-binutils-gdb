@@ -20,6 +20,8 @@ load_lib gdb-guile.exp
 
 standard_testfile
 
+set has_argv0 [gdb_has_argv0]
+
 # Build inferior to language specification.
 # LANG is one of "c" or "c++".
 proc build_inferior {exefile lang} {
@@ -86,9 +88,12 @@ proc test_value_in_inferior {} {
 	"set arg0"
 
     # Check that the dereferenced value is sane.
-    if { ! [target_info exists noargs] } {
-	gdb_test "gu (print arg0)" \
-	    "0x.*$testfile\"" "verify dereferenced value"
+    global has_argv0
+    set test "verify dereferenced value"
+    if { $has_argv0 } {
+	gdb_test "gu (print arg0)" "0x.*$testfile\"" $test
+    } else {
+	unsupported $test
     }
 
     # Smoke-test value-optimized-out?.
@@ -105,14 +110,7 @@ proc test_value_in_inferior {} {
     # Test displaying a variable that is temporarily at a bad address.
     # But if we can examine what's at memory address 0, then we'll also be
     # able to display it without error.  Don't run the test in that case.
-    set can_read_0 0
-    gdb_test_multiple "x 0" "memory at address 0" {
-	-re "0x0:\[ \t\]*Cannot access memory at address 0x0\r\n$gdb_prompt $" { }
-	-re "0x0:\[ \t\]*Error accessing memory address 0x0\r\n$gdb_prompt $" { }
-	-re "\r\n$gdb_prompt $" {
-	    set can_read_0 1
-	}
-    }
+    set can_read_0 [is_address_zero_readable]
 
     # Test memory error.
     set test "parse_and_eval with memory error"
@@ -226,7 +224,11 @@ proc test_lazy_strings {} {
 	"= const char \*." "Test lazy-string type name equality"
     gdb_test "gu (print (value-type sptr))" \
 	"= const char \*." "Test string type name equality"
+
+    # Prevent symbol on address 0x0 being printed.
+    gdb_test_no_output "set print symbol off"
     gdb_test "print sn" "0x0"
+
     gdb_scm_test_silent_cmd "gu (define snptr (history-ref 0))" \
 	"lazy strings: get snptr value from history"
     gdb_test "gu (define snstr (value->lazy-string snptr #:length 5))" \

@@ -18,7 +18,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include <string.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "expression.h"
@@ -173,9 +172,9 @@ c_val_print (struct type *type, const gdb_byte *valaddr,
 				      options->format)
 	      && value_bytes_available (original_value, embedded_offset,
 					TYPE_LENGTH (type))
-	      && value_bits_valid (original_value,
-				   TARGET_CHAR_BIT * embedded_offset,
-				   TARGET_CHAR_BIT * TYPE_LENGTH (type)))
+	      && !value_bits_any_optimized_out (original_value,
+						TARGET_CHAR_BIT * embedded_offset,
+						TARGET_CHAR_BIT * TYPE_LENGTH (type)))
 	    {
 	      int force_ellipses = 0;
 
@@ -496,7 +495,7 @@ c_value_print (struct value *val, struct ui_file *stream,
 	  /* Print nothing.  */
 	}
       else if (options->objectprint
-	       && (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_CLASS))
+	       && (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_STRUCT))
 	{
 	  int is_ref = TYPE_CODE (type) == TYPE_CODE_REF;
 
@@ -546,7 +545,7 @@ c_value_print (struct value *val, struct ui_file *stream,
   if (!value_initialized (val))
     fprintf_filtered (stream, " [uninitialized] ");
 
-  if (options->objectprint && (TYPE_CODE (type) == TYPE_CODE_CLASS))
+  if (options->objectprint && (TYPE_CODE (type) == TYPE_CODE_STRUCT))
     {
       /* Attempt to determine real type of object.  */
       real_type = value_rtti_type (val, &full, &top, &using_enc);

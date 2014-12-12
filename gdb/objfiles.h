@@ -28,7 +28,6 @@
 
 struct bcache;
 struct htab;
-struct symtab;
 struct objfile_data;
 
 /* This structure maintains information on a per-objfile basis about the
@@ -286,11 +285,10 @@ struct objfile
 
     struct program_space *pspace;
 
-    /* Each objfile points to a linked list of symtabs derived from this file,
-       one symtab structure for each compilation unit (source file).  Each link
-       in the symtab list contains a backpointer to this objfile.  */
+    /* List of compunits.
+       These are used to do symbol lookups and file/line-number lookups.  */
 
-    struct symtab *symtabs;
+    struct compunit_symtab *compunit_symtabs;
 
     /* Each objfile points to a linked list of partial symtabs derived from
        this file, one partial symtab structure for each compilation unit
@@ -427,12 +425,9 @@ struct objfile
 #define OBJF_REORDERED	(1 << 0)	/* Functions are reordered */
 
 /* Distinguish between an objfile for a shared library and a "vanilla"
-   objfile.  (If not set, the objfile may still actually be a solib.
-   This can happen if the user created the objfile by using the
-   add-symbol-file command.  GDB doesn't in that situation actually
-   check whether the file is a solib.  Rather, the target's
-   implementation of the solib interface is responsible for setting
-   this flag when noticing solibs used by an inferior.)  */
+   objfile.  This may come from a target's implementation of the solib
+   interface, from add-symbol-file, or any other mechanism that loads
+   dynamic objects.  */
 
 #define OBJF_SHARED     (1 << 1)	/* From a shared library */
 
@@ -468,7 +463,7 @@ struct objfile
 
 extern struct objfile *allocate_objfile (bfd *, const char *name, int);
 
-extern struct gdbarch *get_objfile_arch (struct objfile *);
+extern struct gdbarch *get_objfile_arch (const struct objfile *);
 
 extern int entry_point_address_query (CORE_ADDR *entry_p);
 
@@ -515,12 +510,11 @@ extern void objfiles_changed (void);
 
 extern int is_addr_in_objfile (CORE_ADDR addr, const struct objfile *objfile);
 
-/* Return true if ADDRESS maps into one of the sections of the
-   userloaded ("add-symbol-file") objfiles of PSPACE and false
-   otherwise.  */
+/* Return true if ADDRESS maps into one of the sections of a
+   OBJF_SHARED objfile of PSPACE and false otherwise.  */
 
-extern int userloaded_objfile_contains_address_p (struct program_space *pspace,
-						  CORE_ADDR address);
+extern int shared_objfile_contains_address_p (struct program_space *pspace,
+					      CORE_ADDR address);
 
 /* This operation deletes all objfile entries that represent solibs that
    weren't explicitly loaded by the user, via e.g., the add-symbol-file
@@ -582,11 +576,6 @@ extern void default_iterate_over_objfiles_in_search_order
 #define ALL_PSPACE_OBJFILES(ss, obj)					\
   for ((obj) = ss->objfiles; (obj) != NULL; (obj) = (obj)->next)
 
-#define ALL_PSPACE_OBJFILES_SAFE(ss, obj, nxt)		\
-  for ((obj) = ss->objfiles;			\
-       (obj) != NULL? ((nxt)=(obj)->next,1) :0;	\
-       (obj) = (nxt))
-
 #define ALL_OBJFILES(obj)			    \
   for ((obj) = current_program_space->objfiles; \
        (obj) != NULL;				    \
@@ -599,14 +588,14 @@ extern void default_iterate_over_objfiles_in_search_order
 
 /* Traverse all symtabs in one objfile.  */
 
-#define	ALL_OBJFILE_SYMTABS(objfile, s) \
-    for ((s) = (objfile) -> symtabs; (s) != NULL; (s) = (s) -> next)
+#define ALL_OBJFILE_FILETABS(objfile, cu, s) \
+  ALL_OBJFILE_COMPUNITS (objfile, cu) \
+    ALL_COMPUNIT_FILETABS (cu, s)
 
-/* Traverse all primary symtabs in one objfile.  */
+/* Traverse all compunits in one objfile.  */
 
-#define ALL_OBJFILE_PRIMARY_SYMTABS(objfile, s) \
-  ALL_OBJFILE_SYMTABS ((objfile), (s)) \
-    if ((s)->primary)
+#define ALL_OBJFILE_COMPUNITS(objfile, cu) \
+  for ((cu) = (objfile) -> compunit_symtabs; (cu) != NULL; (cu) = (cu) -> next)
 
 /* Traverse all minimal symbols in one objfile.  */
 
@@ -618,25 +607,15 @@ extern void default_iterate_over_objfiles_in_search_order
 /* Traverse all symtabs in all objfiles in the current symbol
    space.  */
 
-#define	ALL_SYMTABS(objfile, s) \
-  ALL_OBJFILES (objfile)	 \
-    ALL_OBJFILE_SYMTABS (objfile, s)
+#define ALL_FILETABS(objfile, ps, s)		\
+  ALL_OBJFILES (objfile)			\
+    ALL_OBJFILE_FILETABS (objfile, ps, s)
 
-#define ALL_PSPACE_SYMTABS(ss, objfile, s)		\
-  ALL_PSPACE_OBJFILES (ss, objfile)			\
-    ALL_OBJFILE_SYMTABS (objfile, s)
+/* Traverse all compunits in all objfiles in the current program space.  */
 
-/* Traverse all symtabs in all objfiles in the current program space,
-   skipping included files (which share a blockvector with their
-   primary symtab).  */
-
-#define ALL_PRIMARY_SYMTABS(objfile, s) \
+#define ALL_COMPUNITS(objfile, cu)	\
   ALL_OBJFILES (objfile)		\
-    ALL_OBJFILE_PRIMARY_SYMTABS (objfile, s)
-
-#define ALL_PSPACE_PRIMARY_SYMTABS(pspace, objfile, s)	\
-  ALL_PSPACE_OBJFILES (ss, objfile)			\
-    ALL_OBJFILE_PRIMARY_SYMTABS (objfile, s)
+    ALL_OBJFILE_COMPUNITS (objfile, cu)
 
 /* Traverse all minimal symbols in all objfiles in the current symbol
    space.  */

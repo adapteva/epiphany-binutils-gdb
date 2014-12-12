@@ -132,7 +132,7 @@ static int support_old_code = 0;
 static char * thumb_entry_symbol = NULL;
 static lang_assignment_statement_type *image_base_statement = 0;
 static unsigned short pe_dll_characteristics = 0;
-static bfd_boolean insert_timestamp = FALSE;
+static bfd_boolean insert_timestamp = TRUE;
 static const char *emit_build_id;
 
 #ifdef DLL_SUPPORT
@@ -272,7 +272,8 @@ fragment <<EOF
 #define OPTION_TERMINAL_SERVER_AWARE	(OPTION_WDM_DRIVER + 1)
 /* Determinism.  */
 #define OPTION_INSERT_TIMESTAMP		(OPTION_TERMINAL_SERVER_AWARE + 1)
-#define OPTION_BUILD_ID			(OPTION_INSERT_TIMESTAMP + 1)
+#define OPTION_NO_INSERT_TIMESTAMP	(OPTION_INSERT_TIMESTAMP + 1)
+#define OPTION_BUILD_ID			(OPTION_NO_INSERT_TIMESTAMP + 1)
 
 static void
 gld${EMULATION_NAME}_add_options
@@ -307,6 +308,7 @@ gld${EMULATION_NAME}_add_options
     {"no-leading-underscore", no_argument, NULL, OPTION_NO_LEADING_UNDERSCORE},
     {"leading-underscore", no_argument, NULL, OPTION_LEADING_UNDERSCORE},
     {"insert-timestamp", no_argument, NULL, OPTION_INSERT_TIMESTAMP},
+    {"no-insert-timestamp", no_argument, NULL, OPTION_NO_INSERT_TIMESTAMP},
 #ifdef DLL_SUPPORT
     /* getopt allows abbreviations, so we do this to stop it
        from treating -o as an abbreviation for this option.  */
@@ -445,7 +447,7 @@ gld_${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("  --support-old-code                 Support interworking with old code\n"));
   fprintf (file, _("  --[no-]leading-underscore          Set explicit symbol underscore prefix mode\n"));
   fprintf (file, _("  --thumb-entry=<symbol>             Set the entry point to be Thumb <symbol>\n"));
-  fprintf (file, _("  --insert-timestamp                 Use a real timestamp rather than zero.\n"));
+  fprintf (file, _("  --[no-]insert-timestamp            Use a real timestamp rather than zero (default).\n"));
   fprintf (file, _("                                     This makes binaries non-deterministic\n"));
 #ifdef DLL_SUPPORT
   fprintf (file, _("  --add-stdcall-alias                Export symbols with and without @nn\n"));
@@ -768,6 +770,9 @@ gld${EMULATION_NAME}_handle_option (int optc)
       break;
     case OPTION_INSERT_TIMESTAMP:
       insert_timestamp = TRUE;
+      break;
+    case OPTION_NO_INSERT_TIMESTAMP:
+      insert_timestamp = FALSE;
       break;
 #ifdef DLL_SUPPORT
     case OPTION_OUT_DEF:
@@ -1292,7 +1297,7 @@ write_build_id (bfd *abfd)
   bfd_size_type build_id_size;
   unsigned char *build_id;
 
-  /* Find the section the .build-id output section has been merged info.  */
+  /* Find the section the .buildid output section has been merged info.  */
   for (asec = abfd->sections; asec != NULL; asec = asec->next)
     {
       struct bfd_link_order *l = NULL;
@@ -1314,7 +1319,7 @@ write_build_id (bfd *abfd)
 
   if (!link_order)
     {
-      einfo (_("%P: warning: .build-id section discarded,"
+      einfo (_("%P: warning: .buildid section discarded,"
                " --build-id ignored.\n"));
       return TRUE;
     }
@@ -1378,7 +1383,7 @@ write_build_id (bfd *abfd)
   return TRUE;
 }
 
-/* Make .build-id section, and set up coff_tdata->build_id. */
+/* Make .buildid section, and set up coff_tdata->build_id. */
 static bfd_boolean
 setup_build_id (bfd *ibfd)
 {
@@ -1393,7 +1398,7 @@ setup_build_id (bfd *ibfd)
 
   flags = (SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_IN_MEMORY
 	   | SEC_LINKER_CREATED | SEC_READONLY | SEC_DATA);
-  s = bfd_make_section_anyway_with_flags (ibfd, ".build-id", flags);
+  s = bfd_make_section_anyway_with_flags (ibfd, ".buildid", flags);
   if (s != NULL)
     {
       struct pe_tdata *t = pe_data (link_info.output_bfd);
@@ -1411,7 +1416,7 @@ setup_build_id (bfd *ibfd)
       return TRUE;
     }
 
-  einfo ("%P: warning: Cannot create .build-id section,"
+  einfo ("%P: warning: Cannot create .buildid section,"
 	 " --build-id ignored.\n");
   return FALSE;
 }
@@ -1433,7 +1438,7 @@ gld_${EMULATION_NAME}_after_open (void)
 	printf ("-%s\n", sym->root.string);
       bfd_hash_traverse (&link_info.hash->table, pr_sym, NULL);
 
-      for (a = link_info.input_bfds; a; a = a->link_next)
+      for (a = link_info.input_bfds; a; a = a->link.next)
 	printf ("*%s\n",a->filename);
     }
 #endif
@@ -1444,7 +1449,7 @@ gld_${EMULATION_NAME}_after_open (void)
 
       /* Find a COFF input.  */
       for (abfd = link_info.input_bfds;
-	   abfd != (bfd *) NULL; abfd = abfd->link_next)
+	   abfd != (bfd *) NULL; abfd = abfd->link.next)
 	if (bfd_get_flavour (abfd) == bfd_target_coff_flavour)
 	  break;
 

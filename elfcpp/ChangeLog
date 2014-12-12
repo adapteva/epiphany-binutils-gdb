@@ -1,3 +1,35 @@
+2014-09-17  Han Shen  <shenhan@google.com>
+
+	* aarch64.h (R_AARCH64_TLS_DTPREL64): Switch enum value with ...
+	(R_AARCH64_TLS_DTPMOD64): ... enum value.
+
+2014-09-15  Andrew Bennett  <andrew.bennett@imgtec.com>
+	    Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	* mips.h (E_MIPS_ARCH_32R6, E_MIPS_ARCH_64R6): New enum constants.
+
+2014-09-02  Cary Coutant  <ccoutant@google.com>
+
+	* elfcpp_file.h (Elf_file::shnum): New const function.
+	(Elf_file::shstrndx): New const function.
+	(Elf_file::large_shndx_offset): New const function.
+	(Elf_file::section_name): Add const attribute.
+	(Elf_file::section_header_offset): Likewise.
+
+2014-08-08  Han Shen  <shenhan@google.com>
+
+	* aarch64.h (withdrawn): Replaced with R_AARCH64_withdrawn.
+
+2014-07-29  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	* elfcpp.h (PT_MIPS_ABIFLAGS): New program header type.
+
+2014-07-02  Jing Yu  <jingyu@google.com>
+
+	* aarch64.h: New file. New enums for aarch64-elf64 relocations.
+	* elfcpp.h (EM_AARCH64, SHT_AARCH64_ATTRIBUTES, PT_AARCH64_ARCHEXT,
+	PT_AARCH64_UNWIND): New enum constant.
+
 2014-04-22  Christian Svensson  <blue@cmd.nu>
 
 	* elfcpp.h: Remove openrisc and or32 support.

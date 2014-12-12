@@ -31,13 +31,13 @@
 #define bfd_mach_o_bfd_is_local_label_name            bfd_generic_is_local_label_name
 #define bfd_mach_o_get_lineno                         _bfd_nosymbols_get_lineno
 #define bfd_mach_o_find_inliner_info                  _bfd_nosymbols_find_inliner_info
+#define bfd_mach_o_get_symbol_version_string	      _bfd_nosymbols_get_symbol_version_string
 #define bfd_mach_o_bfd_make_debug_symbol              _bfd_nosymbols_bfd_make_debug_symbol
 #define bfd_mach_o_read_minisymbols                   _bfd_generic_read_minisymbols
 #define bfd_mach_o_minisymbol_to_symbol               _bfd_generic_minisymbol_to_symbol
 #define bfd_mach_o_bfd_get_relocated_section_contents bfd_generic_get_relocated_section_contents
 #define bfd_mach_o_bfd_relax_section                  bfd_generic_relax_section
 #define bfd_mach_o_bfd_link_hash_table_create         _bfd_generic_link_hash_table_create
-#define bfd_mach_o_bfd_link_hash_table_free           _bfd_generic_link_hash_table_free
 #define bfd_mach_o_bfd_link_add_symbols               _bfd_generic_link_add_symbols
 #define bfd_mach_o_bfd_link_just_syms                 _bfd_generic_link_just_syms
 #define bfd_mach_o_bfd_copy_link_hash_symbol_type \

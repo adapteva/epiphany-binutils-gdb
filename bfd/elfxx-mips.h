@@ -67,6 +67,8 @@ extern bfd_boolean _bfd_mips_vxworks_finish_dynamic_symbol
    Elf_Internal_Sym *);
 extern bfd_boolean _bfd_mips_elf_finish_dynamic_sections
   (bfd *, struct bfd_link_info *);
+extern bfd_boolean _bfd_mips_elf_sort_relocs_p
+  (asection *);
 extern void _bfd_mips_elf_final_write_processing
   (bfd *, bfd_boolean);
 extern int _bfd_mips_elf_additional_program_headers
@@ -86,8 +88,8 @@ extern bfd_boolean _bfd_mips_elf_ignore_discarded_relocs
 extern bfd_boolean _bfd_mips_elf_is_target_special_symbol
   (bfd *abfd, asymbol *sym);
 extern bfd_boolean _bfd_mips_elf_find_nearest_line
-  (bfd *, asection *, asymbol **, bfd_vma, const char **,
-   const char **, unsigned int *);
+  (bfd *, asymbol **, asection *, bfd_vma,
+   const char **, const char **, unsigned int *, unsigned int *);
 extern bfd_boolean _bfd_mips_elf_find_inliner_info
   (bfd *, const char **, const char **, unsigned int *);
 extern bfd_boolean _bfd_mips_elf_set_section_contents
@@ -157,6 +159,8 @@ extern bfd_vma _bfd_mips_elf_plt_sym_val
   (bfd_vma, const asection *, const arelent *rel);
 extern long _bfd_mips_elf_get_synthetic_symtab
   (bfd *, long, asymbol **, long, asymbol **, asymbol **);
+extern bfd_boolean _bfd_mips_elf_gc_mark_extra_sections
+  (struct bfd_link_info *, elf_gc_mark_hook_fn);
 extern void _bfd_mips_post_process_headers
   (bfd *abfd, struct bfd_link_info *link_info);
 

@@ -30,7 +30,6 @@
 #include "target.h"
 #include "ax.h"
 #include "ax-gdb.h"
-#include <string.h>
 #include "block.h"
 #include "regcache.h"
 #include "user-regs.h"
@@ -2188,7 +2187,7 @@ gen_expr (struct expression *exp, union exp_element **pc,
     case OP_THIS:
       {
 	struct symbol *sym, *func;
-	struct block *b;
+	const struct block *b;
 	const struct language_defn *lang;
 
 	b = block_for_pc (ax->scope);

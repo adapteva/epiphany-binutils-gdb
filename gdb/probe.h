@@ -96,14 +96,14 @@ struct probe_ops
 
     /* Set the semaphore associated with the PROBE.  This function only makes
        sense if the probe has a concept of semaphore associated to a
-       probe.  */
+       probe, otherwise it can be set to NULL.  */
 
     void (*set_semaphore) (struct probe *probe, struct objfile *objfile,
 			   struct gdbarch *gdbarch);
 
     /* Clear the semaphore associated with the PROBE.  This function only
        makes sense if the probe has a concept of semaphore associated to
-       a probe.  */
+       a probe, otherwise it can be set to NULL.  */
 
     void (*clear_semaphore) (struct probe *probe, struct objfile *objfile,
 			     struct gdbarch *gdbarch);
@@ -230,7 +230,7 @@ extern VEC (probe_p) *find_probes_in_objfile (struct objfile *objfile,
    function that can be used by the probe backends to print their
    `info probe TYPE'.  */
 
-extern void info_probes_for_ops (char *arg, int from_tty,
+extern void info_probes_for_ops (const char *arg, int from_tty,
 				 const struct probe_ops *pops);
 
 /* Return the `cmd_list_element' associated with the `info probes' command,

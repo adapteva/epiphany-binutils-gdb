@@ -29,8 +29,6 @@
 #include "gdbcore.h"
 #include "serial.h"
 #include "target.h"
-#include "exceptions.h"
-#include <string.h>
 #include <sys/stat.h>
 #include "gdb_usleep.h"
 #include "regcache.h"
@@ -77,14 +75,6 @@ static ULONGEST mips_request (int cmd, ULONGEST addr, ULONGEST data,
 
 static void mips_initialize (void);
 
-static void mips_open (char *name, int from_tty);
-
-static void pmon_open (char *name, int from_tty);
-
-static void ddb_open (char *name, int from_tty);
-
-static void lsi_open (char *name, int from_tty);
-
 static void mips_close (struct target_ops *self);
 
 static int mips_map_regno (struct gdbarch *, int);
@@ -128,9 +118,7 @@ static void pmon_end_download (int final, int bintotal);
 
 static void pmon_download (char *buffer, int length);
 
-static void pmon_load_fast (char *file);
-
-static void mips_load (struct target_ops *self, char *file, int from_tty);
+static void mips_load (struct target_ops *self, const char *file, int from_tty);
 
 static int mips_make_srec (char *buffer, int type, CORE_ADDR memaddr,
 			   unsigned char *myaddr, int len);
@@ -1543,7 +1531,7 @@ mips_initialize (void)
 /* Open a connection to the remote board.  */
 
 static void
-common_open (struct target_ops *ops, char *name, int from_tty,
+common_open (struct target_ops *ops, const char *name, int from_tty,
 	     enum mips_monitor_type new_monitor,
 	     const char *new_monitor_prompt)
 {
@@ -1671,7 +1659,7 @@ seen from the board via TFTP, specify that name as the third parameter.\n"));
 /* Open a connection to an IDT board.  */
 
 static void
-mips_open (char *name, int from_tty)
+mips_open (const char *name, int from_tty)
 {
   const char *monitor_prompt = NULL;
   if (gdbarch_bfd_arch_info (target_gdbarch ()) != NULL
@@ -1696,7 +1684,7 @@ mips_open (char *name, int from_tty)
 /* Open a connection to a PMON board.  */
 
 static void
-pmon_open (char *name, int from_tty)
+pmon_open (const char *name, int from_tty)
 {
   common_open (&pmon_ops, name, from_tty, MON_PMON, "PMON> ");
 }
@@ -1704,7 +1692,7 @@ pmon_open (char *name, int from_tty)
 /* Open a connection to a DDB board.  */
 
 static void
-ddb_open (char *name, int from_tty)
+ddb_open (const char *name, int from_tty)
 {
   common_open (&ddb_ops, name, from_tty, MON_DDB, "NEC010>");
 }
@@ -1712,7 +1700,7 @@ ddb_open (char *name, int from_tty)
 /* Open a connection to a rockhopper board.  */
 
 static void
-rockhopper_open (char *name, int from_tty)
+rockhopper_open (const char *name, int from_tty)
 {
   common_open (&rockhopper_ops, name, from_tty, MON_ROCKHOPPER, "NEC01>");
 }
@@ -1720,7 +1708,7 @@ rockhopper_open (char *name, int from_tty)
 /* Open a connection to an LSI board.  */
 
 static void
-lsi_open (char *name, int from_tty)
+lsi_open (const char *name, int from_tty)
 {
   int i;
 
@@ -2243,7 +2231,8 @@ mips_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
       /* Copy appropriate bytes out of the buffer.  */
       memcpy (readbuf, buffer + (memaddr & 3), len);
     }
-  return len;
+  *xfered_len = len;
+  return TARGET_XFER_OK;
 }
 
 /* Target to_xfer_partial implementation.  */
@@ -2385,8 +2374,11 @@ mips_insert_breakpoint (struct target_ops *ops, struct gdbarch *gdbarch,
 			struct bp_target_info *bp_tgt)
 {
   if (monitor_supports_breakpoints)
-    return mips_set_breakpoint (bp_tgt->placed_address, MIPS_INSN32_SIZE,
-				BREAK_FETCH);
+    {
+      bp_tgt->placed_address = bp_tgt->reqstd_address;
+      return mips_set_breakpoint (bp_tgt->placed_address, MIPS_INSN32_SIZE,
+				  BREAK_FETCH);
+    }
   else
     return memory_insert_breakpoint (ops, gdbarch, bp_tgt);
 }
@@ -2804,7 +2796,7 @@ send_srec (char *srec, int len, CORE_ADDR addr)
 /*  Download a binary file by converting it to S records.  */
 
 static void
-mips_load_srec (char *args)
+mips_load_srec (const char *args)
 {
   bfd *abfd;
   asection *s;
@@ -3389,7 +3381,7 @@ pmon_download (char *buffer, int length)
    using the FastLoad format.  */
 
 static void
-pmon_load_fast (char *file)
+pmon_load_fast (const char *file)
 {
   bfd *abfd;
   asection *s;
@@ -3548,7 +3540,7 @@ pmon_load_fast (char *file)
 /* mips_load -- download a file.  */
 
 static void
-mips_load (struct target_ops *self, char *file, int from_tty)
+mips_load (struct target_ops *self, const char *file, int from_tty)
 {
   struct regcache *regcache;
 

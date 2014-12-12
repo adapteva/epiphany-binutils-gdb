@@ -94,12 +94,12 @@ frag_alloc (struct obstack *ob)
    do not return. Do not set up any fields of *now_frag.  */
 
 void
-frag_grow (unsigned int nchars)
+frag_grow (size_t nchars)
 {
   if (obstack_room (&frchain_now->frch_obstack) < nchars)
     {
-      long oldc;
-      long newc;
+      size_t oldc;
+      size_t newc;
 
       /* Try to allocate a bit more than needed right now.  But don't do
          this if we would waste too much memory.  Especially necessary
@@ -111,8 +111,8 @@ frag_grow (unsigned int nchars)
       newc += SIZEOF_STRUCT_FRAG;
 
       /* Check for possible overflow.  */
-      if (newc < 0)
-        as_fatal (_("can't extend frag %u chars"), nchars);
+      if (newc < nchars)
+        as_fatal (_("can't extend frag %lu chars"), (unsigned long) nchars);
 
       /* Force to allocate at least NEWC bytes, but not less than the
          default.  */
@@ -152,7 +152,7 @@ frag_grow (unsigned int nchars)
    of frchain_now.  */
 
 void
-frag_new (int old_frags_var_max_size
+frag_new (size_t old_frags_var_max_size
 	  /* Number of chars (already allocated on obstack frags) in
 	     variable_length part of frag.  */)
 {
@@ -204,23 +204,23 @@ frag_new (int old_frags_var_max_size
    frag_now_growth past the new chars.  */
 
 char *
-frag_more (int nchars)
+frag_more (size_t nchars)
 {
-  register char *retval;
+  char *retval;
 
   frag_alloc_check (&frchain_now->frch_obstack);
   frag_grow (nchars);
   retval = obstack_next_free (&frchain_now->frch_obstack);
   obstack_blank_fast (&frchain_now->frch_obstack, nchars);
-  return (retval);
+  return retval;
 }
 
 /* Close the current frag, setting its fields for a relaxable frag.  Start a
    new frag.  */
 
 static void
-frag_var_init (relax_stateT type, int max_chars, int var,
-               relax_substateT subtype, symbolS *symbol, offsetT offset,
+frag_var_init (relax_stateT type, size_t max_chars, size_t var,
+	       relax_substateT subtype, symbolS *symbol, offsetT offset,
                char *opcode)
 {
   frag_now->fr_var = var;
@@ -250,10 +250,11 @@ frag_var_init (relax_stateT type, int max_chars, int var,
    to write into.  */
 
 char *
-frag_var (relax_stateT type, int max_chars, int var, relax_substateT subtype,
-	  symbolS *symbol, offsetT offset, char *opcode)
+frag_var (relax_stateT type, size_t max_chars, size_t var,
+	  relax_substateT subtype, symbolS *symbol, offsetT offset,
+	  char *opcode)
 {
-  register char *retval;
+  char *retval;
 
   frag_grow (max_chars);
   retval = obstack_next_free (&frchain_now->frch_obstack);
@@ -267,11 +268,11 @@ frag_var (relax_stateT type, int max_chars, int var, relax_substateT subtype,
 	No call to frag_grow is done.  */
 
 char *
-frag_variant (relax_stateT type, int max_chars, int var,
+frag_variant (relax_stateT type, size_t max_chars, size_t var,
 	      relax_substateT subtype, symbolS *symbol, offsetT offset,
 	      char *opcode)
 {
-  register char *retval;
+  char *retval;
 
   retval = obstack_next_free (&frchain_now->frch_obstack);
   frag_var_init (type, max_chars, var, subtype, symbol, offset, opcode);
@@ -282,7 +283,7 @@ frag_variant (relax_stateT type, int max_chars, int var,
 /* Reduce the variable end of a frag to a harmless state.  */
 
 void
-frag_wane (register fragS *fragP)
+frag_wane (fragS *fragP)
 {
   fragP->fr_type = rs_fill;
   fragP->fr_offset = 0;
@@ -291,7 +292,7 @@ frag_wane (register fragS *fragP)
 
 /* Return the number of bytes by which the current frag can be grown.  */
 
-int
+size_t
 frag_room (void)
 {
   return obstack_room (&frchain_now->frch_obstack);
@@ -336,7 +337,7 @@ frag_align (int alignment, int fill_character, int max)
 
 void
 frag_align_pattern (int alignment, const char *fill_pattern,
-		    int n_fill, int max)
+		    size_t n_fill, int max)
 {
   char *p;
 

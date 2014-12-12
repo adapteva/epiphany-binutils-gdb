@@ -22,7 +22,6 @@
 
 #include "defs.h"
 #include <ctype.h>
-#include "exceptions.h"
 #include "charset.h"
 #include "gdbcmd.h"
 #include "cli/cli-decode.h"
@@ -290,8 +289,8 @@ cmdscm_destroyer (struct cmd_list_element *self, void *context)
 
   /* We allocated the name, doc string, and perhaps the prefix name.  */
   xfree ((char *) self->name);
-  xfree (self->doc);
-  xfree (self->prefixname);
+  xfree ((char *) self->doc);
+  xfree ((char *) self->prefixname);
 }
 
 /* Called by gdb to invoke the command.  */
@@ -531,7 +530,7 @@ gdbscm_parse_command_name (const char *name,
 
   prefix_text2 = prefix_text;
   elt = lookup_cmd_1 (&prefix_text2, *start_list, NULL, 1);
-  if (!elt || elt == (struct cmd_list_element *) -1)
+  if (elt == NULL || elt == CMD_LIST_AMBIGUOUS)
     {
       msg = xstrprintf (_("could not find command prefix '%s'"), prefix_text);
       xfree (prefix_text);

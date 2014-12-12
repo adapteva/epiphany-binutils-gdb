@@ -18,8 +18,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <stdlib.h>
-
 #include "server.h"
 #include "gdbthread.h"
 #include "dll.h"
@@ -27,7 +25,7 @@
 struct inferior_list all_processes;
 struct inferior_list all_threads;
 
-struct thread_info *current_inferior;
+struct thread_info *current_thread;
 
 #define get_thread(inf) ((struct thread_info *)(inf))
 
@@ -117,8 +115,8 @@ add_thread (ptid_t thread_id, void *target_data)
 
   add_inferior_to_list (&all_threads, &new_thread->entry);
 
-  if (current_inferior == NULL)
-    current_inferior = new_thread;
+  if (current_thread == NULL)
+    current_thread = new_thread;
 
   new_thread->target_data = target_data;
 
@@ -269,7 +267,7 @@ clear_inferiors (void)
 
   clear_dlls ();
 
-  current_inferior = NULL;
+  current_thread = NULL;
 }
 
 struct process_info *
@@ -357,8 +355,6 @@ get_thread_process (struct thread_info *thread)
 struct process_info *
 current_process (void)
 {
-  if (current_inferior == NULL)
-    fatal ("Current inferior requested, but current_inferior is NULL\n");
-
-  return get_thread_process (current_inferior);
+  gdb_assert (current_thread != NULL);
+  return get_thread_process (current_thread);
 }

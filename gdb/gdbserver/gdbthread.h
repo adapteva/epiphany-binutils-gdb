@@ -19,7 +19,6 @@
 #ifndef GDB_THREAD_H
 #define GDB_THREAD_H
 
-#include "server.h"
 #include "inferiors.h"
 
 struct btrace_target_info;
@@ -81,6 +80,6 @@ struct thread_info *get_first_thread (void);
 struct thread_info *find_thread_ptid (ptid_t ptid);
 
 /* Get current thread ID (Linux task ID).  */
-#define current_ptid (current_inferior->entry.id)
+#define current_ptid (current_thread->entry.id)
 
 #endif /* GDB_THREAD_H */

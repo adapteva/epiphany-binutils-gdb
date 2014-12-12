@@ -19,12 +19,9 @@
 
 #include "defs.h"
 #include "dyn-string.h"
-#include "gdb_assert.h"
 #include <ctype.h>
-#include <string.h>
 #include "gdb_wait.h"
 #include "event-top.h"
-#include "exceptions.h"
 #include "gdbthread.h"
 #include "fnmatch.h"
 #include "gdb_bfd.h"
@@ -522,31 +519,16 @@ vwarning (const char *string, va_list args)
     (*deprecated_warning_hook) (string, args);
   else
     {
-      target_terminal_ours ();
-      wrap_here ("");		/* Force out any buffered output.  */
+      if (target_supports_terminal_ours ())
+	target_terminal_ours ();
+      if (filtered_printing_initialized ())
+	wrap_here ("");		/* Force out any buffered output.  */
       gdb_flush (gdb_stdout);
       if (warning_pre_print)
 	fputs_unfiltered (warning_pre_print, gdb_stderr);
       vfprintf_unfiltered (gdb_stderr, string, args);
       fprintf_unfiltered (gdb_stderr, "\n");
-      va_end (args);
     }
-}
-
-/* Print a warning message.
-   The first argument STRING is the warning message, used as a fprintf string,
-   and the remaining args are passed as arguments to it.
-   The primary difference between warnings and errors is that a warning
-   does not force the return to command level.  */
-
-void
-warning (const char *string, ...)
-{
-  va_list args;
-
-  va_start (args, string);
-  vwarning (string, args);
-  va_end (args);
 }
 
 /* Print an error message and return to command level.
@@ -560,36 +542,6 @@ verror (const char *string, va_list args)
 }
 
 void
-error (const char *string, ...)
-{
-  va_list args;
-
-  va_start (args, string);
-  throw_verror (GENERIC_ERROR, string, args);
-  va_end (args);
-}
-
-/* Print an error message and quit.
-   The first argument STRING is the error message, used as a fprintf string,
-   and the remaining args are passed as arguments to it.  */
-
-void
-vfatal (const char *string, va_list args)
-{
-  throw_vfatal (string, args);
-}
-
-void
-fatal (const char *string, ...)
-{
-  va_list args;
-
-  va_start (args, string);
-  throw_vfatal (string, args);
-  va_end (args);
-}
-
-void
 error_stream (struct ui_file *stream)
 {
   char *message = ui_file_xstrdup (stream, NULL);
@@ -598,9 +550,22 @@ error_stream (struct ui_file *stream)
   error (("%s"), message);
 }
 
+/* Emit a message and abort.  */
+
+static void ATTRIBUTE_NORETURN
+abort_with_message (const char *msg)
+{
+  if (gdb_stderr == NULL)
+    fputs (msg, stderr);
+  else
+    fputs_unfiltered (msg, gdb_stderr);
+
+  abort ();		/* NOTE: GDB has only three calls to abort().  */
+}
+
 /* Dump core trying to increase the core soft limit to hard limit first.  */
 
-static void
+void
 dump_core (void)
 {
 #ifdef HAVE_SETRLIMIT
@@ -613,10 +578,12 @@ dump_core (void)
 }
 
 /* Check whether GDB will be able to dump core using the dump_core
-   function.  */
+   function.  Returns zero if GDB cannot or should not dump core.
+   If LIMIT_KIND is LIMIT_CUR the user's soft limit will be respected.
+   If LIMIT_KIND is LIMIT_MAX only the hard limit will be respected.  */
 
-static int
-can_dump_core (const char *reason)
+int
+can_dump_core (enum resource_limit_kind limit_kind)
 {
 #ifdef HAVE_GETRLIMIT
   struct rlimit rlim;
@@ -625,17 +592,45 @@ can_dump_core (const char *reason)
   if (getrlimit (RLIMIT_CORE, &rlim) != 0)
     return 1;
 
-  if (rlim.rlim_max == 0)
+  switch (limit_kind)
     {
-      fprintf_unfiltered (gdb_stderr,
-			  _("%s\nUnable to dump core, use `ulimit -c"
-			    " unlimited' before executing GDB next time.\n"),
-			  reason);
-      return 0;
+    case LIMIT_CUR:
+      if (rlim.rlim_cur == 0)
+	return 0;
+
+    case LIMIT_MAX:
+      if (rlim.rlim_max == 0)
+	return 0;
     }
 #endif /* HAVE_GETRLIMIT */
 
   return 1;
+}
+
+/* Print a warning that we cannot dump core.  */
+
+void
+warn_cant_dump_core (const char *reason)
+{
+  fprintf_unfiltered (gdb_stderr,
+		      _("%s\nUnable to dump core, use `ulimit -c"
+			" unlimited' before executing GDB next time.\n"),
+		      reason);
+}
+
+/* Check whether GDB will be able to dump core using the dump_core
+   function, and print a warning if we cannot.  */
+
+static int
+can_dump_core_warn (enum resource_limit_kind limit_kind,
+		    const char *reason)
+{
+  int core_dump_allowed = can_dump_core (limit_kind);
+
+  if (!core_dump_allowed)
+    warn_cant_dump_core (reason);
+
+  return core_dump_allowed;
 }
 
 /* Allow the user to configure the debugger behavior with respect to
@@ -659,7 +654,9 @@ static const char *const internal_problem_modes[] =
 struct internal_problem
 {
   const char *name;
+  int user_settable_should_quit;
   const char *should_quit;
+  int user_settable_should_dump_core;
   const char *should_dump_core;
 };
 
@@ -688,8 +685,7 @@ internal_vproblem (struct internal_problem *problem,
 	break;
       case 1:
 	dejavu = 2;
-	fputs_unfiltered (msg, gdb_stderr);
-	abort ();	/* NOTE: GDB has only three calls to abort().  */
+	abort_with_message (msg);
       default:
 	dejavu = 3;
         /* Newer GLIBC versions put the warn_unused_result attribute
@@ -702,10 +698,6 @@ internal_vproblem (struct internal_problem *problem,
 	exit (1);
       }
   }
-
-  /* Try to get the message out and at the start of a new line.  */
-  target_terminal_ours ();
-  begin_line ();
 
   /* Create a string containing the full error/warning message.  Need
      to call query with this full string, as otherwize the reason
@@ -724,18 +716,32 @@ internal_vproblem (struct internal_problem *problem,
     make_cleanup (xfree, reason);
   }
 
+  /* Fall back to abort_with_message if gdb_stderr is not set up.  */
+  if (gdb_stderr == NULL)
+    {
+      fputs (reason, stderr);
+      abort_with_message ("\n");
+    }
+
+  /* Try to get the message out and at the start of a new line.  */
+  if (target_supports_terminal_ours ())
+    target_terminal_ours ();
+  if (filtered_printing_initialized ())
+    begin_line ();
+
+  /* Emit the message unless query will emit it below.  */
+  if (problem->should_quit != internal_problem_ask
+      || !confirm
+      || !filtered_printing_initialized ())
+    fprintf_unfiltered (gdb_stderr, "%s\n", reason);
+
   if (problem->should_quit == internal_problem_ask)
     {
       /* Default (yes/batch case) is to quit GDB.  When in batch mode
 	 this lessens the likelihood of GDB going into an infinite
 	 loop.  */
-      if (!confirm)
-        {
-          /* Emit the message and quit.  */
-          fputs_unfiltered (reason, gdb_stderr);
-          fputs_unfiltered ("\n", gdb_stderr);
-          quit_p = 1;
-        }
+      if (!confirm || !filtered_printing_initialized ())
+	quit_p = 1;
       else
         quit_p = query (_("%s\nQuit this debugging session? "), reason);
     }
@@ -754,8 +760,10 @@ internal_vproblem (struct internal_problem *problem,
 
   if (problem->should_dump_core == internal_problem_ask)
     {
-      if (!can_dump_core (reason))
+      if (!can_dump_core_warn (LIMIT_MAX, reason))
 	dump_core_p = 0;
+      else if (!filtered_printing_initialized ())
+	dump_core_p = 1;
       else
 	{
 	  /* Default (yes/batch case) is to dump core.  This leaves a GDB
@@ -765,7 +773,7 @@ internal_vproblem (struct internal_problem *problem,
 	}
     }
   else if (problem->should_dump_core == internal_problem_yes)
-    dump_core_p = can_dump_core (reason);
+    dump_core_p = can_dump_core_warn (LIMIT_MAX, reason);
   else if (problem->should_dump_core == internal_problem_no)
     dump_core_p = 0;
   else
@@ -794,28 +802,18 @@ internal_vproblem (struct internal_problem *problem,
 }
 
 static struct internal_problem internal_error_problem = {
-  "internal-error", internal_problem_ask, internal_problem_ask
+  "internal-error", 1, internal_problem_ask, 1, internal_problem_ask
 };
 
 void
 internal_verror (const char *file, int line, const char *fmt, va_list ap)
 {
   internal_vproblem (&internal_error_problem, file, line, fmt, ap);
-  fatal (_("Command aborted."));
-}
-
-void
-internal_error (const char *file, int line, const char *string, ...)
-{
-  va_list ap;
-
-  va_start (ap, string);
-  internal_verror (file, line, string, ap);
-  va_end (ap);
+  throw_quit (_("Command aborted."));
 }
 
 static struct internal_problem internal_warning_problem = {
-  "internal-warning", internal_problem_ask, internal_problem_ask
+  "internal-warning", 1, internal_problem_ask, 1, internal_problem_ask
 };
 
 void
@@ -824,13 +822,23 @@ internal_vwarning (const char *file, int line, const char *fmt, va_list ap)
   internal_vproblem (&internal_warning_problem, file, line, fmt, ap);
 }
 
+static struct internal_problem demangler_warning_problem = {
+  "demangler-warning", 1, internal_problem_ask, 0, internal_problem_no
+};
+
 void
-internal_warning (const char *file, int line, const char *string, ...)
+demangler_vwarning (const char *file, int line, const char *fmt, va_list ap)
+{
+  internal_vproblem (&demangler_warning_problem, file, line, fmt, ap);
+}
+
+void
+demangler_warning (const char *file, int line, const char *string, ...)
 {
   va_list ap;
 
   va_start (ap, string);
-  internal_vwarning (file, line, string, ap);
+  demangler_vwarning (file, line, string, ap);
   va_end (ap);
 }
 
@@ -894,45 +902,51 @@ add_internal_problem_command (struct internal_problem *problem)
 			  (char *) NULL),
 		  0/*allow-unknown*/, &maintenance_show_cmdlist);
 
-  set_doc = xstrprintf (_("Set whether GDB should quit "
-			  "when an %s is detected"),
-			problem->name);
-  show_doc = xstrprintf (_("Show whether GDB will quit "
-			   "when an %s is detected"),
-			 problem->name);
-  add_setshow_enum_cmd ("quit", class_maintenance,
-			internal_problem_modes,
-			&problem->should_quit,
-			set_doc,
-			show_doc,
-			NULL, /* help_doc */
-			NULL, /* setfunc */
-			NULL, /* showfunc */
-			set_cmd_list,
-			show_cmd_list);
+  if (problem->user_settable_should_quit)
+    {
+      set_doc = xstrprintf (_("Set whether GDB should quit "
+			      "when an %s is detected"),
+			    problem->name);
+      show_doc = xstrprintf (_("Show whether GDB will quit "
+			       "when an %s is detected"),
+			     problem->name);
+      add_setshow_enum_cmd ("quit", class_maintenance,
+			    internal_problem_modes,
+			    &problem->should_quit,
+			    set_doc,
+			    show_doc,
+			    NULL, /* help_doc */
+			    NULL, /* setfunc */
+			    NULL, /* showfunc */
+			    set_cmd_list,
+			    show_cmd_list);
 
-  xfree (set_doc);
-  xfree (show_doc);
+      xfree (set_doc);
+      xfree (show_doc);
+    }
 
-  set_doc = xstrprintf (_("Set whether GDB should create a core "
-			  "file of GDB when %s is detected"),
-			problem->name);
-  show_doc = xstrprintf (_("Show whether GDB will create a core "
-			   "file of GDB when %s is detected"),
-			 problem->name);
-  add_setshow_enum_cmd ("corefile", class_maintenance,
-			internal_problem_modes,
-			&problem->should_dump_core,
-			set_doc,
-			show_doc,
-			NULL, /* help_doc */
-			NULL, /* setfunc */
-			NULL, /* showfunc */
-			set_cmd_list,
-			show_cmd_list);
+  if (problem->user_settable_should_dump_core)
+    {
+      set_doc = xstrprintf (_("Set whether GDB should create a core "
+			      "file of GDB when %s is detected"),
+			    problem->name);
+      show_doc = xstrprintf (_("Show whether GDB will create a core "
+			       "file of GDB when %s is detected"),
+			     problem->name);
+      add_setshow_enum_cmd ("corefile", class_maintenance,
+			    internal_problem_modes,
+			    &problem->should_dump_core,
+			    set_doc,
+			    show_doc,
+			    NULL, /* help_doc */
+			    NULL, /* setfunc */
+			    NULL, /* showfunc */
+			    set_cmd_list,
+			    show_cmd_list);
 
-  xfree (set_doc);
-  xfree (show_doc);
+      xfree (set_doc);
+      xfree (show_doc);
+    }
 }
 
 /* Return a newly allocated string, containing the PREFIX followed
@@ -1032,15 +1046,15 @@ quit (void)
 #ifdef __MSDOS__
   /* No steenking SIGINT will ever be coming our way when the
      program is resumed.  Don't lie.  */
-  fatal ("Quit");
+  throw_quit ("Quit");
 #else
   if (job_control
       /* If there is no terminal switching for this target, then we can't
          possibly get screwed by the lack of job control.  */
-      || current_target.to_terminal_ours == NULL)
-    fatal ("Quit");
+      || !target_supports_terminal_ours ())
+    throw_quit ("Quit");
   else
-    fatal ("Quit (expect signal SIGINT when the program is resumed)");
+    throw_quit ("Quit (expect signal SIGINT when the program is resumed)");
 #endif
 }
 
@@ -1098,6 +1112,23 @@ gdb_print_host_address (const void *addr, struct ui_file *stream)
 {
   fprintf_filtered (stream, "%s", host_address_to_string (addr));
 }
+
+/* See utils.h.  */
+
+char *
+make_hex_string (const gdb_byte *data, size_t length)
+{
+  char *result = xmalloc (length * 2 + 1);
+  char *p;
+  size_t i;
+
+  p = result;
+  for (i = 0; i < length; ++i)
+    p += sprintf (p, "%02x", data[i]);
+  *p = '\0';
+  return result;
+}
+
 
 
 /* A cleanup function that calls regfree.  */
@@ -1702,6 +1733,13 @@ init_page_info (void)
   set_width ();
 }
 
+/* Return nonzero if filtered printing is initialized.  */
+int
+filtered_printing_initialized (void)
+{
+  return wrap_buffer != NULL;
+}
+
 /* Helper for make_cleanup_restore_page_info.  */
 
 static void
@@ -1819,6 +1857,10 @@ prompt_for_continue (void)
 
   immediate_quit++;
   QUIT;
+
+  /* We'll need to handle input.  */
+  target_terminal_ours ();
+
   /* On a real operating system, the user can quit with SIGINT.
      But not on GO32.
 
@@ -2843,83 +2885,47 @@ string_to_core_addr (const char *my_string)
 char *
 gdb_realpath (const char *filename)
 {
-  /* Method 1: The system has a compile time upper bound on a filename
-     path.  Use that and realpath() to canonicalize the name.  This is
-     the most common case.  Note that, if there isn't a compile time
-     upper bound, you want to avoid realpath() at all costs.  */
-#if defined (HAVE_REALPATH) && defined (PATH_MAX)
-  {
-    char buf[PATH_MAX];
-    const char *rp = realpath (filename, buf);
+/* On most hosts, we rely on canonicalize_file_name to compute
+   the FILENAME's realpath.
 
-    if (rp == NULL)
-      rp = filename;
-    return xstrdup (rp);
-  }
-#endif /* HAVE_REALPATH */
+   But the situation is slightly more complex on Windows, due to some
+   versions of GCC which were reported to generate paths where
+   backlashes (the directory separator) were doubled.  For instance:
+      c:\\some\\double\\slashes\\dir
+   ... instead of ...
+      c:\some\double\slashes\dir
+   Those double-slashes were getting in the way when comparing paths,
+   for instance when trying to insert a breakpoint as follow:
+      (gdb) b c:/some/double/slashes/dir/foo.c:4
+      No source file named c:/some/double/slashes/dir/foo.c:4.
+      (gdb) b c:\some\double\slashes\dir\foo.c:4
+      No source file named c:\some\double\slashes\dir\foo.c:4.
+   To prevent this from happening, we need this function to always
+   strip those extra backslashes.  While canonicalize_file_name does
+   perform this simplification, it only works when the path is valid.
+   Since the simplification would be useful even if the path is not
+   valid (one can always set a breakpoint on a file, even if the file
+   does not exist locally), we rely instead on GetFullPathName to
+   perform the canonicalization.  */
 
-  /* Method 2: The host system (i.e., GNU) has the function
-     canonicalize_file_name() which malloc's a chunk of memory and
-     returns that, use that.  */
-#if defined(HAVE_CANONICALIZE_FILE_NAME)
-  {
-    char *rp = canonicalize_file_name (filename);
-
-    if (rp == NULL)
-      return xstrdup (filename);
-    else
-      return rp;
-  }
-#endif
-
-  /* FIXME: cagney/2002-11-13:
-
-     Method 2a: Use realpath() with a NULL buffer.  Some systems, due
-     to the problems described in method 3, have modified their
-     realpath() implementation so that it will allocate a buffer when
-     NULL is passed in.  Before this can be used, though, some sort of
-     configure time test would need to be added.  Otherwize the code
-     will likely core dump.  */
-
-  /* Method 3: Now we're getting desperate!  The system doesn't have a
-     compile time buffer size and no alternative function.  Query the
-     OS, using pathconf(), for the buffer limit.  Care is needed
-     though, some systems do not limit PATH_MAX (return -1 for
-     pathconf()) making it impossible to pass a correctly sized buffer
-     to realpath() (it could always overflow).  On those systems, we
-     skip this.  */
-#if defined (HAVE_REALPATH) && defined (_PC_PATH_MAX) && defined(HAVE_ALLOCA)
-  {
-    /* Find out the max path size.  */
-    long path_max = pathconf ("/", _PC_PATH_MAX);
-
-    if (path_max > 0)
-      {
-	/* PATH_MAX is bounded.  */
-	char *buf = alloca (path_max);
-	char *rp = realpath (filename, buf);
-
-	return xstrdup (rp ? rp : filename);
-      }
-  }
-#endif
-
-  /* The MS Windows method.  If we don't have realpath, we assume we
-     don't have symlinks and just canonicalize to a Windows absolute
-     path.  GetFullPath converts ../ and ./ in relative paths to
-     absolute paths, filling in current drive if one is not given
-     or using the current directory of a specified drive (eg, "E:foo").
-     It also converts all forward slashes to back slashes.  */
-  /* The file system is case-insensitive but case-preserving.
-     So we do not lowercase the path.  Otherwise, we might not
-     be able to display the original casing in a given path.  */
 #if defined (_WIN32)
   {
     char buf[MAX_PATH];
     DWORD len = GetFullPathName (filename, MAX_PATH, buf, NULL);
 
+    /* The file system is case-insensitive but case-preserving.
+       So it is important we do not lowercase the path.  Otherwise,
+       we might not be able to display the original casing in a given
+       path.  */
     if (len > 0 && len < MAX_PATH)
       return xstrdup (buf);
+  }
+#else
+  {
+    char *rp = canonicalize_file_name (filename);
+
+    if (rp != NULL)
+      return rp;
   }
 #endif
 
@@ -3038,7 +3044,7 @@ gdb_sign_extend (LONGEST value, int bit)
 void *
 hashtab_obstack_allocate (void *data, size_t size, size_t count)
 {
-  unsigned int total = size * count;
+  size_t total = size * count;
   void *ptr = obstack_alloc ((struct obstack *) data, total);
 
   memset (ptr, 0, total);
@@ -3529,4 +3535,5 @@ _initialize_utils (void)
 {
   add_internal_problem_command (&internal_error_problem);
   add_internal_problem_command (&internal_warning_problem);
+  add_internal_problem_command (&demangler_warning_problem);
 }

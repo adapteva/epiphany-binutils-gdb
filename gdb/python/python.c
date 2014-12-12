@@ -27,7 +27,6 @@
 #include "objfiles.h"
 #include "value.h"
 #include "language.h"
-#include "exceptions.h"
 #include "event-loop.h"
 #include "serial.h"
 #include "readline/tilde.h"
@@ -86,7 +85,6 @@ const struct extension_language_defn extension_language_python =
 
 #ifdef HAVE_PYTHON
 
-#include "libiberty.h"
 #include "cli/cli-decode.h"
 #include "charset.h"
 #include "top.h"
@@ -1755,9 +1753,14 @@ message == an error message without a stack will be printed."),
       || gdbpy_initialize_signal_event () < 0
       || gdbpy_initialize_breakpoint_event () < 0
       || gdbpy_initialize_continue_event () < 0
+      || gdbpy_initialize_inferior_call_pre_event () < 0
+      || gdbpy_initialize_inferior_call_post_event () < 0
+      || gdbpy_initialize_register_changed_event () < 0
+      || gdbpy_initialize_memory_changed_event () < 0
       || gdbpy_initialize_exited_event () < 0
       || gdbpy_initialize_thread_event () < 0
       || gdbpy_initialize_new_objfile_event ()  < 0
+      || gdbpy_initialize_clear_objfiles_event ()  < 0
       || gdbpy_initialize_arch () < 0
       || gdbpy_initialize_xmethods () < 0)
     goto fail;

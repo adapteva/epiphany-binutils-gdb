@@ -1183,6 +1183,12 @@ elf_s390_check_relocs (bfd *abfd,
 	  /* Fall through */
 
 	case R_390_TLS_LE64:
+	  /* For static linking and executables this reloc will be
+	     calculated at linktime otherwise a TLS_TPOFF runtime
+	     reloc will be generated.  */
+	  if (r_type == R_390_TLS_LE64 && info->pie)
+	    break;
+
 	  if (!info->shared)
 	    break;
 	  info->flags |= DF_STATIC_TLS;
@@ -1995,7 +2001,7 @@ elf_s390_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 
   /* Set up .got offsets for local syms, and space for local dynamic
      relocs.  */
-  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link_next)
+  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
     {
       bfd_signed_vma *local_got;
       bfd_signed_vma *end_local_got;
@@ -3074,7 +3080,7 @@ elf_s390_relocate_section (bfd *output_bfd,
 	  break;
 
 	case R_390_TLS_LE64:
-	  if (info->shared)
+	  if (info->shared && !info->pie)
 	    {
 	      /* Linking a shared library with non-fpic code requires
 		 a R_390_TLS_TPOFF relocation.  */
@@ -3717,7 +3723,7 @@ elf_s390_finish_dynamic_sections (bfd *output_bfd,
     }
 
   /* Finish dynamic symbol for local IFUNC symbols.  */
-  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link_next)
+  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
     {
       struct plt_entry *local_plt;
       Elf_Internal_Sym *isym;

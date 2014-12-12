@@ -27,7 +27,6 @@
 #include "infrun.h"
 #include "target.h"
 #include "regcache.h"
-#include <string.h>
 #include "gdbthread.h"
 #include <ctype.h>
 #include <signal.h>
@@ -340,7 +339,7 @@ m32r_create_inferior (struct target_ops *ops, char *execfile,
   /* The "process" (board) is already stopped awaiting our commands, and
      the program is already downloaded.  We just set its PC and go.  */
 
-  clear_proceed_status ();
+  clear_proceed_status (0);
 
   /* Tell wait_for_inferior that we've started a new process.  */
   init_wait_for_inferior ();
@@ -359,7 +358,7 @@ m32r_create_inferior (struct target_ops *ops, char *execfile,
    NAME is the filename used for communication.  */
 
 static void
-m32r_open (char *args, int from_tty)
+m32r_open (const char *args, int from_tty)
 {
   struct hostent *host_ent;
   struct sockaddr_in server_addr;
@@ -1081,7 +1080,7 @@ m32r_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
 	      if (remote_debug)
 		fprintf_unfiltered (gdb_stdlog,
 				    "m32r_xfer_memory() failed\n");
-	      return 0;
+	      return TARGET_XFER_EOF;
 	    }
 	  ret = send_data (writebuf, len);
 	}
@@ -1095,7 +1094,7 @@ m32r_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
 	{
 	  if (remote_debug)
 	    fprintf_unfiltered (gdb_stdlog, "m32r_xfer_memory() failed\n");
-	  return 0;
+	  return TARGET_XFER_EOF;
 	}
 
       c = serial_readchar (sdi_desc, SDI_TIMEOUT);
@@ -1103,7 +1102,7 @@ m32r_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
 	{
 	  if (remote_debug)
 	    fprintf_unfiltered (gdb_stdlog, "m32r_xfer_memory() failed\n");
-	  return 0;
+	  return TARGET_XFER_EOF;
 	}
 
       ret = recv_data (readbuf, len);
@@ -1173,7 +1172,7 @@ m32r_insert_breakpoint (struct target_ops *ops,
 			struct gdbarch *gdbarch,
 			struct bp_target_info *bp_tgt)
 {
-  CORE_ADDR addr = bp_tgt->placed_address;
+  CORE_ADDR addr = bp_tgt->placed_address = bp_tgt->reqstd_address;
   int ib_breakpoints;
   unsigned char buf[13];
   int i, c;
@@ -1238,9 +1237,9 @@ m32r_remove_breakpoint (struct target_ops *ops,
 }
 
 static void
-m32r_load (struct target_ops *self, char *args, int from_tty)
+m32r_load (struct target_ops *self, const char *args, int from_tty)
 {
-  struct cleanup *old_chain;
+  struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
   asection *section;
   bfd *pbfd;
   bfd_vma entry;
@@ -1258,17 +1257,11 @@ m32r_load (struct target_ops *self, char *args, int from_tty)
 
   while (*args != '\000')
     {
-      char *arg;
+      char *arg = extract_arg_const (&args);
 
-      args = skip_spaces (args);
-
-      arg = args;
-
-      while ((*args != '\000') && !isspace (*args))
-	args++;
-
-      if (*args != '\000')
-	*args++ = '\000';
+      if (arg == NULL)
+	break;
+      make_cleanup (xfree, arg);
 
       if (*arg != '-')
 	filename = arg;
@@ -1285,11 +1278,8 @@ m32r_load (struct target_ops *self, char *args, int from_tty)
 
   pbfd = gdb_bfd_open (filename, gnutarget, -1);
   if (pbfd == NULL)
-    {
-      perror_with_name (filename);
-      return;
-    }
-  old_chain = make_cleanup_bfd_unref (pbfd);
+    perror_with_name (filename);
+  make_cleanup_bfd_unref (pbfd);
 
   if (!bfd_check_format (pbfd, bfd_object))
     error (_("\"%s\" is not an object file: %s"), filename,

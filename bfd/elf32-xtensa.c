@@ -1561,7 +1561,7 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
   if (htab == NULL)
     return;
 
-  for (i = info->input_bfds; i; i = i->link_next)
+  for (i = info->input_bfds; i; i = i->link.next)
     {
       bfd_signed_vma *local_got_refcounts;
       bfd_size_type j, cnt;
@@ -1700,7 +1700,7 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	 literal tables.  */
       sgotloc = htab->sgotloc;
       sgotloc->size = spltlittbl->size;
-      for (abfd = info->input_bfds; abfd != NULL; abfd = abfd->link_next)
+      for (abfd = info->input_bfds; abfd != NULL; abfd = abfd->link.next)
 	{
 	  if (abfd->flags & DYNAMIC)
 	    continue;
@@ -6746,14 +6746,14 @@ analyze_relocations (struct bfd_link_info *link_info)
   bfd_boolean is_relaxable = FALSE;
 
   /* Initialize the per-section relaxation info.  */
-  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link_next)
+  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link.next)
     for (sec = abfd->sections; sec != NULL; sec = sec->next)
       {
 	init_xtensa_relax_info (sec);
       }
 
   /* Mark relaxable sections (and count relocations against each one).  */
-  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link_next)
+  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link.next)
     for (sec = abfd->sections; sec != NULL; sec = sec->next)
       {
 	if (!find_relaxable_sections (abfd, sec, link_info, &is_relaxable))
@@ -6765,7 +6765,7 @@ analyze_relocations (struct bfd_link_info *link_info)
     return TRUE;
 
   /* Allocate space for source_relocs.  */
-  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link_next)
+  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link.next)
     for (sec = abfd->sections; sec != NULL; sec = sec->next)
       {
 	xtensa_relax_info *relax_info;
@@ -6782,7 +6782,7 @@ analyze_relocations (struct bfd_link_info *link_info)
       }
 
   /* Collect info on relocations against each relaxable section.  */
-  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link_next)
+  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link.next)
     for (sec = abfd->sections; sec != NULL; sec = sec->next)
       {
 	if (!collect_source_relocs (abfd, sec, link_info))
@@ -6790,7 +6790,7 @@ analyze_relocations (struct bfd_link_info *link_info)
       }
 
   /* Compute the text actions.  */
-  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link_next)
+  for (abfd = link_info->input_bfds; abfd != NULL; abfd = abfd->link.next)
     for (sec = abfd->sections; sec != NULL; sec = sec->next)
       {
 	if (!compute_text_actions (abfd, sec, link_info))
@@ -7124,10 +7124,43 @@ is_resolvable_asm_expansion (bfd *abfd,
 	  || is_reloc_sym_weak (abfd, irel)))
     return FALSE;
 
-  self_address = (sec->output_section->vma
-		  + sec->output_offset + irel->r_offset + 3);
-  dest_address = (target_sec->output_section->vma
-		  + target_sec->output_offset + target_offset);
+  if (target_sec->output_section != sec->output_section)
+    {
+      /* If the two sections are sufficiently far away that relaxation
+	 might take the call out of range, we can't simplify.  For
+	 example, a positive displacement call into another memory
+	 could get moved to a lower address due to literal removal,
+	 but the destination won't move, and so the displacment might
+	 get larger.
+
+	 If the displacement is negative, assume the destination could
+	 move as far back as the start of the output section.  The
+	 self_address will be at least as far into the output section
+	 as it is prior to relaxation.
+
+	 If the displacement is postive, assume the destination will be in
+	 it's pre-relaxed location (because relaxation only makes sections
+	 smaller).  The self_address could go all the way to the beginning
+	 of the output section.  */
+
+      dest_address = target_sec->output_section->vma;
+      self_address = sec->output_section->vma;
+
+      if (sec->output_section->vma > target_sec->output_section->vma)
+	self_address += sec->output_offset + irel->r_offset + 3;
+      else
+	dest_address += bfd_get_section_limit (abfd, target_sec->output_section);
+      /* Call targets should be four-byte aligned.  */
+      dest_address = (dest_address + 3) & ~3;
+    }
+  else
+    {
+
+      self_address = (sec->output_section->vma
+		      + sec->output_offset + irel->r_offset + 3);
+      dest_address = (target_sec->output_section->vma
+		      + target_sec->output_offset + target_offset);
+    }
 
   *is_reachable_p = pcrel_reloc_fits (direct_call_opcode, 0,
 				      self_address, dest_address);

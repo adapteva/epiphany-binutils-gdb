@@ -41,11 +41,7 @@
    requirement, so `Hc pPID.TID' is pretty much undefined.  So
    CONT_THREAD can be null_ptid for no `Hc' thread, minus_one_ptid for
    resuming all threads of the process (again, `Hc' isn't used for
-   multi-process), or a specific thread ptid_t.
-
-   We also set this when handling a single-thread `vCont' resume, as
-   some places in the backends check it to know when (and for which
-   thread) single-thread scheduler-locking is in effect.  */
+   multi-process), or a specific thread ptid_t.  */
 ptid_t cont_thread;
 
 /* The thread set with an `Hg' packet.  */
@@ -69,14 +65,9 @@ int disable_randomization = 1;
 
 static char **program_argv, **wrapper_argv;
 
-/* Enable debugging of h/w breakpoint/watchpoint support.  */
-int debug_hw_points;
-
 int pass_signals[GDB_SIGNAL_LAST];
 int program_signals[GDB_SIGNAL_LAST];
 int program_signals_p;
-
-jmp_buf toplevel;
 
 /* The PID of the originally created or attached inferior.  Used to
    send signals to the process when GDB sends us an asynchronous interrupt
@@ -230,10 +221,6 @@ start_inferior (char **argv)
   signal (SIGTTIN, SIG_DFL);
 #endif
 
-  /* Clear this so the backend doesn't get confused, thinking
-     CONT_THREAD died, and it needs to resume all threads.  */
-  cont_thread = null_ptid;
-
   signal_pid = create_inferior (new_argv[0], new_argv);
 
   /* FIXME: we don't actually know at this point that the create
@@ -273,8 +260,8 @@ start_inferior (char **argv)
 	  if (last_status.kind != TARGET_WAITKIND_STOPPED)
 	    return signal_pid;
 
-	  current_inferior->last_resume_kind = resume_stop;
-	  current_inferior->last_status = last_status;
+	  current_thread->last_resume_kind = resume_stop;
+	  current_thread->last_status = last_status;
 	}
       while (last_status.value.sig != GDB_SIGNAL_TRAP);
 
@@ -288,8 +275,8 @@ start_inferior (char **argv)
   if (last_status.kind != TARGET_WAITKIND_EXITED
       && last_status.kind != TARGET_WAITKIND_SIGNALLED)
     {
-      current_inferior->last_resume_kind = resume_stop;
-      current_inferior->last_status = last_status;
+      current_thread->last_resume_kind = resume_stop;
+      current_thread->last_status = last_status;
     }
 
   return signal_pid;
@@ -312,10 +299,6 @@ attach_inferior (int pid)
      whichever we were told to attach to.  */
   signal_pid = pid;
 
-  /* Clear this so the backend doesn't get confused, thinking
-     CONT_THREAD died, and it needs to resume all threads.  */
-  cont_thread = null_ptid;
-
   if (!non_stop)
     {
       last_ptid = mywait (pid_to_ptid (pid), &last_status, 0, 0);
@@ -327,8 +310,8 @@ attach_inferior (int pid)
 	  && last_status.value.sig == GDB_SIGNAL_STOP)
 	last_status.value.sig = GDB_SIGNAL_TRAP;
 
-      current_inferior->last_resume_kind = resume_stop;
-      current_inferior->last_status = last_status;
+      current_thread->last_resume_kind = resume_stop;
+      current_thread->last_status = last_status;
     }
 
   return 0;
@@ -696,9 +679,7 @@ monitor_show_help (void)
   monitor_output ("  set debug-format option1[,option2,...]\n");
   monitor_output ("    Add additional information to debugging messages\n");
   monitor_output ("    Options: all, none");
-#ifdef HAVE_GETTIMEOFDAY
   monitor_output (", timestamp");
-#endif
   monitor_output ("\n");
   monitor_output ("  exit\n");
   monitor_output ("    Quit GDBserver\n");
@@ -974,14 +955,12 @@ parse_debug_format_options (const char *arg, int is_monitor)
 	  if (is_monitor)
 	    monitor_output ("All extra debug format options disabled.\n");
 	}
-#ifdef HAVE_GETTIMEOFDAY
       else if (strcmp (option, "timestamp") == 0)
 	{
 	  debug_timestamp = 1;
 	  if (is_monitor)
 	    monitor_output ("Timestamps will be added to debug output.\n");
 	}
-#endif
       else if (*option == '\0')
 	{
 	  /* An empty option, e.g., "--debug-format=foo,,bar", is ignored.  */
@@ -1018,12 +997,12 @@ handle_monitor_command (char *mon, char *own_buf)
     }
   else if (strcmp (mon, "set debug-hw-points 1") == 0)
     {
-      debug_hw_points = 1;
+      show_debug_regs = 1;
       monitor_output ("H/W point debugging output enabled.\n");
     }
   else if (strcmp (mon, "set debug-hw-points 0") == 0)
     {
-      debug_hw_points = 0;
+      show_debug_regs = 0;
       monitor_output ("H/W point debugging output disabled.\n");
     }
   else if (strcmp (mon, "set remote-debug 1") == 0)
@@ -2314,18 +2293,7 @@ handle_v_cont (char *own_buf)
   if (i < n)
     resume_info[i] = default_action;
 
-  /* `cont_thread' is still used in occasional places in the backend,
-     to implement single-thread scheduler-locking.  Doesn't make sense
-     to set it if we see a stop request, or a wildcard action (one
-     with '-1' (all threads), or 'pPID.-1' (all threads of PID)).  */
-  if (n == 1
-      && !(ptid_equal (resume_info[0].thread, minus_one_ptid)
-	   || ptid_get_lwp (resume_info[0].thread) == -1)
-      && resume_info[0].kind != resume_stop)
-    cont_thread = resume_info[0].thread;
-  else
-    cont_thread = minus_one_ptid;
-  set_desired_inferior (0);
+  set_desired_thread (0);
 
   resume (resume_info, n);
   free (resume_info);
@@ -2379,7 +2347,7 @@ resume (struct thread_resume *actions, size_t num_actions)
       if (last_status.kind != TARGET_WAITKIND_EXITED
           && last_status.kind != TARGET_WAITKIND_SIGNALLED
 	  && last_status.kind != TARGET_WAITKIND_NO_RESUMED)
-	current_inferior->last_status = last_status;
+	current_thread->last_status = last_status;
 
       /* From the client's perspective, all-stop mode always stops all
 	 threads implicitly (and the target backend has already done
@@ -2618,7 +2586,7 @@ handle_v_requests (char *own_buf, int packet_len, int *new_packet_len)
   return;
 }
 
-/* Resume inferior and wait for another event.  In non-stop mode,
+/* Resume thread and wait for another event.  In non-stop mode,
    don't really wait here, but return immediatelly to the event
    loop.  */
 static void
@@ -2628,7 +2596,7 @@ myresume (char *own_buf, int step, int sig)
   int n = 0;
   int valid_cont_thread;
 
-  set_desired_inferior (0);
+  set_desired_thread (0);
 
   valid_cont_thread = (!ptid_equal (cont_thread, null_ptid)
 			 && !ptid_equal (cont_thread, minus_one_ptid));
@@ -2849,7 +2817,7 @@ handle_status (char *own_buf)
 	  /* GDB assumes the current thread is the thread we're
 	     reporting the status for.  */
 	  general_thread = thread->id;
-	  set_desired_inferior (1);
+	  set_desired_thread (1);
 
 	  gdb_assert (tp->last_status.kind != TARGET_WAITKIND_IGNORE);
 	  prepare_resume_reply (own_buf, tp->entry.id, &tp->last_status);
@@ -2887,9 +2855,7 @@ gdbserver_usage (FILE *stream)
 	   "                          Options:\n"
 	   "                            all\n"
 	   "                            none\n"
-#ifdef HAVE_GETTIMEOFDAY
 	   "                            timestamp\n"
-#endif
 	   "  --remote-debug        Enable remote protocol debugging output.\n"
 	   "  --version             Display version information and exit.\n"
 	   "  --wrapper WRAPPER --  Run WRAPPER to start new programs.\n"
@@ -3019,8 +2985,34 @@ detach_or_kill_for_exit (void)
   for_each_inferior (&all_processes, detach_or_kill_inferior_callback);
 }
 
-int
-main (int argc, char *argv[])
+/* Value that will be passed to exit(3) when gdbserver exits.  */
+static int exit_code;
+
+/* Cleanup version of detach_or_kill_for_exit.  */
+
+static void
+detach_or_kill_for_exit_cleanup (void *ignore)
+{
+  volatile struct gdb_exception exception;
+
+  TRY_CATCH (exception, RETURN_MASK_ALL)
+    {
+      detach_or_kill_for_exit ();
+    }
+
+  if (exception.reason < 0)
+    {
+      fflush (stdout);
+      fprintf (stderr, "Detach or kill failed: %s\n", exception.message);
+      exit_code = 1;
+    }
+}
+
+/* Main function.  This is called by the real "main" function,
+   wrapped in a TRY_CATCH that handles any uncaught exceptions.  */
+
+static void ATTRIBUTE_NORETURN
+captured_main (int argc, char *argv[])
 {
   int bad_attach;
   int pid;
@@ -3144,12 +3136,6 @@ main (int argc, char *argv[])
       continue;
     }
 
-  if (setjmp (toplevel))
-    {
-      fprintf (stderr, "Exiting\n");
-      exit (1);
-    }
-
   port = *next_arg;
   next_arg++;
   if (port == NULL || (!attach && !multi_mode && *next_arg == NULL))
@@ -3232,6 +3218,7 @@ main (int argc, char *argv[])
       last_status.value.integer = 0;
       last_ptid = minus_one_ptid;
     }
+  make_cleanup (detach_or_kill_for_exit_cleanup, NULL);
 
   initialize_notif ();
 
@@ -3240,19 +3227,6 @@ main (int argc, char *argv[])
      shared library event" notice on gdb side.  */
   dlls_changed = 0;
 
-  if (setjmp (toplevel))
-    {
-      /* If something fails and longjmps while detaching or killing
-	 inferiors, we'd end up here again, stuck in an infinite loop
-	 trap.  Be sure that if that happens, we exit immediately
-	 instead.  */
-      if (setjmp (toplevel) == 0)
-	detach_or_kill_for_exit ();
-      else
-	fprintf (stderr, "Detach or kill failed.  Exiting\n");
-      exit (1);
-    }
-
   if (last_status.kind == TARGET_WAITKIND_EXITED
       || last_status.kind == TARGET_WAITKIND_SIGNALLED)
     was_running = 0;
@@ -3260,94 +3234,109 @@ main (int argc, char *argv[])
     was_running = 1;
 
   if (!was_running && !multi_mode)
-    {
-      fprintf (stderr, "No program to debug.  GDBserver exiting.\n");
-      exit (1);
-    }
+    error ("No program to debug");
 
   while (1)
     {
+      volatile struct gdb_exception exception;
+
       noack_mode = 0;
       multi_process = 0;
       /* Be sure we're out of tfind mode.  */
       current_traceframe = -1;
+      cont_thread = null_ptid;
 
       remote_open (port);
 
-      if (setjmp (toplevel) != 0)
+      TRY_CATCH (exception, RETURN_MASK_ERROR)
 	{
-	  /* An error occurred.  */
+	  /* Wait for events.  This will return when all event sources
+	     are removed from the event loop.  */
+	  start_event_loop ();
+
+	  /* If an exit was requested (using the "monitor exit"
+	     command), terminate now.  The only other way to get
+	     here is for getpkt to fail; close the connection
+	     and reopen it at the top of the loop.  */
+
+	  if (exit_requested || run_once)
+	    throw_quit ("Quit");
+
+	  fprintf (stderr,
+		   "Remote side has terminated connection.  "
+		   "GDBserver will reopen the connection.\n");
+
+	  /* Get rid of any pending statuses.  An eventual reconnection
+	     (by the same GDB instance or another) will refresh all its
+	     state from scratch.  */
+	  discard_queued_stop_replies (-1);
+	  for_each_inferior (&all_threads,
+			     clear_pending_status_callback);
+
+	  if (tracing)
+	    {
+	      if (disconnected_tracing)
+		{
+		  /* Try to enable non-stop/async mode, so we we can
+		     both wait for an async socket accept, and handle
+		     async target events simultaneously.  There's also
+		     no point either in having the target always stop
+		     all threads, when we're going to pass signals
+		     down without informing GDB.  */
+		  if (!non_stop)
+		    {
+		      if (start_non_stop (1))
+			non_stop = 1;
+
+		      /* Detaching implicitly resumes all threads;
+			 simply disconnecting does not.  */
+		    }
+		}
+	      else
+		{
+		  fprintf (stderr,
+			   "Disconnected tracing disabled; "
+			   "stopping trace run.\n");
+		  stop_tracing ();
+		}
+	    }
+	}
+
+      if (exception.reason == RETURN_ERROR)
+	{
 	  if (response_needed)
 	    {
 	      write_enn (own_buf);
 	      putpkt (own_buf);
 	    }
 	}
-
-      /* Wait for events.  This will return when all event sources are
-	 removed from the event loop.  */
-      start_event_loop ();
-
-      /* If an exit was requested (using the "monitor exit" command),
-	 terminate now.  The only other way to get here is for
-	 getpkt to fail; close the connection and reopen it at the
-	 top of the loop.  */
-
-      if (exit_requested || run_once)
-	{
-	  /* If something fails and longjmps while detaching or
-	     killing inferiors, we'd end up here again, stuck in an
-	     infinite loop trap.  Be sure that if that happens, we
-	     exit immediately instead.  */
-	  if (setjmp (toplevel) == 0)
-	    {
-	      detach_or_kill_for_exit ();
-	      exit (0);
-	    }
-	  else
-	    {
-	      fprintf (stderr, "Detach or kill failed.  Exiting\n");
-	      exit (1);
-	    }
-	}
-
-      fprintf (stderr,
-	       "Remote side has terminated connection.  "
-	       "GDBserver will reopen the connection.\n");
-
-      /* Get rid of any pending statuses.  An eventual reconnection
-	 (by the same GDB instance or another) will refresh all its
-	 state from scratch.  */
-      discard_queued_stop_replies (-1);
-      for_each_inferior (&all_threads, clear_pending_status_callback);
-
-      if (tracing)
-	{
-	  if (disconnected_tracing)
-	    {
-	      /* Try to enable non-stop/async mode, so we we can both
-		 wait for an async socket accept, and handle async
-		 target events simultaneously.  There's also no point
-		 either in having the target always stop all threads,
-		 when we're going to pass signals down without
-		 informing GDB.  */
-	      if (!non_stop)
-		{
-		  if (start_non_stop (1))
-		    non_stop = 1;
-
-		  /* Detaching implicitly resumes all threads; simply
-		     disconnecting does not.  */
-		}
-	    }
-	  else
-	    {
-	      fprintf (stderr,
-		       "Disconnected tracing disabled; stopping trace run.\n");
-	      stop_tracing ();
-	    }
-	}
     }
+}
+
+/* Main function.  */
+
+int
+main (int argc, char *argv[])
+{
+  volatile struct gdb_exception exception;
+
+  TRY_CATCH (exception, RETURN_MASK_ALL)
+    {
+      captured_main (argc, argv);
+    }
+
+  /* captured_main should never return.  */
+  gdb_assert (exception.reason < 0);
+
+  if (exception.reason == RETURN_ERROR)
+    {
+      fflush (stdout);
+      fprintf (stderr, "%s\n", exception.message);
+      fprintf (stderr, "Exiting\n");
+      exit_code = 1;
+    }
+
+  exit (exit_code);
 }
 
 /* Skip PACKET until the next semi-colon (or end of string).  */
@@ -3531,7 +3520,7 @@ process_serial_event (void)
 	      last_status.value.integer = 0;
 	      last_ptid = pid_to_ptid (pid);
 
-	      current_inferior = NULL;
+	      current_thread = NULL;
 	    }
 	  else
 	    {
@@ -3612,7 +3601,7 @@ process_serial_event (void)
 		}
 
 	      general_thread = thread_id;
-	      set_desired_inferior (1);
+	      set_desired_thread (1);
 	    }
 	  else if (own_buf[1] == 'c')
 	    cont_thread = thread_id;
@@ -3644,8 +3633,8 @@ process_serial_event (void)
 	{
 	  struct regcache *regcache;
 
-	  set_desired_inferior (1);
-	  regcache = get_thread_regcache (current_inferior, 1);
+	  set_desired_thread (1);
+	  regcache = get_thread_regcache (current_thread, 1);
 	  registers_to_string (regcache, own_buf);
 	}
       break;
@@ -3657,8 +3646,8 @@ process_serial_event (void)
 	{
 	  struct regcache *regcache;
 
-	  set_desired_inferior (1);
-	  regcache = get_thread_regcache (current_inferior, 1);
+	  set_desired_thread (1);
+	  regcache = get_thread_regcache (current_thread, 1);
 	  registers_from_string (regcache, &own_buf[1]);
 	  write_ok (own_buf);
 	}
@@ -3886,9 +3875,9 @@ handle_serial_event (int err, gdb_client_data client_data)
   if (process_serial_event () < 0)
     return -1;
 
-  /* Be sure to not change the selected inferior behind GDB's back.
+  /* Be sure to not change the selected thread behind GDB's back.
      Important in the non-stop mode asynchronous protocol.  */
-  set_desired_inferior (1);
+  set_desired_thread (1);
 
   return 0;
 }
@@ -3925,8 +3914,8 @@ handle_target_event (int err, gdb_client_data client_data)
 	  /* We're reporting this thread as stopped.  Update its
 	     "want-stopped" state to what the client wants, until it
 	     gets a new resume action.  */
-	  current_inferior->last_resume_kind = resume_stop;
-	  current_inferior->last_status = last_status;
+	  current_thread->last_resume_kind = resume_stop;
+	  current_thread->last_status = last_status;
 	}
 
       if (forward_event)
@@ -3973,9 +3962,9 @@ handle_target_event (int err, gdb_client_data client_data)
 	}
     }
 
-  /* Be sure to not change the selected inferior behind GDB's back.
+  /* Be sure to not change the selected thread behind GDB's back.
      Important in the non-stop mode asynchronous protocol.  */
-  set_desired_inferior (1);
+  set_desired_thread (1);
 
   return 0;
 }

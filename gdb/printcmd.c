@@ -18,7 +18,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include <string.h>
 #include "frame.h"
 #include "symtab.h"
 #include "gdbtypes.h"
@@ -37,11 +36,9 @@
 #include "objfiles.h"		/* ditto */
 #include "completer.h"		/* for completion functions */
 #include "ui-out.h"
-#include "gdb_assert.h"
 #include "block.h"
 #include "disasm.h"
 #include "dfp.h"
-#include "exceptions.h"
 #include "observer.h"
 #include "solist.h"
 #include "parser-defs.h"
@@ -1255,7 +1252,7 @@ address_info (char *exp, int from_tty)
   printf_filtered ("\" is ");
   val = SYMBOL_VALUE (sym);
   section = SYMBOL_OBJ_SECTION (SYMBOL_OBJFILE (sym), sym);
-  gdbarch = get_objfile_arch (SYMBOL_SYMTAB (sym)->objfile);
+  gdbarch = get_objfile_arch (SYMBOL_OBJFILE (sym));
 
   if (SYMBOL_COMPUTED_OPS (sym) != NULL)
     {
@@ -1618,7 +1615,7 @@ map_display_numbers (char *args,
 
   while (!state.finished)
     {
-      char *p = state.string;
+      const char *p = state.string;
 
       num = get_number_or_range (&state);
       if (num == 0)

@@ -30,8 +30,6 @@
 
 #include "defs.h"
 #include <ctype.h>
-#include <string.h>
-
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "value.h"
@@ -505,7 +503,7 @@ set_check (char *ignore, int from_tty)
 {
   printf_unfiltered (
      "\"set check\" must be followed by the name of a check subcommand.\n");
-  help_list (setchecklist, "set check ", -1, gdb_stdout);
+  help_list (setchecklist, "set check ", all_commands, gdb_stdout);
 }
 
 static void

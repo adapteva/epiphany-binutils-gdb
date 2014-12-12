@@ -28,8 +28,6 @@
 #include "vec.h"
 #include "frame.h"
 
-#include "gdb_assert.h"
-
 /* We need to save a few variables for every thread stopped at the
    virtual call site of an inlined function.  If there was always a
    "struct thread_info", we could hang it off that; in the mean time,
@@ -209,7 +207,7 @@ inline_frame_sniffer (const struct frame_unwind *self,
 		      void **this_cache)
 {
   CORE_ADDR this_pc;
-  struct block *frame_block, *cur_block;
+  const struct block *frame_block, *cur_block;
   int depth;
   struct frame_info *next_frame;
   struct inline_state *state = find_inline_frame_state (inferior_ptid);
@@ -274,9 +272,9 @@ const struct frame_unwind inline_frame_unwind = {
    before it).  */
 
 static int
-block_starting_point_at (CORE_ADDR pc, struct block *block)
+block_starting_point_at (CORE_ADDR pc, const struct block *block)
 {
-  struct blockvector *bv;
+  const struct blockvector *bv;
   struct block *new_block;
 
   bv = blockvector_for_pc (pc, NULL);
@@ -304,7 +302,7 @@ void
 skip_inline_frames (ptid_t ptid)
 {
   CORE_ADDR this_pc;
-  struct block *frame_block, *cur_block;
+  const struct block *frame_block, *cur_block;
   struct symbol *last_sym = NULL;
   int skip_count = 0;
   struct inline_state *state;

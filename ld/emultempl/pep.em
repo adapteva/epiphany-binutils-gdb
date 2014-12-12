@@ -147,7 +147,7 @@ static flagword real_flags = IMAGE_FILE_LARGE_ADDRESS_AWARE;
 static int support_old_code = 0;
 static lang_assignment_statement_type *image_base_statement = 0;
 static unsigned short pe_dll_characteristics = 0;
-static bfd_boolean insert_timestamp = FALSE;
+static bfd_boolean insert_timestamp = TRUE;
 static const char *emit_build_id;
 
 #ifdef DLL_SUPPORT
@@ -237,6 +237,7 @@ enum options
   OPTION_LEADING_UNDERSCORE,
   OPTION_ENABLE_LONG_SECTION_NAMES,
   OPTION_DISABLE_LONG_SECTION_NAMES,
+  OPTION_HIGH_ENTROPY_VA,
   OPTION_DYNAMIC_BASE,
   OPTION_FORCE_INTEGRITY,
   OPTION_NX_COMPAT,
@@ -245,6 +246,7 @@ enum options
   OPTION_NO_BIND,
   OPTION_WDM_DRIVER,
   OPTION_INSERT_TIMESTAMP,
+  OPTION_NO_INSERT_TIMESTAMP,
   OPTION_TERMINAL_SERVER_AWARE,
   OPTION_BUILD_ID
 };
@@ -313,6 +315,7 @@ gld${EMULATION_NAME}_add_options
 #endif
     {"enable-long-section-names", no_argument, NULL, OPTION_ENABLE_LONG_SECTION_NAMES},
     {"disable-long-section-names", no_argument, NULL, OPTION_DISABLE_LONG_SECTION_NAMES},
+    {"high-entropy-va", no_argument, NULL, OPTION_HIGH_ENTROPY_VA},
     {"dynamicbase",no_argument, NULL, OPTION_DYNAMIC_BASE},
     {"forceinteg", no_argument, NULL, OPTION_FORCE_INTEGRITY},
     {"nxcompat", no_argument, NULL, OPTION_NX_COMPAT},
@@ -322,6 +325,7 @@ gld${EMULATION_NAME}_add_options
     {"wdmdriver", no_argument, NULL, OPTION_WDM_DRIVER},
     {"tsaware", no_argument, NULL, OPTION_TERMINAL_SERVER_AWARE},
     {"insert-timestamp", no_argument, NULL, OPTION_INSERT_TIMESTAMP},
+    {"no-insert-timestamp", no_argument, NULL, OPTION_NO_INSERT_TIMESTAMP},
     {"build-id", optional_argument, NULL, OPTION_BUILD_ID},
     {NULL, no_argument, NULL, 0}
   };
@@ -409,7 +413,7 @@ gld_${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("  --subsystem <name>[:<version>]     Set required OS subsystem [& version]\n"));
   fprintf (file, _("  --support-old-code                 Support interworking with old code\n"));
   fprintf (file, _("  --[no-]leading-underscore          Set explicit symbol underscore prefix mode\n"));
-  fprintf (file, _("  --insert-timestamp                 Use a real timestamp rather than zero.\n"));
+  fprintf (file, _("  --[no-]insert-timestamp            Use a real timestamp rather than zero. (default)\n"));
   fprintf (file, _("                                     This makes binaries non-deterministic\n"));
 #ifdef DLL_SUPPORT
   fprintf (file, _("  --add-stdcall-alias                Export symbols with and without @nn\n"));
@@ -448,6 +452,8 @@ gld_${EMULATION_NAME}_list_options (FILE *file)
                                        executable image files\n"));
   fprintf (file, _("  --disable-long-section-names       Never use long COFF section names, even\n\
                                        in object files\n"));
+  fprintf (file, _("  --high-entropy-va                  Image is compatible with 64-bit address space\n\
+                                       layout randomization (ASLR)\n"));
   fprintf (file, _("  --dynamicbase			 Image base address may be relocated using\n\
 				       address space layout randomization (ASLR)\n"));
   fprintf (file, _("  --forceinteg		 Code integrity checks are enforced\n"));
@@ -721,6 +727,9 @@ gld${EMULATION_NAME}_handle_option (int optc)
     case OPTION_INSERT_TIMESTAMP:
       insert_timestamp = TRUE;
       break;
+    case OPTION_NO_INSERT_TIMESTAMP:
+      insert_timestamp = FALSE;
+      break;
 #ifdef DLL_SUPPORT
     case OPTION_OUT_DEF:
       pep_out_def_filename = xstrdup (optarg);
@@ -799,6 +808,9 @@ gld${EMULATION_NAME}_handle_option (int optc)
       pep_use_coff_long_section_names = 0;
       break;
     /*  Get DLLCharacteristics bits  */
+    case OPTION_HIGH_ENTROPY_VA:
+      pe_dll_characteristics |= IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA;
+      break;
     case OPTION_DYNAMIC_BASE:
       pe_dll_characteristics |= IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE;
       break;
@@ -1249,7 +1261,7 @@ write_build_id (bfd *abfd)
   bfd_size_type build_id_size;
   unsigned char *build_id;
 
-  /* Find the section the .build-id output section has been merged info.  */
+  /* Find the section the .buildid output section has been merged info.  */
   for (asec = abfd->sections; asec != NULL; asec = asec->next)
     {
       struct bfd_link_order *l = NULL;
@@ -1271,7 +1283,7 @@ write_build_id (bfd *abfd)
 
   if (!link_order)
     {
-      einfo (_("%P: warning: .build-id section discarded,"
+      einfo (_("%P: warning: .buildid section discarded,"
                " --build-id ignored.\n"));
       return TRUE;
     }
@@ -1335,7 +1347,7 @@ write_build_id (bfd *abfd)
   return TRUE;
 }
 
-/* Make .build-id section, and set up coff_tdata->build_id. */
+/* Make .buildid section, and set up coff_tdata->build_id. */
 static bfd_boolean
 setup_build_id (bfd *ibfd)
 {
@@ -1350,7 +1362,7 @@ setup_build_id (bfd *ibfd)
 
   flags = (SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_IN_MEMORY
 	   | SEC_LINKER_CREATED | SEC_READONLY | SEC_DATA);
-  s = bfd_make_section_anyway_with_flags (ibfd, ".build-id", flags);
+  s = bfd_make_section_anyway_with_flags (ibfd, ".buildid", flags);
   if (s != NULL)
     {
       struct pe_tdata *t = pe_data (link_info.output_bfd);
@@ -1368,7 +1380,7 @@ setup_build_id (bfd *ibfd)
       return TRUE;
     }
 
-  einfo ("%P: warning: Cannot create .build-id section,"
+  einfo ("%P: warning: Cannot create .buildid section,"
 	 " --build-id ignored.\n");
   return FALSE;
 }
@@ -1391,7 +1403,7 @@ gld_${EMULATION_NAME}_after_open (void)
 	printf ("-%s\n", sym->root.string);
       bfd_hash_traverse (&link_info.hash->table, pr_sym, NULL);
 
-      for (a = link_info.input_bfds; a; a = a->link_next)
+      for (a = link_info.input_bfds; a; a = a->link.next)
 	printf ("*%s\n",a->filename);
     }
 #endif
@@ -1402,7 +1414,7 @@ gld_${EMULATION_NAME}_after_open (void)
 
       /* Find a COFF input.  */
       for (abfd = link_info.input_bfds;
-	   abfd != (bfd *) NULL; abfd = abfd->link_next)
+	   abfd != (bfd *) NULL; abfd = abfd->link.next)
 	if (bfd_get_flavour (abfd) == bfd_target_coff_flavour)
 	  break;
 

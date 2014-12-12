@@ -21,12 +21,10 @@
 
 #include <sys/types.h>
 #include <fcntl.h>
-#include <string.h>
 #include "symtab.h"
 #include "bfd.h"
 #include "symfile.h"
 #include "objfiles.h"
-#include "exceptions.h"
 #include "gdbcore.h"
 #include "command.h"
 #include "target.h"
@@ -604,8 +602,6 @@ master_so_list (void)
 int
 solib_read_symbols (struct so_list *so, int flags)
 {
-  const int from_tty = flags & SYMFILE_VERBOSE;
-
   if (so->symbols_loaded)
     {
       /* If needed, we've already warned in our caller.  */
@@ -649,11 +645,7 @@ solib_read_symbols (struct so_list *so, int flags)
 					    " library symbols for %s:\n"),
 			   so->so_name);
       else
-	{
-	  if (print_symbol_loading_p (from_tty, 0, 1))
-	    printf_unfiltered (_("Loaded symbols for %s\n"), so->so_name);
-	  so->symbols_loaded = 1;
-	}
+	so->symbols_loaded = 1;
       return 1;
     }
 
@@ -900,7 +892,7 @@ libpthread_solib_p (struct so_list *so)
    FROM_TTY and TARGET are as described for update_solib_list, above.  */
 
 void
-solib_add (char *pattern, int from_tty,
+solib_add (const char *pattern, int from_tty,
 	   struct target_ops *target, int readsyms)
 {
   struct so_list *gdb;
@@ -1412,11 +1404,11 @@ show_auto_solib_add (struct ui_file *file, int from_tty,
    the library-specific handler if it is installed for the current target.  */
 
 struct symbol *
-solib_global_lookup (const struct objfile *objfile,
+solib_global_lookup (struct objfile *objfile,
 		     const char *name,
 		     const domain_enum domain)
 {
-  const struct target_so_ops *ops = solib_ops (target_gdbarch ());
+  const struct target_so_ops *ops = solib_ops (get_objfile_arch (objfile));
 
   if (ops->lookup_lib_global_symbol != NULL)
     return ops->lookup_lib_global_symbol (objfile, name, domain);

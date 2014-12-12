@@ -363,12 +363,12 @@ BFD_JUMP_TABLE macros.
 .  NAME##_make_empty_symbol, \
 .  NAME##_print_symbol, \
 .  NAME##_get_symbol_info, \
+.  NAME##_get_symbol_version_string, \
 .  NAME##_bfd_is_local_label_name, \
 .  NAME##_bfd_is_target_special_symbol, \
 .  NAME##_get_lineno, \
 .  NAME##_find_nearest_line, \
-.  _bfd_generic_find_nearest_line_discriminator, \
-.  _bfd_generic_find_line, \
+.  NAME##_find_line, \
 .  NAME##_find_inliner_info, \
 .  NAME##_bfd_make_debug_symbol, \
 .  NAME##_read_minisymbols, \
@@ -385,14 +385,14 @@ BFD_JUMP_TABLE macros.
 .  void        (*_bfd_get_symbol_info)
 .    (bfd *, struct bfd_symbol *, symbol_info *);
 .#define bfd_get_symbol_info(b,p,e) BFD_SEND (b, _bfd_get_symbol_info, (b,p,e))
+.  const char *(*_bfd_get_symbol_version_string)
+.    (bfd *, struct bfd_symbol *, bfd_boolean *);
+.#define bfd_get_symbol_version_string(b,s,h) BFD_SEND (b, _bfd_get_symbol_version_string, (b,s,h))
 .  bfd_boolean (*_bfd_is_local_label_name) (bfd *, const char *);
 .  bfd_boolean (*_bfd_is_target_special_symbol) (bfd *, asymbol *);
 .  alent *     (*_get_lineno) (bfd *, struct bfd_symbol *);
 .  bfd_boolean (*_bfd_find_nearest_line)
-.    (bfd *, struct bfd_section *, struct bfd_symbol **, bfd_vma,
-.     const char **, const char **, unsigned int *);
-.  bfd_boolean (*_bfd_find_nearest_line_discriminator)
-.    (bfd *, struct bfd_section *, struct bfd_symbol **, bfd_vma,
+.    (bfd *, struct bfd_symbol **, struct bfd_section *, bfd_vma,
 .     const char **, const char **, unsigned int *, unsigned int *);
 .  bfd_boolean (*_bfd_find_line)
 .    (bfd *, struct bfd_symbol **, struct bfd_symbol *,
@@ -446,7 +446,6 @@ BFD_JUMP_TABLE macros.
 .  NAME##_bfd_get_relocated_section_contents, \
 .  NAME##_bfd_relax_section, \
 .  NAME##_bfd_link_hash_table_create, \
-.  NAME##_bfd_link_hash_table_free, \
 .  NAME##_bfd_link_add_symbols, \
 .  NAME##_bfd_link_just_syms, \
 .  NAME##_bfd_copy_link_hash_symbol_type, \
@@ -473,16 +472,14 @@ BFD_JUMP_TABLE macros.
 .  struct bfd_link_hash_table *
 .              (*_bfd_link_hash_table_create) (bfd *);
 .
-.  {* Release the memory associated with the linker hash table.  *}
-.  void        (*_bfd_link_hash_table_free) (struct bfd_link_hash_table *);
-.
 .  {* Add symbols from this object file into the hash table.  *}
 .  bfd_boolean (*_bfd_link_add_symbols) (bfd *, struct bfd_link_info *);
 .
 .  {* Indicate that we are only retrieving symbol values from this section.  *}
 .  void        (*_bfd_link_just_syms) (asection *, struct bfd_link_info *);
 .
-.  {* Copy the symbol type of a linker hash table entry.  *}
+.  {* Copy the symbol type and other attributes for a linker script
+.     assignment of one symbol to another.  *}
 .#define bfd_copy_link_hash_symbol_type(b, t, f) \
 .  BFD_SEND (b, _bfd_copy_link_hash_symbol_type, (b, t, f))
 .  void (*_bfd_copy_link_hash_symbol_type)
@@ -879,6 +876,7 @@ extern const bfd_target vax_aout_1knbsd_vec;
 extern const bfd_target vax_aout_bsd_vec;
 extern const bfd_target vax_aout_nbsd_vec;
 extern const bfd_target vax_elf32_vec;
+extern const bfd_target visium_elf32_vec;
 extern const bfd_target w65_coff_vec;
 extern const bfd_target we32k_coff_vec;
 extern const bfd_target x86_64_coff_vec;
@@ -934,7 +932,7 @@ static const bfd_target * const _bfd_target_vector[] =
 #endif
 	/* This list is alphabetized to make it easy to compare
 	   with other vector lists -- the decls above and
-	   the case statement in configure.in.
+	   the case statement in configure.ac.
 	   Try to keep it in order when adding new targets, and
 	   use a name of the form <cpu>_<format>_<other>_<endian>_vec.
 	   Note that sorting is done as if _<endian>_vec wasn't present.
@@ -1032,8 +1030,10 @@ static const bfd_target * const _bfd_target_vector[] =
 	   the file even if we don't recognize the machine type.  */
 	&elf32_be_vec,
 	&elf32_le_vec,
+#ifdef BFD64
 	&elf64_be_vec,
 	&elf64_le_vec,
+#endif
 
 	&epiphany_elf32_vec,
 
@@ -1049,8 +1049,10 @@ static const bfd_target * const _bfd_target_vector[] =
 	&hppa_elf32_vec,
 	&hppa_elf32_linux_vec,
 	&hppa_elf32_nbsd_vec,
+#ifdef BFD64
 	&hppa_elf64_vec,
 	&hppa_elf64_linux_vec,
+#endif
 	&hppa_som_vec,
 
 	&i370_elf32_vec,
@@ -1114,10 +1116,12 @@ static const bfd_target * const _bfd_target_vector[] =
 	&ip2k_elf32_vec,
 	&iq2000_elf32_vec,
 
+#ifdef BFD64
 	&k1om_elf64_vec,
 	&k1om_elf64_fbsd_vec,
 	&l1om_elf64_vec,
 	&l1om_elf64_fbsd_vec,
+#endif
 
 	&lm32_elf32_vec,
 
@@ -1381,6 +1385,8 @@ static const bfd_target * const _bfd_target_vector[] =
 	&vax_aout_bsd_vec,
 	&vax_aout_nbsd_vec,
 	&vax_elf32_vec,
+
+	&visium_elf32_vec,
 
 	&w65_coff_vec,
 
