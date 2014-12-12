@@ -1,5 +1,5 @@
 # Pretty-printer utilities.
-# Copyright (C) 2010-2013 Free Software Foundation, Inc.
+# Copyright (C) 2010-2014 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -199,6 +199,8 @@ class RegexpCollectionPrettyPrinter(PrettyPrinter):
 
         # Get the type name.
         typename = gdb.types.get_basic_type(val.type).tag
+        if not typename:
+            typename = val.type.name
         if not typename:
             return None
 

@@ -1,6 +1,6 @@
 /* Ada language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2013 Free Software Foundation, Inc.
+   Copyright (C) 1992-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,10 +23,12 @@
 struct frame_info;
 struct inferior;
 struct type_print_options;
+struct parser_state;
 
 #include "value.h"
 #include "gdbtypes.h"
 #include "breakpoint.h"
+#include "vec.h"
 
 /* Names of specific files known to be part of the runtime
    system and that might consider (confusing) debugging information.
@@ -114,6 +116,16 @@ enum ada_renaming_category
     ADA_SUBPROGRAM_RENAMING
   };
 
+/* The different types of catchpoints that we introduced for catching
+   Ada exceptions.  */
+
+enum ada_exception_catchpoint_kind
+{
+  ada_catch_exception,
+  ada_catch_exception_unhandled,
+  ada_catch_assert
+};
+
 /* Ada task structures.  */
 
 struct ada_task_info
@@ -158,7 +170,7 @@ extern int ada_get_field_index (const struct type *type,
                                 const char *field_name,
                                 int maybe_missing);
 
-extern int ada_parse (void);    /* Defined in ada-exp.y */
+extern int ada_parse (struct parser_state *);    /* Defined in ada-exp.y */
 
 extern void ada_error (char *); /* Defined in ada-exp.y */
 
@@ -224,8 +236,6 @@ extern const char *ada_decode_symbol (const struct general_symbol_info *);
 extern const char *ada_decode (const char*);
 
 extern enum language ada_update_initial_language (enum language);
-
-extern void clear_ada_sym_cache (void);
 
 extern int ada_lookup_symbol_list (const char *, const struct block *,
                                    domain_enum, struct ada_symbol_info**);
@@ -373,6 +383,26 @@ extern char *ada_breakpoint_rewrite (char *, int *);
 extern char *ada_main_name (void);
 
 extern char *ada_name_for_lookup (const char *name);
+
+extern void create_ada_exception_catchpoint
+  (struct gdbarch *gdbarch, enum ada_exception_catchpoint_kind ex_kind,
+   char *excep_string, char *cond_string, int tempflag, int disabled,
+   int from_tty);
+
+/* Some information about a given Ada exception.  */
+
+typedef struct ada_exc_info
+{
+  /* The name of the exception.  */
+  const char *name;
+
+  /* The address of the symbol corresponding to that exception.  */
+  CORE_ADDR addr;
+} ada_exc_info;
+
+DEF_VEC_O(ada_exc_info);
+
+extern VEC(ada_exc_info) *ada_exceptions_list (const char *regexp);
 
 /* Tasking-related: ada-tasks.c */
 

@@ -1,6 +1,6 @@
 /* Misc. low level support for i386.
 
-   Copyright (C) 2009-2013 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -28,7 +28,6 @@
    The functions below implement debug registers sharing by reference
    counts, and allow to watch regions up to 16 bytes long
    (32 bytes on 64 bit hosts).  */
-
 
 /* Debug registers' indices.  */
 #define DR_FIRSTADDR 0
@@ -58,16 +57,18 @@ extern void i386_low_init_dregs (struct i386_debug_reg_state *state);
 
 /* Insert a watchpoint to watch a memory region which starts at
    address ADDR and whose length is LEN bytes.  Watch memory accesses
-   of the type TYPE_FROM_PACKET.  Return 0 on success, -1 on failure.  */
+   of the type TYPE.  Return 0 on success, -1 on failure.  */
 extern int i386_low_insert_watchpoint (struct i386_debug_reg_state *state,
-				       char type_from_packet, CORE_ADDR addr,
+				       enum target_hw_bp_type type,
+				       CORE_ADDR addr,
 				       int len);
 
 /* Remove a watchpoint that watched the memory region which starts at
    address ADDR, whose length is LEN bytes, and for accesses of the
-   type TYPE_FROM_PACKET.  Return 0 on success, -1 on failure.  */
+   type TYPE.  Return 0 on success, -1 on failure.  */
 extern int i386_low_remove_watchpoint (struct i386_debug_reg_state *state,
-				       char type_from_packet, CORE_ADDR addr,
+				       enum target_hw_bp_type type,
+				       CORE_ADDR addr,
 				       int len);
 
 /* Return non-zero if we can watch a memory region that starts at

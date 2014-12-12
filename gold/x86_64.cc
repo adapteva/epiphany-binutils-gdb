@@ -1,7 +1,6 @@
 // x86_64.cc -- x86_64 target support for gold.
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
-// Free Software Foundation, Inc.
+// Copyright (C) 2006-2014 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -49,6 +48,37 @@ namespace
 
 using namespace gold;
 
+// A class to handle the .got.plt section.
+
+class Output_data_got_plt_x86_64 : public Output_section_data_build
+{
+ public:
+  Output_data_got_plt_x86_64(Layout* layout)
+    : Output_section_data_build(8),
+      layout_(layout)
+  { }
+
+  Output_data_got_plt_x86_64(Layout* layout, off_t data_size)
+    : Output_section_data_build(data_size, 8),
+      layout_(layout)
+  { }
+
+ protected:
+  // Write out the PLT data.
+  void
+  do_write(Output_file*);
+
+  // Write to a map file.
+  void
+  do_print_to_mapfile(Mapfile* mapfile) const
+  { mapfile->print_output_data(this, "** GOT PLT"); }
+
+ private:
+  // A pointer to the Layout class, so that we can find the .dynamic
+  // section when we write out the GOT PLT section.
+  Layout* layout_;
+};
+
 // A class to handle the PLT data.
 // This is an abstract base class that handles most of the linker details
 // but does not know the actual contents of PLT entries.  The derived
@@ -62,9 +92,9 @@ class Output_data_plt_x86_64 : public Output_section_data
 
   Output_data_plt_x86_64(Layout* layout, uint64_t addralign,
 			 Output_data_got<64, false>* got,
-			 Output_data_space* got_plt,
+			 Output_data_got_plt_x86_64* got_plt,
 			 Output_data_space* got_irelative)
-    : Output_section_data(addralign), layout_(layout), tlsdesc_rel_(NULL),
+    : Output_section_data(addralign), tlsdesc_rel_(NULL),
       irelative_rel_(NULL), got_(got), got_plt_(got_plt),
       got_irelative_(got_irelative), count_(0), irelative_count_(0),
       tlsdesc_got_offset_(-1U), free_list_()
@@ -72,12 +102,12 @@ class Output_data_plt_x86_64 : public Output_section_data
 
   Output_data_plt_x86_64(Layout* layout, uint64_t plt_entry_size,
 			 Output_data_got<64, false>* got,
-			 Output_data_space* got_plt,
+			 Output_data_got_plt_x86_64* got_plt,
 			 Output_data_space* got_irelative,
 			 unsigned int plt_count)
     : Output_section_data((plt_count + 1) * plt_entry_size,
 			  plt_entry_size, false),
-      layout_(layout), tlsdesc_rel_(NULL), irelative_rel_(NULL), got_(got),
+      tlsdesc_rel_(NULL), irelative_rel_(NULL), got_(got),
       got_plt_(got_plt), got_irelative_(got_irelative), count_(plt_count),
       irelative_count_(0), tlsdesc_got_offset_(-1U), free_list_()
   {
@@ -269,9 +299,6 @@ class Output_data_plt_x86_64 : public Output_section_data
   void
   do_write(Output_file*);
 
-  // A pointer to the Layout class, so that we can find the .dynamic
-  // section when we write out the GOT PLT section.
-  Layout* layout_;
   // The reloc section.
   Reloc_section* rel_;
   // The TLSDESC relocs, if necessary.  These must follow the regular
@@ -283,7 +310,7 @@ class Output_data_plt_x86_64 : public Output_section_data
   // The .got section.
   Output_data_got<64, false>* got_;
   // The .got.plt section.
-  Output_data_space* got_plt_;
+  Output_data_got_plt_x86_64* got_plt_;
   // The part of the .got.plt section used for IRELATIVE relocs.
   Output_data_space* got_irelative_;
   // The number of PLT entries.
@@ -304,7 +331,7 @@ class Output_data_plt_x86_64_standard : public Output_data_plt_x86_64<size>
  public:
   Output_data_plt_x86_64_standard(Layout* layout,
 				  Output_data_got<64, false>* got,
-				  Output_data_space* got_plt,
+				  Output_data_got_plt_x86_64* got_plt,
 				  Output_data_space* got_irelative)
     : Output_data_plt_x86_64<size>(layout, plt_entry_size,
 				   got, got_plt, got_irelative)
@@ -312,7 +339,7 @@ class Output_data_plt_x86_64_standard : public Output_data_plt_x86_64<size>
 
   Output_data_plt_x86_64_standard(Layout* layout,
 				  Output_data_got<64, false>* got,
-				  Output_data_space* got_plt,
+				  Output_data_got_plt_x86_64* got_plt,
 				  Output_data_space* got_irelative,
 				  unsigned int plt_count)
     : Output_data_plt_x86_64<size>(layout, plt_entry_size,
@@ -396,7 +423,7 @@ class Target_x86_64 : public Sized_target<size, false>
       got_(NULL), plt_(NULL), got_plt_(NULL), got_irelative_(NULL),
       got_tlsdesc_(NULL), global_offset_table_(NULL), rela_dyn_(NULL),
       rela_irelative_(NULL), copy_relocs_(elfcpp::R_X86_64_COPY),
-      dynbss_(NULL), got_mod_index_offset_(-1U), tlsdesc_reloc_info_(),
+      got_mod_index_offset_(-1U), tlsdesc_reloc_info_(),
       tls_base_symbol_defined_(false)
   { }
 
@@ -619,7 +646,7 @@ class Target_x86_64 : public Sized_target<size, false>
   Output_data_plt_x86_64<size>*
   make_data_plt(Layout* layout,
 		Output_data_got<64, false>* got,
-		Output_data_space* got_plt,
+		Output_data_got_plt_x86_64* got_plt,
 		Output_data_space* got_irelative)
   {
     return this->do_make_data_plt(layout, got, got_plt, got_irelative);
@@ -628,7 +655,7 @@ class Target_x86_64 : public Sized_target<size, false>
   Output_data_plt_x86_64<size>*
   make_data_plt(Layout* layout,
 		Output_data_got<64, false>* got,
-		Output_data_space* got_plt,
+		Output_data_got_plt_x86_64* got_plt,
 		Output_data_space* got_irelative,
 		unsigned int plt_count)
   {
@@ -639,7 +666,7 @@ class Target_x86_64 : public Sized_target<size, false>
   virtual Output_data_plt_x86_64<size>*
   do_make_data_plt(Layout* layout,
 		   Output_data_got<64, false>* got,
-		   Output_data_space* got_plt,
+		   Output_data_got_plt_x86_64* got_plt,
 		   Output_data_space* got_irelative)
   {
     return new Output_data_plt_x86_64_standard<size>(layout, got, got_plt,
@@ -649,7 +676,7 @@ class Target_x86_64 : public Sized_target<size, false>
   virtual Output_data_plt_x86_64<size>*
   do_make_data_plt(Layout* layout,
 		   Output_data_got<64, false>* got,
-		   Output_data_space* got_plt,
+		   Output_data_got_plt_x86_64* got_plt,
 		   Output_data_space* got_irelative,
 		   unsigned int plt_count)
   {
@@ -848,7 +875,7 @@ class Target_x86_64 : public Sized_target<size, false>
   got_section(Symbol_table*, Layout*);
 
   // Get the GOT PLT section.
-  Output_data_space*
+  Output_data_got_plt_x86_64*
   got_plt_section() const
   {
     gold_assert(this->got_plt_ != NULL);
@@ -959,7 +986,7 @@ class Target_x86_64 : public Sized_target<size, false>
   // The PLT section.
   Output_data_plt_x86_64<size>* plt_;
   // The GOT PLT section.
-  Output_data_space* got_plt_;
+  Output_data_got_plt_x86_64* got_plt_;
   // The GOT section for IRELATIVE relocations.
   Output_data_space* got_irelative_;
   // The GOT section for TLSDESC relocations.
@@ -972,8 +999,6 @@ class Target_x86_64 : public Sized_target<size, false>
   Reloc_section* rela_irelative_;
   // Relocs saved to avoid a COPY reloc.
   Copy_relocs<elfcpp::SHT_RELA, size, false> copy_relocs_;
-  // Space for variables copied with a COPY reloc.
-  Output_data_space* dynbss_;
   // Offset of the GOT entry for the TLS module index.
   unsigned int got_mod_index_offset_;
   // We handle R_X86_64_TLSDESC against a local symbol as a target
@@ -1077,7 +1102,7 @@ Target_x86_64<size>::got_section(Symbol_table* symtab, Layout* layout)
 				       | elfcpp::SHF_WRITE),
 				      this->got_, got_order, true);
 
-      this->got_plt_ = new Output_data_space(8, "** GOT PLT");
+      this->got_plt_ = new Output_data_got_plt_x86_64(layout);
       layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC
 				       | elfcpp::SHF_WRITE),
@@ -1166,6 +1191,27 @@ Target_x86_64<size>::rela_irelative_section(Layout* layout)
   return this->rela_irelative_;
 }
 
+// Write the first three reserved words of the .got.plt section.
+// The remainder of the section is written while writing the PLT
+// in Output_data_plt_i386::do_write.
+
+void
+Output_data_got_plt_x86_64::do_write(Output_file* of)
+{
+  // The first entry in the GOT is the address of the .dynamic section
+  // aka the PT_DYNAMIC segment.  The next two entries are reserved.
+  // We saved space for them when we created the section in
+  // Target_x86_64::got_section.
+  const off_t got_file_offset = this->offset();
+  gold_assert(this->data_size() >= 24);
+  unsigned char* const got_view = of->get_output_view(got_file_offset, 24);
+  Output_section* dynamic = this->layout_->dynamic_section();
+  uint64_t dynamic_addr = dynamic == NULL ? 0 : dynamic->address();
+  elfcpp::Swap<64, false>::writeval(got_view, dynamic_addr);
+  memset(got_view + 8, 0, 16);
+  of->write_output_view(got_file_offset, 24, got_view);
+}
+
 // Initialize the PLT section.
 
 template<int size>
@@ -1201,7 +1247,7 @@ Output_data_plt_x86_64<size>::add_entry(Symbol_table* symtab, Layout* layout,
   unsigned int* pcount;
   unsigned int offset;
   unsigned int reserved;
-  Output_data_space* got;
+  Output_section_data_build* got;
   if (gsym->type() == elfcpp::STT_GNU_IFUNC
       && gsym->can_use_relative_reloc(false))
     {
@@ -1608,18 +1654,9 @@ Output_data_plt_x86_64<size>::do_write(Output_file* of)
   this->fill_first_plt_entry(pov, got_address, plt_address);
   pov += this->get_plt_entry_size();
 
-  unsigned char* got_pov = got_view;
-
-  // The first entry in the GOT is the address of the .dynamic section
-  // aka the PT_DYNAMIC segment.  The next two entries are reserved.
-  // We saved space for them when we created the section in
-  // Target_x86_64::got_section.
-  Output_section* dynamic = this->layout_->dynamic_section();
-  uint32_t dynamic_addr = dynamic == NULL ? 0 : dynamic->address();
-  elfcpp::Swap<64, false>::writeval(got_pov, dynamic_addr);
-  got_pov += 8;
-  memset(got_pov, 0, 16);
-  got_pov += 16;
+  // The first three entries in the GOT are reserved, and are written
+  // by Output_data_got_plt_x86_64::do_write.
+  unsigned char* got_pov = got_view + 24;
 
   unsigned int plt_offset = this->get_plt_entry_size();
   unsigned int got_offset = 24;
@@ -1780,7 +1817,7 @@ Target_x86_64<size>::init_got_plt_for_update(Symbol_table* symtab,
 				  true);
 
   // Add the three reserved entries.
-  this->got_plt_ = new Output_data_space((plt_count + 3) * 8, 8, "** GOT PLT");
+  this->got_plt_ = new Output_data_got_plt_x86_64(layout, (plt_count + 3) * 8);
   layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
 				  (elfcpp::SHF_ALLOC
 				   | elfcpp::SHF_WRITE),
@@ -2115,12 +2152,14 @@ Target_x86_64<size>::Scan::get_reference_flags(unsigned int r_type)
 
     case elfcpp::R_X86_64_PC64:
     case elfcpp::R_X86_64_PC32:
+    case elfcpp::R_X86_64_PC32_BND:
     case elfcpp::R_X86_64_PC16:
     case elfcpp::R_X86_64_PC8:
     case elfcpp::R_X86_64_GOTOFF64:
       return Symbol::RELATIVE_REF;
 
     case elfcpp::R_X86_64_PLT32:
+    case elfcpp::R_X86_64_PLT32_BND:
     case elfcpp::R_X86_64_PLTOFF64:
       return Symbol::FUNCTION_CALL | Symbol::RELATIVE_REF;
 
@@ -2202,6 +2241,7 @@ Target_x86_64<size>::Scan::check_non_pic(Relobj* object, unsigned int r_type,
 
       // glibc supports these reloc types, but they can overflow.
     case elfcpp::R_X86_64_PC32:
+    case elfcpp::R_X86_64_PC32_BND:
       // A PC relative reference is OK against a local symbol or if
       // the symbol is defined locally.
       if (gsym == NULL
@@ -2221,12 +2261,28 @@ Target_x86_64<size>::Scan::check_non_pic(Relobj* object, unsigned int r_type,
 	object->error(_("requires dynamic R_X86_64_32 reloc which may "
 			"overflow at runtime; recompile with -fPIC"));
       else
-	object->error(_("requires dynamic %s reloc against '%s' which may "
-			"overflow at runtime; recompile with -fPIC"),
-		      (r_type == elfcpp::R_X86_64_32
-		       ? "R_X86_64_32"
-		       : "R_X86_64_PC32"),
-		      gsym->name());
+	{
+	  const char *r_name;
+	  switch (r_type)
+	    {
+	    case elfcpp::R_X86_64_32:
+	      r_name = "R_X86_64_32";
+	      break;
+	    case elfcpp::R_X86_64_PC32:
+	      r_name = "R_X86_64_PC32";
+	      break;
+	    case elfcpp::R_X86_64_PC32_BND:
+	      r_name = "R_X86_64_PC32_BND";
+	      break;
+	    default:
+	      gold_unreachable();
+	      break;
+	    }
+	  object->error(_("requires dynamic %s reloc against '%s' "
+			  "which may overflow at runtime; recompile "
+			  "with -fPIC"),
+			r_name, gsym->name());
+	}
       this->issued_non_pic_error_ = true;
       return;
 
@@ -2370,11 +2426,13 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
 
     case elfcpp::R_X86_64_PC64:
     case elfcpp::R_X86_64_PC32:
+    case elfcpp::R_X86_64_PC32_BND:
     case elfcpp::R_X86_64_PC16:
     case elfcpp::R_X86_64_PC8:
       break;
 
     case elfcpp::R_X86_64_PLT32:
+    case elfcpp::R_X86_64_PLT32_BND:
       // Since we know this is a local symbol, we can handle this as a
       // PC32 reloc.
       break;
@@ -2716,7 +2774,8 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 	// Make a dynamic relocation if necessary.
 	if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type)))
 	  {
-	    if (gsym->may_need_copy_reloc())
+	    if (!parameters->options().output_is_position_independent()
+		&& gsym->may_need_copy_reloc())
 	      {
 		target->copy_reloc(symtab, layout, object,
 				   data_shndx, output_section, gsym, reloc);
@@ -2767,6 +2826,7 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 
     case elfcpp::R_X86_64_PC64:
     case elfcpp::R_X86_64_PC32:
+    case elfcpp::R_X86_64_PC32_BND:
     case elfcpp::R_X86_64_PC16:
     case elfcpp::R_X86_64_PC8:
       {
@@ -2776,7 +2836,8 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 	// Make a dynamic relocation if necessary.
 	if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type)))
 	  {
-	    if (gsym->may_need_copy_reloc())
+	    if (parameters->options().output_is_executable()
+		&& gsym->may_need_copy_reloc())
 	      {
 		target->copy_reloc(symtab, layout, object,
 				   data_shndx, output_section, gsym, reloc);
@@ -2871,6 +2932,7 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
       break;
 
     case elfcpp::R_X86_64_PLT32:
+    case elfcpp::R_X86_64_PLT32_BND:
       // If the symbol is fully resolved, this is just a PC32 reloc.
       // Otherwise we need a PLT entry.
       if (gsym->final_value_is_known())
@@ -3219,6 +3281,8 @@ Target_x86_64<size>::Relocate::relocate(
   if (this->skip_call_tls_get_addr_)
     {
       if ((r_type != elfcpp::R_X86_64_PLT32
+	   && r_type != elfcpp::R_X86_64_PLT32_BND
+	   && r_type != elfcpp::R_X86_64_PC32_BND
 	   && r_type != elfcpp::R_X86_64_PC32)
 	  || gsym == NULL
 	  || strcmp(gsym->name(), "__tls_get_addr") != 0)
@@ -3263,7 +3327,9 @@ Target_x86_64<size>::Relocate::relocate(
   // We need to subtract the size of the GOT section to get
   // the actual offset to use in the relocation.
   bool have_got_offset = false;
-  unsigned int got_offset = 0;
+  // Since the actual offset is always negative, we use signed int to
+  // support 64-bit GOT relocations.
+  int got_offset = 0;
   switch (r_type)
     {
     case elfcpp::R_X86_64_GOT32:
@@ -3322,6 +3388,7 @@ Target_x86_64<size>::Relocate::relocate(
       break;
 
     case elfcpp::R_X86_64_PC32:
+    case elfcpp::R_X86_64_PC32_BND:
       Relocate_functions<size, false>::pcrela32(view, object, psymval, addend,
 						address);
       break;
@@ -3345,6 +3412,7 @@ Target_x86_64<size>::Relocate::relocate(
       break;
 
     case elfcpp::R_X86_64_PLT32:
+    case elfcpp::R_X86_64_PLT32_BND:
       gold_assert(gsym == NULL
 		  || gsym->has_plt_offset()
 		  || gsym->final_value_is_known()
@@ -3364,10 +3432,12 @@ Target_x86_64<size>::Relocate::relocate(
 	gold_assert(gsym->has_plt_offset()
 		    || gsym->final_value_is_known());
 	typename elfcpp::Elf_types<size>::Elf_Addr got_address;
-	got_address = target->got_section(NULL, NULL)->address();
+	// This is the address of GLOBAL_OFFSET_TABLE.
+	got_address = target->got_plt_section()->address();
 	Relocate_functions<size, false>::rela64(view, object, psymval,
 						addend - got_address);
       }
+      break;
 
     case elfcpp::R_X86_64_GOT32:
       gold_assert(have_got_offset);
@@ -4153,7 +4223,9 @@ Target_x86_64<size>::Relocatable_size_for_reloc::get_size_for_reloc(
     case elfcpp::R_X86_64_32:
     case elfcpp::R_X86_64_32S:
     case elfcpp::R_X86_64_PC32:
+    case elfcpp::R_X86_64_PC32_BND:
     case elfcpp::R_X86_64_PLT32:
+    case elfcpp::R_X86_64_PLT32_BND:
     case elfcpp::R_X86_64_GOTPC32:
     case elfcpp::R_X86_64_GOT32:
       return 4;
@@ -4473,7 +4545,7 @@ class Output_data_plt_x86_64_nacl : public Output_data_plt_x86_64<size>
  public:
   Output_data_plt_x86_64_nacl(Layout* layout,
 			      Output_data_got<64, false>* got,
-			      Output_data_space* got_plt,
+			      Output_data_got_plt_x86_64* got_plt,
 			      Output_data_space* got_irelative)
     : Output_data_plt_x86_64<size>(layout, plt_entry_size,
 				   got, got_plt, got_irelative)
@@ -4481,7 +4553,7 @@ class Output_data_plt_x86_64_nacl : public Output_data_plt_x86_64<size>
 
   Output_data_plt_x86_64_nacl(Layout* layout,
 			      Output_data_got<64, false>* got,
-			      Output_data_space* got_plt,
+			      Output_data_got_plt_x86_64* got_plt,
 			      Output_data_space* got_irelative,
 			      unsigned int plt_count)
     : Output_data_plt_x86_64<size>(layout, plt_entry_size,
@@ -4554,7 +4626,7 @@ class Target_x86_64_nacl : public Target_x86_64<size>
   virtual Output_data_plt_x86_64<size>*
   do_make_data_plt(Layout* layout,
 		   Output_data_got<64, false>* got,
-		   Output_data_space* got_plt,
+		   Output_data_got_plt_x86_64* got_plt,
 		   Output_data_space* got_irelative)
   {
     return new Output_data_plt_x86_64_nacl<size>(layout, got, got_plt,
@@ -4564,7 +4636,7 @@ class Target_x86_64_nacl : public Target_x86_64<size>
   virtual Output_data_plt_x86_64<size>*
   do_make_data_plt(Layout* layout,
 		   Output_data_got<64, false>* got,
-		   Output_data_space* got_plt,
+		   Output_data_got_plt_x86_64* got_plt,
 		   Output_data_space* got_irelative,
 		   unsigned int plt_count)
   {
@@ -4651,7 +4723,7 @@ Output_data_plt_x86_64_nacl<size>::first_plt_entry[plt_entry_size] =
   0x41, 0xff, 0xe3,                   // jmpq *%r11
 
   // 9-byte nop sequence to pad out to the next 32-byte boundary.
-  0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, // nopl %cs:0x0(%rax,%rax,1)
+  0x66, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, // nopw 0x0(%rax,%rax,1)
 
   // 32 bytes of nop to pad out to the standard size
   0x66, 0x66, 0x66, 0x66, 0x66, 0x66,    // excess data32 prefixes

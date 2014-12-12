@@ -1,6 +1,5 @@
 /* Declarations for Intel 80386 opcode table
-   Copyright 2007, 2008, 2009, 2010, 2012
-   Free Software Foundation, Inc.
+   Copyright (C) 2007-2014 Free Software Foundation, Inc.
 
    This file is part of the GNU opcodes library.
 
@@ -169,6 +168,16 @@ enum
   CpuSHA,
   /* VREX support required  */
   CpuVREX,
+  /* CLFLUSHOPT instruction required */
+  CpuClflushOpt,
+  /* XSAVES/XRSTORS instruction required */
+  CpuXSAVES,
+  /* XSAVEC instruction required */
+  CpuXSAVEC,
+  /* PREFETCHWT1 instruction required */
+  CpuPREFETCHWT1,
+  /* SE1 instruction required */
+  CpuSE1,
   /* 64bit support required  */
   Cpu64,
   /* Not supported in the 64bit mode  */
@@ -260,6 +269,11 @@ typedef union i386_cpu_flags
       unsigned int cpusmap:1;
       unsigned int cpusha:1;
       unsigned int cpuvrex:1;
+      unsigned int cpuclflushopt:1;
+      unsigned int cpuxsaves:1;
+      unsigned int cpuxsavec:1;
+      unsigned int cpuprefetchwt1:1;
+      unsigned int cpuse1:1;
       unsigned int cpu64:1;
       unsigned int cpuno64:1;
 #ifdef CpuUnused

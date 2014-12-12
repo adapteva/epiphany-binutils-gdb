@@ -1,6 +1,5 @@
 /* BFD back-end for os9000 i386 binaries.
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2001, 2002,
-   2004, 2005, 2006, 2007, 2009, 2011, 2012  Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -183,7 +182,7 @@ os9k_sizeof_headers (bfd *abfd ATTRIBUTE_UNUSED,
 #define os9k_bfd_final_link _bfd_generic_final_link
 #define os9k_bfd_link_split_section  _bfd_generic_link_split_section
 
-const bfd_target i386os9k_vec =
+const bfd_target i386_aout_os9k_vec =
   {
     "i386os9k",			/* name */
     bfd_target_os9k_flavour,

@@ -1,5 +1,5 @@
 /* Header for GDB line completion.
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -50,8 +50,9 @@ extern char *gdb_completion_word_break_characters (void);
 
 /* Exported to linespec.c */
 
-extern char *skip_quoted_chars (char *, char *, char *);
+extern const char *skip_quoted_chars (const char *, const char *,
+				      const char *);
 
-extern char *skip_quoted (char *);
+extern const char *skip_quoted (const char *);
 
 #endif /* defined (COMPLETER_H) */

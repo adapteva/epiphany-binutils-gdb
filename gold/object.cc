@@ -1,7 +1,6 @@
 // object.cc -- support for an object file for linking in gold
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
-// Free Software Foundation, Inc.
+// Copyright (C) 2006-2014 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -1633,7 +1632,7 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
 				symtab->icf()->get_folded_section(this, i);
 		    Relobj* folded_obj =
 				reinterpret_cast<Relobj*>(folded.first);
-		    gold_info(_("%s: ICF folding section '%s' in file '%s'"
+		    gold_info(_("%s: ICF folding section '%s' in file '%s' "
 				"into '%s' in file '%s'"),
 			      program_name, this->section_name(i).c_str(),
 			      this->name().c_str(),
@@ -1704,6 +1703,28 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
   if (!is_pass_two)
     layout->layout_gnu_stack(seen_gnu_stack, gnu_stack_flags, this);
 
+  // Handle the .eh_frame sections after the other sections.
+  gold_assert(!is_pass_one || eh_frame_sections.empty());
+  for (std::vector<unsigned int>::const_iterator p = eh_frame_sections.begin();
+       p != eh_frame_sections.end();
+       ++p)
+    {
+      unsigned int i = *p;
+      const unsigned char* pshdr;
+      pshdr = section_headers_data + i * This::shdr_size;
+      typename This::Shdr shdr(pshdr);
+
+      this->layout_eh_frame_section(layout,
+				    symbols_data,
+				    symbols_size,
+				    symbol_names_data,
+				    symbol_names_size,
+				    i,
+				    shdr,
+				    reloc_shndx[i],
+				    reloc_type[i]);
+    }
+
   // When doing a relocatable link handle the reloc sections at the
   // end.  Garbage collection  and Identical Code Folding is not
   // turned on for relocatable code.
@@ -1754,28 +1775,6 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
 						rr);
       out_sections[i] = os;
       out_section_offsets[i] = invalid_address;
-    }
-
-  // Handle the .eh_frame sections at the end.
-  gold_assert(!is_pass_one || eh_frame_sections.empty());
-  for (std::vector<unsigned int>::const_iterator p = eh_frame_sections.begin();
-       p != eh_frame_sections.end();
-       ++p)
-    {
-      unsigned int i = *p;
-      const unsigned char* pshdr;
-      pshdr = section_headers_data + i * This::shdr_size;
-      typename This::Shdr shdr(pshdr);
-
-      this->layout_eh_frame_section(layout,
-				    symbols_data,
-				    symbols_size,
-				    symbol_names_data,
-				    symbol_names_size,
-				    i,
-				    shdr,
-				    reloc_shndx[i],
-				    reloc_type[i]);
     }
 
   // When building a .gdb_index section, scan the .debug_info and

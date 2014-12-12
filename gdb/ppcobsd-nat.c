@@ -1,6 +1,6 @@
 /* Native-dependent code for OpenBSD/powerpc.
 
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,6 +34,7 @@
 #include "ppc-tdep.h"
 #include "ppcobsd-tdep.h"
 #include "inf-ptrace.h"
+#include "obsd-nat.h"
 #include "bsd-kvm.h"
 
 /* OpenBSD/powerpc didn't have PT_GETFPREGS/PT_SETFPREGS until release
@@ -77,7 +78,7 @@ ppcobsd_fetch_registers (struct target_ops *ops,
 {
   struct reg regs;
 
-  if (ptrace (PT_GETREGS, PIDGET (inferior_ptid),
+  if (ptrace (PT_GETREGS, ptid_get_pid (inferior_ptid),
 	      (PTRACE_TYPE_ARG3) &regs, 0) == -1)
     perror_with_name (_("Couldn't get registers"));
 
@@ -94,7 +95,7 @@ ppcobsd_fetch_registers (struct target_ops *ops,
     {
       struct fpreg fpregs;
 
-      if (ptrace (PT_GETFPREGS, PIDGET (inferior_ptid),
+      if (ptrace (PT_GETFPREGS, ptid_get_pid (inferior_ptid),
 		  (PTRACE_TYPE_ARG3) &fpregs, 0) == -1)
 	perror_with_name (_("Couldn't get floating point status"));
 
@@ -113,7 +114,7 @@ ppcobsd_store_registers (struct target_ops *ops,
 {
   struct reg regs;
 
-  if (ptrace (PT_GETREGS, PIDGET (inferior_ptid),
+  if (ptrace (PT_GETREGS, ptid_get_pid (inferior_ptid),
 	      (PTRACE_TYPE_ARG3) &regs, 0) == -1)
     perror_with_name (_("Couldn't get registers"));
 
@@ -124,7 +125,7 @@ ppcobsd_store_registers (struct target_ops *ops,
 			regnum, &regs, sizeof regs);
 #endif
 
-  if (ptrace (PT_SETREGS, PIDGET (inferior_ptid),
+  if (ptrace (PT_SETREGS, ptid_get_pid (inferior_ptid),
 	      (PTRACE_TYPE_ARG3) &regs, 0) == -1)
     perror_with_name (_("Couldn't write registers"));
 
@@ -134,14 +135,14 @@ ppcobsd_store_registers (struct target_ops *ops,
     {
       struct fpreg fpregs;
 
-      if (ptrace (PT_GETFPREGS, PIDGET (inferior_ptid),
+      if (ptrace (PT_GETFPREGS, ptid_get_pid (inferior_ptid),
 		  (PTRACE_TYPE_ARG3) &fpregs, 0) == -1)
 	perror_with_name (_("Couldn't get floating point status"));
 
       ppc_collect_fpregset (&ppcobsd_fpregset, regcache,
 			    regnum, &fpregs, sizeof fpregs);
 
-      if (ptrace (PT_SETFPREGS, PIDGET (inferior_ptid),
+      if (ptrace (PT_SETFPREGS, ptid_get_pid (inferior_ptid),
 		  (PTRACE_TYPE_ARG3) &fpregs, 0) == -1)
 	perror_with_name (_("Couldn't write floating point status"));
     }
@@ -199,7 +200,7 @@ _initialize_ppcobsd_nat (void)
   t = inf_ptrace_target ();
   t->to_fetch_registers = ppcobsd_fetch_registers;
   t->to_store_registers = ppcobsd_store_registers;
-  add_target (t);
+  obsd_add_target (t);
 
   /* General-purpose registers.  */
   ppcobsd_reg_offsets.r0_offset = offsetof (struct reg, gpr);

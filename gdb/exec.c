@@ -1,6 +1,6 @@
 /* Work with executable files, for GDB. 
 
-   Copyright (C) 1988-2013 Free Software Foundation, Inc.
+   Copyright (C) 1988-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,15 +34,16 @@
 #include "gdbthread.h"
 #include "progspace.h"
 #include "gdb_bfd.h"
+#include "gcore.h"
 
 #include <fcntl.h>
 #include "readline/readline.h"
-#include "gdb_string.h"
+#include <string.h>
 
 #include "gdbcore.h"
 
 #include <ctype.h>
-#include "gdb_stat.h"
+#include <sys/stat.h>
 
 void (*deprecated_file_changed_hook) (char *);
 
@@ -112,7 +113,7 @@ exec_close (void)
    sections and closes all executable bfds from all program spaces.  */
 
 static void
-exec_close_1 (void)
+exec_close_1 (struct target_ops *self)
 {
   using_exec_ops = 0;
 
@@ -124,12 +125,7 @@ exec_close_1 (void)
     ALL_PSPACES (ss)
     {
       set_current_program_space (ss);
-
-      /* Delete all target sections.  */
-      resize_section_table
-	(current_target_sections,
-	 -resize_section_table (current_target_sections, 0));
-
+      clear_section_table (current_target_sections);
       exec_close ();
     }
 
@@ -167,6 +163,14 @@ exec_file_clear (int from_tty)
 void
 exec_file_attach (char *filename, int from_tty)
 {
+  struct cleanup *cleanups;
+
+  /* First, acquire a reference to the current exec_bfd.  We release
+     this at the end of the function; but acquiring it now lets the
+     BFD cache return it if this call refers to the same file.  */
+  gdb_bfd_ref (exec_bfd);
+  cleanups = make_cleanup_bfd_unref (exec_bfd);
+
   /* Remove any previous exec file.  */
   exec_close ();
 
@@ -181,7 +185,6 @@ exec_file_attach (char *filename, int from_tty)
     }
   else
     {
-      struct cleanup *cleanups;
       char *scratch_pathname, *canonical_pathname;
       int scratch_chan;
       struct target_section *sections = NULL, *sections_end = NULL;
@@ -204,7 +207,7 @@ exec_file_attach (char *filename, int from_tty)
       if (scratch_chan < 0)
 	perror_with_name (filename);
 
-      cleanups = make_cleanup (xfree, scratch_pathname);
+      make_cleanup (xfree, scratch_pathname);
 
       /* gdb_bfd_open (and its variants) prefers canonicalized pathname for
 	 better BFD caching.  */
@@ -224,7 +227,7 @@ exec_file_attach (char *filename, int from_tty)
 	}
 
       gdb_assert (exec_filename == NULL);
-      exec_filename = xstrdup (scratch_pathname);
+      exec_filename = gdb_realpath_keepfile (scratch_pathname);
 
       if (!bfd_check_format_matches (exec_bfd, bfd_object, &matching))
 	{
@@ -260,9 +263,10 @@ exec_file_attach (char *filename, int from_tty)
       /* Tell display code (if any) about the changed file name.  */
       if (deprecated_exec_file_display_hook)
 	(*deprecated_exec_file_display_hook) (filename);
-
-      do_cleanups (cleanups);
     }
+
+  do_cleanups (cleanups);
+
   bfd_cache_close_all ();
   observer_notify_executable_changed ();
 }
@@ -357,15 +361,29 @@ add_to_section_table (bfd *abfd, struct bfd_section *asect,
   (*table_pp)++;
 }
 
-int
-resize_section_table (struct target_section_table *table, int num_added)
+/* See exec.h.  */
+
+void
+clear_section_table (struct target_section_table *table)
+{
+  xfree (table->sections);
+  table->sections = table->sections_end = NULL;
+}
+
+/* Resize section table TABLE by ADJUSTMENT.
+   ADJUSTMENT may be negative, in which case the caller must have already
+   removed the sections being deleted.
+   Returns the old size.  */
+
+static int
+resize_section_table (struct target_section_table *table, int adjustment)
 {
   int old_count;
   int new_count;
 
   old_count = table->sections_end - table->sections;
 
-  new_count = num_added + old_count;
+  new_count = adjustment + old_count;
 
   if (new_count)
     {
@@ -374,10 +392,7 @@ resize_section_table (struct target_section_table *table, int num_added)
       table->sections_end = table->sections + new_count;
     }
   else
-    {
-      xfree (table->sections);
-      table->sections = table->sections_end = NULL;
-    }
+    clear_section_table (table);
 
   return old_count;
 }
@@ -438,6 +453,51 @@ add_target_sections (void *owner,
     }
 }
 
+/* Add the sections of OBJFILE to the current set of target sections.  */
+
+void
+add_target_sections_of_objfile (struct objfile *objfile)
+{
+  struct target_section_table *table = current_target_sections;
+  struct obj_section *osect;
+  int space;
+  unsigned count = 0;
+  struct target_section *ts;
+
+  if (objfile == NULL)
+    return;
+
+  /* Compute the number of sections to add.  */
+  ALL_OBJFILE_OSECTIONS (objfile, osect)
+    {
+      if (bfd_get_section_size (osect->the_bfd_section) == 0)
+	continue;
+      count++;
+    }
+
+  if (count == 0)
+    return;
+
+  space = resize_section_table (table, count);
+
+  ts = table->sections + space;
+
+  ALL_OBJFILE_OSECTIONS (objfile, osect)
+    {
+      if (bfd_get_section_size (osect->the_bfd_section) == 0)
+	continue;
+
+      gdb_assert (ts < table->sections + space + count);
+
+      ts->addr = obj_section_addr (osect);
+      ts->endaddr = obj_section_endaddr (osect);
+      ts->the_bfd_section = osect->the_bfd_section;
+      ts->owner = (void *) objfile;
+
+      ts++;
+    }
+}
+
 /* Remove all target sections owned by OWNER.
    OWNER must be the same value passed to add_target_sections.  */
 
@@ -484,7 +544,59 @@ remove_target_sections (void *owner)
 
 
 
-VEC(mem_range_s) *
+enum target_xfer_status
+exec_read_partial_read_only (gdb_byte *readbuf, ULONGEST offset,
+			     ULONGEST len, ULONGEST *xfered_len)
+{
+  /* It's unduly pedantic to refuse to look at the executable for
+     read-only pieces; so do the equivalent of readonly regions aka
+     QTro packet.  */
+  if (exec_bfd != NULL)
+    {
+      asection *s;
+      bfd_size_type size;
+      bfd_vma vma;
+
+      for (s = exec_bfd->sections; s; s = s->next)
+	{
+	  if ((s->flags & SEC_LOAD) == 0
+	      || (s->flags & SEC_READONLY) == 0)
+	    continue;
+
+	  vma = s->vma;
+	  size = bfd_get_section_size (s);
+	  if (vma <= offset && offset < (vma + size))
+	    {
+	      ULONGEST amt;
+
+	      amt = (vma + size) - offset;
+	      if (amt > len)
+		amt = len;
+
+	      amt = bfd_get_section_contents (exec_bfd, s,
+					      readbuf, offset - vma, amt);
+
+	      if (amt == 0)
+		return TARGET_XFER_EOF;
+	      else
+		{
+		  *xfered_len = amt;
+		  return TARGET_XFER_OK;
+		}
+	    }
+	}
+    }
+
+  /* Indicate failure to find the requested memory block.  */
+  return TARGET_XFER_E_IO;
+}
+
+/* Appends all read-only memory ranges found in the target section
+   table defined by SECTIONS and SECTIONS_END, starting at (and
+   intersected with) MEMADDR for LEN bytes.  Returns the augmented
+   VEC.  */
+
+static VEC(mem_range_s) *
 section_table_available_memory (VEC(mem_range_s) *memory,
 				CORE_ADDR memaddr, ULONGEST len,
 				struct target_section *sections,
@@ -521,9 +633,64 @@ section_table_available_memory (VEC(mem_range_s) *memory,
   return memory;
 }
 
-int
+enum target_xfer_status
+section_table_read_available_memory (gdb_byte *readbuf, ULONGEST offset,
+				     ULONGEST len, ULONGEST *xfered_len)
+{
+  VEC(mem_range_s) *available_memory = NULL;
+  struct target_section_table *table;
+  struct cleanup *old_chain;
+  mem_range_s *r;
+  int i;
+
+  table = target_get_section_table (&exec_ops);
+  available_memory = section_table_available_memory (available_memory,
+						     offset, len,
+						     table->sections,
+						     table->sections_end);
+
+  old_chain = make_cleanup (VEC_cleanup(mem_range_s),
+			    &available_memory);
+
+  normalize_mem_ranges (available_memory);
+
+  for (i = 0;
+       VEC_iterate (mem_range_s, available_memory, i, r);
+       i++)
+    {
+      if (mem_ranges_overlap (r->start, r->length, offset, len))
+	{
+	  CORE_ADDR end;
+	  enum target_xfer_status status;
+
+	  /* Get the intersection window.  */
+	  end = min (offset + len, r->start + r->length);
+
+	  gdb_assert (end - offset <= len);
+
+	  if (offset >= r->start)
+	    status = exec_read_partial_read_only (readbuf, offset,
+						  end - offset,
+						  xfered_len);
+	  else
+	    {
+	      *xfered_len = r->start - offset;
+	      status = TARGET_XFER_UNAVAILABLE;
+	    }
+	  do_cleanups (old_chain);
+	  return status;
+	}
+    }
+  do_cleanups (old_chain);
+
+  *xfered_len = len;
+  return TARGET_XFER_UNAVAILABLE;
+}
+
+enum target_xfer_status
 section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
-				   ULONGEST offset, LONGEST len,
+				   ULONGEST offset, ULONGEST len,
+				   ULONGEST *xfered_len,
 				   struct target_section *sections,
 				   struct target_section *sections_end,
 				   const char *section_name)
@@ -533,7 +700,7 @@ section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
   ULONGEST memaddr = offset;
   ULONGEST memend = memaddr + len;
 
-  if (len <= 0)
+  if (len == 0)
     internal_error (__FILE__, __LINE__,
 		    _("failed internal consistency check"));
 
@@ -557,7 +724,14 @@ section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
 		res = bfd_get_section_contents (abfd, asect,
 						readbuf, memaddr - p->addr,
 						len);
-	      return (res != 0) ? len : 0;
+
+	      if (res != 0)
+		{
+		  *xfered_len = len;
+		  return TARGET_XFER_OK;
+		}
+	      else
+		return TARGET_XFER_EOF;
 	    }
 	  else if (memaddr >= p->endaddr)
 	    {
@@ -576,12 +750,18 @@ section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
 		res = bfd_get_section_contents (abfd, asect,
 						readbuf, memaddr - p->addr,
 						len);
-	      return (res != 0) ? len : 0;
+	      if (res != 0)
+		{
+		  *xfered_len = len;
+		  return TARGET_XFER_OK;
+		}
+	      else
+		return TARGET_XFER_EOF;
 	    }
         }
     }
 
-  return 0;			/* We can't help.  */
+  return TARGET_XFER_EOF;		/* We can't help.  */
 }
 
 static struct target_section_table *
@@ -590,22 +770,22 @@ exec_get_section_table (struct target_ops *ops)
   return current_target_sections;
 }
 
-static LONGEST
+static enum target_xfer_status
 exec_xfer_partial (struct target_ops *ops, enum target_object object,
 		   const char *annex, gdb_byte *readbuf,
 		   const gdb_byte *writebuf,
-		   ULONGEST offset, LONGEST len)
+		   ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
 {
   struct target_section_table *table = target_get_section_table (ops);
 
   if (object == TARGET_OBJECT_MEMORY)
     return section_table_xfer_memory_partial (readbuf, writebuf,
-					      offset, len,
+					      offset, len, xfered_len,
 					      table->sections,
 					      table->sections_end,
 					      NULL);
   else
-    return -1;
+    return TARGET_XFER_E_IO;
 }
 
 
@@ -756,7 +936,8 @@ exec_set_section_address (const char *filename, int index, CORE_ADDR address)
    breakpoint_init_inferior).  */
 
 static int
-ignore (struct gdbarch *gdbarch, struct bp_target_info *bp_tgt)
+ignore (struct target_ops *ops, struct gdbarch *gdbarch,
+	struct bp_target_info *bp_tgt)
 {
   return 0;
 }
@@ -770,15 +951,7 @@ exec_has_memory (struct target_ops *ops)
 	  != current_target_sections->sections_end);
 }
 
-/* Find mapped memory.  */
-
-extern void
-exec_set_find_memory_regions (int (*func) (find_memory_region_ftype, void *))
-{
-  exec_ops.to_find_memory_regions = func;
-}
-
-static char *exec_make_note_section (bfd *, int *);
+static char *exec_make_note_section (struct target_ops *self, bfd *, int *);
 
 /* Fill in the exec file target vector.  Very few entries need to be
    defined.  */
@@ -792,16 +965,15 @@ init_exec_ops (void)
 Specify the filename of the executable file.";
   exec_ops.to_open = exec_open;
   exec_ops.to_close = exec_close_1;
-  exec_ops.to_attach = find_default_attach;
   exec_ops.to_xfer_partial = exec_xfer_partial;
   exec_ops.to_get_section_table = exec_get_section_table;
   exec_ops.to_files_info = exec_files_info;
   exec_ops.to_insert_breakpoint = ignore;
   exec_ops.to_remove_breakpoint = ignore;
-  exec_ops.to_create_inferior = find_default_create_inferior;
   exec_ops.to_stratum = file_stratum;
   exec_ops.to_has_memory = exec_has_memory;
   exec_ops.to_make_corefile_notes = exec_make_note_section;
+  exec_ops.to_find_memory_regions = objfile_find_memory_regions;
   exec_ops.to_magic = OPS_MAGIC;
 }
 
@@ -849,7 +1021,7 @@ Show writing into executable and core files."), NULL,
 }
 
 static char *
-exec_make_note_section (bfd *obfd, int *note_size)
+exec_make_note_section (struct target_ops *self, bfd *obfd, int *note_size)
 {
   error (_("Can't create a corefile"));
 }

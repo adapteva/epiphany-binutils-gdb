@@ -1,5 +1,5 @@
 /* IA-64 support for 64-bit ELF
-   Copyright 1998-2013 Free Software Foundation, Inc.
+   Copyright (C) 1998-2014 Free Software Foundation, Inc.
    Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -3902,17 +3902,17 @@ elfNN_ia64_relocate_section (bfd *output_bfd,
       else
 	{
 	  bfd_boolean unresolved_reloc;
-	  bfd_boolean warned;
+	  bfd_boolean warned, ignored;
 	  struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (input_bfd);
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
 				   h, sym_sec, value,
-				   unresolved_reloc, warned);
+				   unresolved_reloc, warned, ignored);
 
 	  if (h->root.type == bfd_link_hash_undefweak)
 	    undef_weak_ref = TRUE;
-	  else if (warned)
+	  else if (warned || (ignored && info->executable))
 	    continue;
 	}
 
@@ -4936,8 +4936,8 @@ elfNN_ia64_object_p (bfd *abfd)
 static bfd_boolean
 elfNN_ia64_hpux_vec (const bfd_target *vec)
 {
-  extern const bfd_target bfd_elfNN_ia64_hpux_big_vec;
-  return (vec == & bfd_elfNN_ia64_hpux_big_vec);
+  extern const bfd_target ia64_elfNN_hpux_be_vec;
+  return (vec == &ia64_elfNN_hpux_be_vec);
 }
 
 static void
@@ -4978,9 +4978,9 @@ elfNN_hpux_backend_symbol_processing (bfd *abfd ATTRIBUTE_UNUSED,
     }
 }
 
-#define TARGET_LITTLE_SYM		bfd_elfNN_ia64_little_vec
+#define TARGET_LITTLE_SYM		ia64_elfNN_le_vec
 #define TARGET_LITTLE_NAME		"elfNN-ia64-little"
-#define TARGET_BIG_SYM			bfd_elfNN_ia64_big_vec
+#define TARGET_BIG_SYM			ia64_elfNN_be_vec
 #define TARGET_BIG_NAME			"elfNN-ia64-big"
 #define ELF_ARCH			bfd_arch_ia64
 #define ELF_TARGET_ID			IA64_ELF_DATA
@@ -5083,7 +5083,7 @@ elfNN_hpux_backend_symbol_processing (bfd *abfd ATTRIBUTE_UNUSED,
 #undef  TARGET_LITTLE_SYM
 #undef  TARGET_LITTLE_NAME
 #undef  TARGET_BIG_SYM
-#define TARGET_BIG_SYM                  bfd_elfNN_ia64_hpux_big_vec
+#define TARGET_BIG_SYM                  ia64_elfNN_hpux_be_vec
 #undef  TARGET_BIG_NAME
 #define TARGET_BIG_NAME                 "elfNN-ia64-hpux-big"
 

@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux AArch64.
 
-   Copyright (C) 2011-2013 Free Software Foundation, Inc.
+   Copyright (C) 2011-2014 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -33,6 +33,7 @@
 
 #include <sys/ptrace.h>
 #include <sys/utsname.h>
+#include <asm/ptrace.h>
 
 #include "gregset.h"
 
@@ -54,10 +55,10 @@
 static int
 get_thread_id (ptid_t ptid)
 {
-  int tid = TIDGET (ptid);
+  int tid = ptid_get_lwp (ptid);
 
   if (0 == tid)
-    tid = PIDGET (ptid);
+    tid = ptid_get_pid (ptid);
   return tid;
 }
 
@@ -314,10 +315,13 @@ aarch64_linux_set_debug_regs (const struct aarch64_debug_reg_state *state,
 
   memset (&regs, 0, sizeof (regs));
   iov.iov_base = &regs;
-  iov.iov_len = sizeof (regs);
   count = watchpoint ? aarch64_num_wp_regs : aarch64_num_bp_regs;
   addr = watchpoint ? state->dr_addr_wp : state->dr_addr_bp;
   ctrl = watchpoint ? state->dr_ctrl_wp : state->dr_ctrl_bp;
+  if (count == 0)
+    return;
+  iov.iov_len = (offsetof (struct user_hwdebug_state, dbg_regs[count - 1])
+		 + sizeof (regs.dbg_regs [count - 1]));
 
   for (i = 0; i < count; i++)
     {
@@ -683,7 +687,7 @@ aarch64_linux_prepare_to_resume (struct lwp_info *lwp)
   if (DR_HAS_CHANGED (info->dr_changed_bp)
       || DR_HAS_CHANGED (info->dr_changed_wp))
     {
-      int tid = GET_LWP (lwp->ptid);
+      int tid = ptid_get_lwp (lwp->ptid);
       struct aarch64_debug_reg_state *state
 	= aarch64_get_debug_reg_state (ptid_get_pid (lwp->ptid));
 
@@ -825,16 +829,18 @@ aarch64_linux_get_debug_reg_capacity (void)
     }
 }
 
-static void (*super_post_startup_inferior) (ptid_t ptid);
+static void (*super_post_startup_inferior) (struct target_ops *self,
+					    ptid_t ptid);
 
 /* Implement the "to_post_startup_inferior" target_ops method.  */
 
 static void
-aarch64_linux_child_post_startup_inferior (ptid_t ptid)
+aarch64_linux_child_post_startup_inferior (struct target_ops *self,
+					   ptid_t ptid)
 {
   aarch64_forget_process (ptid_get_pid (ptid));
   aarch64_linux_get_debug_reg_capacity ();
-  super_post_startup_inferior (ptid);
+  super_post_startup_inferior (self, ptid);
 }
 
 /* Implement the "to_read_description" target_ops method.  */
@@ -938,7 +944,8 @@ aarch64_align_watchpoint (CORE_ADDR addr, int len, CORE_ADDR *aligned_addr_p,
    sharing implemented via reference counts.  */
 
 static int
-aarch64_linux_can_use_hw_breakpoint (int type, int cnt, int othertype)
+aarch64_linux_can_use_hw_breakpoint (struct target_ops *self,
+				     int type, int cnt, int othertype)
 {
   return 1;
 }
@@ -1198,7 +1205,8 @@ aarch64_handle_breakpoint (int type, CORE_ADDR addr, int len, int is_insert)
    Return 0 on success, -1 on failure.  */
 
 static int
-aarch64_linux_insert_hw_breakpoint (struct gdbarch *gdbarch,
+aarch64_linux_insert_hw_breakpoint (struct target_ops *self,
+				    struct gdbarch *gdbarch,
 				    struct bp_target_info *bp_tgt)
 {
   int ret;
@@ -1230,7 +1238,8 @@ aarch64_linux_insert_hw_breakpoint (struct gdbarch *gdbarch,
    Return 0 on success, -1 on failure.  */
 
 static int
-aarch64_linux_remove_hw_breakpoint (struct gdbarch *gdbarch,
+aarch64_linux_remove_hw_breakpoint (struct target_ops *self,
+				    struct gdbarch *gdbarch,
 				    struct bp_target_info *bp_tgt)
 {
   int ret;
@@ -1334,7 +1343,8 @@ aarch64_handle_watchpoint (int type, CORE_ADDR addr, int len, int is_insert)
    of the type TYPE.  Return 0 on success, -1 on failure.  */
 
 static int
-aarch64_linux_insert_watchpoint (CORE_ADDR addr, int len, int type,
+aarch64_linux_insert_watchpoint (struct target_ops *self,
+				 CORE_ADDR addr, int len, int type,
 				 struct expression *cond)
 {
   int ret;
@@ -1366,7 +1376,8 @@ aarch64_linux_insert_watchpoint (CORE_ADDR addr, int len, int type,
    type TYPE.  Return 0 on success, -1 on failure.  */
 
 static int
-aarch64_linux_remove_watchpoint (CORE_ADDR addr, int len, int type,
+aarch64_linux_remove_watchpoint (struct target_ops *self,
+				 CORE_ADDR addr, int len, int type,
 				 struct expression *cond)
 {
   int ret;
@@ -1395,7 +1406,8 @@ aarch64_linux_remove_watchpoint (CORE_ADDR addr, int len, int type,
 /* Implement the "to_region_ok_for_hw_watchpoint" target_ops method.  */
 
 static int
-aarch64_linux_region_ok_for_hw_watchpoint (CORE_ADDR addr, int len)
+aarch64_linux_region_ok_for_hw_watchpoint (struct target_ops *self,
+					   CORE_ADDR addr, int len)
 {
   CORE_ADDR aligned_addr;
 
@@ -1473,11 +1485,11 @@ aarch64_linux_stopped_data_address (struct target_ops *target,
 /* Implement the "to_stopped_by_watchpoint" target_ops method.  */
 
 static int
-aarch64_linux_stopped_by_watchpoint (void)
+aarch64_linux_stopped_by_watchpoint (struct target_ops *ops)
 {
   CORE_ADDR addr;
 
-  return aarch64_linux_stopped_data_address (&current_target, &addr);
+  return aarch64_linux_stopped_data_address (ops, &addr);
 }
 
 /* Implement the "to_watchpoint_addr_within_range" target_ops method.  */

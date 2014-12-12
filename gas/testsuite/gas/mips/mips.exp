@@ -1,5 +1,4 @@
-# Copyright 2012, 2013
-# Free Software Foundation, Inc.
+# Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -417,6 +416,14 @@ mips_arch_create mips32r2 32	mips32	{ fpisa3 fpisa4 fpisa5 ror } \
 			{ -march=mips32r2 -mtune=mips32r2 } \
 			{ -mmips:isa32r2 } \
 			{ mipsisa32r2-*-* mipsisa32r2el-*-* }
+mips_arch_create mips32r3 32	mips32r2 { fpisa3 fpisa4 fpisa5 ror } \
+			{ -march=mips32r3 -mtune=mips32r3 } \
+			{ -mmips:isa32r3 } \
+			{ mipsisa32r3-*-* mipsisa32r3el-*-* }
+mips_arch_create mips32r5 32	mips32r3 { fpisa3 fpisa4 fpisa5 ror } \
+			{ -march=mips32r5 -mtune=mips32r5 } \
+			{ -mmips:isa32r5 } \
+			{ mipsisa32r5-*-* mipsisa32r5el-*-* }
 mips_arch_create mips64	64	mips5	{ mips32 } \
 			{ -march=mips64 -mtune=mips64 } { -mmips:isa64 } \
 			{ mipsisa64-*-* mipsisa64el-*-* }
@@ -424,10 +431,18 @@ mips_arch_create mips64r2 64	mips64	{ mips32r2 ror } \
 			{ -march=mips64r2 -mtune=mips64r2 } \
 			{ -mmips:isa64r2 } \
 			{ mipsisa64r2-*-* mipsisa64r2el-*-* }
+mips_arch_create mips64r3 64	mips64r2 { mips32r3 ror } \
+			{ -march=mips64r3 -mtune=mips64r3 } \
+			{ -mmips:isa64r3 } \
+			{ mipsisa64r3-*-* mipsisa64r3el-*-* }
+mips_arch_create mips64r5 64	mips64r3 { mips32r5 ror } \
+			{ -march=mips64r5 -mtune=mips64r5 } \
+			{ -mmips:isa64r5 } \
+			{ mipsisa64r5-*-* mipsisa64r5el-*-* }
 mips_arch_create mips16	32	{}	{} \
 			{ -march=mips1 -mips16 } { -mmips:16 }
 mips_arch_create micromips 64	mips64r2 {} \
-			{ -march=mips64 -mmicromips } {}
+			{ -march=mips64r2 -mmicromips } {}
 mips_arch_create r3000 	32	mips1	{} \
 			{ -march=r3000 -mtune=r3000 } { -mmips:3000 }
 mips_arch_create r3900 	32	mips1	{ gpr_ilocks } \
@@ -466,10 +481,12 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "vxworks1-xgot-el"
 } elseif { [istarget mips*-*-*] } {
     set addr32 [expr [istarget mipstx39*-*-*] || [istarget mips-*-linux*] || [istarget mipsel-*-linux*]]
-    set has_newabi [expr [istarget *-*-irix6*] || [istarget mips*-*-linux*] || [istarget mips*-sde-elf*]]
+    set has_newabi [expr [istarget *-*-irix6*] || [istarget mips*-*-linux*] \
+                         || [istarget mips*-sde-elf*] || [istarget mips*-mti-elf*]]
 
     if { [istarget "mips*-*-*linux*"]
 	 || [istarget "mips*-sde-elf*"]
+	 || [istarget "mips*-mti-elf*"]
 	 || [istarget "mips*-*-*bsd*"] } then {
 	set tmips "t"
     } else {
@@ -529,6 +546,10 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "eret-1"
     run_dump_test "eret-2"
     run_dump_test "eret-3"
+    run_dump_test_arches "fix-rm7000-1" \
+					[mips_arch_list_matching mips3 !singlefloat]
+    run_dump_test_arches "fix-rm7000-2" \
+					[mips_arch_list_matching mips3 !singlefloat]
     run_dump_test_arches "24k-branch-delay-1" \
 					[mips_arch_list_matching mips1]
     run_dump_test_arches "24k-triple-stores-1" \
@@ -766,7 +787,7 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "relax-swap1-mips2"
     run_dump_test "relax-swap2"
     run_dump_test_arches "relax-swap3"	[mips_arch_list_all]
-    run_list_test_arches "relax-bc1any" "-mips3d -relax-branch" \
+    run_list_test_arches "relax-bc1any" "-mips3d -mabi=o64 -relax-branch" \
 					[mips_arch_list_matching mips64 \
 					    !micromips]
     run_list_test_arches "relax-bposge" "-mdsp -relax-branch" \
@@ -965,6 +986,18 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "cp0sel-names-mips64r2"
     run_dump_test "cp0sel-names-sb1"
 
+    run_dump_test "cp1-names-numeric"
+    run_dump_test "cp1-names-r3000"
+    run_dump_test "cp1-names-r4000" \
+		  { { {name} {(r4000)} } { {objdump} {-M cp0-names=r4000} } }
+    run_dump_test "cp1-names-r4000" \
+		  { { {name} {(r4400)} } { {objdump} {-M cp0-names=r4400} } }
+    run_dump_test "cp1-names-mips32"
+    run_dump_test "cp1-names-mips32r2"
+    run_dump_test "cp1-names-mips64"
+    run_dump_test "cp1-names-mips64r2"
+    run_dump_test "cp1-names-sb1"
+
     run_dump_test "hwr-names-numeric"
     run_dump_test "hwr-names-mips32r2"
     run_dump_test "hwr-names-mips64r2"
@@ -1147,4 +1180,28 @@ if { [istarget mips*-*-vxworks*] } {
 
     run_dump_test "l_d-reloc"
     run_list_test "bltzal"
+
+    run_dump_test_arches "msa"		[mips_arch_list_matching mips32r2]
+    run_dump_test_arches "msa64"	[mips_arch_list_matching mips64r2]
+    run_dump_test_arches "msa-relax"	[mips_arch_list_matching mips32r2]
+    run_dump_test_arches "msa-branch"	[mips_arch_list_matching mips32r2]
+
+    run_dump_test_arches "xpa"		[mips_arch_list_matching mips32r2 !micromips]
+    run_dump_test_arches "r5"		[mips_arch_list_matching mips32r5 !micromips]
+
+    run_dump_test "pcrel-1"
+    run_dump_test "pcrel-2"
+    run_list_test "pcrel-3" "" "Invalid cross-section PC-relative references"
+    run_dump_test "pcrel-4-32"
+    if $has_newabi {
+	run_dump_test "pcrel-4-n32"
+	run_dump_test "pcrel-4-64"
+    }
+
+    run_dump_test "attr-gnu-abi-fp-1"
+    run_dump_test "attr-gnu-abi-msa-1"
+
+    run_dump_test "module-override"
+    run_dump_test "module-defer-warn1"
+    run_list_test "module-defer-warn2" -32
 }

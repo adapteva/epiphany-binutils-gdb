@@ -1,6 +1,5 @@
 /* IBM S/390-specific support for 32-bit ELF
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2011, 2012 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
    Contributed by Carl B. Pedersen and Martin Schwidefsky.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -2415,11 +2414,12 @@ elf_s390_relocate_section (bfd *output_bfd,
       else
 	{
 	  bfd_boolean warned ATTRIBUTE_UNUSED;
+	  bfd_boolean ignored ATTRIBUTE_UNUSED;
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
 				   h, sec, relocation,
-				   unresolved_reloc, warned);
+				   unresolved_reloc, warned, ignored);
 	}
 
       if (sec != NULL && discarded_section (sec))
@@ -3982,7 +3982,7 @@ elf32_s390_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
 }
 
 
-#define TARGET_BIG_SYM	bfd_elf32_s390_vec
+#define TARGET_BIG_SYM	s390_elf32_vec
 #define TARGET_BIG_NAME	"elf32-s390"
 #define ELF_ARCH	bfd_arch_s390
 #define ELF_TARGET_ID	S390_ELF_DATA

@@ -1,6 +1,5 @@
 /* .eh_frame section optimization.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
-   2012 Free Software Foundation, Inc.
+   Copyright (C) 2001-2014 Free Software Foundation, Inc.
    Written by Jakub Jelinek <jakub@redhat.com>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -41,7 +40,10 @@ struct cie
   bfd_vma augmentation_size;
   union {
     struct elf_link_hash_entry *h;
-    bfd_vma val;
+    struct {
+      unsigned int bfd_id;
+      unsigned int index;
+    } sym;
     unsigned int reloc_index;
   } personality;
   asection *output_sec;
@@ -235,6 +237,7 @@ cie_eq (const void *e1, const void *e2)
       && c1->lsda_encoding == c2->lsda_encoding
       && c1->fde_encoding == c2->fde_encoding
       && c1->initial_insn_length == c2->initial_insn_length
+      && c1->initial_insn_length <= sizeof (c1->initial_instructions)
       && memcmp (c1->initial_instructions,
 		 c2->initial_instructions,
 		 c1->initial_insn_length) == 0)
@@ -254,6 +257,7 @@ static hashval_t
 cie_compute_hash (struct cie *c)
 {
   hashval_t h = 0;
+  size_t len;
   h = iterative_hash_object (c->length, h);
   h = iterative_hash_object (c->version, h);
   h = iterative_hash (c->augmentation, strlen (c->augmentation) + 1, h);
@@ -267,7 +271,10 @@ cie_compute_hash (struct cie *c)
   h = iterative_hash_object (c->lsda_encoding, h);
   h = iterative_hash_object (c->fde_encoding, h);
   h = iterative_hash_object (c->initial_insn_length, h);
-  h = iterative_hash (c->initial_instructions, c->initial_insn_length, h);
+  len = c->initial_insn_length;
+  if (len > sizeof (c->initial_instructions))
+    len = sizeof (c->initial_instructions);
+  h = iterative_hash (c->initial_instructions, len, h);
   c->hash = h;
   return h;
 }
@@ -762,11 +769,10 @@ _bfd_elf_parse_eh_frame (bfd *abfd, struct bfd_link_info *info,
 	    cie->fde_encoding = DW_EH_PE_absptr;
 
 	  initial_insn_length = end - buf;
-	  if (initial_insn_length <= sizeof (cie->initial_instructions))
-	    {
-	      cie->initial_insn_length = initial_insn_length;
-	      memcpy (cie->initial_instructions, buf, initial_insn_length);
-	    }
+	  cie->initial_insn_length = initial_insn_length;
+	  memcpy (cie->initial_instructions, buf,
+		  initial_insn_length <= sizeof (cie->initial_instructions)
+		  ? initial_insn_length : sizeof (cie->initial_instructions));
 	  insns = buf;
 	  buf += initial_insn_length;
 	  ENSURE_NO_RELOCS (buf);
@@ -1027,8 +1033,12 @@ find_merged_cie (bfd *abfd, struct bfd_link_info *info, asection *sec,
     {
       bfd_boolean per_binds_local;
 
-      /* Work out the address of personality routine, either as an absolute
-	 value or as a symbol.  */
+      /* Work out the address of personality routine, or at least
+	 enough info that we could calculate the address had we made a
+	 final section layout.  The symbol on the reloc is enough,
+	 either the hash for a global, or (bfd id, index) pair for a
+	 local.  The assumption here is that no one uses addends on
+	 the reloc.  */
       rel = cookie->rels + cie->personality.reloc_index;
       memset (&cie->personality, 0, sizeof (cie->personality));
 #ifdef BFD64
@@ -1068,9 +1078,8 @@ find_merged_cie (bfd *abfd, struct bfd_link_info *info, asection *sec,
 	    return cie_inf;
 
 	  cie->local_personality = 1;
-	  cie->personality.val = (sym->st_value
-				  + sym_sec->output_offset
-				  + sym_sec->output_section->vma);
+	  cie->personality.sym.bfd_id = abfd->id;
+	  cie->personality.sym.index = r_symndx;
 	  per_binds_local = TRUE;
 	}
 

@@ -1,6 +1,6 @@
 /* General utility routines for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,7 +21,7 @@
 #include "dyn-string.h"
 #include "gdb_assert.h"
 #include <ctype.h>
-#include "gdb_string.h"
+#include <string.h>
 #include "gdb_wait.h"
 #include "event-top.h"
 #include "exceptions.h"
@@ -38,11 +38,6 @@
 
 #ifdef __GO32__
 #include <pc.h>
-#endif
-
-/* SunOS's curses.h has a '#define reg register' in it.  Thank you Sun.  */
-#ifdef reg
-#undef reg
 #endif
 
 #include <signal.h>
@@ -117,12 +112,6 @@ static int debug_timestamp = 0;
 
 int job_control;
 
-#ifndef HAVE_PYTHON
-/* Nonzero means a quit has been requested.  */
-
-int quit_flag;
-#endif /* HAVE_PYTHON */
-
 /* Nonzero means quit immediately if Control-C is typed now, rather
    than waiting until QUIT is executed.  Be careful in setting this;
    code which executes with immediate_quit set has to be very careful
@@ -135,41 +124,6 @@ int quit_flag;
    expect to block), call QUIT after setting immediate_quit.  */
 
 int immediate_quit;
-
-#ifndef HAVE_PYTHON
-
-/* Clear the quit flag.  */
-
-void
-clear_quit_flag (void)
-{
-  quit_flag = 0;
-}
-
-/* Set the quit flag.  */
-
-void
-set_quit_flag (void)
-{
-  quit_flag = 1;
-}
-
-/* Return true if the quit flag has been set, false otherwise.  */
-
-int
-check_quit_flag (void)
-{
-  /* This is written in a particular way to avoid races.  */
-  if (quit_flag)
-    {
-      quit_flag = 0;
-      return 1;
-    }
-
-  return 0;
-}
-
-#endif /* HAVE_PYTHON */
 
 /* Nonzero means that strings with character values >0x7F should be printed
    as octal escapes.  Zero means just print the value (e.g. it's an
@@ -512,6 +466,24 @@ make_cleanup_restore_current_language (void)
 		       (void *) (uintptr_t) saved_lang);
 }
 
+/* Helper function for make_cleanup_clear_parser_state.  */
+
+static void
+do_clear_parser_state (void *ptr)
+{
+  struct parser_state **p = (struct parser_state **) ptr;
+
+  *p = NULL;
+}
+
+/* Clean (i.e., set to NULL) the parser state variable P.  */
+
+struct cleanup *
+make_cleanup_clear_parser_state (struct parser_state **p)
+{
+  return make_cleanup (do_clear_parser_state, (void *) p);
+}
+
 /* This function is useful for cleanups.
    Do
 
@@ -774,6 +746,12 @@ internal_vproblem (struct internal_problem *problem,
   else
     internal_error (__FILE__, __LINE__, _("bad switch"));
 
+  fputs_unfiltered (_("\nThis is a bug, please report it."), gdb_stderr);
+  if (REPORT_BUGS_TO[0])
+    fprintf_unfiltered (gdb_stderr, _("  For instructions, see:\n%s."),
+			REPORT_BUGS_TO);
+  fputs_unfiltered ("\n\n", gdb_stderr);
+
   if (problem->should_dump_core == internal_problem_ask)
     {
       if (!can_dump_core (reason))
@@ -957,6 +935,26 @@ add_internal_problem_command (struct internal_problem *problem)
   xfree (show_doc);
 }
 
+/* Return a newly allocated string, containing the PREFIX followed
+   by the system error message for errno (separated by a colon).
+
+   The result must be deallocated after use.  */
+
+static char *
+perror_string (const char *prefix)
+{
+  char *err;
+  char *combined;
+
+  err = safe_strerror (errno);
+  combined = (char *) xmalloc (strlen (err) + strlen (prefix) + 3);
+  strcpy (combined, prefix);
+  strcat (combined, ": ");
+  strcat (combined, err);
+
+  return combined;
+}
+
 /* Print the system error message for errno, and also mention STRING
    as the file name for which the error was encountered.  Use ERRCODE
    for the thrown exception.  Then return to command level.  */
@@ -964,14 +962,10 @@ add_internal_problem_command (struct internal_problem *problem)
 void
 throw_perror_with_name (enum errors errcode, const char *string)
 {
-  char *err;
   char *combined;
 
-  err = safe_strerror (errno);
-  combined = (char *) alloca (strlen (err) + strlen (string) + 3);
-  strcpy (combined, string);
-  strcat (combined, ": ");
-  strcat (combined, err);
+  combined = perror_string (string);
+  make_cleanup (xfree, combined);
 
   /* I understand setting these is a matter of taste.  Still, some people
      may clear errno but not know about bfd_error.  Doing this here is not
@@ -988,6 +982,19 @@ void
 perror_with_name (const char *string)
 {
   throw_perror_with_name (GENERIC_ERROR, string);
+}
+
+/* Same as perror_with_name except that it prints a warning instead
+   of throwing an error.  */
+
+void
+perror_warning_with_name (const char *string)
+{
+  char *combined;
+
+  combined = perror_string (string);
+  warning (_("%s"), combined);
+  xfree (combined);
 }
 
 /* Print the system error message for ERRCODE, and also mention STRING
@@ -1016,6 +1023,12 @@ print_sys_errmsg (const char *string, int errcode)
 void
 quit (void)
 {
+  if (sync_quit_force_run)
+    {
+      sync_quit_force_run = 0;
+      quit_force (NULL, stdin == instream);
+    }
+
 #ifdef __MSDOS__
   /* No steenking SIGINT will ever be coming our way when the
      program is resumed.  Don't lie.  */
@@ -1412,7 +1425,7 @@ host_char_to_target (struct gdbarch *gdbarch, int c, int *target_c)
    after the zeros.  A value of 0 does not mean end of string.  */
 
 int
-parse_escape (struct gdbarch *gdbarch, char **string_ptr)
+parse_escape (struct gdbarch *gdbarch, const char **string_ptr)
 {
   int target_char = -2;	/* Initialize to avoid GCC warnings.  */
   int c = *(*string_ptr)++;
@@ -1489,7 +1502,13 @@ parse_escape (struct gdbarch *gdbarch, char **string_ptr)
 /* Print the character C on STREAM as part of the contents of a literal
    string whose delimiter is QUOTER.  Note that this routine should only
    be call for printing things which are independent of the language
-   of the program being debugged.  */
+   of the program being debugged.
+
+   printchar will normally escape backslashes and instances of QUOTER. If
+   QUOTER is 0, printchar won't escape backslashes or any quoting character.
+   As a side effect, if you pass the backslash character as the QUOTER,
+   printchar will escape backslashes as usual, but not any other quoting
+   character. */
 
 static void
 printchar (int c, void (*do_fputs) (const char *, struct ui_file *),
@@ -1532,7 +1551,7 @@ printchar (int c, void (*do_fputs) (const char *, struct ui_file *),
     }
   else
     {
-      if (c == '\\' || c == quoter)
+      if (quoter != 0 && (c == '\\' || c == quoter))
 	do_fputs ("\\", stream);
       do_fprintf (stream, "%c", c);
     }
@@ -2724,21 +2743,6 @@ When set, debugging messages will be marked with seconds and microseconds."),
 			   &setdebuglist, &showdebuglist);
 }
 
-/* Print routines to handle variable size regs, etc.  */
-/* Temporary storage using circular buffer.  */
-#define NUMCELLS 16
-#define CELLSIZE 50
-static char *
-get_cell (void)
-{
-  static char buf[NUMCELLS][CELLSIZE];
-  static int cell = 0;
-
-  if (++cell >= NUMCELLS)
-    cell = 0;
-  return buf[cell];
-}
-
 const char *
 paddress (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
@@ -2798,278 +2802,6 @@ core_addr_eq (const void *ap, const void *bp)
   return *addr_ap == *addr_bp;
 }
 
-static char *
-decimal2str (char *sign, ULONGEST addr, int width)
-{
-  /* Steal code from valprint.c:print_decimal().  Should this worry
-     about the real size of addr as the above does?  */
-  unsigned long temp[3];
-  char *str = get_cell ();
-  int i = 0;
-
-  do
-    {
-      temp[i] = addr % (1000 * 1000 * 1000);
-      addr /= (1000 * 1000 * 1000);
-      i++;
-      width -= 9;
-    }
-  while (addr != 0 && i < (sizeof (temp) / sizeof (temp[0])));
-
-  width += 9;
-  if (width < 0)
-    width = 0;
-
-  switch (i)
-    {
-    case 1:
-      xsnprintf (str, CELLSIZE, "%s%0*lu", sign, width, temp[0]);
-      break;
-    case 2:
-      xsnprintf (str, CELLSIZE, "%s%0*lu%09lu", sign, width,
-		 temp[1], temp[0]);
-      break;
-    case 3:
-      xsnprintf (str, CELLSIZE, "%s%0*lu%09lu%09lu", sign, width,
-		 temp[2], temp[1], temp[0]);
-      break;
-    default:
-      internal_error (__FILE__, __LINE__,
-		      _("failed internal consistency check"));
-    }
-
-  return str;
-}
-
-static char *
-octal2str (ULONGEST addr, int width)
-{
-  unsigned long temp[3];
-  char *str = get_cell ();
-  int i = 0;
-
-  do
-    {
-      temp[i] = addr % (0100000 * 0100000);
-      addr /= (0100000 * 0100000);
-      i++;
-      width -= 10;
-    }
-  while (addr != 0 && i < (sizeof (temp) / sizeof (temp[0])));
-
-  width += 10;
-  if (width < 0)
-    width = 0;
-
-  switch (i)
-    {
-    case 1:
-      if (temp[0] == 0)
-	xsnprintf (str, CELLSIZE, "%*o", width, 0);
-      else
-	xsnprintf (str, CELLSIZE, "0%0*lo", width, temp[0]);
-      break;
-    case 2:
-      xsnprintf (str, CELLSIZE, "0%0*lo%010lo", width, temp[1], temp[0]);
-      break;
-    case 3:
-      xsnprintf (str, CELLSIZE, "0%0*lo%010lo%010lo", width,
-		 temp[2], temp[1], temp[0]);
-      break;
-    default:
-      internal_error (__FILE__, __LINE__,
-		      _("failed internal consistency check"));
-    }
-
-  return str;
-}
-
-char *
-pulongest (ULONGEST u)
-{
-  return decimal2str ("", u, 0);
-}
-
-char *
-plongest (LONGEST l)
-{
-  if (l < 0)
-    return decimal2str ("-", -l, 0);
-  else
-    return decimal2str ("", l, 0);
-}
-
-/* Eliminate warning from compiler on 32-bit systems.  */
-static int thirty_two = 32;
-
-char *
-phex (ULONGEST l, int sizeof_l)
-{
-  char *str;
-
-  switch (sizeof_l)
-    {
-    case 8:
-      str = get_cell ();
-      xsnprintf (str, CELLSIZE, "%08lx%08lx",
-		 (unsigned long) (l >> thirty_two),
-		 (unsigned long) (l & 0xffffffff));
-      break;
-    case 4:
-      str = get_cell ();
-      xsnprintf (str, CELLSIZE, "%08lx", (unsigned long) l);
-      break;
-    case 2:
-      str = get_cell ();
-      xsnprintf (str, CELLSIZE, "%04x", (unsigned short) (l & 0xffff));
-      break;
-    default:
-      str = phex (l, sizeof (l));
-      break;
-    }
-
-  return str;
-}
-
-char *
-phex_nz (ULONGEST l, int sizeof_l)
-{
-  char *str;
-
-  switch (sizeof_l)
-    {
-    case 8:
-      {
-	unsigned long high = (unsigned long) (l >> thirty_two);
-
-	str = get_cell ();
-	if (high == 0)
-	  xsnprintf (str, CELLSIZE, "%lx",
-		     (unsigned long) (l & 0xffffffff));
-	else
-	  xsnprintf (str, CELLSIZE, "%lx%08lx", high,
-		     (unsigned long) (l & 0xffffffff));
-	break;
-      }
-    case 4:
-      str = get_cell ();
-      xsnprintf (str, CELLSIZE, "%lx", (unsigned long) l);
-      break;
-    case 2:
-      str = get_cell ();
-      xsnprintf (str, CELLSIZE, "%x", (unsigned short) (l & 0xffff));
-      break;
-    default:
-      str = phex_nz (l, sizeof (l));
-      break;
-    }
-
-  return str;
-}
-
-/* Converts a LONGEST to a C-format hexadecimal literal and stores it
-   in a static string.  Returns a pointer to this string.  */
-char *
-hex_string (LONGEST num)
-{
-  char *result = get_cell ();
-
-  xsnprintf (result, CELLSIZE, "0x%s", phex_nz (num, sizeof (num)));
-  return result;
-}
-
-/* Converts a LONGEST number to a C-format hexadecimal literal and
-   stores it in a static string.  Returns a pointer to this string
-   that is valid until the next call.  The number is padded on the
-   left with 0s to at least WIDTH characters.  */
-char *
-hex_string_custom (LONGEST num, int width)
-{
-  char *result = get_cell ();
-  char *result_end = result + CELLSIZE - 1;
-  const char *hex = phex_nz (num, sizeof (num));
-  int hex_len = strlen (hex);
-
-  if (hex_len > width)
-    width = hex_len;
-  if (width + 2 >= CELLSIZE)
-    internal_error (__FILE__, __LINE__, _("\
-hex_string_custom: insufficient space to store result"));
-
-  strcpy (result_end - width - 2, "0x");
-  memset (result_end - width, '0', width);
-  strcpy (result_end - hex_len, hex);
-  return result_end - width - 2;
-}
-
-/* Convert VAL to a numeral in the given radix.  For
- * radix 10, IS_SIGNED may be true, indicating a signed quantity;
- * otherwise VAL is interpreted as unsigned.  If WIDTH is supplied, 
- * it is the minimum width (0-padded if needed).  USE_C_FORMAT means
- * to use C format in all cases.  If it is false, then 'x' 
- * and 'o' formats do not include a prefix (0x or leading 0).  */
-
-char *
-int_string (LONGEST val, int radix, int is_signed, int width, 
-	    int use_c_format)
-{
-  switch (radix) 
-    {
-    case 16:
-      {
-	char *result;
-
-	if (width == 0)
-	  result = hex_string (val);
-	else
-	  result = hex_string_custom (val, width);
-	if (! use_c_format)
-	  result += 2;
-	return result;
-      }
-    case 10:
-      {
-	if (is_signed && val < 0)
-	  return decimal2str ("-", -val, width);
-	else
-	  return decimal2str ("", val, width);
-      }
-    case 8:
-      {
-	char *result = octal2str (val, width);
-
-	if (use_c_format || val == 0)
-	  return result;
-	else
-	  return result + 1;
-      }
-    default:
-      internal_error (__FILE__, __LINE__,
-		      _("failed internal consistency check"));
-    }
-}	
-
-/* Convert a CORE_ADDR into a string.  */
-const char *
-core_addr_to_string (const CORE_ADDR addr)
-{
-  char *str = get_cell ();
-
-  strcpy (str, "0x");
-  strcat (str, phex (addr, sizeof (addr)));
-  return str;
-}
-
-const char *
-core_addr_to_string_nz (const CORE_ADDR addr)
-{
-  char *str = get_cell ();
-
-  strcpy (str, "0x");
-  strcat (str, phex_nz (addr, sizeof (addr)));
-  return str;
-}
-
 /* Convert a string back into a CORE_ADDR.  */
 CORE_ADDR
 string_to_core_addr (const char *my_string)
@@ -3106,15 +2838,6 @@ string_to_core_addr (const char *my_string)
     }
 
   return addr;
-}
-
-const char *
-host_address_to_string (const void *addr)
-{
-  char *str = get_cell ();
-
-  xsnprintf (str, CELLSIZE, "0x%s", phex_nz ((uintptr_t) addr, sizeof (addr)));
-  return str;
 }
 
 char *
@@ -3202,6 +2925,78 @@ gdb_realpath (const char *filename)
 
   /* This system is a lost cause, just dup the buffer.  */
   return xstrdup (filename);
+}
+
+/* Return a copy of FILENAME, with its directory prefix canonicalized
+   by gdb_realpath.  */
+
+char *
+gdb_realpath_keepfile (const char *filename)
+{
+  const char *base_name = lbasename (filename);
+  char *dir_name;
+  char *real_path;
+  char *result;
+
+  /* Extract the basename of filename, and return immediately 
+     a copy of filename if it does not contain any directory prefix.  */
+  if (base_name == filename)
+    return xstrdup (filename);
+
+  dir_name = alloca ((size_t) (base_name - filename + 2));
+  /* Allocate enough space to store the dir_name + plus one extra
+     character sometimes needed under Windows (see below), and
+     then the closing \000 character.  */
+  strncpy (dir_name, filename, base_name - filename);
+  dir_name[base_name - filename] = '\000';
+
+#ifdef HAVE_DOS_BASED_FILE_SYSTEM
+  /* We need to be careful when filename is of the form 'd:foo', which
+     is equivalent of d:./foo, which is totally different from d:/foo.  */
+  if (strlen (dir_name) == 2 && isalpha (dir_name[0]) && dir_name[1] == ':')
+    {
+      dir_name[2] = '.';
+      dir_name[3] = '\000';
+    }
+#endif
+
+  /* Canonicalize the directory prefix, and build the resulting
+     filename.  If the dirname realpath already contains an ending
+     directory separator, avoid doubling it.  */
+  real_path = gdb_realpath (dir_name);
+  if (IS_DIR_SEPARATOR (real_path[strlen (real_path) - 1]))
+    result = concat (real_path, base_name, (char *) NULL);
+  else
+    result = concat (real_path, SLASH_STRING, base_name, (char *) NULL);
+
+  xfree (real_path);
+  return result;
+}
+
+/* Return PATH in absolute form, performing tilde-expansion if necessary.
+   PATH cannot be NULL or the empty string.
+   This does not resolve symlinks however, use gdb_realpath for that.
+   Space for the result is allocated with malloc.
+   If the path is already absolute, it is strdup'd.
+   If there is a problem computing the absolute path, the path is returned
+   unchanged (still strdup'd).  */
+
+char *
+gdb_abspath (const char *path)
+{
+  gdb_assert (path != NULL && path[0] != '\0');
+
+  if (path[0] == '~')
+    return tilde_expand (path);
+
+  if (IS_ABSOLUTE_PATH (path))
+    return xstrdup (path);
+
+  /* Beware the // my son, the Emacs barfs, the botch that catch...  */
+  return concat (current_directory,
+	    IS_DIR_SEPARATOR (current_directory[strlen (current_directory) - 1])
+		 ? "" : SLASH_STRING,
+		 path, (char *) NULL);
 }
 
 ULONGEST
@@ -3466,7 +3261,7 @@ gdb_bfd_errmsg (bfd_error_type error_tag, char **matching)
 /* Return ARGS parsed as a valid pid, or throw an error.  */
 
 int
-parse_pid_to_attach (char *args)
+parse_pid_to_attach (const char *args)
 {
   unsigned long pid;
   char *dummy;
@@ -3474,7 +3269,7 @@ parse_pid_to_attach (char *args)
   if (!args)
     error_no_arg (_("process-id to attach"));
 
-  dummy = args;
+  dummy = (char *) args;
   pid = strtoul (args, &dummy, 0);
   /* Some targets don't set errno on errors, grrr!  */
   if ((pid == 0 && dummy == args) || dummy != &args[strlen (args)])

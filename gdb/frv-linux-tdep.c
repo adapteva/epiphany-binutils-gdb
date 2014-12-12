@@ -1,7 +1,7 @@
 /* Target-dependent code for GNU/Linux running on the Fujitsu FR-V,
    for GDB.
 
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,7 +30,7 @@
 #include "trad-frame.h"
 #include "frame-unwind.h"
 #include "regset.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "linux-tdep.h"
 
 /* Define the size (in bytes) of an FR-V instruction.  */
@@ -465,13 +465,13 @@ frv_linux_supply_fpregset (const struct regset *regset,
 
 /* FRV Linux kernel register sets.  */
 
-static struct regset frv_linux_gregset =
+static const struct regset frv_linux_gregset =
 {
   NULL,
   frv_linux_supply_gregset
 };
 
-static struct regset frv_linux_fpregset =
+static const struct regset frv_linux_fpregset =
 {
   NULL,
   frv_linux_supply_fpregset

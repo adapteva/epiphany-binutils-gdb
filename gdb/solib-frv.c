@@ -1,5 +1,5 @@
 /* Handle FR-V (FDPIC) shared libraries for GDB, the GNU Debugger.
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,7 +18,7 @@
 
 
 #include "defs.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "inferior.h"
 #include "gdbcore.h"
 #include "solib.h"
@@ -266,7 +266,7 @@ static CORE_ADDR
 lm_base (void)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
-  struct minimal_symbol *got_sym;
+  struct bound_minimal_symbol got_sym;
   CORE_ADDR addr;
   gdb_byte buf[FRV_PTR_SIZE];
 
@@ -284,7 +284,7 @@ lm_base (void)
 
   got_sym = lookup_minimal_symbol ("_GLOBAL_OFFSET_TABLE_", NULL,
                                    symfile_objfile);
-  if (got_sym == 0)
+  if (got_sym.minsym == 0)
     {
       if (solib_frv_debug)
 	fprintf_unfiltered (gdb_stdlog,
@@ -292,7 +292,7 @@ lm_base (void)
       return 0;
     }
 
-  addr = SYMBOL_VALUE_ADDRESS (got_sym) + 8;
+  addr = BMSYMBOL_VALUE_ADDRESS (got_sym) + 8;
 
   if (solib_frv_debug)
     fprintf_unfiltered (gdb_stdlog,
@@ -721,6 +721,7 @@ static int
 enable_break (void)
 {
   asection *interp_sect;
+  CORE_ADDR entry_point;
 
   if (symfile_objfile == NULL)
     {
@@ -730,7 +731,7 @@ enable_break (void)
       return 0;
     }
 
-  if (!symfile_objfile->ei.entry_point_p)
+  if (!entry_point_address_query (&entry_point))
     {
       if (solib_frv_debug)
 	fprintf_unfiltered (gdb_stdlog,
@@ -751,15 +752,13 @@ enable_break (void)
       return 0;
     }
 
-  create_solib_event_breakpoint (target_gdbarch (),
-				 symfile_objfile->ei.entry_point);
+  create_solib_event_breakpoint (target_gdbarch (), entry_point);
 
   if (solib_frv_debug)
     fprintf_unfiltered (gdb_stdlog,
 			"enable_break: solib event breakpoint "
 			"placed at entry point: %s\n",
-			hex_string_custom (symfile_objfile->ei.entry_point,
-					   8));
+			hex_string_custom (entry_point, 8));
   return 1;
 }
 
@@ -920,14 +919,14 @@ frv_relocate_section_addresses (struct so_list *so,
 static CORE_ADDR
 main_got (void)
 {
-  struct minimal_symbol *got_sym;
+  struct bound_minimal_symbol got_sym;
 
   got_sym = lookup_minimal_symbol ("_GLOBAL_OFFSET_TABLE_",
 				   NULL, symfile_objfile);
-  if (got_sym == 0)
+  if (got_sym.minsym == 0)
     return 0;
 
-  return SYMBOL_VALUE_ADDRESS (got_sym);
+  return BMSYMBOL_VALUE_ADDRESS (got_sym);
 }
 
 /* Find the global pointer for the given function address ADDR.  */

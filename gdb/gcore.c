@@ -1,6 +1,6 @@
 /* Generate a core file for the inferior process.
 
-   Copyright (C) 2001-2013 Free Software Foundation, Inc.
+   Copyright (C) 2001-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -136,7 +136,7 @@ gcore_command (char *args, int from_tty)
   else
     {
       /* Default corefile name is "core.PID".  */
-      corefilename = xstrprintf ("core.%d", PIDGET (inferior_ptid));
+      corefilename = xstrprintf ("core.%d", ptid_get_pid (inferior_ptid));
     }
   filename_chain = make_cleanup (xfree, corefilename);
 
@@ -268,13 +268,13 @@ call_target_sbrk (int sbrk_arg)
   struct value *sbrk_fn, *ret;
   bfd_vma tmp;
 
-  if (lookup_minimal_symbol ("sbrk", NULL, NULL) != NULL)
+  if (lookup_minimal_symbol ("sbrk", NULL, NULL).minsym != NULL)
     {
       sbrk_fn = find_function_in_inferior ("sbrk", &sbrk_objf);
       if (sbrk_fn == NULL)
 	return (bfd_vma) 0;
     }
-  else if (lookup_minimal_symbol ("_sbrk", NULL, NULL) != NULL)
+  else if (lookup_minimal_symbol ("_sbrk", NULL, NULL).minsym != NULL)
     {
       sbrk_fn = find_function_in_inferior ("_sbrk", &sbrk_objf);
       if (sbrk_fn == NULL)
@@ -471,8 +471,9 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
   return 0;
 }
 
-static int
-objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
+int
+objfile_find_memory_regions (struct target_ops *self,
+			     find_memory_region_ftype func, void *obfd)
 {
   /* Use objfile data to create memory sections.  */
   struct objfile *objfile;
@@ -607,5 +608,4 @@ Save a core file with the current state of the debugged process.\n\
 Argument is optional filename.  Default filename is 'core.<process_id>'."));
 
   add_com_alias ("gcore", "generate-core-file", class_files, 1);
-  exec_set_find_memory_regions (objfile_find_memory_regions);
 }

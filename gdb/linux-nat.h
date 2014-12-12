@@ -1,6 +1,6 @@
 /* Native debugging support for GNU/Linux (LWP layer).
 
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -109,11 +109,6 @@ extern struct lwp_info *lwp_list;
   for ((LP) = lwp_list;							\
        (LP) != NULL;							\
        (LP) = (LP)->next)
-
-#define GET_LWP(ptid)		ptid_get_lwp (ptid)
-#define GET_PID(ptid)		ptid_get_pid (ptid)
-#define is_lwp(ptid)		(GET_LWP (ptid) != 0)
-#define BUILD_LWP(lwp, pid)	ptid_build (pid, lwp, 0)
 
 /* Attempt to initialize libthread_db.  */
 void check_for_thread_db (void);

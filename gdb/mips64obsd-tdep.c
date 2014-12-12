@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/mips64.
 
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,8 +26,9 @@
 #include "tramp-frame.h"
 
 #include "gdb_assert.h"
-#include "gdb_string.h"
+#include <string.h>
 
+#include "obsd-tdep.h"
 #include "mips-tdep.h"
 #include "solib-svr4.h"
 
@@ -60,7 +61,7 @@ mips64obsd_supply_gregset (const struct regset *regset,
 
 /* OpenBSD/mips64 register set.  */
 
-static struct regset mips64obsd_gregset =
+static const struct regset mips64obsd_gregset =
 {
   NULL,
   mips64obsd_supply_gregset
@@ -154,6 +155,8 @@ mips64obsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_long_double_bit (gdbarch, 128);
   set_gdbarch_long_double_format (gdbarch, floatformats_mips64_quad);
+
+  obsd_init_abi(info, gdbarch);
 
   /* OpenBSD/mips64 has SVR4-style shared libraries.  */
   set_solib_svr4_fetch_link_map_offsets

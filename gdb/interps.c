@@ -1,6 +1,6 @@
 /* Manages interpreters for GDB, the GNU debugger.
 
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
 
    Written by Jim Ingham <jingham@apple.com> of Apple Computer, Inc.
 
@@ -36,7 +36,7 @@
 #include "event-top.h"
 #include "interps.h"
 #include "completer.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "gdb_assert.h"
 #include "top.h"		/* For command_loop.  */
 #include "exceptions.h"
@@ -93,7 +93,7 @@ interp_new (const char *name, const struct interp_procs *procs)
 {
   struct interp *new_interp;
 
-  new_interp = XMALLOC (struct interp);
+  new_interp = XNEW (struct interp);
 
   new_interp->name = xstrdup (name);
   new_interp->data = NULL;
@@ -204,19 +204,11 @@ interp_set (struct interp *interp, int top_level)
       return 0;
     }
 
-  /* Finally, put up the new prompt to show that we are indeed here. 
-     Also, display_gdb_prompt for the console does some readline magic
-     which is needed for the console interpreter, at least...  */
-
-  if (!first_time)
+  if (!first_time && !interp_quiet_p (interp))
     {
-      if (!interp_quiet_p (interp))
-	{
-	  xsnprintf (buffer, sizeof (buffer),
-		     "Switching to interpreter \"%.24s\".\n", interp->name);
-	  ui_out_text (current_uiout, buffer);
-	}
-      display_gdb_prompt (NULL);
+      xsnprintf (buffer, sizeof (buffer),
+		 "Switching to interpreter \"%.24s\".\n", interp->name);
+      ui_out_text (current_uiout, buffer);
     }
 
   return 1;
@@ -304,18 +296,27 @@ current_interp_named_p (const char *interp_name)
   return 0;
 }
 
-/* This is called in display_gdb_prompt.  If the proc returns a zero
-   value, display_gdb_prompt will return without displaying the
-   prompt.  */
-int
-current_interp_display_prompt_p (void)
+/* The interpreter that is active while `interp_exec' is active, NULL
+   at all other times.  */
+static struct interp *command_interpreter;
+
+/* The interpreter that was active when a command was executed.
+   Normally that'd always be CURRENT_INTERPRETER, except that MI's
+   -interpreter-exec command doesn't actually flip the current
+   interpreter when running its sub-command.  The
+   `command_interpreter' global tracks when interp_exec is called
+   (IOW, when -interpreter-exec is called).  If that is set, it is
+   INTERP in '-interpreter-exec INTERP "CMD"' or in 'interpreter-exec
+   INTERP "CMD".  Otherwise, interp_exec isn't active, and so the
+   interpreter running the command is the current interpreter.  */
+
+struct interp *
+command_interp (void)
 {
-  if (current_interpreter == NULL
-      || current_interpreter->procs->prompt_proc_p == NULL)
-    return 0;
+  if (command_interpreter != NULL)
+    return command_interpreter;
   else
-    return current_interpreter->procs->prompt_proc_p (current_interpreter->
-						      data);
+    return current_interpreter;
 }
 
 /* Run the current command interpreter's main loop.  */
@@ -347,20 +348,24 @@ interp_set_quiet (struct interp *interp, int quiet)
 
 /* interp_exec - This executes COMMAND_STR in the current 
    interpreter.  */
-int
-interp_exec_p (struct interp *interp)
-{
-  return interp->procs->exec_proc != NULL;
-}
 
 struct gdb_exception
 interp_exec (struct interp *interp, const char *command_str)
 {
-  if (interp->procs->exec_proc != NULL)
-    {
-      return interp->procs->exec_proc (interp->data, command_str);
-    }
-  return exception_none;
+  struct gdb_exception ex;
+  struct interp *save_command_interp;
+
+  gdb_assert (interp->procs->exec_proc != NULL);
+
+  /* See `command_interp' for why we do this.  */
+  save_command_interp = command_interpreter;
+  command_interpreter = interp;
+
+  ex = interp->procs->exec_proc (interp->data, command_str);
+
+  command_interpreter = save_command_interp;
+
+  return ex;
 }
 
 /* A convenience routine that nulls out all the common command hooks.

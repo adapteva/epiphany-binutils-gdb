@@ -1,6 +1,5 @@
 /* IA-64 support for OpenVMS
-   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010, 2012  Free Software Foundation, Inc.
+   Copyright (C) 1998-2014 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -3495,13 +3494,13 @@ elf64_ia64_relocate_section (bfd *output_bfd,
       else
 	{
 	  bfd_boolean unresolved_reloc;
-	  bfd_boolean warned;
+	  bfd_boolean warned, ignored;
 	  struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (input_bfd);
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
 				   h, sym_sec, value,
-				   unresolved_reloc, warned);
+				   unresolved_reloc, warned, ignored);
 
 	  if (h->root.type == bfd_link_hash_undefweak)
 	    undef_weak_ref = TRUE;
@@ -5513,7 +5512,7 @@ static const struct elf_size_info elf64_ia64_vms_size_info = {
 /* VMS-specific vectors.  */
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		bfd_elf64_ia64_vms_vec
+#define TARGET_LITTLE_SYM		ia64_elf64_vms_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		"elf64-ia64-vms"
 #undef  TARGET_BIG_SYM

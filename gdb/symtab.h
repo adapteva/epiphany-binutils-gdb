@@ -1,6 +1,6 @@
 /* Symbol table definitions for GDB.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -180,8 +180,8 @@ extern const char *symbol_get_demangled_name
 extern CORE_ADDR symbol_overlayed_address (CORE_ADDR, struct obj_section *);
 
 /* Note that all the following SYMBOL_* macros are used with the
-   SYMBOL argument being either a partial symbol, a minimal symbol or
-   a full symbol.  All three types have a ginfo field.  In particular
+   SYMBOL argument being either a partial symbol or
+   a full symbol.  Both types have a ginfo field.  In particular
    the SYMBOL_SET_LANGUAGE, SYMBOL_DEMANGLED_NAME, etc.
    macros cannot be entirely substituted by
    functions, unless the callers are changed to pass in the ginfo
@@ -339,7 +339,7 @@ struct minimal_symbol
      The SYMBOL_VALUE_ADDRESS contains the address that this symbol
      corresponds to.  */
 
-  struct general_symbol_info ginfo;
+  struct general_symbol_info mginfo;
 
   /* Size of this symbol.  end_psymtab in dbxread.c uses this
      information to calculate the end of the partial symtab based on the
@@ -390,6 +390,45 @@ struct minimal_symbol
 #define MSYMBOL_HAS_SIZE(msymbol)	((msymbol)->has_size + 0)
 #define MSYMBOL_TYPE(msymbol)		(msymbol)->type
 
+#define MSYMBOL_VALUE(symbol)		(symbol)->mginfo.value.ivalue
+/* The unrelocated address of the minimal symbol.  */
+#define MSYMBOL_VALUE_RAW_ADDRESS(symbol) ((symbol)->mginfo.value.address + 0)
+/* The relocated address of the minimal symbol, using the section
+   offsets from OBJFILE.  */
+#define MSYMBOL_VALUE_ADDRESS(objfile, symbol)				\
+  ((symbol)->mginfo.value.address					\
+   + ANOFFSET ((objfile)->section_offsets, ((symbol)->mginfo.section)))
+/* For a bound minsym, we can easily compute the address directly.  */
+#define BMSYMBOL_VALUE_ADDRESS(symbol) \
+  MSYMBOL_VALUE_ADDRESS ((symbol).objfile, (symbol).minsym)
+#define SET_MSYMBOL_VALUE_ADDRESS(symbol, new_value)	\
+  ((symbol)->mginfo.value.address = (new_value))
+#define MSYMBOL_VALUE_BYTES(symbol)	(symbol)->mginfo.value.bytes
+#define MSYMBOL_BLOCK_VALUE(symbol)	(symbol)->mginfo.value.block
+#define MSYMBOL_VALUE_CHAIN(symbol)	(symbol)->mginfo.value.chain
+#define MSYMBOL_LANGUAGE(symbol)	(symbol)->mginfo.language
+#define MSYMBOL_SECTION(symbol)		(symbol)->mginfo.section
+#define MSYMBOL_OBJ_SECTION(objfile, symbol)			\
+  (((symbol)->mginfo.section >= 0)				\
+   ? (&(((objfile)->sections)[(symbol)->mginfo.section]))	\
+   : NULL)
+
+#define MSYMBOL_NATURAL_NAME(symbol) \
+  (symbol_natural_name (&(symbol)->mginfo))
+#define MSYMBOL_LINKAGE_NAME(symbol)	(symbol)->mginfo.name
+#define MSYMBOL_PRINT_NAME(symbol)					\
+  (demangle ? MSYMBOL_NATURAL_NAME (symbol) : MSYMBOL_LINKAGE_NAME (symbol))
+#define MSYMBOL_DEMANGLED_NAME(symbol) \
+  (symbol_demangled_name (&(symbol)->mginfo))
+#define MSYMBOL_SET_LANGUAGE(symbol,language,obstack)	\
+  (symbol_set_language (&(symbol)->mginfo, (language), (obstack)))
+#define MSYMBOL_SEARCH_NAME(symbol)					 \
+   (symbol_search_name (&(symbol)->mginfo))
+#define MSYMBOL_MATCHES_SEARCH_NAME(symbol, name)			\
+  (strcmp_iw (MSYMBOL_SEARCH_NAME (symbol), (name)) == 0)
+#define MSYMBOL_SET_NAMES(symbol,linkage_name,len,copy_name,objfile)	\
+  symbol_set_names (&(symbol)->mginfo, linkage_name, len, copy_name, objfile)
+
 #include "minsyms.h"
 
 
@@ -418,6 +457,10 @@ typedef enum domain_enum_tag
 
   STRUCT_DOMAIN,
 
+  /* MODULE_DOMAIN is used in Fortran to hold module type names.  */
+
+  MODULE_DOMAIN,
+
   /* LABEL_DOMAIN may be used for names of labels (for gotos).  */
 
   LABEL_DOMAIN,
@@ -426,6 +469,8 @@ typedef enum domain_enum_tag
      They also always use LOC_COMMON_BLOCK.  */
   COMMON_BLOCK_DOMAIN
 } domain_enum;
+
+extern const char *domain_name (domain_enum);
 
 /* Searching domains, used for `search_symbols'.  Element numbers are
    hardcoded in GDB, check all enum uses before changing it.  */
@@ -445,6 +490,8 @@ enum search_domain
   /* Any type.  */
   ALL_DOMAIN = 3
 };
+
+extern const char *search_domain_name (enum search_domain);
 
 /* An address-class says where to find the value of a symbol.  */
 
@@ -871,11 +918,11 @@ struct symtab
 
   /* Name of this source file.  This pointer is never NULL.  */
 
-  char *filename;
+  const char *filename;
 
   /* Directory in which it was compiled, or NULL if we don't know.  */
 
-  char *dirname;
+  const char *dirname;
 
   /* Total number of lines found in source file.  */
 
@@ -936,6 +983,9 @@ struct symtab
 #define BLOCKVECTOR(symtab)	(symtab)->blockvector
 #define LINETABLE(symtab)	(symtab)->linetable
 #define SYMTAB_PSPACE(symtab)	(symtab)->objfile->pspace
+
+/* Call this to set the "primary" field in struct symtab.  */
+extern void set_symtab_primary (struct symtab *, int primary);
 
 typedef struct symtab *symtab_ptr;
 DEF_VEC_P (symtab_ptr);
@@ -1171,6 +1221,9 @@ struct symtab_and_line
 
   /* The probe associated with this symtab_and_line.  */
   struct probe *probe;
+  /* If PROBE is not NULL, then this is the objfile in which the probe
+     originated.  */
+  struct objfile *objfile;
 };
 
 extern void init_sal (struct symtab_and_line *sal);
@@ -1313,9 +1366,8 @@ extern struct cleanup *make_cleanup_free_search_symbols (struct symbol_search
    FIXME: cagney/2001-03-20: Can't make main_name() const since some
    of the calling code currently assumes that the string isn't
    const.  */
-extern void set_main_name (const char *name);
 extern /*const */ char *main_name (void);
-extern enum language language_of_main;
+extern enum language main_language (void);
 
 /* Check global symbols in objfile.  */
 struct symbol *lookup_global_symbol_from_objfile (const struct objfile *,
@@ -1331,7 +1383,7 @@ void fixup_section (struct general_symbol_info *ginfo,
 
 struct objfile *lookup_objfile_from_block (const struct block *block);
 
-extern int symtab_create_debug;
+extern unsigned int symtab_create_debug;
 
 extern int basenames_may_differ;
 

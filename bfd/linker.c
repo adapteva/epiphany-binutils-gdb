@@ -1,7 +1,5 @@
 /* linker.c -- BFD linker routines
-   Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1993-2014 Free Software Foundation, Inc.
    Written by Steve Chamberlain and Ian Lance Taylor, Cygnus Support
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -568,8 +566,6 @@ bfd_wrapped_link_hash_lookup (bfd *abfd,
 	  return h;
 	}
 
-#undef WRAP
-
 #undef  REAL
 #define REAL "__real_"
 
@@ -603,6 +599,42 @@ bfd_wrapped_link_hash_lookup (bfd *abfd,
 
   return bfd_link_hash_lookup (info->hash, string, create, copy, follow);
 }
+
+/* If H is a wrapped symbol, ie. the symbol name starts with "__wrap_"
+   and the remainder is found in wrap_hash, return the real symbol.  */
+
+struct bfd_link_hash_entry *
+unwrap_hash_lookup (struct bfd_link_info *info,
+		    bfd *input_bfd,
+		    struct bfd_link_hash_entry *h)
+{
+  const char *l = h->root.string;
+
+  if (*l == bfd_get_symbol_leading_char (input_bfd)
+      || *l == info->wrap_char)
+    ++l;
+
+  if (CONST_STRNEQ (l, WRAP))
+    {
+      l += sizeof WRAP - 1;
+
+      if (bfd_hash_lookup (info->wrap_hash, l, FALSE, FALSE) != NULL)
+	{
+	  char save = 0;
+	  if (l - (sizeof WRAP - 1) != h->root.string)
+	    {
+	      --l;
+	      save = *l;
+	      *(char *) l = *h->root.string;
+	    }
+	  h = bfd_link_hash_lookup (info->hash, l, FALSE, FALSE, FALSE);
+	  if (save)
+	    *(char *) l = save;
+	}
+    }
+  return h;
+}
+#undef WRAP
 
 /* Traverse a generic link hash table.  Differs from bfd_hash_traverse
    in the treatment of warning symbols.  When warning symbols are

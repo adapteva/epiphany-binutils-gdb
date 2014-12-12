@@ -1,6 +1,6 @@
 /* Target-dependent code for Atmel AVR, for GDB.
 
-   Copyright (C) 1996-2013 Free Software Foundation, Inc.
+   Copyright (C) 1996-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,8 +34,9 @@
 #include "symfile.h"
 #include "arch-utils.h"
 #include "regcache.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "dis-asm.h"
+#include "objfiles.h"
 
 /* AVR Background:
 
@@ -179,7 +180,7 @@ struct avr_unwind_cache
 struct gdbarch_tdep
 {
   /* Number of bytes stored to the stack by call instructions.
-     2 bytes for avr1-5, 3 bytes for avr6.  */
+     2 bytes for avr1-5 and avrxmega1-5, 3 bytes for avr6 and avrxmega6-7.  */
   int call_length;
 
   /* Type for void.  */
@@ -492,7 +493,7 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
   int i;
   unsigned short insn;
   int scan_stage = 0;
-  struct minimal_symbol *msymbol;
+  struct bound_minimal_symbol msymbol;
   unsigned char prologue[AVR_MAX_PROLOGUE_SIZE];
   int vpc = 0;
   int len;
@@ -586,7 +587,7 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
       pc_offset += 2;
 
       msymbol = lookup_minimal_symbol ("__prologue_saves__", NULL, NULL);
-      if (!msymbol)
+      if (!msymbol.minsym)
 	break;
 
       insn = extract_unsigned_integer (&prologue[vpc + 8], 2, byte_order);
@@ -624,7 +625,7 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
 
       /* Resolve offset (in words) from __prologue_saves__ symbol.
          Which is a pushes count in `-mcall-prologues' mode */
-      num_pushes = AVR_MAX_PUSHES - (i - SYMBOL_VALUE_ADDRESS (msymbol)) / 2;
+      num_pushes = AVR_MAX_PUSHES - (i - BMSYMBOL_VALUE_ADDRESS (msymbol)) / 2;
 
       if (num_pushes > AVR_MAX_PUSHES)
         {
@@ -719,7 +720,7 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
           info->size += gdbarch_tdep (gdbarch)->call_length;
           vpc += 2;
         }
-      else if (insn == 0x920f)  /* push r0 */
+      else if (insn == 0x920f || insn == 0x921f)  /* push r0 or push r1 */
         {
           info->size += 1;
           vpc += 2;
@@ -1355,14 +1356,21 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   switch (info.bfd_arch_info->mach)
     {
     case bfd_mach_avr1:
+    case bfd_mach_avrxmega1:
     case bfd_mach_avr2:
+    case bfd_mach_avrxmega2:
     case bfd_mach_avr3:
+    case bfd_mach_avrxmega3:
     case bfd_mach_avr4:
+    case bfd_mach_avrxmega4:
     case bfd_mach_avr5:
+    case bfd_mach_avrxmega5:
     default:
       call_length = 2;
       break;
     case bfd_mach_avr6:
+    case bfd_mach_avrxmega6:
+    case bfd_mach_avrxmega7:
       call_length = 3;
       break;
     }
@@ -1377,7 +1385,7 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     }
 
   /* None found, create a new architecture from the information provided.  */
-  tdep = XMALLOC (struct gdbarch_tdep);
+  tdep = XNEW (struct gdbarch_tdep);
   gdbarch = gdbarch_alloc (&info, tdep);
   
   tdep->call_length = call_length;

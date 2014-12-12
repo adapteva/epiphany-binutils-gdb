@@ -1,5 +1,5 @@
 /* Native debugging support for Intel x86 running DJGPP.
-   Copyright (C) 1997-2013 Free Software Foundation, Inc.
+   Copyright (C) 1997-2014 Free Software Foundation, Inc.
    Written by Robert Hoehne.
 
    This file is part of GDB.
@@ -87,6 +87,7 @@
 
 #include "i386-nat.h"
 #include "inferior.h"
+#include "infrun.h"
 #include "gdbthread.h"
 #include "gdb_wait.h"
 #include "gdbcore.h"
@@ -99,9 +100,10 @@
 #include "i386-cpuid.h"
 #include "value.h"
 #include "regcache.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "top.h"
 #include "cli/cli-utils.h"
+#include "inf-child.h"
 
 #include <stdio.h>		/* might be required for __DJGPP_MINOR__ */
 #include <stdlib.h>
@@ -234,34 +236,7 @@ static int dr_ref_count[4];
 #define SOME_PID 42
 
 static int prog_has_started = 0;
-static void go32_open (char *name, int from_tty);
-static void go32_close (void);
-static void go32_attach (struct target_ops *ops, char *args, int from_tty);
-static void go32_detach (struct target_ops *ops, char *args, int from_tty);
-static void go32_resume (struct target_ops *ops,
-			 ptid_t ptid, int step,
-			 enum gdb_signal siggnal);
-static void go32_fetch_registers (struct target_ops *ops,
-				  struct regcache *, int regno);
-static void store_register (const struct regcache *, int regno);
-static void go32_store_registers (struct target_ops *ops,
-				  struct regcache *, int regno);
-static void go32_prepare_to_store (struct regcache *);
-static int go32_xfer_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len,
-			     int write,
-			     struct mem_attrib *attrib,
-			     struct target_ops *target);
-static void go32_files_info (struct target_ops *target);
-static void go32_kill_inferior (struct target_ops *ops);
-static void go32_create_inferior (struct target_ops *ops, char *exec_file,
-				  char *args, char **env, int from_tty);
 static void go32_mourn_inferior (struct target_ops *ops);
-static int go32_can_run (void);
-
-static struct target_ops go32_ops;
-static void go32_terminal_init (void);
-static void go32_terminal_inferior (void);
-static void go32_terminal_ours (void);
 
 #define r_ofs(x) (offsetof(TSS,x))
 
@@ -365,27 +340,11 @@ static struct {
 };
 
 static void
-go32_open (char *name, int from_tty)
-{
-  printf_unfiltered ("Done.  Use the \"run\" command to run the program.\n");
-}
-
-static void
-go32_close (void)
-{
-}
-
-static void
-go32_attach (struct target_ops *ops, char *args, int from_tty)
+go32_attach (struct target_ops *ops, const char *args, int from_tty)
 {
   error (_("\
 You cannot attach to a running program on this platform.\n\
 Use the `run' command to run DJGPP programs."));
-}
-
-static void
-go32_detach (struct target_ops *ops, char *args, int from_tty)
-{
 }
 
 static int resume_is_step;
@@ -597,36 +556,65 @@ go32_store_registers (struct target_ops *ops,
     }
 }
 
-static void
-go32_prepare_to_store (struct regcache *regcache)
-{
-}
+/* Const-correct version of DJGPP's write_child, which unfortunately
+   takes a non-const buffer pointer.  */
 
 static int
-go32_xfer_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len, int write,
-		  struct mem_attrib *attrib, struct target_ops *target)
+my_write_child (unsigned child_addr, const void *buf, unsigned len)
 {
-  if (write)
+  static void *buffer = NULL;
+  static unsigned buffer_len = 0;
+  int res;
+
+  if (buffer_len < len)
     {
-      if (write_child (memaddr, myaddr, len))
-	{
-	  return 0;
-	}
-      else
-	{
-	  return len;
-	}
+      buffer = xrealloc (buffer, len);
+      buffer_len = len;
     }
+
+  memcpy (buffer, buf, len);
+  res = write_child (child_addr, buffer, len);
+  return res;
+}
+
+/* Helper for go32_xfer_partial that handles memory transfers.
+   Arguments are like target_xfer_partial.  */
+
+static enum target_xfer_status
+go32_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
+		  ULONGEST memaddr, ULONGEST len, ULONGEST *xfered_len)
+{
+  int res;
+
+  if (writebuf != NULL)
+    res = my_write_child (memaddr, writebuf, len);
   else
+    res = read_child (memaddr, readbuf, len);
+
+  if (res <= 0)
+    return TARGET_XFER_E_IO;
+
+  *xfered_len = res;
+  return TARGET_XFER_OK;
+}
+
+/* Target to_xfer_partial implementation.  */
+
+static enum target_xfer_status
+go32_xfer_partial (struct target_ops *ops, enum target_object object,
+		   const char *annex, gdb_byte *readbuf,
+		   const gdb_byte *writebuf, ULONGEST offset, ULONGEST len,
+		   ULONGEST *xfered_len)
+{
+  switch (object)
     {
-      if (read_child (memaddr, myaddr, len))
-	{
-	  return 0;
-	}
-      else
-	{
-	  return len;
-	}
+    case TARGET_OBJECT_MEMORY:
+      return go32_xfer_memory (readbuf, writebuf, offset, len, xfered_len);
+
+    default:
+      return ops->beneath->to_xfer_partial (ops->beneath, object, annex,
+					    readbuf, writebuf, offset, len,
+					    xfered_len);
     }
 }
 
@@ -723,7 +711,8 @@ go32_create_inferior (struct target_ops *ops, char *exec_file,
   inf = current_inferior ();
   inferior_appeared (inf, SOME_PID);
 
-  push_target (&go32_ops);
+  if (!target_is_pushed (ops))
+    push_target (ops);
 
   add_thread_silent (inferior_ptid);
 
@@ -757,14 +746,8 @@ go32_mourn_inferior (struct target_ops *ops)
   delete_thread_silent (ptid);
   prog_has_started = 0;
 
-  unpush_target (ops);
   generic_mourn_inferior ();
-}
-
-static int
-go32_can_run (void)
-{
-  return 1;
+  inf_child_maybe_unpush_target (ops);
 }
 
 /* Hardware watchpoint support.  */
@@ -870,14 +853,14 @@ static int inf_terminal_mode;
 static int terminal_is_ours = 1;
 
 static void
-go32_terminal_init (void)
+go32_terminal_init (struct target_ops *self)
 {
   inf_mode_valid = 0;	/* Reinitialize, in case they are restarting child.  */
   terminal_is_ours = 1;
 }
 
 static void
-go32_terminal_info (const char *args, int from_tty)
+go32_terminal_info (struct target_ops *self, const char *args, int from_tty)
 {
   printf_unfiltered ("Inferior's terminal is in %s mode.\n",
 		     !inf_mode_valid
@@ -907,7 +890,7 @@ go32_terminal_info (const char *args, int from_tty)
 }
 
 static void
-go32_terminal_inferior (void)
+go32_terminal_inferior (struct target_ops *self)
 {
   /* Redirect standard handles as child wants them.  */
   errno = 0;
@@ -928,7 +911,7 @@ go32_terminal_inferior (void)
 }
 
 static void
-go32_terminal_ours (void)
+go32_terminal_ours (struct target_ops *self)
 {
   /* Switch to cooked mode on the gdb terminal and save the inferior
      terminal mode to be restored when it is resumed.  */
@@ -966,68 +949,32 @@ go32_pid_to_str (struct target_ops *ops, ptid_t ptid)
   return normal_pid_to_str (ptid);
 }
 
-static void
-init_go32_ops (void)
+/* Create a go32 target.  */
+
+static struct target_ops *
+go32_target (void)
 {
-  go32_ops.to_shortname = "djgpp";
-  go32_ops.to_longname = "djgpp target process";
-  go32_ops.to_doc =
-    "Program loaded by djgpp, when gdb is used as an external debugger";
-  go32_ops.to_open = go32_open;
-  go32_ops.to_close = go32_close;
-  go32_ops.to_attach = go32_attach;
-  go32_ops.to_detach = go32_detach;
-  go32_ops.to_resume = go32_resume;
-  go32_ops.to_wait = go32_wait;
-  go32_ops.to_fetch_registers = go32_fetch_registers;
-  go32_ops.to_store_registers = go32_store_registers;
-  go32_ops.to_prepare_to_store = go32_prepare_to_store;
-  go32_ops.deprecated_xfer_memory = go32_xfer_memory;
-  go32_ops.to_files_info = go32_files_info;
-  go32_ops.to_insert_breakpoint = memory_insert_breakpoint;
-  go32_ops.to_remove_breakpoint = memory_remove_breakpoint;
-  go32_ops.to_terminal_init = go32_terminal_init;
-  go32_ops.to_terminal_inferior = go32_terminal_inferior;
-  go32_ops.to_terminal_ours_for_output = go32_terminal_ours;
-  go32_ops.to_terminal_ours = go32_terminal_ours;
-  go32_ops.to_terminal_info = go32_terminal_info;
-  go32_ops.to_kill = go32_kill_inferior;
-  go32_ops.to_create_inferior = go32_create_inferior;
-  go32_ops.to_mourn_inferior = go32_mourn_inferior;
-  go32_ops.to_can_run = go32_can_run;
-  go32_ops.to_thread_alive = go32_thread_alive;
-  go32_ops.to_pid_to_str = go32_pid_to_str;
-  go32_ops.to_stratum = process_stratum;
-  go32_ops.to_has_all_memory = default_child_has_all_memory;
-  go32_ops.to_has_memory = default_child_has_memory;
-  go32_ops.to_has_stack = default_child_has_stack;
-  go32_ops.to_has_registers = default_child_has_registers;
-  go32_ops.to_has_execution = default_child_has_execution;
+  struct target_ops *t = inf_child_target ();
 
-  i386_use_watchpoints (&go32_ops);
+  t->to_attach = go32_attach;
+  t->to_resume = go32_resume;
+  t->to_wait = go32_wait;
+  t->to_fetch_registers = go32_fetch_registers;
+  t->to_store_registers = go32_store_registers;
+  t->to_xfer_partial = go32_xfer_partial;
+  t->to_files_info = go32_files_info;
+  t->to_terminal_init = go32_terminal_init;
+  t->to_terminal_inferior = go32_terminal_inferior;
+  t->to_terminal_ours_for_output = go32_terminal_ours;
+  t->to_terminal_ours = go32_terminal_ours;
+  t->to_terminal_info = go32_terminal_info;
+  t->to_kill = go32_kill_inferior;
+  t->to_create_inferior = go32_create_inferior;
+  t->to_mourn_inferior = go32_mourn_inferior;
+  t->to_thread_alive = go32_thread_alive;
+  t->to_pid_to_str = go32_pid_to_str;
 
-
-  i386_dr_low.set_control = go32_set_dr7;
-  i386_dr_low.set_addr = go32_set_dr;
-  i386_dr_low.get_status = go32_get_dr6;
-  i386_dr_low.get_control = go32_get_dr7;
-  i386_dr_low.get_addr = go32_get_dr;
-  i386_set_debug_register_length (4);
-
-  go32_ops.to_magic = OPS_MAGIC;
-
-  /* Initialize child's cwd as empty to be initialized when starting
-     the child.  */
-  *child_cwd = 0;
-
-  /* Initialize child's command line storage.  */
-  if (redir_debug_init (&child_cmd) == -1)
-    internal_error (__FILE__, __LINE__,
-		    _("Cannot allocate redirection storage: "
-		      "not enough memory.\n"));
-
-  /* We are always processing GCC-compiled programs.  */
-  processing_gcc_compilation = 2;
+  return t;
 }
 
 /* Return the current DOS codepage number.  */
@@ -2117,8 +2064,30 @@ extern initialize_file_ftype _initialize_go32_nat;
 void
 _initialize_go32_nat (void)
 {
-  init_go32_ops ();
-  add_target (&go32_ops);
+  struct target_ops *t = go32_target ();
+
+  i386_dr_low.set_control = go32_set_dr7;
+  i386_dr_low.set_addr = go32_set_dr;
+  i386_dr_low.get_status = go32_get_dr6;
+  i386_dr_low.get_control = go32_get_dr7;
+  i386_dr_low.get_addr = go32_get_dr;
+  i386_set_debug_register_length (4);
+
+  i386_use_watchpoints (t);
+  add_target (t);
+
+  /* Initialize child's cwd as empty to be initialized when starting
+     the child.  */
+  *child_cwd = 0;
+
+  /* Initialize child's command line storage.  */
+  if (redir_debug_init (&child_cmd) == -1)
+    internal_error (__FILE__, __LINE__,
+		    _("Cannot allocate redirection storage: "
+		      "not enough memory.\n"));
+
+  /* We are always processing GCC-compiled programs.  */
+  processing_gcc_compilation = 2;
 
   add_prefix_cmd ("dos", class_info, go32_info_dos_command, _("\
 Print information specific to DJGPP (aka MS-DOS) debugging."),

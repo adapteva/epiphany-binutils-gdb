@@ -1,5 +1,5 @@
 /* tc-epiphany.h -- Header file for tc-epiphany.c.
-   Copyright 2009, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
    Contributed by Embecosm on behalf of Adapteva, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -80,14 +80,16 @@ extern void epiphany_handle_align (fragS *);
 /* We need to parse the @PLT reloc specifier in .word.  */
 
 #define TC_PARSE_CONS_EXPRESSION(EXPR,N) epiphany_parse_cons_expression (EXPR, N)
-extern void epiphany_parse_cons_expression (expressionS *, int);
+extern bfd_reloc_code_real_type epiphany_parse_cons_expression (expressionS *,
+                                                                int);
 
 /* This is called by emit_expr when creating a reloc for a cons. We use this to
    set the relocation type manually to BFD_RELOC_EPIPHANY_CACHE32 for PLT
    relocs.  */
 
 #define TC_CONS_FIX_NEW epiphany_cons_fix_new
-extern void epiphany_cons_fix_new (fragS *, int, int, expressionS *);
+extern void epiphany_cons_fix_new (fragS *, int, int, expressionS *,
+                                   bfd_reloc_code_real_type);
 
 #define TARGET_FORMAT "elf32-epiphany"
 

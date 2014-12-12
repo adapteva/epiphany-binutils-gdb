@@ -1,4 +1,4 @@
-@c Copyright 1991-2013 Free Software Foundation, Inc.
+@c Copyright (C) 1991-2014 Free Software Foundation, Inc.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
 @c man end
@@ -119,6 +119,7 @@ processor names are recognized:
 @code{bdver1},
 @code{bdver2},
 @code{bdver3},
+@code{bdver4},
 @code{btver1},
 @code{btver2},
 @code{generic32} and
@@ -281,6 +282,11 @@ The @code{.att_syntax} and @code{.intel_syntax} directives will take precedent.
 @item -madd-bnd-prefix
 This option forces the assembler to add BND prefix to all branches, even
 if such prefix was not explicitly specified in the source code.
+
+@cindex @samp{-mbig-obj} option, x86-64
+@item -mbig-obj
+On x86-64 PE/COFF target this option forces the use of big object file
+format, which allows more than 32768 sections.
 
 @end table
 @c man end
@@ -1050,7 +1056,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{corei7} @tab @samp{l1om} @tab @samp{k1om}
 @item @samp{k6} @tab @samp{k6_2} @tab @samp{athlon} @tab @samp{k8}
 @item @samp{amdfam10} @tab @samp{bdver1} @tab @samp{bdver2} @tab @samp{bdver3}
-@item @samp{btver1} @tab @samp{btver2}
+@item @samp{bdver4} @tab @samp{btver1} @tab @samp{btver2}
 @item @samp{generic32} @tab @samp{generic64}
 @item @samp{.mmx} @tab @samp{.sse} @tab @samp{.sse2} @tab @samp{.sse3}
 @item @samp{.ssse3} @tab @samp{.sse4.1} @tab @samp{.sse4.2} @tab @samp{.sse4}
@@ -1062,6 +1068,8 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.rtm} @tab @samp{.adx} @tab @samp{.rdseed} @tab @samp{.prfchw}
 @item @samp{.smap} @tab @samp{.mpx}
 @item @samp{.smap} @tab @samp{.sha}
+@item @samp{.smap} @tab @samp{.clflushopt} @tab @samp{.xsavec} @tab @samp{.xsaves}
+@item @samp{.smap} @tab @samp{.prefetchwt1}
 @item @samp{.3dnow} @tab @samp{.3dnowa} @tab @samp{.sse4a} @tab @samp{.sse5}
 @item @samp{.syscall} @tab @samp{.rdtscp} @tab @samp{.svme} @tab @samp{.abm}
 @item @samp{.lwp} @tab @samp{.fma4} @tab @samp{.xop} @tab @samp{.cx16}

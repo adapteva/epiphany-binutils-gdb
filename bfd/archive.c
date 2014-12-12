@@ -1,5 +1,5 @@
 /* BFD back-end for archive files (libraries).
-   Copyright 1990-2013 Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
    Written by Cygnus Support.  Mostly Gumby Henkel-Wallace's fault.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -705,7 +705,7 @@ _bfd_get_elt_at_filepos (bfd *archive, file_ptr filepos)
   else
     {
       n_nfd->origin = n_nfd->proxy_origin;
-      n_nfd->filename = filename;
+      n_nfd->filename = xstrdup (filename);
     }
 
   n_nfd->arelt_data = new_areldata;

@@ -1,5 +1,5 @@
 /* aarch64-dis.c -- AArch64 disassembler.
-   Copyright 2009-2013  Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of the GNU opcodes library.
@@ -422,11 +422,17 @@ aarch64_ext_ldst_elemlist (const aarch64_operand *self ATTRIBUTE_UNUSED,
       info->reglist.index = QSsize;
       break;
     case 0x1:
+      if (QSsize & 0x1)
+	/* UND.  */
+	return 0;
       info->qualifier = AARCH64_OPND_QLF_S_H;
       /* Index encoded in "Q:S:size<1>".  */
       info->reglist.index = QSsize >> 1;
       break;
     case 0x2:
+      if ((QSsize >> 1) & 0x1)
+	/* UND.  */
+	return 0;
       if ((QSsize & 0x1) == 0)
 	{
 	  info->qualifier = AARCH64_OPND_QLF_S_S;
@@ -435,12 +441,12 @@ aarch64_ext_ldst_elemlist (const aarch64_operand *self ATTRIBUTE_UNUSED,
 	}
       else
 	{
-	  info->qualifier = AARCH64_OPND_QLF_S_D;
-	  /* Index encoded in "Q".  */
-	  info->reglist.index = QSsize >> 3;
 	  if (extract_field (FLD_S, code, 0))
 	    /* UND */
 	    return 0;
+	  info->qualifier = AARCH64_OPND_QLF_S_D;
+	  /* Index encoded in "Q".  */
+	  info->reglist.index = QSsize >> 3;
 	}
       break;
     default:
@@ -1601,12 +1607,14 @@ convert_ubfm_to_lsl (aarch64_inst *inst)
 
 /* CINC <Wd>, <Wn>, <cond>
      is equivalent to:
-   CSINC <Wd>, <Wn>, <Wn>, invert(<cond>).  */
+   CSINC <Wd>, <Wn>, <Wn>, invert(<cond>)
+     where <cond> is not AL or NV.  */
 
 static int
 convert_from_csel (aarch64_inst *inst)
 {
-  if (inst->operands[1].reg.regno == inst->operands[2].reg.regno)
+  if (inst->operands[1].reg.regno == inst->operands[2].reg.regno
+      && (inst->operands[3].cond->value & 0xe) != 0xe)
     {
       copy_operand_info (inst, 2, 3);
       inst->operands[2].cond = get_inverted_cond (inst->operands[3].cond);
@@ -1618,13 +1626,15 @@ convert_from_csel (aarch64_inst *inst)
 
 /* CSET <Wd>, <cond>
      is equivalent to:
-   CSINC <Wd>, WZR, WZR, invert(<cond>).  */
+   CSINC <Wd>, WZR, WZR, invert(<cond>)
+     where <cond> is not AL or NV.  */
 
 static int
 convert_csinc_to_cset (aarch64_inst *inst)
 {
   if (inst->operands[1].reg.regno == 0x1f
-      && inst->operands[2].reg.regno == 0x1f)
+      && inst->operands[2].reg.regno == 0x1f
+      && (inst->operands[3].cond->value & 0xe) != 0xe)
     {
       copy_operand_info (inst, 1, 3);
       inst->operands[1].cond = get_inverted_cond (inst->operands[3].cond);

@@ -1,6 +1,6 @@
 /* Evaluate expressions for GDB.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,7 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "value.h"
@@ -40,7 +40,6 @@
 #include "valprint.h"
 #include "gdb_obstack.h"
 #include "objfiles.h"
-#include "python/python.h"
 
 #include "gdb_assert.h"
 
@@ -51,7 +50,8 @@ extern int overload_resolution;
 
 /* Prototypes for local functions.  */
 
-static struct value *evaluate_subexp_for_sizeof (struct expression *, int *);
+static struct value *evaluate_subexp_for_sizeof (struct expression *, int *,
+						 enum noside);
 
 static struct value *evaluate_subexp_for_address (struct expression *,
 						  int *, enum noside);
@@ -660,8 +660,8 @@ ptrmath_type_p (const struct language_defn *lang, struct type *type)
 static struct type *
 make_params (int num_types, struct type **param_types)
 {
-  struct type *type = XZALLOC (struct type);
-  TYPE_MAIN_TYPE (type) = XZALLOC (struct main_type);
+  struct type *type = XCNEW (struct type);
+  TYPE_MAIN_TYPE (type) = XCNEW (struct main_type);
   TYPE_LENGTH (type) = 1;
   TYPE_CODE (type) = TYPE_CODE_METHOD;
   TYPE_VPTR_FIELDNO (type) = -1;
@@ -1114,7 +1114,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	if (value_as_long (target) == 0)
  	  return value_from_longest (long_type, 0);
 	
-	if (lookup_minimal_symbol ("objc_msg_lookup", 0, 0))
+	if (lookup_minimal_symbol ("objc_msg_lookup", 0, 0).minsym)
 	  gnu_runtime = 1;
 	
 	/* Find the method dispatch (Apple runtime) or method lookup
@@ -1363,7 +1363,7 @@ evaluate_subexp_standard (struct type *expect_type,
       op = exp->elts[*pos].opcode;
       nargs = longest_to_int (exp->elts[pc + 1].longconst);
       /* Allocate arg vector, including space for the function to be
-         called in argvec[0] and a terminating NULL.  */
+         called in argvec[0], a potential `this', and a terminating NULL.  */
       argvec = (struct value **)
 	alloca (sizeof (struct value *) * (nargs + 3));
       if (op == STRUCTOP_MEMBER || op == STRUCTOP_MPTR)
@@ -1514,6 +1514,7 @@ evaluate_subexp_standard (struct type *expect_type,
 		       name, TYPE_TAG_NAME (type));
 
 	      tem = 1;
+	      /* arg2 is left as NULL on purpose.  */
 	    }
 	  else
 	    {
@@ -1521,6 +1522,8 @@ evaluate_subexp_standard (struct type *expect_type,
 			  || TYPE_CODE (type) == TYPE_CODE_UNION);
 	      function_name = name;
 
+	      /* We need a properly typed value for method lookup.  For
+		 static methods arg2 is otherwise unused.  */
 	      arg2 = value_zero (type, lval_memory);
 	      ++nargs;
 	      tem = 2;
@@ -1570,7 +1573,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	    }
 	}
 
-      /* Evaluate arguments.  */
+      /* Evaluate arguments (if not already done, e.g., namespace::func()
+	 and overload-resolution is off).  */
       for (; tem <= nargs; tem++)
 	{
 	  /* Ensure that array expressions are coerced into pointer
@@ -1580,6 +1584,7 @@ evaluate_subexp_standard (struct type *expect_type,
 
       /* Signal end of arglist.  */
       argvec[tem] = 0;
+
       if (op == OP_ADL_FUNC)
         {
           struct symbol *symp;
@@ -1609,7 +1614,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	  int static_memfuncp;
 	  char *tstr;
 
-	  /* Method invocation : stuff "this" as first parameter.  */
+	  /* Method invocation: stuff "this" as first parameter.
+	     If the method turns out to be static we undo this below.  */
 	  argvec[1] = arg2;
 
 	  if (op != OP_SCOPE)
@@ -1663,6 +1669,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	      argvec[1] = arg2;	/* the ``this'' pointer */
 	    }
 
+	  /* Take out `this' if needed.  */
 	  if (static_memfuncp)
 	    {
 	      argvec[1] = argvec[0];
@@ -1758,11 +1765,16 @@ evaluate_subexp_standard (struct type *expect_type,
 	    error (_("Expression of type other than "
 		     "\"Function returning ...\" used as function"));
 	}
-      if (TYPE_CODE (value_type (argvec[0])) == TYPE_CODE_INTERNAL_FUNCTION)
-	return call_internal_function (exp->gdbarch, exp->language_defn,
-				       argvec[0], nargs, argvec + 1);
-
-      return call_function_by_hand (argvec[0], nargs, argvec + 1);
+      switch (TYPE_CODE (value_type (argvec[0])))
+	{
+	case TYPE_CODE_INTERNAL_FUNCTION:
+	  return call_internal_function (exp->gdbarch, exp->language_defn,
+					 argvec[0], nargs, argvec + 1);
+	case TYPE_CODE_XMETHOD:
+	  return call_xmethod (argvec[0], nargs, argvec + 1);
+	default:
+	  return call_function_by_hand (argvec[0], nargs, argvec + 1);
+	}
       /* pai: FIXME save value from call_function_by_hand, then adjust
 	 pc by adjust_fn_pc if +ve.  */
 
@@ -2563,7 +2575,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	  evaluate_subexp (NULL_TYPE, exp, pos, EVAL_SKIP);
 	  goto nosideret;
 	}
-      return evaluate_subexp_for_sizeof (exp, pos);
+      return evaluate_subexp_for_sizeof (exp, pos, noside);
 
     case UNOP_CAST:
       (*pos) += 2;
@@ -2997,10 +3009,13 @@ evaluate_subexp_with_coercion (struct expression *exp,
 
 /* Evaluate a subexpression of EXP, at index *POS,
    and return a value for the size of that subexpression.
-   Advance *POS over the subexpression.  */
+   Advance *POS over the subexpression.  If NOSIDE is EVAL_NORMAL
+   we allow side-effects on the operand if its type is a variable
+   length array.   */
 
 static struct value *
-evaluate_subexp_for_sizeof (struct expression *exp, int *pos)
+evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
+			    enum noside noside)
 {
   /* FIXME: This should be size_t.  */
   struct type *size_type = builtin_type (exp->gdbarch)->builtin_int;
@@ -3026,31 +3041,78 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos)
 	  && TYPE_CODE (type) != TYPE_CODE_REF
 	  && TYPE_CODE (type) != TYPE_CODE_ARRAY)
 	error (_("Attempt to take contents of a non-pointer value."));
-      type = check_typedef (TYPE_TARGET_TYPE (type));
+      type = TYPE_TARGET_TYPE (type);
+      if (is_dynamic_type (type))
+	type = value_type (value_ind (val));
       return value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
 
     case UNOP_MEMVAL:
       (*pos) += 3;
-      type = check_typedef (exp->elts[pc + 1].type);
-      return value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
+      type = exp->elts[pc + 1].type;
+      break;
 
     case UNOP_MEMVAL_TYPE:
       (*pos) += 1;
       val = evaluate_subexp (NULL, exp, pos, EVAL_AVOID_SIDE_EFFECTS);
-      type = check_typedef (value_type (val));
-      return value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
+      type = value_type (val);
+      break;
 
     case OP_VAR_VALUE:
-      (*pos) += 4;
-      type = check_typedef (SYMBOL_TYPE (exp->elts[pc + 2].symbol));
-      return
-	value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
+      type = SYMBOL_TYPE (exp->elts[pc + 2].symbol);
+      if (is_dynamic_type (type))
+	{
+	  val = evaluate_subexp (NULL_TYPE, exp, pos, EVAL_NORMAL);
+	  type = value_type (val);
+	}
+      else
+	(*pos) += 4;
+      break;
+
+      /* Deal with the special case if NOSIDE is EVAL_NORMAL and the resulting
+	 type of the subscript is a variable length array type. In this case we
+	 must re-evaluate the right hand side of the subcription to allow
+	 side-effects. */
+    case BINOP_SUBSCRIPT:
+      if (noside == EVAL_NORMAL)
+	{
+	  int pc = (*pos) + 1;
+
+	  val = evaluate_subexp (NULL_TYPE, exp, &pc, EVAL_AVOID_SIDE_EFFECTS);
+	  type = check_typedef (value_type (val));
+	  if (TYPE_CODE (type) == TYPE_CODE_ARRAY)
+	    {
+	      type = check_typedef (TYPE_TARGET_TYPE (type));
+	      if (TYPE_CODE (type) == TYPE_CODE_ARRAY)
+		{
+		  type = TYPE_INDEX_TYPE (type);
+		  /* Only re-evaluate the right hand side if the resulting type
+		     is a variable length type.  */
+		  if (TYPE_RANGE_DATA (type)->flag_bound_evaluated)
+		    {
+		      val = evaluate_subexp (NULL_TYPE, exp, pos, EVAL_NORMAL);
+		      return value_from_longest
+			(size_type, (LONGEST) TYPE_LENGTH (value_type (val)));
+		    }
+		}
+	    }
+	}
+
+      /* Fall through.  */
 
     default:
       val = evaluate_subexp (NULL_TYPE, exp, pos, EVAL_AVOID_SIDE_EFFECTS);
-      return value_from_longest (size_type,
-				 (LONGEST) TYPE_LENGTH (value_type (val)));
+      type = value_type (val);
+      break;
     }
+
+  /* $5.3.3/2 of the C++ Standard (n3290 draft) says of sizeof:
+     "When applied to a reference or a reference type, the result is
+     the size of the referenced type."  */
+  CHECK_TYPEDEF (type);
+  if (exp->language_defn->la_language == language_cplus
+      && TYPE_CODE (type) == TYPE_CODE_REF)
+    type = check_typedef (TYPE_TARGET_TYPE (type));
+  return value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
 }
 
 /* Parse a type expression in the string [P..P+LENGTH).  */

@@ -1,6 +1,6 @@
 /* Program and address space management, for GDB, the GNU debugger.
 
-   Copyright (C) 2009-2013 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -33,6 +33,7 @@ struct inferior;
 struct exec;
 struct address_space;
 struct program_space_data;
+struct address_space_data;
 
 typedef struct so_list *so_list_ptr;
 DEF_VEC_P (so_list_ptr);
@@ -235,9 +236,6 @@ extern struct program_space *current_program_space;
    pointer to the new object.  */
 extern struct program_space *add_program_space (struct address_space *aspace);
 
-/* Release PSPACE and removes it from the pspace list.  */
-extern void remove_program_space (struct program_space *pspace);
-
 /* Returns the number of program spaces listed.  */
 extern int number_of_program_spaces (void);
 
@@ -303,5 +301,10 @@ extern void clear_program_space_solib_cache (struct program_space *);
    modules.  */
 
 DECLARE_REGISTRY (program_space);
+
+/* Keep a registry of per-aspace data-pointers required by other GDB
+   modules.  */
+
+DECLARE_REGISTRY (address_space);
 
 #endif

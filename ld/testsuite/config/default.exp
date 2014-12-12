@@ -1,6 +1,5 @@
 # Basic expect script for LD Regression Tests
-#   Copyright 1993, 1994, 1995, 1997, 1998, 1999, 2001, 2003, 2005, 2007, 2009
-#   2011, 2012 Free Software Foundation, Inc.
+#   Copyright (C) 1993-2014 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -107,6 +106,11 @@ if {[istarget mips64*-*-linux*] &&
     append gcc_gas_flag " -mabi=n32"
 }
 
+if { [istarget rx-*-*] } {
+    global ASFLAGS
+    set ASFLAGS "-muse-conventional-section-names"
+}
+
 # load the utility procedures
 load_lib ld-lib.exp
 
@@ -139,11 +143,11 @@ proc get_target_emul {} {
 }
 
 if [isnative] {
-    foreach x {HOSTING_CRT0 HOSTING_SCRT0 HOSTING_LIBS} {
+    foreach x {HOSTING_CRT0 HOSTING_SCRT0 HOSTING_LIBS HOSTING_SLIBS} {
 	get_link_files $x
     }
 } else {
-    foreach x {HOSTING_CRT0 HOSTING_SCRT0 HOSTING_LIBS} { set $x "" }
+    foreach x {HOSTING_CRT0 HOSTING_SCRT0 HOSTING_LIBS HOSTING_SLIBS} { set $x "" }
 }
 if ![info exists HOSTING_EMU] { set HOSTING_EMU "-m [get_target_emul]" }
 
@@ -236,10 +240,6 @@ proc ld_exec { target output } {
 # From gas-defs.exp, to support run_dump_test.
 if ![info exists AS] then {
     set AS $as
-}
-
-if ![info exists GASP] then {
-    set GASP [findfile $base_dir/../gas/gasp-new $base_dir/../gas/gasp-new [transform gasp]]
 }
 
 if ![info exists ASFLAGS] then {

@@ -1,6 +1,6 @@
 /* Core dump and executable file functions above target vector, for GDB.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,7 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include "gdb_string.h"
+#include <string.h>
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -30,7 +30,7 @@
 #include "target.h"
 #include "gdbcore.h"
 #include "dis-asm.h"
-#include "gdb_stat.h"
+#include <sys/stat.h>
 #include "completer.h"
 #include "exceptions.h"
 #include "observer.h"
@@ -193,44 +193,53 @@ Use the \"file\" or \"exec-file\" command."));
 }
 
 
-/* Report a target xfer memory error by throwing a suitable
-   exception.  */
-
-static void
-target_xfer_memory_error (enum target_xfer_error err, CORE_ADDR memaddr)
+char *
+memory_error_message (enum target_xfer_status err,
+		      struct gdbarch *gdbarch, CORE_ADDR memaddr)
 {
   switch (err)
     {
     case TARGET_XFER_E_IO:
       /* Actually, address between memaddr and memaddr + len was out of
 	 bounds.  */
-      throw_error (MEMORY_ERROR,
-		   _("Cannot access memory at address %s"),
-		   paddress (target_gdbarch (), memaddr));
-    case TARGET_XFER_E_UNAVAILABLE:
-      throw_error (NOT_AVAILABLE_ERROR,
-		   _("Memory at address %s unavailable."),
-		   paddress (target_gdbarch (), memaddr));
+      return xstrprintf (_("Cannot access memory at address %s"),
+			 paddress (gdbarch, memaddr));
+    case TARGET_XFER_UNAVAILABLE:
+      return xstrprintf (_("Memory at address %s unavailable."),
+			 paddress (gdbarch, memaddr));
     default:
       internal_error (__FILE__, __LINE__,
-		      "unhandled target_xfer_error: %s (%s)",
-		      target_xfer_error_to_string (err),
+		      "unhandled target_xfer_status: %s (%s)",
+		      target_xfer_status_to_string (err),
 		      plongest (err));
     }
 }
 
-/* Report a memory error by throwing a MEMORY_ERROR error.  */
+/* Report a memory error by throwing a suitable exception.  */
 
 void
-memory_error (int status, CORE_ADDR memaddr)
+memory_error (enum target_xfer_status err, CORE_ADDR memaddr)
 {
-  if (status == EIO)
-    target_xfer_memory_error (TARGET_XFER_E_IO, memaddr);
-  else
-    throw_error (MEMORY_ERROR,
-		 _("Error accessing memory address %s: %s."),
-		 paddress (target_gdbarch (), memaddr),
-		 safe_strerror (status));
+  char *str;
+  enum errors exception = GDB_NO_ERROR;
+
+  /* Build error string.  */
+  str = memory_error_message (err, target_gdbarch (), memaddr);
+  make_cleanup (xfree, str);
+
+  /* Choose the right error to throw.  */
+  switch (err)
+    {
+    case TARGET_XFER_E_IO:
+      exception = MEMORY_ERROR;
+      break;
+    case TARGET_XFER_UNAVAILABLE:
+      exception = NOT_AVAILABLE_ERROR;
+      break;
+    }
+
+  /* Throw it.  */
+  throw_error (exception, ("%s"), str);
 }
 
 /* Same as target_read_memory, but report an error if can't read.  */
@@ -238,20 +247,24 @@ memory_error (int status, CORE_ADDR memaddr)
 void
 read_memory (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
 {
-  LONGEST xfered = 0;
+  ULONGEST xfered = 0;
 
   while (xfered < len)
     {
-      LONGEST xfer = target_xfer_partial (current_target.beneath,
-					  TARGET_OBJECT_MEMORY, NULL,
-					  myaddr + xfered, NULL,
-					  memaddr + xfered, len - xfered);
+      enum target_xfer_status status;
+      ULONGEST xfered_len;
 
-      if (xfer == 0)
-	target_xfer_memory_error (TARGET_XFER_E_IO, memaddr + xfered);
-      if (xfer < 0)
-	target_xfer_memory_error (xfer, memaddr + xfered);
-      xfered += xfer;
+      status = target_xfer_partial (current_target.beneath,
+				    TARGET_OBJECT_MEMORY, NULL,
+				    myaddr + xfered, NULL,
+				    memaddr + xfered, len - xfered,
+				    &xfered_len);
+
+      if (status != TARGET_XFER_OK)
+	memory_error (status == TARGET_XFER_EOF ? TARGET_XFER_E_IO : status,
+		      memaddr + xfered);
+
+      xfered += xfered_len;
       QUIT;
     }
 }
@@ -264,6 +277,18 @@ read_stack (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
   int status;
 
   status = target_read_stack (memaddr, myaddr, len);
+  if (status != 0)
+    memory_error (status, memaddr);
+}
+
+/* Same as target_read_code, but report an error if can't read.  */
+
+void
+read_code (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
+{
+  int status;
+
+  status = target_read_code (memaddr, myaddr, len);
   if (status != 0)
     memory_error (status, memaddr);
 }
@@ -343,6 +368,26 @@ read_memory_unsigned_integer (CORE_ADDR memaddr, int len,
   gdb_byte buf[sizeof (ULONGEST)];
 
   read_memory (memaddr, buf, len);
+  return extract_unsigned_integer (buf, len, byte_order);
+}
+
+LONGEST
+read_code_integer (CORE_ADDR memaddr, int len,
+		   enum bfd_endian byte_order)
+{
+  gdb_byte buf[sizeof (LONGEST)];
+
+  read_code (memaddr, buf, len);
+  return extract_signed_integer (buf, len, byte_order);
+}
+
+ULONGEST
+read_code_unsigned_integer (CORE_ADDR memaddr, int len,
+			    enum bfd_endian byte_order)
+{
+  gdb_byte buf[sizeof (ULONGEST)];
+
+  read_code (memaddr, buf, len);
   return extract_unsigned_integer (buf, len, byte_order);
 }
 

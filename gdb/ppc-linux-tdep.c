@@ -1,6 +1,6 @@
 /* Target-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -44,6 +44,7 @@
 #include "observer.h"
 #include "auxv.h"
 #include "elf/common.h"
+#include "elf/ppc64.h"
 #include "exceptions.h"
 #include "arch-utils.h"
 #include "spu-tdep.h"
@@ -342,8 +343,8 @@ powerpc_linux_in_dynsym_resolve_code (CORE_ADDR pc)
   /* Check if we are in the resolver.  */
   sym = lookup_minimal_symbol_by_pc (pc);
   if (sym.minsym != NULL
-      && (strcmp (SYMBOL_LINKAGE_NAME (sym.minsym), "__glink") == 0
-	  || strcmp (SYMBOL_LINKAGE_NAME (sym.minsym),
+      && (strcmp (MSYMBOL_LINKAGE_NAME (sym.minsym), "__glink") == 0
+	  || strcmp (MSYMBOL_LINKAGE_NAME (sym.minsym),
 		     "__glink_PLTresolve") == 0))
     return 1;
 
@@ -497,36 +498,31 @@ static const struct ppc_reg_offsets ppc64_linux_reg_offsets =
 static const struct regset ppc32_linux_gregset = {
   &ppc32_linux_reg_offsets,
   ppc_linux_supply_gregset,
-  ppc_linux_collect_gregset,
-  NULL
+  ppc_linux_collect_gregset
 };
 
 static const struct regset ppc64_linux_gregset = {
   &ppc64_linux_reg_offsets,
   ppc_linux_supply_gregset,
-  ppc_linux_collect_gregset,
-  NULL
+  ppc_linux_collect_gregset
 };
 
 static const struct regset ppc32_linux_fpregset = {
   &ppc32_linux_reg_offsets,
   ppc_supply_fpregset,
-  ppc_collect_fpregset,
-  NULL
+  ppc_collect_fpregset
 };
 
 static const struct regset ppc32_linux_vrregset = {
   &ppc32_linux_reg_offsets,
   ppc_supply_vrregset,
-  ppc_collect_vrregset,
-  NULL
+  ppc_collect_vrregset
 };
 
 static const struct regset ppc32_linux_vsxregset = {
   &ppc32_linux_reg_offsets,
   ppc_supply_vsxregset,
-  ppc_collect_vsxregset,
-  NULL
+  ppc_collect_vsxregset
 };
 
 const struct regset *
@@ -876,6 +872,55 @@ ppc_linux_core_read_description (struct gdbarch *gdbarch,
     }
 }
 
+
+/* Implementation of `gdbarch_elf_make_msymbol_special', as defined in
+   gdbarch.h.  This implementation is used for the ELFv2 ABI only.  */
+
+static void
+ppc_elfv2_elf_make_msymbol_special (asymbol *sym, struct minimal_symbol *msym)
+{
+  elf_symbol_type *elf_sym = (elf_symbol_type *)sym;
+
+  /* If the symbol is marked as having a local entry point, set a target
+     flag in the msymbol.  We currently only support local entry point
+     offsets of 8 bytes, which is the only entry point offset ever used
+     by current compilers.  If/when other offsets are ever used, we will
+     have to use additional target flag bits to store them.  */
+  switch (PPC64_LOCAL_ENTRY_OFFSET (elf_sym->internal_elf_sym.st_other))
+    {
+    default:
+      break;
+    case 8:
+      MSYMBOL_TARGET_FLAG_1 (msym) = 1;
+      break;
+    }
+}
+
+/* Implementation of `gdbarch_skip_entrypoint', as defined in
+   gdbarch.h.  This implementation is used for the ELFv2 ABI only.  */
+
+static CORE_ADDR
+ppc_elfv2_skip_entrypoint (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  struct bound_minimal_symbol fun;
+  int local_entry_offset = 0;
+
+  fun = lookup_minimal_symbol_by_pc (pc);
+  if (fun.minsym == NULL)
+    return pc;
+
+  /* See ppc_elfv2_elf_make_msymbol_special for how local entry point
+     offset values are encoded.  */
+  if (MSYMBOL_TARGET_FLAG_1 (fun.minsym))
+    local_entry_offset = 8;
+
+  if (BMSYMBOL_VALUE_ADDRESS (fun) <= pc
+      && pc < BMSYMBOL_VALUE_ADDRESS (fun) + local_entry_offset)
+    return BMSYMBOL_VALUE_ADDRESS (fun) + local_entry_offset;
+
+  return pc;
+}
+
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
@@ -928,11 +973,11 @@ ppc_stap_parse_special_token (struct gdbarch *gdbarch,
 	error (_("Invalid register name `%s' on expression `%s'."),
 	       regname, p->saved_arg);
 
-      write_exp_elt_opcode (OP_REGISTER);
+      write_exp_elt_opcode (&p->pstate, OP_REGISTER);
       str.ptr = regname;
       str.length = len;
-      write_exp_string (str);
-      write_exp_elt_opcode (OP_REGISTER);
+      write_exp_string (&p->pstate, str);
+      write_exp_elt_opcode (&p->pstate, OP_REGISTER);
 
       p->arg = s;
     }
@@ -961,7 +1006,7 @@ static CORE_ADDR spe_context_cache_address;
 static void
 ppc_linux_spe_context_lookup (struct objfile *objfile)
 {
-  struct minimal_symbol *sym;
+  struct bound_minimal_symbol sym;
 
   if (!objfile)
     {
@@ -974,11 +1019,11 @@ ppc_linux_spe_context_lookup (struct objfile *objfile)
     }
 
   sym = lookup_minimal_symbol ("__spe_current_active_context", NULL, objfile);
-  if (sym)
+  if (sym.minsym)
     {
       spe_context_objfile = objfile;
       spe_context_lm_addr = svr4_fetch_objfile_link_map (objfile);
-      spe_context_offset = SYMBOL_VALUE_ADDRESS (sym);
+      spe_context_offset = BMSYMBOL_VALUE_ADDRESS (sym);
       spe_context_cache_ptid = minus_one_ptid;
       spe_context_cache_address = 0;
       return;
@@ -1245,6 +1290,11 @@ ppc_linux_init_abi (struct gdbarch_info info,
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   struct tdesc_arch_data *tdesc_data = (void *) info.tdep_info;
+  static const char *const stap_integer_prefixes[] = { "i", NULL };
+  static const char *const stap_register_indirection_prefixes[] = { "(",
+								    NULL };
+  static const char *const stap_register_indirection_suffixes[] = { ")",
+								    NULL };
 
   linux_init_abi (info, gdbarch);
 
@@ -1263,9 +1313,11 @@ ppc_linux_init_abi (struct gdbarch_info info,
   set_gdbarch_get_syscall_number (gdbarch, ppc_linux_get_syscall_number);
 
   /* SystemTap functions.  */
-  set_gdbarch_stap_integer_prefix (gdbarch, "i");
-  set_gdbarch_stap_register_indirection_prefix (gdbarch, "(");
-  set_gdbarch_stap_register_indirection_suffix (gdbarch, ")");
+  set_gdbarch_stap_integer_prefixes (gdbarch, stap_integer_prefixes);
+  set_gdbarch_stap_register_indirection_prefixes (gdbarch,
+					  stap_register_indirection_prefixes);
+  set_gdbarch_stap_register_indirection_suffixes (gdbarch,
+					  stap_register_indirection_suffixes);
   set_gdbarch_stap_gdb_register_prefix (gdbarch, "r");
   set_gdbarch_stap_is_single_operand (gdbarch, ppc_stap_is_single_operand);
   set_gdbarch_stap_parse_special_token (gdbarch,
@@ -1332,13 +1384,23 @@ ppc_linux_init_abi (struct gdbarch_info info,
   
   if (tdep->wordsize == 8)
     {
-      /* Handle PPC GNU/Linux 64-bit function pointers (which are really
-	 function descriptors).  */
-      set_gdbarch_convert_from_func_ptr_addr
-	(gdbarch, ppc64_convert_from_func_ptr_addr);
+      if (tdep->elf_abi == POWERPC_ELF_V1)
+	{
+	  /* Handle PPC GNU/Linux 64-bit function pointers (which are really
+	     function descriptors).  */
+	  set_gdbarch_convert_from_func_ptr_addr
+	    (gdbarch, ppc64_convert_from_func_ptr_addr);
 
-      set_gdbarch_elf_make_msymbol_special (gdbarch,
-					    ppc64_elf_make_msymbol_special);
+	  set_gdbarch_elf_make_msymbol_special
+	    (gdbarch, ppc64_elf_make_msymbol_special);
+	}
+      else
+	{
+	  set_gdbarch_elf_make_msymbol_special
+	    (gdbarch, ppc_elfv2_elf_make_msymbol_special);
+
+	  set_gdbarch_skip_entrypoint (gdbarch, ppc_elfv2_skip_entrypoint);
+	}
 
       /* Shared library handling.  */
       set_gdbarch_skip_trampoline_code (gdbarch, ppc64_skip_trampoline_code);

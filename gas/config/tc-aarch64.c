@@ -1,7 +1,6 @@
 /* tc-aarch64.c -- Assemble for the AArch64 ISA
 
-   Copyright 2009, 2010, 2011, 2012, 2013
-   Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -436,9 +435,16 @@ static symbolS *last_label_seen;
    and per-sub-section basis.  */
 
 #define MAX_LITERAL_POOL_SIZE 1024
+typedef struct literal_expression
+{
+  expressionS exp;
+  /* If exp.op == O_big then this bignum holds a copy of the global bignum value.  */
+  LITTLENUM_TYPE * bignum;
+} literal_expression;
+
 typedef struct literal_pool
 {
-  expressionS literals[MAX_LITERAL_POOL_SIZE];
+  literal_expression literals[MAX_LITERAL_POOL_SIZE];
   unsigned int next_free_entry;
   unsigned int id;
   symbolS *symbol;
@@ -1617,17 +1623,19 @@ add_to_lit_pool (expressionS *exp, int size)
   /* Check if this literal value is already in the pool.  */
   for (entry = 0; entry < pool->next_free_entry; entry++)
     {
-      if ((pool->literals[entry].X_op == exp->X_op)
+      expressionS * litexp = & pool->literals[entry].exp;
+
+      if ((litexp->X_op == exp->X_op)
 	  && (exp->X_op == O_constant)
-	  && (pool->literals[entry].X_add_number == exp->X_add_number)
-	  && (pool->literals[entry].X_unsigned == exp->X_unsigned))
+	  && (litexp->X_add_number == exp->X_add_number)
+	  && (litexp->X_unsigned == exp->X_unsigned))
 	break;
 
-      if ((pool->literals[entry].X_op == exp->X_op)
+      if ((litexp->X_op == exp->X_op)
 	  && (exp->X_op == O_symbol)
-	  && (pool->literals[entry].X_add_number == exp->X_add_number)
-	  && (pool->literals[entry].X_add_symbol == exp->X_add_symbol)
-	  && (pool->literals[entry].X_op_symbol == exp->X_op_symbol))
+	  && (litexp->X_add_number == exp->X_add_number)
+	  && (litexp->X_add_symbol == exp->X_add_symbol)
+	  && (litexp->X_op_symbol == exp->X_op_symbol))
 	break;
     }
 
@@ -1640,8 +1648,18 @@ add_to_lit_pool (expressionS *exp, int size)
 	  return FALSE;
 	}
 
-      pool->literals[entry] = *exp;
+      pool->literals[entry].exp = *exp;
       pool->next_free_entry += 1;
+      if (exp->X_op == O_big)
+	{
+	  /* PR 16688: Bignums are held in a single global array.  We must
+	     copy and preserve that value now, before it is overwritten.  */
+	  pool->literals[entry].bignum = xmalloc (CHARS_PER_LITTLENUM * exp->X_add_number);
+	  memcpy (pool->literals[entry].bignum, generic_bignum,
+		  CHARS_PER_LITTLENUM * exp->X_add_number);
+	}
+      else
+	pool->literals[entry].bignum = NULL;
     }
 
   exp->X_op = O_symbol;
@@ -1735,8 +1753,26 @@ s_ltorg (int ignored ATTRIBUTE_UNUSED)
       symbol_table_insert (pool->symbol);
 
       for (entry = 0; entry < pool->next_free_entry; entry++)
-	/* First output the expression in the instruction to the pool.  */
-	emit_expr (&(pool->literals[entry]), size);	/* .word|.xword  */
+	{
+	  expressionS * exp = & pool->literals[entry].exp;
+
+	  if (exp->X_op == O_big)
+	    {
+	      /* PR 16688: Restore the global bignum value.  */
+	      gas_assert (pool->literals[entry].bignum != NULL);
+	      memcpy (generic_bignum, pool->literals[entry].bignum,
+		      CHARS_PER_LITTLENUM * exp->X_add_number);
+	    }
+
+	  /* First output the expression in the instruction to the pool.  */
+	  emit_expr (exp, size);	/* .word|.xword  */
+
+	  if (exp->X_op == O_big)
+	    {
+	      free (pool->literals[entry].bignum);
+	      pool->literals[entry].bignum = NULL;
+	    }
+	}
 
       /* Mark the pool as empty.  */
       pool->next_free_entry = 0;
@@ -2816,7 +2852,7 @@ parse_shifter_operand_reloc (char **str, aarch64_opnd_info *operand,
       if (**str == '\0')
 	return TRUE;
 
-      /* Otherwise, we have a shifted reloc modifier, so rewind to 
+      /* Otherwise, we have a shifted reloc modifier, so rewind to
          recover the variable name and continue parsing for the shifter.  */
       *str = p;
       return parse_shifter_operand_imm (str, operand, mode);
@@ -3270,14 +3306,14 @@ parse_barrier (char **str)
    Returns the encoding for the option, or PARSE_FAIL.
 
    If IMPLE_DEFINED_P is non-zero, the function will also try to parse the
-   implementation defined system register name S3_<op1>_<Cn>_<Cm>_<op2>.  */
+   implementation defined system register name S<op0>_<op1>_<Cn>_<Cm>_<op2>.  */
 
 static int
 parse_sys_reg (char **str, struct hash_control *sys_regs, int imple_defined_p)
 {
   char *p, *q;
   char buf[32];
-  const struct aarch64_name_value_pair *o;
+  const aarch64_sys_reg *o;
   int value;
 
   p = buf;
@@ -3295,7 +3331,7 @@ parse_sys_reg (char **str, struct hash_control *sys_regs, int imple_defined_p)
 	return PARSE_FAIL;
       else
 	{
-	  /* Parse S3_<op1>_<Cn>_<Cm>_<op2>, the implementation defined
+	  /* Parse S<op0>_<op1>_<Cn>_<Cm>_<op2>, the implementation defined
 	     registers.  */
 	  unsigned int op0, op1, cn, cm, op2;
 	  if (sscanf (buf, "s%u_%u_c%u_c%u_%u", &op0, &op1, &cn, &cm, &op2) != 5)
@@ -3303,17 +3339,22 @@ parse_sys_reg (char **str, struct hash_control *sys_regs, int imple_defined_p)
 	  /* The architecture specifies the encoding space for implementation
 	     defined registers as:
 	     op0  op1  CRn   CRm   op2
-	     11   xxx  1x11  xxxx  xxx
+	     1x   xxx  1x11  xxxx  xxx
 	     For convenience GAS accepts a wider encoding space, as follows:
 	     op0  op1  CRn   CRm   op2
-	     11   xxx  xxxx  xxxx  xxx  */
-	  if (op0 != 3 || op1 > 7 || cn > 15 || cm > 15 || op2 > 7)
+	     1x   xxx  xxxx  xxxx  xxx  */
+	  if ((op0 != 2 && op0 != 3) || op1 > 7 || cn > 15 || cm > 15 || op2 > 7)
 	    return PARSE_FAIL;
 	  value = (op0 << 14) | (op1 << 11) | (cn << 7) | (cm << 3) | op2;
 	}
     }
   else
-    value = o->value;
+    {
+      if (aarch64_sys_reg_deprecated_p (o))
+	as_warn (_("system register name '%s' is deprecated and may be "
+"removed in a future release"), buf);
+      value = o->value;
+    }
 
   *str = q;
   return value;
@@ -3512,9 +3553,9 @@ fix_new_aarch64 (fragS * frag,
 
 /* Diagnostics on operands errors.  */
 
-/* By default, output one-line error message only.
-   Enable the verbose error message by -merror-verbose.  */
-static int verbose_error_p = 0;
+/* By default, output verbose error message.
+   Disable the verbose error message by -mno-verbose-error.  */
+static int verbose_error_p = 1;
 
 #ifdef DEBUG_AARCH64
 /* N.B. this is only for the purpose of debugging.  */
@@ -4810,7 +4851,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_IMM_MOV:
 	  {
 	    char *saved = str;
-	    if (reg_name_p (str, REG_TYPE_R_Z_SP))
+	    if (reg_name_p (str, REG_TYPE_R_Z_SP) ||
+		reg_name_p (str, REG_TYPE_VN))
 	      goto failure;
 	    str = saved;
 	    po_misc_or_fail (my_get_expression (&inst.reloc.exp, &str,
@@ -4968,11 +5010,19 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_COND:
+	case AARCH64_OPND_COND1:
 	  info->cond = hash_find_n (aarch64_cond_hsh, str, 2);
 	  str += 2;
 	  if (info->cond == NULL)
 	    {
 	      set_syntax_error (_("invalid condition"));
+	      goto failure;
+	    }
+	  else if (operands[i] == AARCH64_OPND_COND1
+		   && (info->cond->value & 0xe) == 0xe)
+	    {
+	      /* Not allow AL or NV.  */
+	      set_default_error ();
 	      goto failure;
 	    }
 	  break;
@@ -5517,14 +5567,6 @@ md_assemble (char *str)
 	dump_opcode_operands (opcode);
 #endif /* DEBUG_AARCH64 */
 
-      /* Check that this instruction is supported for this CPU.  */
-      if (!opcode->avariant
-	  || !AARCH64_CPU_HAS_FEATURE (cpu_variant, *opcode->avariant))
-	{
-	  as_bad (_("selected processor does not support `%s'"), str);
-	  return;
-	}
-
       mapping_state (MAP_INSN);
 
       inst_base = &inst.base;
@@ -5549,6 +5591,14 @@ md_assemble (char *str)
 	  && programmer_friendly_fixup (&inst)
 	  && do_encode (inst_base->opcode, &inst.base, &inst_base->value))
 	{
+	  /* Check that this instruction is supported for this CPU.  */
+	  if (!opcode->avariant
+	      || !AARCH64_CPU_HAS_FEATURE (cpu_variant, *opcode->avariant))
+	    {
+	      as_bad (_("selected processor does not support `%s'"), str);
+	      return;
+	    }
+
 	  if (inst.reloc.type == BFD_RELOC_UNUSED
 	      || !inst.reloc.need_libopcodes_p)
 	    output_inst (NULL);
@@ -7105,6 +7155,8 @@ static struct aarch64_option_table aarch64_opts[] = {
 #endif /* DEBUG_AARCH64 */
   {"mverbose-error", N_("output verbose error messages"), &verbose_error_p, 1,
    NULL},
+  {"mno-verbose-error", N_("do not output verbose error messages"),
+   &verbose_error_p, 0, NULL},
   {NULL, NULL, NULL, 0, NULL}
 };
 
@@ -7123,6 +7175,7 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
   {"all", AARCH64_ANY, NULL},
   {"cortex-a53",	AARCH64_ARCH_V8, "Cortex-A53"},
   {"cortex-a57",	AARCH64_ARCH_V8, "Cortex-A57"},
+  {"xgene-1", AARCH64_ARCH_V8, "APM X-Gene 1"},
   {"generic", AARCH64_ARCH_V8, NULL},
 
   /* These two are example CPUs supported in GCC, once we have real

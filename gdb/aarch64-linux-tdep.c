@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux AArch64.
 
-   Copyright (C) 2009-2013 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -35,6 +35,12 @@
 #include "regcache.h"
 #include "regset.h"
 
+#include "cli/cli-utils.h"
+#include "stap-probe.h"
+#include "parser-defs.h"
+#include "user-regs.h"
+#include <ctype.h>
+
 /* The general-purpose regset consists of 31 X registers, plus SP, PC,
    and PSTATE registers, as defined in the AArch64 port of the Linux
    kernel.  */
@@ -47,28 +53,30 @@
 
 /* Signal frame handling.
 
-      +----------+  ^
-      | saved lr |  |
-   +->| saved fp |--+
-   |  |          |
-   |  |          |
-   |  +----------+
-   |  | saved lr |
-   +--| saved fp |
-   ^  |          |
-   |  |          |
-   |  +----------+
-   ^  |          |
-   |  | signal   |
-   |  |          |
-   |  | saved lr |-->interrupted_function_pc
-   +--| saved fp |
-   |  +----------+
-   |  | saved lr |--> default_restorer (movz x8, NR_sys_rt_sigreturn; svc 0)
-   +--| saved fp |<- FP
-      |          |
-      |          |<- SP
-      +----------+
+      +------------+  ^
+      | saved lr   |  |
+   +->| saved fp   |--+
+   |  |            |
+   |  |            |
+   |  +------------+
+   |  | saved lr   |
+   +--| saved fp   |
+   ^  |            |
+   |  |            |
+   |  +------------+
+   ^  |            |
+   |  | signal     |
+   |  |            |        SIGTRAMP_FRAME (struct rt_sigframe)
+   |  | saved regs |
+   +--| saved sp   |--> interrupted_sp
+   |  | saved pc   |--> interrupted_pc
+   |  |            |
+   |  +------------+
+   |  | saved lr   |--> default_restorer (movz x8, NR_sys_rt_sigreturn; svc 0)
+   +--| saved fp   |<- FP
+      |            |         NORMAL_FRAME
+      |            |<- SP
+      +------------+
 
   On signal delivery, the kernel will create a signal handler stack
   frame and setup the return address in LR to point at restorer stub.
@@ -117,6 +125,8 @@
   d28015a8        movz    x8, #0xad
   d4000001        svc     #0x0
 
+  This is a system call sys_rt_sigreturn.
+
   We detect signal frames by snooping the return code for the restorer
   instruction sequence.
 
@@ -140,7 +150,6 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   CORE_ADDR sp = get_frame_register_unsigned (this_frame, AARCH64_SP_REGNUM);
-  CORE_ADDR fp = get_frame_register_unsigned (this_frame, AARCH64_FP_REGNUM);
   CORE_ADDR sigcontext_addr =
     sp
     + AARCH64_RT_SIGFRAME_UCONTEXT_OFFSET
@@ -154,12 +163,14 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 			       sigcontext_addr + AARCH64_SIGCONTEXT_XO_OFFSET
 			       + i * AARCH64_SIGCONTEXT_REG_SIZE);
     }
+  trad_frame_set_reg_addr (this_cache, AARCH64_SP_REGNUM,
+			   sigcontext_addr + AARCH64_SIGCONTEXT_XO_OFFSET
+			     + 31 * AARCH64_SIGCONTEXT_REG_SIZE);
+  trad_frame_set_reg_addr (this_cache, AARCH64_PC_REGNUM,
+			   sigcontext_addr + AARCH64_SIGCONTEXT_XO_OFFSET
+			     + 32 * AARCH64_SIGCONTEXT_REG_SIZE);
 
-  trad_frame_set_reg_addr (this_cache, AARCH64_FP_REGNUM, fp);
-  trad_frame_set_reg_addr (this_cache, AARCH64_LR_REGNUM, fp + 8);
-  trad_frame_set_reg_addr (this_cache, AARCH64_PC_REGNUM, fp + 8);
-
-  trad_frame_set_id (this_cache, frame_id_build (fp, func));
+  trad_frame_set_id (this_cache, frame_id_build (sp, func));
 }
 
 static const struct tramp_frame aarch64_linux_rt_sigframe =
@@ -234,6 +245,18 @@ supply_fpregset_from_core (const struct regset *regset,
   aarch64_linux_supply_fpregset (regcache, (const gdb_byte *) regbuf);
 }
 
+/* Register set definitions. */
+
+static const struct regset aarch64_linux_gregset =
+  {
+    NULL, supply_gregset_from_core, NULL
+  };
+
+static const struct regset aarch64_linux_fpregset =
+  {
+    NULL, supply_fpregset_from_core, NULL
+  };
+
 /* Implement the "regset_from_core_section" gdbarch method.  */
 
 static const struct regset *
@@ -241,34 +264,145 @@ aarch64_linux_regset_from_core_section (struct gdbarch *gdbarch,
 					const char *sect_name,
 					size_t sect_size)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-
   if (strcmp (sect_name, ".reg") == 0
       && sect_size == AARCH64_LINUX_SIZEOF_GREGSET)
-    {
-      if (tdep->gregset == NULL)
-	tdep->gregset = regset_alloc (gdbarch, supply_gregset_from_core,
-				      NULL);
-      return tdep->gregset;
-    }
+    return &aarch64_linux_gregset;
 
   if (strcmp (sect_name, ".reg2") == 0
       && sect_size == AARCH64_LINUX_SIZEOF_FPREGSET)
-    {
-      if (tdep->fpregset == NULL)
-	tdep->fpregset = regset_alloc (gdbarch, supply_fpregset_from_core,
-				       NULL);
-      return tdep->fpregset;
-    }
+    return &aarch64_linux_fpregset;
+
   return NULL;
+}
+
+/* Implementation of `gdbarch_stap_is_single_operand', as defined in
+   gdbarch.h.  */
+
+static int
+aarch64_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
+{
+  return (*s == '#' || isdigit (*s) /* Literal number.  */
+	  || *s == '[' /* Register indirection.  */
+	  || isalpha (*s)); /* Register value.  */
+}
+
+/* This routine is used to parse a special token in AArch64's assembly.
+
+   The special tokens parsed by it are:
+
+      - Register displacement (e.g, [fp, #-8])
+
+   It returns one if the special token has been parsed successfully,
+   or zero if the current token is not considered special.  */
+
+static int
+aarch64_stap_parse_special_token (struct gdbarch *gdbarch,
+				  struct stap_parse_info *p)
+{
+  if (*p->arg == '[')
+    {
+      /* Temporary holder for lookahead.  */
+      const char *tmp = p->arg;
+      char *endp;
+      /* Used to save the register name.  */
+      const char *start;
+      char *regname;
+      int len;
+      int got_minus = 0;
+      long displacement;
+      struct stoken str;
+
+      ++tmp;
+      start = tmp;
+
+      /* Register name.  */
+      while (isalnum (*tmp))
+	++tmp;
+
+      if (*tmp != ',')
+	return 0;
+
+      len = tmp - start;
+      regname = alloca (len + 2);
+
+      strncpy (regname, start, len);
+      regname[len] = '\0';
+
+      if (user_reg_map_name_to_regnum (gdbarch, regname, len) == -1)
+	error (_("Invalid register name `%s' on expression `%s'."),
+	       regname, p->saved_arg);
+
+      ++tmp;
+      tmp = skip_spaces_const (tmp);
+      /* Now we expect a number.  It can begin with '#' or simply
+	 a digit.  */
+      if (*tmp == '#')
+	++tmp;
+
+      if (*tmp == '-')
+	{
+	  ++tmp;
+	  got_minus = 1;
+	}
+      else if (*tmp == '+')
+	++tmp;
+
+      if (!isdigit (*tmp))
+	return 0;
+
+      displacement = strtol (tmp, &endp, 10);
+      tmp = endp;
+
+      /* Skipping last `]'.  */
+      if (*tmp++ != ']')
+	return 0;
+
+      /* The displacement.  */
+      write_exp_elt_opcode (&p->pstate, OP_LONG);
+      write_exp_elt_type (&p->pstate, builtin_type (gdbarch)->builtin_long);
+      write_exp_elt_longcst (&p->pstate, displacement);
+      write_exp_elt_opcode (&p->pstate, OP_LONG);
+      if (got_minus)
+	write_exp_elt_opcode (&p->pstate, UNOP_NEG);
+
+      /* The register name.  */
+      write_exp_elt_opcode (&p->pstate, OP_REGISTER);
+      str.ptr = regname;
+      str.length = len;
+      write_exp_string (&p->pstate, str);
+      write_exp_elt_opcode (&p->pstate, OP_REGISTER);
+
+      write_exp_elt_opcode (&p->pstate, BINOP_ADD);
+
+      /* Casting to the expected type.  */
+      write_exp_elt_opcode (&p->pstate, UNOP_CAST);
+      write_exp_elt_type (&p->pstate, lookup_pointer_type (p->arg_type));
+      write_exp_elt_opcode (&p->pstate, UNOP_CAST);
+
+      write_exp_elt_opcode (&p->pstate, UNOP_IND);
+
+      p->arg = tmp;
+    }
+  else
+    return 0;
+
+  return 1;
 }
 
 static void
 aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
+  static const char *const stap_integer_prefixes[] = { "#", "", NULL };
+  static const char *const stap_register_prefixes[] = { "", NULL };
+  static const char *const stap_register_indirection_prefixes[] = { "[",
+								    NULL };
+  static const char *const stap_register_indirection_suffixes[] = { "]",
+								    NULL };
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
   tdep->lowest_pc = 0x8000;
+
+  linux_init_abi (info, gdbarch);
 
   set_solib_svr4_fetch_link_map_offsets (gdbarch,
 					 svr4_lp64_fetch_link_map_offsets);
@@ -288,6 +422,17 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_regset_from_core_section (gdbarch,
 					aarch64_linux_regset_from_core_section);
+
+  /* SystemTap related.  */
+  set_gdbarch_stap_integer_prefixes (gdbarch, stap_integer_prefixes);
+  set_gdbarch_stap_register_prefixes (gdbarch, stap_register_prefixes);
+  set_gdbarch_stap_register_indirection_prefixes (gdbarch,
+					    stap_register_indirection_prefixes);
+  set_gdbarch_stap_register_indirection_suffixes (gdbarch,
+					    stap_register_indirection_suffixes);
+  set_gdbarch_stap_is_single_operand (gdbarch, aarch64_stap_is_single_operand);
+  set_gdbarch_stap_parse_special_token (gdbarch,
+					aarch64_stap_parse_special_token);
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */

@@ -1,4 +1,4 @@
-# Copyright 2002-2013 Free Software Foundation, Inc.
+# Copyright 2002-2014 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -169,7 +169,10 @@ if {[test_compiler_info {gcc-[0-3]-*}]
     # and DW_AT_MIPS_linkage_name = _ZN9gnu_obj_47nowhereE .
     setup_xfail *-*-*
 }
-gdb_test "print test4.nowhere" "field nowhere is nonexistent or has been optimized out" "static const int initialized nowhere"
+gdb_test "print test4.nowhere" "<optimized out>" "static const int initialized nowhere (print field)"
+
+# Same, but print the whole struct.
+gdb_test "print test4" "static nowhere = <optimized out>.*" "static const int initialized nowhere (whole struct)"
 
 # static const initialized in the class definition, PR gdb/11702.
 if { $non_dwarf } { setup_xfail *-*-* }

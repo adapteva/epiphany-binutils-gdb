@@ -1,7 +1,7 @@
 /* *INDENT-OFF* */ /* ATTRIBUTE_PRINTF confuses indent, avoid running it
 		      for now.  */
 /* I/O, string, cleanup, and other random utilities for GDB.
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,6 +23,7 @@
 
 #include "cleanups.h"
 #include "exceptions.h"
+#include "print-utils.h"
 
 extern void initialize_utils (void);
 
@@ -62,9 +63,9 @@ struct timeval get_prompt_for_continue_wait_time (void);
 
 /* Parsing utilites.  */
 
-extern int parse_pid_to_attach (char *args);
+extern int parse_pid_to_attach (const char *args);
 
-extern int parse_escape (struct gdbarch *, char **);
+extern int parse_escape (struct gdbarch *, const char **);
 
 char **gdb_buildargv (const char *);
 
@@ -114,6 +115,10 @@ extern struct cleanup *make_cleanup_restore_current_language (void);
 
 extern struct cleanup *make_cleanup_htab_delete (htab_t htab);
 
+struct parser_state;
+extern struct cleanup *make_cleanup_clear_parser_state
+  (struct parser_state **p);
+
 extern void free_current_contents (void *);
 
 extern void init_page_info (void);
@@ -127,6 +132,10 @@ extern struct cleanup *make_bpstat_clear_actions_cleanup (void);
 /* Path utilities.  */
 
 extern char *gdb_realpath (const char *);
+
+extern char *gdb_realpath_keepfile (const char *);
+
+extern char *gdb_abspath (const char *);
 
 extern int gdb_filename_fnmatch (const char *pattern, const char *string,
 				 int flags);
@@ -241,8 +250,6 @@ extern void fputstrn_unfiltered (const char *str, int n, int quotr,
 /* Display the host ADDR on STREAM formatted as ``0x%x''.  */
 extern void gdb_print_host_address (const void *addr, struct ui_file *stream);
 
-extern const char *host_address_to_string (const void *addr);
-
 /* Convert CORE_ADDR to string in platform-specific manner.
    This is usually formatted similar to 0x%lx.  */
 extern const char *paddress (struct gdbarch *gdbarch, CORE_ADDR addr);
@@ -257,26 +264,7 @@ extern const char *print_core_address (struct gdbarch *gdbarch,
 extern hashval_t core_addr_hash (const void *ap);
 extern int core_addr_eq (const void *ap, const void *bp);
 
-/* %d for LONGEST */
-extern char *plongest (LONGEST l);
-/* %u for ULONGEST */
-extern char *pulongest (ULONGEST l);
-
-extern char *phex (ULONGEST l, int sizeof_l);
-extern char *phex_nz (ULONGEST l, int sizeof_l);
-extern char *int_string (LONGEST, int, int, int, int);
-
-/* Convert a CORE_ADDR into a HEX string with leading zeros.
-   The output from core_addr_to_string() can be passed direct to
-   string_to_core_addr().  */
-extern const char *core_addr_to_string (const CORE_ADDR addr);
-extern const char *core_addr_to_string_nz (const CORE_ADDR addr);
 extern CORE_ADDR string_to_core_addr (const char *my_string);
-
-/* Return a string that contains a number formatted as a hex
-   string.  */
-extern char *hex_string (LONGEST);
-extern char *hex_string_custom (LONGEST, int);
 
 extern void fprintf_symbol_filtered (struct ui_file *, const char *,
 				     enum language, int);
@@ -284,6 +272,8 @@ extern void fprintf_symbol_filtered (struct ui_file *, const char *,
 extern void throw_perror_with_name (enum errors errcode, const char *string)
   ATTRIBUTE_NORETURN;
 extern void perror_with_name (const char *) ATTRIBUTE_NORETURN;
+
+extern void perror_warning_with_name (const char *string);
 
 extern void print_sys_errmsg (const char *, int);
 

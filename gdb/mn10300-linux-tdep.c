@@ -1,6 +1,6 @@
 /* Target-dependent code for the Matsushita MN10300 for GDB, the GNU debugger.
 
-   Copyright (C) 2003-2013 Free Software Foundation, Inc.
+   Copyright (C) 2003-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,7 +19,7 @@
 
 #include "defs.h"
 #include "gdbcore.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "regcache.h"
 #include "mn10300-tdep.h"
 #include "gdb_assert.h"
@@ -451,6 +451,16 @@ am33_collect_fpregset_method (const struct regset *regset,
   return;
 }
 
+static const struct regset am33_gregset =
+  {
+    NULL, am33_supply_gregset_method, am33_collect_gregset_method
+  };
+
+static const struct regset am33_fpregset =
+  {
+    NULL, am33_supply_fpregset_method, am33_collect_fpregset_method
+  };
+
 /* Create a struct regset from a corefile register section.  */
 
 static const struct regset *
@@ -458,17 +468,10 @@ am33_regset_from_core_section (struct gdbarch *gdbarch,
 			       const char *sect_name, 
 			       size_t sect_size)
 {
-  /* We will call regset_alloc, and pass the names of the supply and
-     collect methods.  */
-
   if (sect_size == sizeof (mn10300_elf_fpregset_t))
-    return regset_alloc (gdbarch, 
-			 am33_supply_fpregset_method,
-			 am33_collect_fpregset_method);
+    return &am33_fpregset;
   else
-    return regset_alloc (gdbarch, 
-			 am33_supply_gregset_method,
-			 am33_collect_gregset_method);
+    return &am33_gregset;
 }
 
 static void

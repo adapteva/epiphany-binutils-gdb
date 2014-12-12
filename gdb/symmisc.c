@@ -1,6 +1,6 @@
 /* Do various things to symbol tables (other than lookup), for GDB.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,13 +32,13 @@
 #include "bcache.h"
 #include "block.h"
 #include "gdb_regex.h"
-#include "gdb_stat.h"
+#include <sys/stat.h>
 #include "dictionary.h"
 #include "typeprint.h"
 #include "gdbcmd.h"
 #include "source.h"
 
-#include "gdb_string.h"
+#include <string.h>
 #include "readline/readline.h"
 
 #include "psymtab.h"
@@ -84,7 +84,8 @@ print_symbol_bcache_statistics (void)
     ALL_PSPACE_OBJFILES (pspace, objfile)
   {
     QUIT;
-    printf_filtered (_("Byte cache statistics for '%s':\n"), objfile->name);
+    printf_filtered (_("Byte cache statistics for '%s':\n"),
+		     objfile_name (objfile));
     print_bcache_statistics (psymbol_bcache_get_bcache (objfile->psymbol_cache),
                              "partial symbol cache");
     print_bcache_statistics (objfile->per_bfd->macro_cache,
@@ -106,13 +107,13 @@ print_objfile_statistics (void)
     ALL_PSPACE_OBJFILES (pspace, objfile)
   {
     QUIT;
-    printf_filtered (_("Statistics for '%s':\n"), objfile->name);
+    printf_filtered (_("Statistics for '%s':\n"), objfile_name (objfile));
     if (OBJSTAT (objfile, n_stabs) > 0)
       printf_filtered (_("  Number of \"stab\" symbols read: %d\n"),
 		       OBJSTAT (objfile, n_stabs));
-    if (OBJSTAT (objfile, n_minsyms) > 0)
+    if (objfile->per_bfd->n_minsyms > 0)
       printf_filtered (_("  Number of \"minimal\" symbols read: %d\n"),
-		       OBJSTAT (objfile, n_minsyms));
+		       objfile->per_bfd->n_minsyms);
     if (OBJSTAT (objfile, n_psyms) > 0)
       printf_filtered (_("  Number of \"partial\" symbols read: %d\n"),
 		       OBJSTAT (objfile, n_psyms));
@@ -161,13 +162,13 @@ dump_objfile (struct objfile *objfile)
 {
   struct symtab *symtab;
 
-  printf_filtered ("\nObject file %s:  ", objfile->name);
+  printf_filtered ("\nObject file %s:  ", objfile_name (objfile));
   printf_filtered ("Objfile at ");
   gdb_print_host_address (objfile, gdb_stdout);
   printf_filtered (", bfd at ");
   gdb_print_host_address (objfile->obfd, gdb_stdout);
   printf_filtered (", %d minsyms\n\n",
-		   objfile->minimal_symbol_count);
+		   objfile->per_bfd->minimal_symbol_count);
 
   if (objfile->sf)
     objfile->sf->qf->dump (objfile);
@@ -202,8 +203,8 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
   int index;
   char ms_type;
 
-  fprintf_filtered (outfile, "\nObject file %s:\n\n", objfile->name);
-  if (objfile->minimal_symbol_count == 0)
+  fprintf_filtered (outfile, "\nObject file %s:\n\n", objfile_name (objfile));
+  if (objfile->per_bfd->minimal_symbol_count == 0)
     {
       fprintf_filtered (outfile, "No minimal symbols found.\n");
       return;
@@ -211,7 +212,7 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
   index = 0;
   ALL_OBJFILE_MSYMBOLS (objfile, msymbol)
     {
-      struct obj_section *section = SYMBOL_OBJ_SECTION (objfile, msymbol);
+      struct obj_section *section = MSYMBOL_OBJ_SECTION (objfile, msymbol);
 
       switch (MSYMBOL_TYPE (msymbol))
 	{
@@ -250,9 +251,10 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
 	  break;
 	}
       fprintf_filtered (outfile, "[%2d] %c ", index, ms_type);
-      fputs_filtered (paddress (gdbarch, SYMBOL_VALUE_ADDRESS (msymbol)),
+      fputs_filtered (paddress (gdbarch, MSYMBOL_VALUE_ADDRESS (objfile,
+								msymbol)),
 		      outfile);
-      fprintf_filtered (outfile, " %s", SYMBOL_LINKAGE_NAME (msymbol));
+      fprintf_filtered (outfile, " %s", MSYMBOL_LINKAGE_NAME (msymbol));
       if (section)
 	{
 	  if (section->the_bfd_section != NULL)
@@ -263,19 +265,19 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
 	    fprintf_filtered (outfile, " spurious section %ld",
 			      (long) (section - objfile->sections));
 	}
-      if (SYMBOL_DEMANGLED_NAME (msymbol) != NULL)
+      if (MSYMBOL_DEMANGLED_NAME (msymbol) != NULL)
 	{
-	  fprintf_filtered (outfile, "  %s", SYMBOL_DEMANGLED_NAME (msymbol));
+	  fprintf_filtered (outfile, "  %s", MSYMBOL_DEMANGLED_NAME (msymbol));
 	}
       if (msymbol->filename)
 	fprintf_filtered (outfile, "  %s", msymbol->filename);
       fputs_filtered ("\n", outfile);
       index++;
     }
-  if (objfile->minimal_symbol_count != index)
+  if (objfile->per_bfd->minimal_symbol_count != index)
     {
       warning (_("internal error:  minimal symbol count %d != %d"),
-	       objfile->minimal_symbol_count, index);
+	       objfile->per_bfd->minimal_symbol_count, index);
     }
   fprintf_filtered (outfile, "\n");
 }
@@ -299,7 +301,8 @@ dump_symtab_1 (struct objfile *objfile, struct symtab *symtab,
   if (symtab->dirname)
     fprintf_filtered (outfile, "Compilation directory is %s\n",
 		      symtab->dirname);
-  fprintf_filtered (outfile, "Read from object file %s (", objfile->name);
+  fprintf_filtered (outfile, "Read from object file %s (",
+		    objfile_name (objfile));
   gdb_print_host_address (objfile, outfile);
   fprintf_filtered (outfile, ")\n");
   fprintf_filtered (outfile, "Language: %s\n",
@@ -677,7 +680,7 @@ maintenance_print_msymbols (char *args, int from_tty)
     ALL_PSPACE_OBJFILES (pspace, objfile)
       {
 	QUIT;
-	if (symname == NULL || (!stat (objfile->name, &obj_st)
+	if (symname == NULL || (!stat (objfile_name (objfile), &obj_st)
 				&& sym_st.st_dev == obj_st.st_dev
 				&& sym_st.st_ino == obj_st.st_ino))
 	  dump_msymbols (objfile, outfile);
@@ -702,7 +705,7 @@ maintenance_print_objfiles (char *regexp, int from_tty)
       {
 	QUIT;
 	if (! regexp
-	    || re_exec (objfile->name))
+	    || re_exec (objfile_name (objfile)))
 	  dump_objfile (objfile);
       }
 }
@@ -738,7 +741,7 @@ maintenance_info_symtabs (char *regexp, int from_tty)
 	    {
 	      if (! printed_objfile_start)
 		{
-		  printf_filtered ("{ objfile %s ", objfile->name);
+		  printf_filtered ("{ objfile %s ", objfile_name (objfile));
 		  wrap_here ("  ");
 		  printf_filtered ("((struct objfile *) %s)\n", 
 				   host_address_to_string (objfile));
@@ -809,7 +812,7 @@ maintenance_check_symtabs (char *ignore, int from_tty)
 	    {
 	      if (! printed_objfile_start)
 		{
-		  printf_filtered ("{ objfile %s ", objfile->name);
+		  printf_filtered ("{ objfile %s ", objfile_name (objfile));
 		  wrap_here ("  ");
 		  printf_filtered ("((struct objfile *) %s)\n", 
 				   host_address_to_string (objfile));

@@ -1,5 +1,5 @@
 /* tc-score.c -- Assembler for Score
-   Copyright 2006, 2007, 2008, 2009, 2011, 2012 Free Software Foundation, Inc.
+   Copyright (C) 2006-2014 Free Software Foundation, Inc.
    Contributed by:
    Brain.lin (brain.lin@sunplusct.com)
    Mei Ligang (ligang@sunnorth.com.cn)
@@ -5363,7 +5363,7 @@ s3_parse_pce_inst (char *insnstr)
 	 || ((pec_part_1.size == s3_INSN16_SIZE) && (s3_inst.size == s3_INSN_SIZE)))
     {
       s3_inst.error = _("pce instruction error (16 bit || 16 bit)'");
-      sprintf (s3_inst.str, insnstr);
+      sprintf (s3_inst.str, "%s", insnstr);
       return;
     }
 

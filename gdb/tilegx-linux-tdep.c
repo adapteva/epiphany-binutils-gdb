@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux on Tilera TILE-Gx processors.
 
-   Copyright (C) 2012-2013 Free Software Foundation, Inc.
+   Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -97,7 +97,7 @@ tilegx_linux_supply_regset (const struct regset *regset,
 }
 
 /* TILE-Gx Linux kernel register set.  */
-static struct regset tilegx_linux_regset =
+static const struct regset tilegx_linux_regset =
 {
   NULL,
   tilegx_linux_supply_regset

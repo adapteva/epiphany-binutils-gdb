@@ -1,6 +1,6 @@
 /* Pascal language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,12 +20,13 @@
 /* This file is derived from c-lang.c */
 
 #include "defs.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "expression.h"
 #include "parser-defs.h"
 #include "language.h"
+#include "varobj.h"
 #include "p-lang.h"
 #include "valprint.h"
 #include "value.h"
@@ -58,23 +59,23 @@ static const char GPC_MAIN_PROGRAM_NAME_2[] = "pascal_main_program";
 const char *
 pascal_main_name (void)
 {
-  struct minimal_symbol *msym;
+  struct bound_minimal_symbol msym;
 
   msym = lookup_minimal_symbol (GPC_P_INITIALIZE, NULL, NULL);
 
   /*  If '_p_initialize' was not found, the main program is likely not
      written in Pascal.  */
-  if (msym == NULL)
+  if (msym.minsym == NULL)
     return NULL;
 
   msym = lookup_minimal_symbol (GPC_MAIN_PROGRAM_NAME_1, NULL, NULL);
-  if (msym != NULL)
+  if (msym.minsym != NULL)
     {
       return GPC_MAIN_PROGRAM_NAME_1;
     }
 
   msym = lookup_minimal_symbol (GPC_MAIN_PROGRAM_NAME_2, NULL, NULL);
-  if (msym != NULL)
+  if (msym.minsym != NULL)
     {
       return GPC_MAIN_PROGRAM_NAME_2;
     }
@@ -415,6 +416,7 @@ pascal_language_arch_info (struct gdbarch *gdbarch,
 const struct language_defn pascal_language_defn =
 {
   "pascal",			/* Language name */
+  "Pascal",
   language_pascal,
   range_check_on,
   case_sensitive_on,
@@ -449,6 +451,7 @@ const struct language_defn pascal_language_defn =
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  &default_varobj_ops,
   LANG_MAGIC
 };
 

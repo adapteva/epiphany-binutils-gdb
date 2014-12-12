@@ -1,3 +1,106 @@
+2014-05-19  Nick Clifton  <nickc@redhat.com>
+
+	* msp430.h (struct msp430_operand_s): Add vshift field.
+
+2014-05-07  Andrew Bennett  <andrew.bennett@imgtec.com>
+
+	* mips.h (INSN_ISA_MASK): Updated.
+	(INSN_ISA32R3): New define.
+	(INSN_ISA32R5): New define.
+	(INSN_ISA64R3): New define.
+	(INSN_ISA64R5): New define.
+	(INSN_ISA64, INSN_ISA64R2, INSN_ISA3_32, INSN_ISA3_32R2, INSN_ISA4_32
+	INSN_ISA4_32R2, INSN_ISA5_32R2): Renumbered.
+	(mips_isa_table): Add entries for mips32r3, mips32r5, mips64r3 and
+	mips64r5.
+	(INSN_UPTO32R3): New define.
+	(INSN_UPTO32R5): New define.
+	(INSN_UPTO64R3): New define.
+	(INSN_UPTO64R5): New define.
+	(ISA_MIPS32R3): New define.
+	(ISA_MIPS32R5): New define.
+	(ISA_MIPS64R3): New define.
+	(ISA_MIPS64R5): New define.
+	(CPU_MIPS32R3): New define.
+	(CPU_MIPS32R5): New define.
+	(CPU_MIPS64R3): New define.
+	(CPU_MIPS64R5): New define.
+
+2014-05-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips.h (mips_isa_table): Avoid hard-coding INSN_ISA* values.
+
+2014-04-22  Christian Svensson  <blue@cmd.nu>
+
+	* or32.h: Delete.
+
+2014-03-05  Alan Modra  <amodra@gmail.com>
+
+	Update copyright years.
+
+2013-12-16  Andrew Bennett  <andrew.bennett@imgtec.com>
+
+	* mips.h: Updated description of +o, +u, +v and +w for MIPS and
+	microMIPS.
+
+2013-12-13  Kuan-Lin Chen  <kuanlinchentw@gmail.com>
+	    Wei-Cheng Wang  <cole945@gmail.com>
+
+	* nds32.h: New file for Andes NDS32.
+
+2013-12-07  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin.h: Remove +x file mode.
+
+2013-11-20  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64.h (aarch64_pstatefields): Change element type to
+	aarch64_sys_reg.
+
+2013-11-18  Renlin Li  <Renlin.Li@arm.com>
+
+	* arm.h (ARM_AEXT_V7VE): New define.
+	(ARM_ARCH_V7VE): New define.
+	(ARM_ARCH_V7A_IDIV_MP_SEC_VIRT): Removed.
+
+2013-11-18  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	Revert
+
+	2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64.h (aarch64_sys_reg_readonly_p): New declaration.
+	(aarch64_sys_reg_writeonly_p): Ditto.
+
+2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64.h (aarch64_sys_reg_readonly_p): New declaration.
+	(aarch64_sys_reg_writeonly_p): Ditto.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64.h (aarch64_sys_reg): New typedef.
+	(aarch64_sys_regs): Change to define with the new type.
+	(aarch64_sys_reg_deprecated_p): Declare.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64.h (enum aarch64_operand_class): Add AARCH64_OPND_CLASS_COND.
+	(enum aarch64_opnd): Add AARCH64_OPND_COND1.
+
+2013-10-14  Chao-ying Fu  <Chao-ying.Fu@imgtec.com>
+
+	* mips.h (mips_operand_type): Add OP_IMM_INDEX and OP_REG_INDEX.
+	(mips_reg_operand_type): Add OP_REG_MSA and OP_REG_MSA_CTRL.
+	For MIPS, add comments for +d, +e, +h, +k, +l, +n, +o, +u, +v, +w,
+	+T, +U, +V, +W, +~, +!, +@, +#, +$, +%, +^, +&, +*, +|.
+	For MIPS, update extension character sequences after +.
+	(ASE_MSA): New define.
+	(ASE_MSA64): New define.
+	For microMIPS, add comments for +d, +e, +h, +k, +l, +n, +o, +u, +v, +w,
+	+x, +T, +U, +V, +W, +~, +!, +@, +#, +$, +%, +^, +&, +*, +|.
+	For microMIPS, update extension character sequences after +.
+
 2013-08-23  Yuri Chornoivan  <yurchor@ukr.net>
 
 	PR binutils/15834
@@ -1889,7 +1992,7 @@
 
 For older changes see ChangeLog-9103
 
-Copyright (C) 2004-2012 Free Software Foundation, Inc.
+Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

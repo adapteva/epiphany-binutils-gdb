@@ -1,6 +1,6 @@
 /* Multi-process/thread control for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    Contributed by Lynx Real-Time Systems, Inc.  Los Gatos, CA.
 
@@ -32,7 +32,7 @@
 #include "gdbcmd.h"
 #include "regcache.h"
 #include "gdb.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "btrace.h"
 
 #include <ctype.h>
@@ -810,7 +810,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	  if (!number_is_in_list (requested_threads, tp->num))
 	    continue;
 
-	  if (pid != -1 && PIDGET (tp->ptid) != pid)
+	  if (pid != -1 && ptid_get_pid (tp->ptid) != pid)
 	    continue;
 
 	  if (tp->state == THREAD_EXITED)
@@ -847,7 +847,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
       if (!number_is_in_list (requested_threads, tp->num))
 	continue;
 
-      if (pid != -1 && PIDGET (tp->ptid) != pid)
+      if (pid != -1 && ptid_get_pid (tp->ptid) != pid)
 	{
 	  if (requested_threads != NULL && *requested_threads != '\0')
 	    error (_("Requested thread not found in requested process"));

@@ -1,5 +1,5 @@
 /* Target-dependent code for GNU/Linux on Nios II.
-   Copyright (C) 2012-2013 Free Software Foundation, Inc.
+   Copyright (C) 2012-2014 Free Software Foundation, Inc.
    Contributed by Mentor Graphics, Inc.
 
    This file is part of GDB.
@@ -20,7 +20,7 @@
 #include "defs.h"
 #include "frame.h"
 #include "gdb_assert.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "osabi.h"
 #include "solib-svr4.h"
 #include "trad-frame.h"
@@ -45,7 +45,7 @@ static const int reg_offsets[NIOS2_NUM_REGS] =
   -1,  8,  9, 10, 11, 12, 13, 14,	/* r0 - r7 */
   0,  1,  2,  3,  4,  5,  6,  7,	/* r8 - r15 */
   23, 24, 25, 26, 27, 28, 29, 30,	/* r16 - r23 */
-  -1, -1, 19, 18, 17, 21, -1, 16,	/* et bt gp sp fp ea ba ra */
+  -1, -1, 19, 18, 17, 21, -1, 16,	/* et bt gp sp fp ea sstatus ra */
   21,					/* pc */
   -1, 20, -1, -1, -1, -1, -1, -1,	/* status estatus ...  */
   -1, -1, -1, -1, -1, -1, -1, -1
@@ -73,12 +73,11 @@ nios2_supply_gregset (const struct regset *regset,
       }
 }
 
-static struct regset nios2_core_regset =
+static const struct regset nios2_core_regset =
 {
   NULL,
   nios2_supply_gregset,
   NULL,
-  NULL
 };
 
 /* Implement the regset_from_core_section gdbarch method.  */
@@ -91,33 +90,6 @@ nios2_regset_from_core_section (struct gdbarch *gdbarch,
     return &nios2_core_regset;
 
   return NULL;
-}
-
-/* Initialize a trad-frame cache corresponding to the tramp-frame.
-   FUNC is the address of the instruction TRAMP[0] in memory.  */
-
-static void
-nios2_linux_sigreturn_init (const struct tramp_frame *self,
-			    struct frame_info *next_frame,
-			    struct trad_frame_cache *this_cache,
-			    CORE_ADDR func)
-{
-  CORE_ADDR base = func + 16;
-  int i;
-
-  for (i = 0; i < 8; i++)
-    trad_frame_set_reg_addr (this_cache, i + 8, base + i * 4);
-  for (i = 0; i < 7; i++)
-    trad_frame_set_reg_addr (this_cache, i + 1, base + (i + 8) * 4);
-  trad_frame_set_reg_addr (this_cache, NIOS2_RA_REGNUM, base + 16 * 4);
-  trad_frame_set_reg_addr (this_cache, NIOS2_FP_REGNUM, base + 17 * 4);
-  trad_frame_set_reg_addr (this_cache, NIOS2_SP_REGNUM, base + 18 * 4);
-  trad_frame_set_reg_addr (this_cache, NIOS2_GP_REGNUM, base + 19 * 4);
-  trad_frame_set_reg_addr (this_cache, NIOS2_ESTATUS_REGNUM, base + 20 * 4);
-  trad_frame_set_reg_addr (this_cache, NIOS2_PC_REGNUM, base + 21 * 4);
-
-  /* Save a frame ID.  */
-  trad_frame_set_id (this_cache, frame_id_build (base, func));
 }
 
 /* Initialize a trad-frame cache corresponding to the tramp-frame.
@@ -144,24 +116,12 @@ nios2_linux_rt_sigreturn_init (const struct tramp_frame *self,
   trad_frame_set_id (this_cache, frame_id_build (base, func));
 }
 
-static struct tramp_frame nios2_linux_sigreturn_tramp_frame =
-{
-  SIGTRAMP_FRAME,
-  4,
-  {
-    { 0x00800004 | (119 << 6), -1 },  /* movi r2,__NR_sigreturn */
-    { 0x003b683a, -1 },               /* trap */
-    { TRAMP_SENTINEL_INSN }
-  },
-  nios2_linux_sigreturn_init
-};
-
 static struct tramp_frame nios2_linux_rt_sigreturn_tramp_frame =
 {
   SIGTRAMP_FRAME,
   4,
   {
-    { 0x00800004 | (173 << 6), -1 },  /* movi r2,__NR_rt_sigreturn */
+    { 0x00800004 | (139 << 6), -1 },  /* movi r2,__NR_rt_sigreturn */
     { 0x003b683a, -1 },               /* trap */
     { TRAMP_SENTINEL_INSN }
   },
@@ -179,8 +139,7 @@ nios2_linux_syscall_next_pc (struct frame_info *frame)
 
   /* If we are about to make a sigreturn syscall, use the unwinder to
      decode the signal frame.  */
-  if (syscall_nr == 119 /* sigreturn */
-      || syscall_nr == 173 /* rt_sigreturn */)
+  if (syscall_nr == 139 /* rt_sigreturn */)
     return frame_unwind_caller_pc (frame);
 
   return pc + NIOS2_OPCODE_SIZE;
@@ -208,8 +167,6 @@ nios2_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_regset_from_core_section (gdbarch,
                                         nios2_regset_from_core_section);
   /* Linux signal frame unwinders.  */
-  tramp_frame_prepend_unwinder (gdbarch,
-                                &nios2_linux_sigreturn_tramp_frame);
   tramp_frame_prepend_unwinder (gdbarch,
                                 &nios2_linux_rt_sigreturn_tramp_frame);
 

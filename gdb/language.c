@@ -1,6 +1,6 @@
 /* Multiple source language support for GDB.
 
-   Copyright (C) 1991-2013 Free Software Foundation, Inc.
+   Copyright (C) 1991-2014 Free Software Foundation, Inc.
 
    Contributed by the Department of Computer Science at the State University
    of New York at Buffalo.
@@ -30,7 +30,7 @@
 
 #include "defs.h"
 #include <ctype.h>
-#include "gdb_string.h"
+#include <string.h>
 
 #include "symtab.h"
 #include "gdbtypes.h"
@@ -38,6 +38,7 @@
 #include "gdbcmd.h"
 #include "expression.h"
 #include "language.h"
+#include "varobj.h"
 #include "target.h"
 #include "parser-defs.h"
 #include "jv-lang.h"
@@ -49,7 +50,7 @@ extern void _initialize_language (void);
 
 static void unk_lang_error (char *);
 
-static int unk_lang_parser (void);
+static int unk_lang_parser (struct parser_state *);
 
 static void show_check (char *, int);
 
@@ -484,7 +485,7 @@ language_def (enum language lang)
 }
 
 /* Return the language as a string.  */
-char *
+const char *
 language_str (enum language lang)
 {
   int i;
@@ -519,7 +520,7 @@ void
 add_language (const struct language_defn *lang)
 {
   /* For the "set language" command.  */
-  static char **language_names = NULL;
+  static const char **language_names = NULL;
   /* For the "help set language" command.  */
   char *language_set_doc = NULL;
 
@@ -693,7 +694,7 @@ default_get_string (struct value *value, gdb_byte **buffer, int *length,
 /* Define the language that is no language.  */
 
 static int
-unk_lang_parser (void)
+unk_lang_parser (struct parser_state *ps)
 {
   return 1;
 }
@@ -791,6 +792,7 @@ unknown_language_arch_info (struct gdbarch *gdbarch,
 const struct language_defn unknown_language_defn =
 {
   "unknown",
+  "Unknown",
   language_unknown,
   range_check_off,
   case_sensitive_on,
@@ -826,6 +828,7 @@ const struct language_defn unknown_language_defn =
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  &default_varobj_ops,
   LANG_MAGIC
 };
 
@@ -834,6 +837,7 @@ const struct language_defn unknown_language_defn =
 const struct language_defn auto_language_defn =
 {
   "auto",
+  "Auto",
   language_auto,
   range_check_off,
   case_sensitive_on,
@@ -869,12 +873,14 @@ const struct language_defn auto_language_defn =
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  &default_varobj_ops,
   LANG_MAGIC
 };
 
 const struct language_defn local_language_defn =
 {
   "local",
+  "Local",
   language_auto,
   range_check_off,
   case_sensitive_on,
@@ -910,6 +916,7 @@ const struct language_defn local_language_defn =
   default_get_string,
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
+  &default_varobj_ops,
   LANG_MAGIC
 };
 

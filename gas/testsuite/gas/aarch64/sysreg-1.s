@@ -1,6 +1,6 @@
 /* sysreg-1.s Test file for AArch64 system registers.
 
-   Copyright 2011, 2012 Free Software Foundation, Inc.
+   Copyright (C) 2011-2014 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -162,3 +162,7 @@
 	rw_sys_reg sys_reg=rmr_el1 xreg=x15 r=1 w=1
 	rw_sys_reg sys_reg=rmr_el2 xreg=x15 r=1 w=1
 	rw_sys_reg sys_reg=rmr_el3 xreg=x15 r=1 w=1
+
+	rw_sys_reg sys_reg=spsr_el1 xreg=x15 r=1 w=1
+	rw_sys_reg sys_reg=spsr_el2 xreg=x15 r=1 w=1
+	rw_sys_reg sys_reg=spsr_el3 xreg=x15 r=1 w=1

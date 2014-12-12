@@ -1,7 +1,5 @@
 /* BFD COFF object file private structure.
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -55,7 +53,7 @@ typedef struct coff_tdata
   unsigned long raw_syment_count;
 
   /* These are only valid once writing has begun.  */
-  long int relocbase;
+  unsigned long int relocbase;
 
   /* These members communicate important constants about the symbol table
      to GDB's symbol-reading code.  These `constants' unfortunately vary
@@ -118,8 +116,17 @@ typedef struct pe_tdata
   int dll;
   int has_reloc_section;
   int dont_strip_reloc;
+  bfd_boolean insert_timestamp;
   bfd_boolean (*in_reloc_p) (bfd *, reloc_howto_type *);
   flagword real_flags;
+
+  /* Build-id info.  */
+  struct
+  {
+    bfd_boolean (*after_write_object_contents) (bfd *);
+    const char *style;
+    asection *sec;
+  } build_id;
 } pe_data_type;
 
 #define pe_data(bfd)		((bfd)->tdata.pe_obj_data)

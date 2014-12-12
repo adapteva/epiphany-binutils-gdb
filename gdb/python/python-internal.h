@@ -1,6 +1,6 @@
 /* Gdb/Python header for private use by Python module.
 
-   Copyright (C) 2008-2013 Free Software Foundation, Inc.
+   Copyright (C) 2008-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,6 +19,8 @@
 
 #ifndef GDB_PYTHON_INTERNAL_H
 #define GDB_PYTHON_INTERNAL_H
+
+#include "extension.h"
 
 /* These WITH_* macros are defined by the CPython API checker that
    comes with the Python plugin for GCC.  See:
@@ -185,7 +187,33 @@ gdb_Py_DECREF (void *op) /* ARI: editCase function */
 #undef Py_DECREF
 #define Py_DECREF(op) gdb_Py_DECREF (op)
 
-/* In order to be able to parse symtab_and_line_to_sal_object function 
+/* The second argument to PyObject_GetAttrString was missing the 'const'
+   qualifier in Python-2.4.  Hence, we wrap it in a function to avoid errors
+   when compiled with -Werror.  */
+
+static inline PyObject *
+gdb_PyObject_GetAttrString (PyObject *obj,
+			    const char *attr) /* ARI: editCase function */
+{
+  return PyObject_GetAttrString (obj, (char *) attr);
+}
+
+#define PyObject_GetAttrString(obj, attr) gdb_PyObject_GetAttrString (obj, attr)
+
+/* The second argument to PyObject_HasAttrString was also missing the 'const'
+   qualifier in Python-2.4.  Hence, we wrap it also in a function to avoid
+   errors when compiled with -Werror.  */
+
+static inline int
+gdb_PyObject_HasAttrString (PyObject *obj,
+			    const char *attr)  /* ARI: editCase function */
+{
+  return PyObject_HasAttrString (obj, (char *) attr);
+}
+
+#define PyObject_HasAttrString(obj, attr) gdb_PyObject_HasAttrString (obj, attr)
+
+/* In order to be able to parse symtab_and_line_to_sal_object function
    a real symtab_and_line structure is needed.  */
 #include "symtab.h"
 
@@ -223,7 +251,7 @@ extern PyTypeObject breakpoint_object_type
 extern PyTypeObject frame_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("frame_object");
 
-typedef struct breakpoint_object
+typedef struct gdbpy_breakpoint_object
 {
   PyObject_HEAD
 
@@ -236,7 +264,7 @@ typedef struct breakpoint_object
 
   /* 1 is this is a FinishBreakpoint object, 0 otherwise.  */
   int is_finish_bp;
-} breakpoint_object;
+} gdbpy_breakpoint_object;
 
 /* Require that BREAKPOINT be a valid breakpoint ID; throw a Python
    exception if it is invalid.  */
@@ -263,7 +291,7 @@ typedef struct breakpoint_object
 
 /* Variables used to pass information between the Breakpoint
    constructor and the breakpoint-created hook function.  */
-extern breakpoint_object *bppy_pending_object;
+extern gdbpy_breakpoint_object *bppy_pending_object;
 
 
 typedef struct
@@ -279,7 +307,51 @@ typedef struct
 
 extern struct cmd_list_element *set_python_list;
 extern struct cmd_list_element *show_python_list;
+
+/* extension_language_script_ops "methods".  */
 
+extern int gdbpy_auto_load_enabled (const struct extension_language_defn *);
+
+/* extension_language_ops "methods".  */
+
+extern enum ext_lang_rc gdbpy_apply_val_pretty_printer
+  (const struct extension_language_defn *,
+   struct type *type, const gdb_byte *valaddr,
+   int embedded_offset, CORE_ADDR address,
+   struct ui_file *stream, int recurse,
+   const struct value *val,
+   const struct value_print_options *options,
+   const struct language_defn *language);
+extern enum ext_lang_bt_status gdbpy_apply_frame_filter
+  (const struct extension_language_defn *,
+   struct frame_info *frame, int flags, enum ext_lang_frame_args args_type,
+   struct ui_out *out, int frame_low, int frame_high);
+extern void gdbpy_preserve_values (const struct extension_language_defn *,
+				   struct objfile *objfile,
+				   htab_t copied_types);
+extern enum ext_lang_bp_stop gdbpy_breakpoint_cond_says_stop
+  (const struct extension_language_defn *, struct breakpoint *);
+extern int gdbpy_breakpoint_has_cond (const struct extension_language_defn *,
+				      struct breakpoint *b);
+
+extern void *gdbpy_clone_xmethod_worker_data
+  (const struct extension_language_defn *extlang, void *data);
+extern void gdbpy_free_xmethod_worker_data
+  (const struct extension_language_defn *extlang, void *data);
+extern enum ext_lang_rc gdbpy_get_matching_xmethod_workers
+  (const struct extension_language_defn *extlang,
+   struct type *obj_type, const char *method_name,
+   xmethod_worker_vec **dm_vec);
+extern enum ext_lang_rc gdbpy_get_xmethod_arg_types
+  (const struct extension_language_defn *extlang,
+   struct xmethod_worker *worker,
+   int *nargs,
+   struct type ***arg_types);
+extern struct value *gdbpy_invoke_xmethod
+  (const struct extension_language_defn *extlang,
+   struct xmethod_worker *worker,
+   struct value *obj, struct value **args, int nargs);
+
 PyObject *gdbpy_history (PyObject *self, PyObject *args);
 PyObject *gdbpy_breakpoints (PyObject *, PyObject *);
 PyObject *gdbpy_frame_stop_reason_string (PyObject *, PyObject *);
@@ -290,6 +362,7 @@ PyObject *gdbpy_newest_frame (PyObject *self, PyObject *args);
 PyObject *gdbpy_selected_frame (PyObject *self, PyObject *args);
 PyObject *gdbpy_block_for_pc (PyObject *self, PyObject *args);
 PyObject *gdbpy_lookup_type (PyObject *self, PyObject *args, PyObject *kw);
+int gdbpy_is_field (PyObject *obj);
 PyObject *gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
 					   const char *encoding,
 					   struct type *type);
@@ -311,16 +384,18 @@ PyObject *block_to_block_object (const struct block *block,
 PyObject *value_to_value_object (struct value *v);
 PyObject *type_to_type_object (struct type *);
 PyObject *frame_info_to_frame_object (struct frame_info *frame);
-
+PyObject *symtab_to_linetable_object (PyObject *symtab);
 PyObject *pspace_to_pspace_object (struct program_space *)
     CPYCHECKER_RETURNS_BORROWED_REF;
 PyObject *pspy_get_printers (PyObject *, void *);
 PyObject *pspy_get_frame_filters (PyObject *, void *);
+PyObject *pspy_get_xmethods (PyObject *, void *);
 
 PyObject *objfile_to_objfile_object (struct objfile *)
     CPYCHECKER_RETURNS_BORROWED_REF;
 PyObject *objfpy_get_printers (PyObject *, void *);
 PyObject *objfpy_get_frame_filters (PyObject *, void *);
+PyObject *objfpy_get_xmethods (PyObject *, void *);
 
 PyObject *gdbarch_to_arch_object (struct gdbarch *gdbarch);
 
@@ -371,6 +446,8 @@ int gdbpy_initialize_finishbreakpoints (void)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 int gdbpy_initialize_lazy_string (void)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+int gdbpy_initialize_linetable (void)
+  CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 int gdbpy_initialize_parameters (void)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 int gdbpy_initialize_thread (void)
@@ -398,6 +475,8 @@ int gdbpy_initialize_thread_event (void)
 int gdbpy_initialize_new_objfile_event (void)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 int gdbpy_initialize_arch (void)
+  CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+int gdbpy_initialize_xmethods (void)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 
 struct cleanup *make_cleanup_py_decref (PyObject *py);
@@ -433,9 +512,6 @@ extern const struct language_defn *python_language;
 
 void gdbpy_print_stack (void);
 
-void source_python_script_for_objfile (struct objfile *objfile, FILE *file,
-				       const char *filename);
-
 PyObject *python_string_to_unicode (PyObject *obj);
 char *unicode_to_target_string (PyObject *unicode_str);
 char *python_string_to_target_string (PyObject *obj);
@@ -447,7 +523,7 @@ char *gdbpy_exception_to_string (PyObject *ptype, PyObject *pvalue);
 
 int gdbpy_is_lazy_string (PyObject *result);
 void gdbpy_extract_lazy_string (PyObject *string, CORE_ADDR *addr,
-				struct type **str_type, 
+				struct type **str_type,
 				long *length, char **encoding);
 
 int gdbpy_is_value_object (PyObject *obj);
@@ -461,8 +537,8 @@ PyObject *gdbpy_get_varobj_pretty_printer (struct value *value);
 char *gdbpy_get_display_hint (PyObject *printer);
 PyObject *gdbpy_default_visualizer (PyObject *self, PyObject *args);
 
-void bpfinishpy_pre_stop_hook (struct breakpoint_object *bp_obj);
-void bpfinishpy_post_stop_hook (struct breakpoint_object *bp_obj);
+void bpfinishpy_pre_stop_hook (struct gdbpy_breakpoint_object *bp_obj);
+void bpfinishpy_post_stop_hook (struct gdbpy_breakpoint_object *bp_obj);
 
 extern PyObject *gdbpy_doc_cst;
 extern PyObject *gdbpy_children_cst;

@@ -1,5 +1,5 @@
 /* Target-dependent code for GNU/Linux on Alpha.
-   Copyright (C) 2002-2013 Free Software Foundation, Inc.
+   Copyright (C) 2002-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,7 +19,7 @@
 #include "defs.h"
 #include "frame.h"
 #include "gdb_assert.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "osabi.h"
 #include "solib-svr4.h"
 #include "symtab.h"
@@ -206,13 +206,13 @@ alpha_linux_supply_fpregset (const struct regset *regset,
     regcache_raw_supply (regcache, ALPHA_FPCR_REGNUM, regs + 31 * 8);
 }
 
-static struct regset alpha_linux_gregset =
+static const struct regset alpha_linux_gregset =
 {
   NULL,
   alpha_linux_supply_gregset
 };
 
-static struct regset alpha_linux_fpregset =
+static const struct regset alpha_linux_fpregset =
 {
   NULL,
   alpha_linux_supply_fpregset

@@ -1,5 +1,5 @@
 /* Native Client support for ELF
-   Copyright 2012, 2013 Free Software Foundation, Inc.
+   Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -44,14 +44,13 @@ segment_executable (struct elf_segment_map *seg)
 }
 
 /* Determine if this segment is eligible to receive the file and program
-   headers.  It must be read-only, non-executable, and have contents.
+   headers.  It must be read-only and non-executable.
    Its first section must start far enough past the page boundary to
    allow space for the headers.  */
 static bfd_boolean
 segment_eligible_for_headers (struct elf_segment_map *seg,
 			      bfd_vma minpagesize, bfd_vma sizeof_headers)
 {
-  bfd_boolean any_contents = FALSE;
   unsigned int i;
   if (seg->count == 0 || seg->sections[0]->lma % minpagesize < sizeof_headers)
     return FALSE;
@@ -59,10 +58,8 @@ segment_eligible_for_headers (struct elf_segment_map *seg,
     {
       if ((seg->sections[i]->flags & (SEC_CODE|SEC_READONLY)) != SEC_READONLY)
 	return FALSE;
-      if (seg->sections[i]->flags & SEC_HAS_CONTENTS)
-	any_contents = TRUE;
     }
-  return any_contents;
+  return TRUE;
 }
 
 
@@ -72,17 +69,30 @@ segment_eligible_for_headers (struct elf_segment_map *seg,
 bfd_boolean
 nacl_modify_segment_map (bfd *abfd, struct bfd_link_info *info)
 {
+  const struct elf_backend_data *const bed = get_elf_backend_data (abfd);
   struct elf_segment_map **m = &elf_seg_map (abfd);
   struct elf_segment_map **first_load = NULL;
   struct elf_segment_map **last_load = NULL;
   bfd_boolean moved_headers = FALSE;
-  int sizeof_headers = info == NULL ? 0 : bfd_sizeof_headers (abfd, info);
-  bfd_vma minpagesize = get_elf_backend_data (abfd)->minpagesize;
+  int sizeof_headers;
 
   if (info != NULL && info->user_phdrs)
     /* The linker script used PHDRS explicitly, so don't change what the
        user asked for.  */
     return TRUE;
+
+  if (info != NULL)
+    /* We're doing linking, so evalute SIZEOF_HEADERS as in a linker script.  */
+    sizeof_headers = bfd_sizeof_headers (abfd, info);
+  else
+    {
+      /* We're not doing linking, so this is objcopy or suchlike.
+	 We just need to collect the size of the existing headers.  */
+      struct elf_segment_map *seg;
+      sizeof_headers = bed->s->sizeof_ehdr;
+      for (seg = *m; seg != NULL; seg = seg->next)
+	sizeof_headers += bed->s->sizeof_phdr;
+    }
 
   while (*m != NULL)
     {
@@ -94,11 +104,11 @@ nacl_modify_segment_map (bfd *abfd, struct bfd_link_info *info)
 
 	  if (executable
 	      && seg->count > 0
-	      && seg->sections[0]->vma % minpagesize == 0)
+	      && seg->sections[0]->vma % bed->minpagesize == 0)
 	    {
 	      asection *lastsec = seg->sections[seg->count - 1];
 	      bfd_vma end = lastsec->vma + lastsec->size;
-	      if (end % minpagesize != 0)
+	      if (end % bed->minpagesize != 0)
 		{
 		  /* This is an executable segment that starts on a page
 		     boundary but does not end on a page boundary.  Fill
@@ -139,7 +149,7 @@ nacl_modify_segment_map (bfd *abfd, struct bfd_link_info *info)
 		     in assign_file_positions_for_load_sections.  */
 		  sec->vma = end;
 		  sec->lma = lastsec->lma + lastsec->size;
-		  sec->size = minpagesize - (end % minpagesize);
+		  sec->size = bed->minpagesize - (end % bed->minpagesize);
 		  sec->flags = (SEC_ALLOC | SEC_LOAD
 				| SEC_READONLY | SEC_CODE | SEC_LINKER_CREATED);
 		  sec->used_by_bfd = secdata;
@@ -174,7 +184,7 @@ nacl_modify_segment_map (bfd *abfd, struct bfd_link_info *info)
 	  /* Now that we've noted the first PT_LOAD, we're looking for
 	     the first non-executable PT_LOAD with a nonempty p_filesz.  */
 	  else if (!moved_headers
-		   && segment_eligible_for_headers (seg, minpagesize,
+		   && segment_eligible_for_headers (seg, bed->minpagesize,
 						    sizeof_headers))
 	    {
 	      /* This is the one we were looking for!

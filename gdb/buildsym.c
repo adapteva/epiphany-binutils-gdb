@@ -1,5 +1,5 @@
 /* Support routines for building symbol tables in GDB's internal format.
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,7 +32,7 @@
 #include "gdbtypes.h"
 #include "gdb_assert.h"
 #include "complaints.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "expression.h"		/* For "enum exp_opcode" used by...  */
 #include "bcache.h"
 #include "filenames.h"		/* For DOSish file names.  */
@@ -1144,9 +1144,10 @@ end_symtab_from_static_block (struct block *static_block,
       blockvector = make_blockvector (objfile);
     }
 
-  /* Read the line table if it has to be read separately.  */
+  /* Read the line table if it has to be read separately.
+     This is only used by xcoffread.c.  */
   if (objfile->sf->sym_read_linetable != NULL)
-    objfile->sf->sym_read_linetable ();
+    objfile->sf->sym_read_linetable (objfile);
 
   /* Handle the case where the debug info specifies a different path
      for the main source file.  It can cause us to lose track of its
@@ -1203,10 +1204,10 @@ end_symtab_from_static_block (struct block *static_block,
 	  if (subfile->dirname)
 	    {
 	      /* Reallocate the dirname on the symbol obstack.  */
-	      symtab->dirname = (char *)
-		obstack_alloc (&objfile->objfile_obstack,
-			       strlen (subfile->dirname) + 1);
-	      strcpy (symtab->dirname, subfile->dirname);
+	      symtab->dirname =
+		obstack_copy0 (&objfile->objfile_obstack,
+			       subfile->dirname,
+			       strlen (subfile->dirname));
 	    }
 	  else
 	    {
@@ -1230,8 +1231,7 @@ end_symtab_from_static_block (struct block *static_block,
 	  /* All symtabs for the main file and the subfiles share a
 	     blockvector, so we need to clear primary for everything
 	     but the main file.  */
-
-	  symtab->primary = 0;
+	  set_symtab_primary (symtab, 0);
 	}
       else
         {
@@ -1279,7 +1279,7 @@ end_symtab_from_static_block (struct block *static_block,
   /* Set this for the main source file.  */
   if (symtab)
     {
-      symtab->primary = 1;
+      set_symtab_primary (symtab, 1);
 
       if (symtab->blockvector)
 	{

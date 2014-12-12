@@ -1,8 +1,5 @@
 /* tc-i386.c -- Assemble code for the Intel 80386
-   Copyright 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
-   2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1989-2014 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -516,6 +513,11 @@ enum x86_elf_abi
 static enum x86_elf_abi x86_elf_abi = I386_ABI;
 #endif
 
+#if defined (TE_PE) || defined (TE_PEP)
+/* Use big object file format.  */
+static int use_big_obj = 0;
+#endif
+
 /* 1 for intel syntax,
    0 if att syntax.  */
 static int intel_syntax = 0;
@@ -772,6 +774,8 @@ static const arch_entry cpu_arch[] =
     CPU_BDVER2_FLAGS, 0, 0 },
   { STRING_COMMA_LEN ("bdver3"), PROCESSOR_BD,
     CPU_BDVER3_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN ("bdver4"), PROCESSOR_BD,
+    CPU_BDVER4_FLAGS, 0, 0 },
   { STRING_COMMA_LEN ("btver1"), PROCESSOR_BT,
     CPU_BTVER1_FLAGS, 0, 0 },
   { STRING_COMMA_LEN ("btver2"), PROCESSOR_BT,
@@ -902,6 +906,16 @@ static const arch_entry cpu_arch[] =
     CPU_MPX_FLAGS, 0, 0 },
   { STRING_COMMA_LEN (".sha"), PROCESSOR_UNKNOWN,
     CPU_SHA_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".clflushopt"), PROCESSOR_UNKNOWN,
+    CPU_CLFLUSHOPT_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".xsavec"), PROCESSOR_UNKNOWN,
+    CPU_XSAVEC_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".xsaves"), PROCESSOR_UNKNOWN,
+    CPU_XSAVES_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".prefetchwt1"), PROCESSOR_UNKNOWN,
+    CPU_PREFETCHWT1_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".se1"), PROCESSOR_UNKNOWN,
+    CPU_SE1_FLAGS, 0, 0 },
 };
 
 #ifdef I386COFF
@@ -1665,8 +1679,6 @@ static const i386_operand_type imm16_32 = OPERAND_TYPE_IMM16_32;
 static const i386_operand_type imm16_32s = OPERAND_TYPE_IMM16_32S;
 static const i386_operand_type imm16_32_32s = OPERAND_TYPE_IMM16_32_32S;
 static const i386_operand_type vec_imm4 = OPERAND_TYPE_VEC_IMM4;
-static const i386_operand_type regbnd = OPERAND_TYPE_REGBND;
-static const i386_operand_type vec_disp8 = OPERAND_TYPE_VEC_DISP8;
 
 enum operand_type
 {
@@ -2798,6 +2810,7 @@ static bfd_reloc_code_real_type
 reloc (unsigned int size,
        int pcrel,
        int sign,
+       int bnd_prefix,
        bfd_reloc_code_real_type other)
 {
   if (other != NO_RELOC)
@@ -2870,7 +2883,9 @@ reloc (unsigned int size,
 	{
 	case 1: return BFD_RELOC_8_PCREL;
 	case 2: return BFD_RELOC_16_PCREL;
-	case 4: return BFD_RELOC_32_PCREL;
+	case 4: return (bnd_prefix && object_64bit
+			? BFD_RELOC_X86_64_PC32_BND
+			: BFD_RELOC_32_PCREL);
 	case 8: return BFD_RELOC_64_PCREL;
 	}
       as_bad (_("cannot do %u byte pc-relative relocation"), size);
@@ -4343,6 +4358,14 @@ check_VecOperands (const insn_template *t)
       return 1;
     }
 
+  /* Check if default mask is allowed.  */
+  if (t->opcode_modifier.nodefmask
+      && (!i.mask || i.mask->mask->reg_num == 0))
+    {
+      i.error = no_default_mask;
+      return 1;
+    }
+
   /* For VSIB byte, we need a vector register for index, and all vector
      registers must be distinct.  */
   if (t->opcode_modifier.vecsib)
@@ -4363,11 +4386,9 @@ check_VecOperands (const insn_template *t)
       if (i.reg_operands == 2 && !i.mask)
 	{
 	  gas_assert (i.types[0].bitfield.regxmm
-		      || i.types[0].bitfield.regymm
-		      || i.types[0].bitfield.regzmm);
+		      || i.types[0].bitfield.regymm);
 	  gas_assert (i.types[2].bitfield.regxmm
-		      || i.types[2].bitfield.regymm
-		      || i.types[2].bitfield.regzmm);
+		      || i.types[2].bitfield.regymm);
 	  if (operand_check == check_none)
 	    return 0;
 	  if (register_number (i.op[0].regs)
@@ -4383,6 +4404,22 @@ check_VecOperands (const insn_template *t)
 	      return 1;
 	    }
 	  as_warn (_("mask, index, and destination registers should be distinct"));
+	}
+      else if (i.reg_operands == 1 && i.mask)
+	{
+	  if ((i.types[1].bitfield.regymm
+	       || i.types[1].bitfield.regzmm)
+	      && (register_number (i.op[1].regs)
+		  == register_number (i.index_reg)))
+	    {
+	      if (operand_check == check_error)
+		{
+		  i.error = invalid_vector_register_set;
+		  return 1;
+		}
+	      if (operand_check != check_none)
+		as_warn (_("index and destination registers should be distinct"));
+	    }
 	}
     }
 
@@ -4457,14 +4494,6 @@ check_VecOperands (const insn_template *t)
   if (i.mask && (i.mask->operand != (int) (i.operands - 1)))
     {
       i.error = mask_not_on_destination;
-      return 1;
-    }
-
-  /* Check if default mask is allowed.  */
-  if (t->opcode_modifier.nodefmask
-      && (!i.mask || i.mask->mask->reg_num == 0))
-    {
-      i.error = no_default_mask;
       return 1;
     }
 
@@ -5416,7 +5445,7 @@ check_long_reg (void)
 		i.suffix);
 	return 0;
       }
-  /* Warn if the e prefix on a general reg is missing.  */
+    /* Warn if the e prefix on a general reg is missing.  */
     else if ((!quiet_warnings || flag_code == CODE_64BIT)
 	     && i.types[op].bitfield.reg16
 	     && (i.tm.operand_types[op].bitfield.reg32
@@ -5432,16 +5461,13 @@ check_long_reg (void)
 	    return 0;
 	  }
 #if REGISTER_WARNINGS
-	else
-	  as_warn (_("using `%s%s' instead of `%s%s' due to `%c' suffix"),
-		   register_prefix,
-		   (i.op[op].regs + REGNAM_EAX - REGNAM_AX)->reg_name,
-		   register_prefix,
-		   i.op[op].regs->reg_name,
-		   i.suffix);
+	as_warn (_("using `%s%s' instead of `%s%s' due to `%c' suffix"),
+		 register_prefix,
+		 (i.op[op].regs + REGNAM_EAX - REGNAM_AX)->reg_name,
+		 register_prefix, i.op[op].regs->reg_name, i.suffix);
 #endif
       }
-  /* Warn if the r prefix on a general reg is missing.  */
+    /* Warn if the r prefix on a general reg is present.  */
     else if (i.types[op].bitfield.reg64
 	     && (i.tm.operand_types[op].bitfield.reg32
 		 || i.tm.operand_types[op].bitfield.acc))
@@ -5484,7 +5510,7 @@ check_qword_reg (void)
 		i.suffix);
 	return 0;
       }
-  /* Warn if the e prefix on a general reg is missing.  */
+    /* Warn if the r prefix on a general reg is missing.  */
     else if ((i.types[op].bitfield.reg16
 	      || i.types[op].bitfield.reg32)
 	     && (i.tm.operand_types[op].bitfield.reg32
@@ -5529,9 +5555,10 @@ check_word_reg (void)
 		i.suffix);
 	return 0;
       }
-  /* Warn if the e prefix on a general reg is present.  */
+    /* Warn if the e or r prefix on a general reg is present.  */
     else if ((!quiet_warnings || flag_code == CODE_64BIT)
-	     && i.types[op].bitfield.reg32
+	     && (i.types[op].bitfield.reg32
+		 || i.types[op].bitfield.reg64)
 	     && (i.tm.operand_types[op].bitfield.reg16
 		 || i.tm.operand_types[op].bitfield.acc))
       {
@@ -5544,14 +5571,11 @@ check_word_reg (void)
 		    i.suffix);
 	    return 0;
 	  }
-	else
 #if REGISTER_WARNINGS
-	  as_warn (_("using `%s%s' instead of `%s%s' due to `%c' suffix"),
-		   register_prefix,
-		   (i.op[op].regs + REGNAM_AX - REGNAM_EAX)->reg_name,
-		   register_prefix,
-		   i.op[op].regs->reg_name,
-		   i.suffix);
+	as_warn (_("using `%s%s' instead of `%s%s' due to `%c' suffix"),
+		 register_prefix,
+		 (i.op[op].regs + REGNAM_AX - REGNAM_EAX)->reg_name,
+		 register_prefix, i.op[op].regs->reg_name, i.suffix);
 #endif
       }
   return 1;
@@ -6719,7 +6743,13 @@ output_branch (void)
 
   /* 1 possible extra opcode + 4 byte displacement go in var part.
      Pass reloc in fr_var.  */
-  frag_var (rs_machine_dependent, 5, i.reloc[0], subtype, sym, off, p);
+  frag_var (rs_machine_dependent, 5,
+	    ((!object_64bit
+	      || i.reloc[0] != NO_RELOC 
+	      || (i.bnd_prefix == NULL && !add_bnd_prefix))
+	     ? i.reloc[0]
+	     : BFD_RELOC_X86_64_PC32_BND),
+	    subtype, sym, off, p);
 }
 
 static void
@@ -6795,7 +6825,10 @@ output_jump (void)
     }
 
   fixP = fix_new_exp (frag_now, p - frag_now->fr_literal, size,
-		      i.op[0].disps, 1, reloc (size, 1, 1, i.reloc[0]));
+		      i.op[0].disps, 1, reloc (size, 1, 1,
+					       (i.bnd_prefix != NULL
+						|| add_bnd_prefix),
+					       i.reloc[0]));
 
   /* All jumps handled here are signed, but don't use a signed limit
      check for 32 and 16 bit jumps as we want to allow wrap around at
@@ -6861,7 +6894,7 @@ output_interseg_jump (void)
     }
   else
     fix_new_exp (frag_now, p - frag_now->fr_literal, size,
-		 i.op[1].imms, 0, reloc (size, 0, 0, i.reloc[1]));
+		 i.op[1].imms, 0, reloc (size, 0, 0, 0, i.reloc[1]));
   if (i.op[0].imms->X_op != O_constant)
     as_bad (_("can't handle non absolute segment in `%s'"),
 	    i.tm.name);
@@ -7120,7 +7153,10 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 		}
 
 	      p = frag_more (size);
-	      reloc_type = reloc (size, pcrel, sign, i.reloc[n]);
+	      reloc_type = reloc (size, pcrel, sign,
+				  (i.bnd_prefix != NULL
+				   || add_bnd_prefix),
+				  i.reloc[n]);
 	      if (GOT_symbol
 		  && GOT_symbol == i.op[n].disps->X_add_symbol
 		  && (((reloc_type == BFD_RELOC_32
@@ -7211,7 +7247,7 @@ output_imm (fragS *insn_start_frag, offsetT insn_start_off)
 		sign = 0;
 
 	      p = frag_more (size);
-	      reloc_type = reloc (size, 0, sign, i.reloc[n]);
+	      reloc_type = reloc (size, 0, sign, 0, i.reloc[n]);
 
 	      /*   This is tough to explain.  We end up with this one if we
 	       * have operands that look like
@@ -7298,16 +7334,13 @@ output_imm (fragS *insn_start_frag, offsetT insn_start_off)
 
 /* x86_cons_fix_new is called via the expression parsing code when a
    reloc is needed.  We use this hook to get the correct .got reloc.  */
-static enum bfd_reloc_code_real got_reloc = NO_RELOC;
 static int cons_sign = -1;
 
 void
 x86_cons_fix_new (fragS *frag, unsigned int off, unsigned int len,
-		  expressionS *exp)
+		  expressionS *exp, bfd_reloc_code_real_type r)
 {
-  enum bfd_reloc_code_real r = reloc (len, 0, cons_sign, got_reloc);
-
-  got_reloc = NO_RELOC;
+  r = reloc (len, 0, cons_sign, 0, r);
 
 #ifdef TE_PE
   if (exp->X_op == O_secrel)
@@ -7333,7 +7366,7 @@ x86_address_bytes (void)
 
 #if !(defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF) || defined (OBJ_MACH_O)) \
     || defined (LEX_AT)
-# define lex_got(reloc, adjust, types) NULL
+# define lex_got(reloc, adjust, types, bnd_prefix) NULL
 #else
 /* Parse operands of the form
    <symbol>@GOTOFF+<nnn>
@@ -7347,7 +7380,8 @@ x86_address_bytes (void)
 static char *
 lex_got (enum bfd_reloc_code_real *rel,
 	 int *adjust,
-	 i386_operand_type *types)
+	 i386_operand_type *types,
+	 int bnd_prefix)
 {
   /* Some of the relocations depend on the size of what field is to
      be relocated.  But in our callers i386_immediate and i386_displacement
@@ -7482,6 +7516,8 @@ lex_got (enum bfd_reloc_code_real *rel,
 		*adjust = len;
 	      memcpy (tmpbuf + first, past_reloc, second);
 	      tmpbuf[first + second] = '\0';
+	      if (bnd_prefix && *rel == BFD_RELOC_X86_64_PLT32)
+		*rel = BFD_RELOC_X86_64_PLT32_BND;
 	      return tmpbuf;
 	    }
 
@@ -7514,7 +7550,8 @@ lex_got (enum bfd_reloc_code_real *rel,
 static char *
 lex_got (enum bfd_reloc_code_real *rel ATTRIBUTE_UNUSED,
 	 int *adjust ATTRIBUTE_UNUSED,
-	 i386_operand_type *types ATTRIBUTE_UNUSED)
+	 i386_operand_type *types,
+	 int bnd_prefix ATTRIBUTE_UNUSED)
 {
   static const struct
   {
@@ -7599,9 +7636,11 @@ lex_got (enum bfd_reloc_code_real *rel ATTRIBUTE_UNUSED,
 
 #endif /* TE_PE */
 
-void
+bfd_reloc_code_real_type
 x86_cons (expressionS *exp, int size)
 {
+  bfd_reloc_code_real_type got_reloc = NO_RELOC;
+
   intel_syntax = -intel_syntax;
 
   exp->X_md = 0;
@@ -7613,7 +7652,7 @@ x86_cons (expressionS *exp, int size)
       int adjust = 0;
 
       save = input_line_pointer;
-      gotfree_input_line = lex_got (&got_reloc, &adjust, NULL);
+      gotfree_input_line = lex_got (&got_reloc, &adjust, NULL, 0);
       if (gotfree_input_line)
 	input_line_pointer = gotfree_input_line;
 
@@ -7648,6 +7687,8 @@ x86_cons (expressionS *exp, int size)
 
   if (intel_syntax)
     i386_intel_simplify (exp);
+
+  return got_reloc;
 }
 
 static void
@@ -7841,7 +7882,9 @@ i386_immediate (char *imm_start)
   save_input_line_pointer = input_line_pointer;
   input_line_pointer = imm_start;
 
-  gotfree_input_line = lex_got (&i.reloc[this_operand], NULL, &types);
+  gotfree_input_line = lex_got (&i.reloc[this_operand], NULL, &types,
+				(i.bnd_prefix != NULL
+				 || add_bnd_prefix));
   if (gotfree_input_line)
     input_line_pointer = gotfree_input_line;
 
@@ -8098,7 +8141,9 @@ i386_displacement (char *disp_start, char *disp_end)
       *displacement_string_end = '0';
     }
 #endif
-  gotfree_input_line = lex_got (&i.reloc[this_operand], NULL, &types);
+  gotfree_input_line = lex_got (&i.reloc[this_operand], NULL, &types,
+				(i.bnd_prefix != NULL
+				 || add_bnd_prefix));
   if (gotfree_input_line)
     input_line_pointer = gotfree_input_line;
 
@@ -9058,7 +9103,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       && (fixP->fx_r_type == BFD_RELOC_32_PCREL
 	  || fixP->fx_r_type == BFD_RELOC_64_PCREL
 	  || fixP->fx_r_type == BFD_RELOC_16_PCREL
-	  || fixP->fx_r_type == BFD_RELOC_8_PCREL)
+	  || fixP->fx_r_type == BFD_RELOC_8_PCREL
+	  || fixP->fx_r_type == BFD_RELOC_X86_64_PC32_BND)
       && !use_rela_relocations)
     {
       /* This is a hack.  There should be a better way to handle this.
@@ -9100,8 +9146,21 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 #endif
     }
 #if defined (OBJ_COFF) && defined (TE_PE)
-  if (fixP->fx_addsy != NULL && S_IS_WEAK (fixP->fx_addsy))
+  if (fixP->fx_addsy != NULL
+      && S_IS_WEAK (fixP->fx_addsy)
+      /* PR 16858: Do not modify weak function references.  */
+      && ! fixP->fx_pcrel)
     {
+#if !defined (TE_PEP)
+      /* For x86 PE weak function symbols are neither PC-relative
+	 nor do they set S_IS_FUNCTION.  So the only reliable way
+	 to detect them is to check the flags of their containing
+	 section.  */
+      if (S_GET_SEGMENT (fixP->fx_addsy) != NULL
+	  && S_GET_SEGMENT (fixP->fx_addsy)->flags & SEC_CODE)
+	;
+      else
+#endif
       value -= S_GET_VALUE (fixP->fx_addsy);
     }
 #endif
@@ -9114,6 +9173,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       {
       case BFD_RELOC_386_PLT32:
       case BFD_RELOC_X86_64_PLT32:
+      case BFD_RELOC_X86_64_PLT32_BND:
 	/* Make the jump instruction point to the address of the operand.  At
 	   runtime we merely add the offset to the actual PLT entry.  */
 	value = -4;
@@ -9458,6 +9518,7 @@ const char *md_shortopts = "qn";
 #define OPTION_MADD_BND_PREFIX (OPTION_MD_BASE + 15)
 #define OPTION_MEVEXLIG (OPTION_MD_BASE + 16)
 #define OPTION_MEVEXWIG (OPTION_MD_BASE + 17)
+#define OPTION_MBIG_OBJ (OPTION_MD_BASE + 18)
 
 struct option md_longopts[] =
 {
@@ -9484,6 +9545,9 @@ struct option md_longopts[] =
   {"madd-bnd-prefix", no_argument, NULL, OPTION_MADD_BND_PREFIX},
   {"mevexlig", required_argument, NULL, OPTION_MEVEXLIG},
   {"mevexwig", required_argument, NULL, OPTION_MEVEXWIG},
+# if defined (TE_PE) || defined (TE_PEP)
+  {"mbig-obj", no_argument, NULL, OPTION_MBIG_OBJ},
+#endif
   {NULL, no_argument, NULL, 0}
 };
 size_t md_longopts_size = sizeof (md_longopts);
@@ -9765,6 +9829,12 @@ md_parse_option (int c, char *arg)
 	as_fatal (_("invalid -mevexwig= option: `%s'"), arg);
       break;
 
+# if defined (TE_PE) || defined (TE_PEP)
+    case OPTION_MBIG_OBJ:
+      use_big_obj = 1;
+      break;
+#endif
+
     default:
       return 0;
     }
@@ -9917,6 +9987,10 @@ md_show_usage (FILE *stream)
   -mold-gcc               support old (<= 2.8.1) versions of gcc\n"));
   fprintf (stream, _("\
   -madd-bnd-prefix        add BND prefix for all valid branches\n"));
+# if defined (TE_PE) || defined (TE_PEP)
+  fprintf (stream, _("\
+  -mbig-obj               generate big object files\n"));
+#endif
 }
 
 #if ((defined (OBJ_MAYBE_COFF) && defined (OBJ_MAYBE_AOUT)) \
@@ -9955,7 +10029,10 @@ i386_target_format (void)
 #if defined (OBJ_MAYBE_COFF) || defined (OBJ_COFF)
 # if defined (TE_PE) || defined (TE_PEP)
     case bfd_target_coff_flavour:
-      return flag_code == CODE_64BIT ? "pe-x86-64" : "pe-i386";
+      if (flag_code == CODE_64BIT)
+	return use_big_obj ? "pe-bigobj-x86-64" : "pe-x86-64";
+      else
+	return "pe-i386";
 # elif defined (TE_GO32)
     case bfd_target_coff_flavour:
       return "coff-go32";
@@ -10185,6 +10262,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 #endif
 
     case BFD_RELOC_X86_64_PLT32:
+    case BFD_RELOC_X86_64_PLT32_BND:
     case BFD_RELOC_X86_64_GOT32:
     case BFD_RELOC_X86_64_GOTPCREL:
     case BFD_RELOC_386_PLT32:
@@ -10245,7 +10323,10 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	      break;
 	    case 1: code = BFD_RELOC_8_PCREL;  break;
 	    case 2: code = BFD_RELOC_16_PCREL; break;
-	    case 4: code = BFD_RELOC_32_PCREL; break;
+	    case 4:
+	      code = (fixp->fx_r_type == BFD_RELOC_X86_64_PC32_BND
+		      ? fixp-> fx_r_type : BFD_RELOC_32_PCREL);
+	      break;
 #ifdef BFD64
 	    case 8: code = BFD_RELOC_64_PCREL; break;
 #endif
@@ -10338,6 +10419,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	switch (code)
 	  {
 	  case BFD_RELOC_X86_64_PLT32:
+	  case BFD_RELOC_X86_64_PLT32_BND:
 	  case BFD_RELOC_X86_64_GOT32:
 	  case BFD_RELOC_X86_64_GOTPCREL:
 	  case BFD_RELOC_X86_64_TLSGD:

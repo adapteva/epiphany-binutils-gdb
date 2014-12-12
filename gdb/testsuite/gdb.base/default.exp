@@ -1,4 +1,4 @@
-#   Copyright 1988-2013 Free Software Foundation, Inc.
+#   Copyright 1988-2014 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -746,11 +746,8 @@ gdb_test "step" "The program is not being run." "step #2"
 #test symbol-file
 gdb_test "symbol-file" ".*" "symbol-file"
 
-#test target child
-gdb_test "target child" "Use the \"run\" command to start a Unix child process.*|Undefined target command: \"child\".  *Try \"help target\".*" "target child"
-
-#test target procfs
-gdb_test "target procfs" "Use the \"run\" command to start a Unix child process.*|Undefined target command: \"procfs\".  *Try \"help target\".*" "target procfs"
+#test target native
+gdb_test "target native" "Use the \"run\" command to start a process.*|Undefined target command: \"native\".  *Try \"help target\".*" "target native"
 
 #test target core
 send_gdb "target core\n"

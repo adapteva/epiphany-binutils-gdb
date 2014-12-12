@@ -1,6 +1,6 @@
 /* C language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2013 Free Software Foundation, Inc.
+   Copyright (C) 1992-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -24,6 +24,7 @@
 struct ui_file;
 struct language_arch_info;
 struct type_print_options;
+struct parser_state;
 
 #include "value.h"
 #include "macroexp.h"
@@ -57,11 +58,11 @@ enum c_string_type
 
 /* Defined in c-exp.y.  */
 
-extern int c_parse (void);
+extern int c_parse (struct parser_state *);
 
 extern void c_error (char *);
 
-extern int c_parse_escape (char **, struct obstack *);
+extern int c_parse_escape (const char **, struct obstack *);
 
 /* Defined in c-typeprint.c */
 extern void c_print_type (struct type *, const char *,

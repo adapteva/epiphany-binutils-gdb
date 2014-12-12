@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2013 Free Software Foundation, Inc.
+# Copyright (C) 2011-2014 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -90,8 +90,7 @@ if { [istarget "*-*-cygwin*"] } {
     set testpid [ exec ps -e | gawk "{ if (\$1 == $testpid) print \$4; }" ]
 }
 
-set GDBFLAGS [concat $tmp_gdbflags " -ex \"set target-async on\""]
-set GDBFLAGS [concat $GDBFLAGS " -ex \"set pagination off\""]
+set GDBFLAGS [concat $tmp_gdbflags " -ex \"set pagination off\""]
 set GDBFLAGS [concat $GDBFLAGS " -ex \"set editing on\""]
 set GDBFLAGS [concat $GDBFLAGS " -ex \"attach $testpid\""]
 set GDBFLAGS [concat $GDBFLAGS " -ex \"continue&\""]
@@ -107,8 +106,7 @@ gdb_test "python print (\"'\" + str(p\[0\]) + \"'\")" "'$gdb_prompt_fail '" \
 	 "prompt_hook argument is default prompt. 3"
 gdb_exit
 
-set GDBFLAGS [concat $tmp_gdbflags " -ex \"set target-async on\""]
-set GDBFLAGS [concat $GDBFLAGS " -ex \"set pagination off\""]
+set GDBFLAGS [concat $tmp_gdbflags " -ex \"set pagination off\""]
 set GDBFLAGS [concat $GDBFLAGS " -ex \"set editing on\""]
 set GDBFLAGS [concat $GDBFLAGS " -ex \"attach $testpid\""]
 set GDBFLAGS [concat $GDBFLAGS " -ex \"interrupt\""]

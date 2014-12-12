@@ -1,5 +1,5 @@
 /* tc-aarch64.h -- Header file for tc-aarch64.c.
-   Copyright 2009, 2010, 2011, 2012  Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -114,7 +114,7 @@ void aarch64_copy_symbol_attributes (symbolS *, symbolS *);
    || (FIX)->fx_r_type == BFD_RELOC_32			\
    || TC_FORCE_RELOCATION (FIX))
 
-#define TC_CONS_FIX_NEW cons_fix_new_aarch64
+#define TC_CONS_FIX_NEW(f,w,s,e,r) cons_fix_new_aarch64 ((f), (w), (s), (e))
 
 /* Max code alignment is 32 bytes */
 #define MAX_MEM_FOR_RS_ALIGN_CODE 31

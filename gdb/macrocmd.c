@@ -1,5 +1,5 @@
 /* C preprocessor macro expansion commands for GDB.
-   Copyright (C) 2002-2013 Free Software Foundation, Inc.
+   Copyright (C) 2002-2014 Free Software Foundation, Inc.
    Contributed by Red Hat, Inc.
 
    This file is part of GDB.
@@ -25,7 +25,7 @@
 #include "cli/cli-utils.h"
 #include "command.h"
 #include "gdbcmd.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "linespec.h"
 
 
@@ -159,32 +159,32 @@ print_macro_definition (const char *name,
 			struct macro_source_file *file,
 			int line)
 {
-      fprintf_filtered (gdb_stdout, "Defined at ");
-      show_pp_source_pos (gdb_stdout, file, line);
+  fprintf_filtered (gdb_stdout, "Defined at ");
+  show_pp_source_pos (gdb_stdout, file, line);
 
-      if (line != 0)
-	fprintf_filtered (gdb_stdout, "#define %s", name);
-      else
-	fprintf_filtered (gdb_stdout, "-D%s", name);
+  if (line != 0)
+    fprintf_filtered (gdb_stdout, "#define %s", name);
+  else
+    fprintf_filtered (gdb_stdout, "-D%s", name);
 
-      if (d->kind == macro_function_like)
-        {
-          int i;
+  if (d->kind == macro_function_like)
+    {
+      int i;
 
-          fputs_filtered ("(", gdb_stdout);
-          for (i = 0; i < d->argc; i++)
-            {
-              fputs_filtered (d->argv[i], gdb_stdout);
-              if (i + 1 < d->argc)
-                fputs_filtered (", ", gdb_stdout);
-            }
-          fputs_filtered (")", gdb_stdout);
-        }
+      fputs_filtered ("(", gdb_stdout);
+      for (i = 0; i < d->argc; i++)
+	{
+	  fputs_filtered (d->argv[i], gdb_stdout);
+	  if (i + 1 < d->argc)
+	    fputs_filtered (", ", gdb_stdout);
+	}
+      fputs_filtered (")", gdb_stdout);
+    }
 
-      if (line != 0)
-	fprintf_filtered (gdb_stdout, " %s\n", d->replacement);
-      else
-	fprintf_filtered (gdb_stdout, "=%s\n", d->replacement);
+  if (line != 0)
+    fprintf_filtered (gdb_stdout, " %s\n", d->replacement);
+  else
+    fprintf_filtered (gdb_stdout, "=%s\n", d->replacement);
 }
 
 /* A callback function for usage with macro_for_each and friends.

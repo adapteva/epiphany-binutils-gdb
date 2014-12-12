@@ -37,7 +37,6 @@
 
 #include "demangle.h"
 #include "defs.h"
-#include "gdb_string.h"
 #include "gdb_assert.h"
 #include "frame.h"
 #include "inferior.h"

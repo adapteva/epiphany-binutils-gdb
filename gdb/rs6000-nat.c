@@ -1,6 +1,6 @@
 /* IBM RS/6000 native-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -50,7 +50,7 @@
 
 #include <a.out.h>
 #include <sys/file.h>
-#include "gdb_stat.h"
+#include <sys/stat.h>
 #include "gdb_bfd.h"
 #include <sys/core.h>
 #define __LDINFO_PTRACE32__	/* for __ld_info32 */
@@ -79,10 +79,7 @@
 
 static void exec_one_dummy_insn (struct regcache *);
 
-static LONGEST rs6000_xfer_shared_libraries
-  (struct target_ops *ops, enum target_object object,
-   const char *annex, gdb_byte *readbuf, const gdb_byte *writebuf,
-   ULONGEST offset, LONGEST len);
+static target_xfer_partial_ftype rs6000_xfer_shared_libraries;
 
 /* Given REGNO, a gdb register number, return the corresponding
    number suitable for use as a ptrace() parameter.  Return -1 if
@@ -180,7 +177,7 @@ fetch_register (struct regcache *regcache, int regno)
 
   /* Floating-point registers.  */
   if (isfloat)
-    rs6000_ptrace32 (PT_READ_FPR, PIDGET (inferior_ptid), addr, nr, 0);
+    rs6000_ptrace32 (PT_READ_FPR, ptid_get_pid (inferior_ptid), addr, nr, 0);
 
   /* Bogus register number.  */
   else if (nr < 0)
@@ -196,14 +193,15 @@ fetch_register (struct regcache *regcache, int regno)
   else
     {
       if (!ARCH64 ())
-	*addr = rs6000_ptrace32 (PT_READ_GPR, PIDGET (inferior_ptid),
+	*addr = rs6000_ptrace32 (PT_READ_GPR, ptid_get_pid (inferior_ptid),
 				 (int *) nr, 0, 0);
       else
 	{
 	  /* PT_READ_GPR requires the buffer parameter to point to long long,
 	     even if the register is really only 32 bits.  */
 	  long long buf;
-	  rs6000_ptrace64 (PT_READ_GPR, PIDGET (inferior_ptid), nr, 0, &buf);
+	  rs6000_ptrace64 (PT_READ_GPR, ptid_get_pid (inferior_ptid),
+			   nr, 0, &buf);
 	  if (register_size (gdbarch, regno) == 8)
 	    memcpy (addr, &buf, 8);
 	  else
@@ -242,7 +240,7 @@ store_register (struct regcache *regcache, int regno)
 
   /* Floating-point registers.  */
   if (isfloat)
-    rs6000_ptrace32 (PT_WRITE_FPR, PIDGET (inferior_ptid), addr, nr, 0);
+    rs6000_ptrace32 (PT_WRITE_FPR, ptid_get_pid (inferior_ptid), addr, nr, 0);
 
   /* Bogus register number.  */
   else if (nr < 0)
@@ -268,7 +266,7 @@ store_register (struct regcache *regcache, int regno)
          the register's value is passed by value, but for 64-bit inferiors,
 	 the address of a buffer containing the value is passed.  */
       if (!ARCH64 ())
-	rs6000_ptrace32 (PT_WRITE_GPR, PIDGET (inferior_ptid),
+	rs6000_ptrace32 (PT_WRITE_GPR, ptid_get_pid (inferior_ptid),
 			 (int *) nr, *addr, 0);
       else
 	{
@@ -279,7 +277,8 @@ store_register (struct regcache *regcache, int regno)
 	    memcpy (&buf, addr, 8);
 	  else
 	    buf = *addr;
-	  rs6000_ptrace64 (PT_WRITE_GPR, PIDGET (inferior_ptid), nr, 0, &buf);
+	  rs6000_ptrace64 (PT_WRITE_GPR, ptid_get_pid (inferior_ptid),
+			   nr, 0, &buf);
 	}
     }
 
@@ -375,16 +374,13 @@ rs6000_store_inferior_registers (struct target_ops *ops,
     }
 }
 
+/* Implement the to_xfer_partial target_ops method.  */
 
-/* Attempt a transfer all LEN bytes starting at OFFSET between the
-   inferior's OBJECT:ANNEX space and GDB's READBUF/WRITEBUF buffer.
-   Return the number of bytes actually transferred.  */
-
-static LONGEST
+static enum target_xfer_status
 rs6000_xfer_partial (struct target_ops *ops, enum target_object object,
 		     const char *annex, gdb_byte *readbuf,
 		     const gdb_byte *writebuf,
-		     ULONGEST offset, LONGEST len)
+		     ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
 {
   pid_t pid = ptid_get_pid (inferior_ptid);
   int arch64 = ARCH64 ();
@@ -394,7 +390,7 @@ rs6000_xfer_partial (struct target_ops *ops, enum target_object object,
     case TARGET_OBJECT_LIBRARIES_AIX:
       return rs6000_xfer_shared_libraries (ops, object, annex,
 					   readbuf, writebuf,
-					   offset, len);
+					   offset, len, xfered_len);
     case TARGET_OBJECT_MEMORY:
       {
 	union
@@ -452,7 +448,7 @@ rs6000_xfer_partial (struct target_ops *ops, enum target_object object,
 			       (int *) (uintptr_t) rounded_offset,
 			       buffer.word, NULL);
 	    if (errno)
-	      return 0;
+	      return TARGET_XFER_EOF;
 	  }
 
 	if (readbuf)
@@ -466,18 +462,19 @@ rs6000_xfer_partial (struct target_ops *ops, enum target_object object,
 					     (int *)(uintptr_t)rounded_offset,
 					     0, NULL);
 	    if (errno)
-	      return 0;
+	      return TARGET_XFER_EOF;
 
 	    /* Copy appropriate bytes out of the buffer.  */
 	    memcpy (readbuf, buffer.byte + (offset - rounded_offset),
 		    partial_len);
 	  }
 
-	return partial_len;
+	*xfered_len = (ULONGEST) partial_len;
+	return TARGET_XFER_OK;
       }
 
     default:
-      return -1;
+      return TARGET_XFER_E_IO;
     }
 }
 
@@ -566,9 +563,10 @@ exec_one_dummy_insn (struct regcache *regcache)
   prev_pc = regcache_read_pc (regcache);
   regcache_write_pc (regcache, DUMMY_INSN_ADDR);
   if (ARCH64 ())
-    ret = rs6000_ptrace64 (PT_CONTINUE, PIDGET (inferior_ptid), 1, 0, NULL);
+    ret = rs6000_ptrace64 (PT_CONTINUE, ptid_get_pid (inferior_ptid),
+			   1, 0, NULL);
   else
-    ret = rs6000_ptrace32 (PT_CONTINUE, PIDGET (inferior_ptid),
+    ret = rs6000_ptrace32 (PT_CONTINUE, ptid_get_pid (inferior_ptid),
 			   (int *) 1, 0, NULL);
 
   if (ret != 0)
@@ -576,9 +574,9 @@ exec_one_dummy_insn (struct regcache *regcache)
 
   do
     {
-      pid = waitpid (PIDGET (inferior_ptid), &status, 0);
+      pid = waitpid (ptid_get_pid (inferior_ptid), &status, 0);
     }
-  while (pid != PIDGET (inferior_ptid));
+  while (pid != ptid_get_pid (inferior_ptid));
 
   regcache_write_pc (regcache, prev_pc);
   deprecated_remove_raw_breakpoint (gdbarch, bp);
@@ -682,11 +680,11 @@ rs6000_ptrace_ldinfo (ptid_t ptid)
 /* Implement the to_xfer_partial target_ops method for
    TARGET_OBJECT_LIBRARIES_AIX objects.  */
 
-static LONGEST
+static enum target_xfer_status
 rs6000_xfer_shared_libraries
   (struct target_ops *ops, enum target_object object,
    const char *annex, gdb_byte *readbuf, const gdb_byte *writebuf,
-   ULONGEST offset, LONGEST len)
+   ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
 {
   gdb_byte *ldi_buf;
   ULONGEST result;
@@ -697,7 +695,7 @@ rs6000_xfer_shared_libraries
   gdb_assert (target_has_execution);
 
   if (writebuf)
-    return -1;
+    return TARGET_XFER_E_IO;
 
   ldi_buf = rs6000_ptrace_ldinfo (inferior_ptid);
   gdb_assert (ldi_buf != NULL);
@@ -707,7 +705,14 @@ rs6000_xfer_shared_libraries
   xfree (ldi_buf);
 
   do_cleanups (cleanup);
-  return result;
+
+  if (result == 0)
+    return TARGET_XFER_EOF;
+  else
+    {
+      *xfered_len = result;
+      return TARGET_XFER_OK;
+    }
 }
 
 void _initialize_rs6000_nat (void);

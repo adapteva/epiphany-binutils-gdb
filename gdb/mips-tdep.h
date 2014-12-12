@@ -1,6 +1,6 @@
 /* Target-dependent header for the MIPS architecture, for GDB, the GNU Debugger.
 
-   Copyright (C) 2002-2013 Free Software Foundation, Inc.
+   Copyright (C) 2002-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -108,14 +108,6 @@ struct gdbarch_tdep
      left alignment even for big endian (very strange).  */
   int register_size_valid_p;
   int register_size;
-
-  /* General-purpose registers.  */
-  struct regset *gregset;
-  struct regset *gregset64;
-
-  /* Floating-point registers.  */
-  struct regset *fpregset;
-  struct regset *fpregset64;
 
   /* Return the expected next PC if FRAME is stopped at a syscall
      instruction.  */

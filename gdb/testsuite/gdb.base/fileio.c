@@ -55,9 +55,14 @@ time(time_t *t);
 Not applicable.
 
 system (const char * string);
-1) Invalid string/command. -  returns 127.  */
+1) See if shell available - returns 0
+2) See if shell available - returns !0
+3) Execute simple shell command - returns 0
+4) Invalid string/command. -  returns 127.  */
+
 static const char *strerrno (int err);
 
+/* Note that OUTDIR is defined by the test suite.  */
 #define FILENAME    "foo.fileio.test"
 #define RENAMED     "bar.fileio.test"
 #define NONEXISTANT "nofoo.fileio.test"
@@ -77,7 +82,7 @@ test_open ()
 
   /* Test opening */
   errno = 0;
-  ret = open (FILENAME, O_CREAT | O_TRUNC | O_RDWR, S_IWUSR | S_IRUSR);
+  ret = open (OUTDIR FILENAME, O_CREAT | O_TRUNC | O_RDWR, S_IWUSR | S_IRUSR);
   printf ("open 1: ret = %d, errno = %d %s\n", ret, errno,
 	  ret >= 0 ? "OK" : "");
   
@@ -86,7 +91,7 @@ test_open ()
   stop ();
   /* Creating an already existing file (created by fileio.exp) */
   errno = 0;
-  ret = open (FILENAME, O_CREAT | O_EXCL | O_WRONLY, S_IWUSR | S_IRUSR);
+  ret = open (OUTDIR FILENAME, O_CREAT | O_EXCL | O_WRONLY, S_IWUSR | S_IRUSR);
   printf ("open 2: ret = %d, errno = %d %s\n", ret, errno,
 	  strerrno (errno));
   if (ret >= 0)
@@ -110,13 +115,13 @@ test_open ()
   stop ();
   /* Open for write but no write permission */
   errno = 0;
-  ret = open (NOWRITE, O_CREAT | O_RDONLY, S_IRUSR);
+  ret = open (OUTDIR NOWRITE, O_CREAT | O_RDONLY, S_IRUSR);
   if (ret >= 0)
     {
       close (ret);
       stop ();
       errno = 0;
-      ret = open (NOWRITE, O_WRONLY);
+      ret = open (OUTDIR NOWRITE, O_WRONLY);
       printf ("open 5: ret = %d, errno = %d %s\n", ret, errno,
 	      strerrno (errno));
       if (ret >= 0)
@@ -137,7 +142,7 @@ test_write ()
 
   /* Test writing */
   errno = 0;
-  fd = open (FILENAME, O_WRONLY);
+  fd = open (OUTDIR FILENAME, O_WRONLY);
   if (fd >= 0)
     {
       errno = 0;
@@ -157,7 +162,7 @@ test_write ()
   stop ();
   /* Write to a read-only file */
   errno = 0;
-  fd = open (FILENAME, O_RDONLY);
+  fd = open (OUTDIR FILENAME, O_RDONLY);
   if (fd >= 0)
     {
       errno = 0;
@@ -178,7 +183,7 @@ test_read ()
 
   /* Test reading */
   errno = 0;
-  fd = open (FILENAME, O_RDONLY);
+  fd = open (OUTDIR FILENAME, O_RDONLY);
   if (fd >= 0)
     {
       memset (buf, 0, 16);
@@ -210,7 +215,7 @@ test_lseek ()
 
   /* Test seeking */
   errno = 0;
-  fd = open (FILENAME, O_RDONLY);
+  fd = open (OUTDIR FILENAME, O_RDONLY);
   if (fd >= 0)
     {
       errno = 0;
@@ -251,7 +256,7 @@ test_close ()
 
   /* Test close */
   errno = 0;
-  fd = open (FILENAME, O_RDONLY);
+  fd = open (OUTDIR FILENAME, O_RDONLY);
   if (fd >= 0)
     {
       errno = 0;
@@ -278,7 +283,7 @@ test_stat ()
 
   /* Test stat */
   errno = 0;
-  ret = stat (FILENAME, &st);
+  ret = stat (OUTDIR FILENAME, &st);
   if (!ret)
     printf ("stat 1: ret = %d, errno = %d %s\n", ret, errno,
 	    st.st_size == 11 ? "OK" : "");
@@ -313,7 +318,7 @@ test_fstat ()
 
   /* Test fstat */
   errno = 0;
-  fd = open (FILENAME, O_RDONLY);
+  fd = open (OUTDIR FILENAME, O_RDONLY);
   if (fd >= 0)
     {
       errno = 0;
@@ -352,7 +357,7 @@ test_isatty ()
   printf ("isatty 4: invalid %s\n", isatty (999) ? "yes" : "no OK");
   stop ();
   /* Check open file */
-  fd = open (FILENAME, O_RDONLY);
+  fd = open (OUTDIR FILENAME, O_RDONLY);
   if (fd >= 0)
     {
       printf ("isatty 5: file %s\n", isatty (fd) ? "yes" : "no OK");
@@ -364,6 +369,8 @@ test_isatty ()
 }
 
 
+char sys[1512];
+
 int
 test_system ()
 {
@@ -371,23 +378,28 @@ test_system ()
    * Requires test framework to switch on "set remote system-call-allowed 1"
    */
   int ret;
-  char sys[512];
 
-  /* Test for shell */
+  /* Test for shell ('set remote system-call-allowed' is disabled
+     by default).  */
   ret = system (NULL);
-  printf ("system 1: ret = %d %s\n", ret, ret != 0 ? "OK" : "");
+  printf ("system 1: ret = %d %s\n", ret, ret == 0 ? "OK" : "");
+  stop ();
+  /* Test for shell again (the testsuite will have enabled it now).  */
+  ret = system (NULL);
+  printf ("system 2: ret = %d %s\n", ret, ret != 0 ? "OK" : "");
   stop ();
   /* This test prepares the directory for test_rename() */
-  sprintf (sys, "mkdir -p %s %s", TESTSUBDIR, TESTDIR2);
+  sprintf (sys, "mkdir -p %s/%s %s/%s", OUTDIR, TESTSUBDIR, OUTDIR, TESTDIR2);
   ret = system (sys);
   if (ret == 127)
-    printf ("system 2: ret = %d /bin/sh unavailable???\n", ret);
+    printf ("system 3: ret = %d /bin/sh unavailable???\n", ret);
   else
-    printf ("system 2: ret = %d %s\n", ret, ret == 0 ? "OK" : "");
+    printf ("system 3: ret = %d %s\n", ret, ret == 0 ? "OK" : "");
   stop ();
   /* Invalid command (just guessing ;-) ) */
   ret = system ("wrtzlpfrmpft");
-  printf ("system 3: ret = %d %s\n", ret, WEXITSTATUS (ret) == 127 ? "OK" : "");
+  printf ("system 4: ret = %d %s\n", ret,
+	  WEXITSTATUS (ret) == 127 ? "OK" : "");
   stop ();
 }
 
@@ -399,7 +411,7 @@ test_rename ()
 
   /* Test rename */
   errno = 0;
-  ret = rename (FILENAME, RENAMED);
+  ret = rename (OUTDIR FILENAME, OUTDIR RENAMED);
   if (!ret)
     {
       errno = 0;
@@ -407,7 +419,7 @@ test_rename ()
       if (ret && errno == ENOENT)
         {
 	  errno = 0;
-	  ret = stat (RENAMED, &st);
+	  ret = stat (OUTDIR RENAMED, &st);
 	  printf ("rename 1: ret = %d, errno = %d %s\n", ret, errno,
 		  strerrno (errno));
 	  errno = 0;
@@ -420,50 +432,50 @@ test_rename ()
   stop ();
   /* newpath is existing directory, oldpath is not a directory */
   errno = 0;
-  ret = rename (RENAMED, TESTDIR2);
+  ret = rename (OUTDIR RENAMED, OUTDIR TESTDIR2);
   printf ("rename 2: ret = %d, errno = %d %s\n", ret, errno,
 	  strerrno (errno));
   stop ();
   /* newpath is a non-empty directory */
   errno = 0;
-  ret = rename (TESTDIR2, TESTDIR1);
+  ret = rename (OUTDIR TESTDIR2, OUTDIR TESTDIR1);
   printf ("rename 3: ret = %d, errno = %d %s\n", ret, errno,
           strerrno (errno));
   stop ();
   /* newpath is a subdirectory of old path */
   errno = 0;
-  ret = rename (TESTDIR1, TESTSUBDIR);
+  ret = rename (OUTDIR TESTDIR1, OUTDIR TESTSUBDIR);
   printf ("rename 4: ret = %d, errno = %d %s\n", ret, errno,
 	  strerrno (errno));
   stop ();
   /* oldpath does not exist */
   errno = 0;
-  ret = rename (NONEXISTANT, FILENAME);
+  ret = rename (OUTDIR NONEXISTANT, OUTDIR FILENAME);
   printf ("rename 5: ret = %d, errno = %d %s\n", ret, errno,
 	  strerrno (errno));
   stop ();
 }
 
+char name[1256];
+
 int
 test_unlink ()
 {
   int ret;
-  char name[256];
-  char sys[512];
 
   /* Test unlink */
   errno = 0;
-  ret = unlink (RENAMED);
+  ret = unlink (OUTDIR RENAMED);
   printf ("unlink 1: ret = %d, errno = %d %s\n", ret, errno,
 	  strerrno (errno));
   stop ();
   /* No write access */
-  sprintf (name, "%s/%s", TESTDIR2, FILENAME);
+  sprintf (name, "%s/%s/%s", OUTDIR, TESTDIR2, FILENAME);
   errno = 0;
   ret = open (name, O_CREAT | O_RDONLY, S_IRUSR | S_IWUSR);
   if (ret >= 0)
     {
-      sprintf (sys, "chmod -w %s", TESTDIR2);
+      sprintf (sys, "chmod -w %s/%s", OUTDIR, TESTDIR2);
       ret = system (sys);
       if (!ret)
         {
@@ -480,7 +492,7 @@ test_unlink ()
   stop ();
   /* pathname doesn't exist */
   errno = 0;
-  ret = unlink (NONEXISTANT);
+  ret = unlink (OUTDIR NONEXISTANT);
   printf ("unlink 3: ret = %d, errno = %d %s\n", ret, errno,
           strerrno (errno));
   stop ();

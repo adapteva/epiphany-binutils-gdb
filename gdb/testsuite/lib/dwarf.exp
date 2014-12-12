@@ -1,4 +1,4 @@
-# Copyright 2010-2013 Free Software Foundation, Inc.
+# Copyright 2010-2014 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +24,63 @@ proc dwarf2_support {} {
 	|| [istarget arm*-*-symbianelf*]
 	|| [istarget powerpc-*-eabi*]} {
 	return 1
+    }
+
+    return 0
+}
+
+# Build an executable from a fission-based .S file.
+# This handles the extra work of splitting the .o into non-dwo and dwo
+# pieces, making sure the .dwo is available if we're using cc-with-tweaks.sh
+# to build a .dwp file.
+# The arguments and results are the same as for build_executable.
+#
+# Current restrictions:
+# - only supports one source file
+# - cannot be run on remote hosts
+
+proc build_executable_from_fission_assembler { testname executable sources options } {
+    verbose -log "build_executable_from_fission_assembler $testname $executable $sources $options"
+    if { [llength $sources] != 1 } {
+	error "Only one source file supported."
+    }
+    if [is_remote host] {
+	error "Remote hosts are not supported."
+    }
+
+    global srcdir subdir
+    set source_file ${srcdir}/${subdir}/${sources}
+    set root_name [file rootname [file tail $source_file]]
+    set output_base [standard_output_file $root_name]
+    set object_file ${output_base}.o
+    set dwo_file ${output_base}.dwo
+    set object_options "object $options"
+    set objcopy [gdb_find_objcopy]
+
+    set result [gdb_compile $source_file $object_file object $options]
+    if { "$result" != "" } {
+	return -1
+    }
+
+    set command "$objcopy --extract-dwo $object_file $dwo_file"
+    verbose -log "Executing $command"
+    set result [catch "exec $command" output]
+    verbose -log "objcopy --extract-dwo output: $output"
+    if { $result == 1 } {
+	return -1
+    }
+
+    set command "$objcopy --strip-dwo $object_file"
+    verbose -log "Executing $command"
+    set result [catch "exec $command" output]
+    verbose -log "objcopy --strip-dwo output: $output"
+    if { $result == 1 } {
+	return -1
+    }
+
+    set result [gdb_compile $object_file $executable executable {nodebug}]
+    if { "$result" != "" } {
+	return -1
     }
 
     return 0
@@ -466,20 +523,27 @@ namespace eval Dwarf {
 	}
     }
 
-    proc _section {name} {
-	_emit "        .section $name"
+    proc _section {name {flags ""} {type ""}} {
+	if {$flags == "" && $type == ""} {
+	    _emit "        .section $name"
+	} elseif {$type == ""} {
+	    _emit "        .section $name, \"$flags\""
+	} else {
+	    _emit "        .section $name, \"$flags\", %$type"
+	}
     }
 
-    proc _defer_output {section body} {
+    # SECTION_SPEC is a list of arguments to _section.
+    proc _defer_output {section_spec body} {
 	variable _defer
 	variable _deferred_output
 
 	set old_defer $_defer
-	set _defer $section
+	set _defer [lindex $section_spec 0]
 
 	if {![info exists _deferred_output($_defer)]} {
 	    set _deferred_output($_defer) ""
-	    _section $section
+	    eval _section $section_spec
 	}
 
 	uplevel $body
@@ -652,8 +716,17 @@ namespace eval Dwarf {
 		    _op .sleb128 [lindex $line 1]
 		}
 
+		DW_OP_plus_uconst {
+		    _op .uleb128 [lindex $line 1]
+		}
+
 		DW_OP_piece {
 		    _op .uleb128 [lindex $line 1]
+		}
+
+		DW_OP_bit_piece {
+		    _op .uleb128 [lindex $line 1]
+		    _op .uleb128 [lindex $line 2]
 		}
 
 		DW_OP_GNU_implicit_pointer {
@@ -889,6 +962,51 @@ namespace eval Dwarf {
 	catch {unset the_array}
 	set the_array(_) {}
 	unset the_array(_)
+    }
+
+    # Emit a .gnu_debugaltlink section with the given file name and
+    # build-id.  The buildid should be represented as a hexadecimal
+    # string, like "ffeeddcc".
+    proc gnu_debugaltlink {filename buildid} {
+	_defer_output .gnu_debugaltlink {
+	    _op .ascii [_quote $filename]
+	    foreach {a b} [split $buildid {}] {
+		_op .byte 0x$a$b
+	    }
+	}
+    }
+
+    proc _note {type name hexdata} {
+	set namelen [expr [string length $name] + 1]
+
+	# Name size.
+	_op .4byte $namelen
+	# Data size.
+	_op .4byte [expr [string length $hexdata] / 2]
+	# Type.
+	_op .4byte $type
+	# The name.
+	_op .ascii [_quote $name]
+	# Alignment.
+	set align 2
+	set total [expr {($namelen + (1 << $align) - 1) & (-1 << $align)}]
+	for {set i $namelen} {$i < $total} {incr i} {
+	    _op .byte 0
+	}
+	# The data.
+	foreach {a b} [split $hexdata {}] {
+	    _op .byte 0x$a$b
+	}
+    }
+
+    # Emit a note section holding the given build-id.
+    proc build_id {buildid} {
+	_defer_output {.note.gnu.build-id a note} {
+	    # From elf/common.h.
+	    set NT_GNU_BUILD_ID 3
+
+	    _note $NT_GNU_BUILD_ID GNU $buildid
+	}
     }
 
     # The top-level interface to the DWARF assembler.

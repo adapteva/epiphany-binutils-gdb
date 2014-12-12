@@ -1,7 +1,6 @@
 /* BFD library -- caching of file descriptors.
 
-   Copyright 1990, 1991, 1992, 1993, 1994, 1996, 2000, 2001, 2002,
-   2003, 2004, 2005, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
 
    Hacked by Steve Chamberlain of Cygnus Support (steve@cygnus.com).
 
@@ -82,7 +81,7 @@ bfd_cache_max_open (void)
 #ifdef HAVE_GETRLIMIT
       struct rlimit rlim;
       if (getrlimit (RLIMIT_NOFILE, &rlim) == 0
-	  && rlim.rlim_cur != RLIM_INFINITY)
+	  && rlim.rlim_cur != (rlim_t) RLIM_INFINITY)
 	max = rlim.rlim_cur / 8;
       else
 #endif /* HAVE_GETRLIMIT */

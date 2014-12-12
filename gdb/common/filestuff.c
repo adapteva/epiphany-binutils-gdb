@@ -1,5 +1,5 @@
 /* Low-level file-handling.
-   Copyright (C) 2012, 2013 Free Software Foundation, Inc.
+   Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,7 +20,7 @@
 #include "server.h"
 #else
 #include "defs.h"
-#include "gdb_string.h"
+#include <string.h>
 #endif
 #include "filestuff.h"
 #include "gdb_vecs.h"
@@ -29,7 +29,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "gdb_stat.h"
+#include <sys/stat.h>
 
 #ifdef USE_WIN32API
 #include <winsock2.h>
@@ -58,7 +58,7 @@
 
 #ifndef HAVE_FDWALK
 
-#include "gdb_dirent.h"
+#include <dirent.h>
 
 /* Replacement for fdwalk, if the system doesn't define it.  Walks all
    open file descriptors (though this implementation may walk closed
@@ -115,7 +115,7 @@ fdwalk (int (*func) (void *, int), void *arg)
   {
     int max, fd;
 
-#ifdef HAVE_GETRLIMIT
+#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_NOFILE)
     struct rlimit rlim;
 
     if (getrlimit (RLIMIT_NOFILE, &rlim) == 0 && rlim.rlim_max != RLIM_INFINITY)
@@ -310,16 +310,16 @@ gdb_open_cloexec (const char *filename, int flags, unsigned long mode)
 FILE *
 gdb_fopen_cloexec (const char *filename, const char *opentype)
 {
-  FILE *result = NULL;
+  FILE *result;
   /* Probe for "e" support once.  But, if we can tell the operating
      system doesn't know about close on exec mode "e" without probing,
      skip it.  E.g., the Windows runtime issues an "Invalid parameter
      passed to C runtime function" OutputDebugString warning for
      unknown modes.  Assume that if O_CLOEXEC is zero, then "e" isn't
      supported.  */
-  static int fopen_e_ever_failed = O_CLOEXEC == 0;
+  static int fopen_e_ever_failed_einval = O_CLOEXEC == 0;
 
-  if (!fopen_e_ever_failed)
+  if (!fopen_e_ever_failed_einval)
     {
       char *copy;
 
@@ -329,15 +329,16 @@ gdb_fopen_cloexec (const char *filename, const char *opentype)
 	 this path.  */
       strcat (copy, "e");
       result = fopen (filename, copy);
-    }
 
-  if (result == NULL)
-    {
-      /* Fallback.  */
-      result = fopen (filename, opentype);
-      if (result != NULL)
-	fopen_e_ever_failed = 1;
+      if (result == NULL && errno == EINVAL)
+	{
+	  result = fopen (filename, opentype);
+	  if (result != NULL)
+	    fopen_e_ever_failed_einval = 1;
+	}
     }
+  else
+    result = fopen (filename, opentype);
 
   if (result != NULL)
     maybe_mark_cloexec (fileno (result));

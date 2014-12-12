@@ -1,4 +1,4 @@
-/* Copyright (C) 2011-2013 Free Software Foundation, Inc.
+/* Copyright (C) 2011-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -83,9 +83,10 @@ struct buffer;
 #define __WALL          0x40000000 /* Wait for any child.  */
 #endif
 
-extern void linux_ptrace_attach_warnings (pid_t pid, struct buffer *buffer);
+extern void linux_ptrace_attach_fail_reason (pid_t pid, struct buffer *buffer);
 extern void linux_ptrace_init_warnings (void);
 extern void linux_enable_event_reporting (pid_t pid);
+extern void linux_disable_event_reporting (pid_t pid);
 extern int linux_supports_tracefork (void);
 extern int linux_supports_traceclone (void);
 extern int linux_supports_tracevforkdone (void);

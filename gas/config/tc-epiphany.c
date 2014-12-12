@@ -1,5 +1,5 @@
 /* tc-epiphany.c -- Assembler for the Adapteva EPIPHANY
-   Copyright 2009, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
    Contributed by Embecosm on behalf of Adapteva, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -365,7 +365,7 @@ epiphany_handle_align (fragS *fragp)
 
    Additionnally, we check for .word symbol@PLT and set the relocation type.  */
 
-void
+bfd_reloc_code_real_type
 epiphany_parse_cons_expression (expressionS *exp,
 				int nbytes)
 {
@@ -377,6 +377,7 @@ epiphany_parse_cons_expression (expressionS *exp,
       exp->X_md = BFD_RELOC_EPIPHANY_CACHE32;
       input_line_pointer += 4;
     }
+  return BFD_RELOC_NONE;
 }
 
 /* Create a fixup for a cons expression. If epiphany_parse_cons_expression
@@ -386,10 +387,9 @@ void
 epiphany_cons_fix_new (fragS *frag,
 		  int where,
 		  int nbytes,
-		  expressionS *exp)
+		  expressionS *exp,
+		  bfd_reloc_code_real_type r)
 {
-  bfd_reloc_code_real_type r;
-
   if (exp->X_md == BFD_RELOC_EPIPHANY_CACHE32)
     r = BFD_RELOC_EPIPHANY_CACHE32;
   else
@@ -960,6 +960,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
     case EPIPHANY_RELAX_LDST_IMM3:
       addend = ((addend & 7) << 5) | opcode[0];
       opindx = EPIPHANY_OPERAND_DISP3;
+      break;
 
     case EPIPHANY_RELAX_BRANCH_SHORT:
       addend >>= 1;		/* Convert to a word offset.  */

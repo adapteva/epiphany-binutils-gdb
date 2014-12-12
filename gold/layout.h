@@ -1,7 +1,6 @@
 // layout.h -- lay out output file sections for gold  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
-// Free Software Foundation, Inc.
+// Copyright (C) 2006-2014 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -1524,10 +1523,10 @@ class Write_symbols_task : public Task
 {
  public:
   Write_symbols_task(const Layout* layout, const Symbol_table* symtab,
-		     const Input_objects* input_objects,
+		     const Input_objects* /*input_objects*/,
 		     const Stringpool* sympool, const Stringpool* dynpool,
 		     Output_file* of, Task_token* final_blocker)
-    : layout_(layout), symtab_(symtab), input_objects_(input_objects),
+    : layout_(layout), symtab_(symtab),
       sympool_(sympool), dynpool_(dynpool), of_(of),
       final_blocker_(final_blocker)
   { }
@@ -1550,7 +1549,6 @@ class Write_symbols_task : public Task
  private:
   const Layout* layout_;
   const Symbol_table* symtab_;
-  const Input_objects* input_objects_;
   const Stringpool* sympool_;
   const Stringpool* dynpool_;
   Output_file* of_;

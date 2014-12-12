@@ -1,5 +1,5 @@
 /* Register support routines for the remote server for GDB.
-   Copyright (C) 2001-2013 Free Software Foundation, Inc.
+   Copyright (C) 2001-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,7 +19,6 @@
 #ifndef REGCACHE_H
 #define REGCACHE_H
 
-struct inferior_list_entry;
 struct thread_info;
 struct target_desc;
 

@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux m32r.
 
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -27,7 +27,7 @@
 #include "reggroups.h"
 #include "regset.h"
 
-#include "gdb_string.h"
+#include <string.h>
 
 #include "glibc-tdep.h"
 #include "solib-svr4.h"
@@ -388,7 +388,7 @@ m32r_linux_supply_gregset (const struct regset *regset,
     }
 }
 
-static struct regset m32r_linux_gregset = {
+static const struct regset m32r_linux_gregset = {
   NULL, m32r_linux_supply_gregset
 };
 

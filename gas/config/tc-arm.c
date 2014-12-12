@@ -1,5 +1,5 @@
 /* tc-arm.c -- Assemble for the ARM
-   Copyright 1994-2013 Free Software Foundation, Inc.
+   Copyright (C) 1994-2014 Free Software Foundation, Inc.
    Contributed by Richard Earnshaw (rwe@pegasus.esprit.ec.org)
 	Modified by David Taylor (dtaylor@armltd.co.uk)
 	Cirrus coprocessor mods by Aldy Hernandez (aldyh@redhat.com)
@@ -137,6 +137,8 @@ static int fix_v4bx	     = FALSE;
 /* Warn on using deprecated features.  */
 static int warn_on_deprecated = TRUE;
 
+/* Understand CodeComposer Studio assembly syntax.  */
+bfd_boolean codecomposer_syntax = FALSE;
 
 /* Variables that we set while parsing command-line options.  Once all
    options have been read we re-process these values to set the real
@@ -795,6 +797,15 @@ typedef struct literal_pool
 /* Pointer to a linked list of literal pools.  */
 literal_pool * list_of_pools = NULL;
 
+typedef enum asmfunc_states
+{
+  OUTSIDE_ASMFUNC,
+  WAITING_ASMFUNC_NAME,
+  WAITING_ENDASMFUNC
+} asmfunc_states;
+
+static asmfunc_states asmfunc_state = OUTSIDE_ASMFUNC;
+
 #ifdef OBJ_ELF
 #  define now_it seg_info (now_seg)->tc_segment_info_data.current_it
 #else
@@ -853,7 +864,7 @@ static void it_fsm_post_encode (void);
 
 /* This array holds the chars that always start a comment.  If the
    pre-processor is disabled, these aren't very useful.	 */
-const char comment_chars[] = "@";
+char arm_comment_chars[] = "@";
 
 /* This array holds the chars that only start a comment at the beginning of
    a line.  If the line seems to have the form '# 123 filename'
@@ -864,7 +875,7 @@ const char comment_chars[] = "@";
 /* Also note that comments like this one will always work.  */
 const char line_comment_chars[] = "#";
 
-const char line_separator_chars[] = ";";
+char arm_line_separator_chars[] = ";";
 
 /* Chars that can be used to separate mant
    from exp in floating point numbers.	*/
@@ -3012,6 +3023,104 @@ s_even (int ignore ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
+/* Directives: CodeComposer Studio.  */
+
+/*  .ref  (for CodeComposer Studio syntax only).  */
+static void
+s_ccs_ref (int unused ATTRIBUTE_UNUSED)
+{
+  if (codecomposer_syntax)
+    ignore_rest_of_line ();
+  else
+    as_bad (_(".ref pseudo-op only available with -mccs flag."));
+}
+
+/*  If name is not NULL, then it is used for marking the beginning of a
+    function, wherease if it is NULL then it means the function end.  */
+static void
+asmfunc_debug (const char * name)
+{
+  static const char * last_name = NULL;
+
+  if (name != NULL)
+    {
+      gas_assert (last_name == NULL);
+      last_name = name;
+
+      if (debug_type == DEBUG_STABS)
+         stabs_generate_asm_func (name, name);
+    }
+  else
+    {
+      gas_assert (last_name != NULL);
+
+      if (debug_type == DEBUG_STABS)
+        stabs_generate_asm_endfunc (last_name, last_name);
+
+      last_name = NULL;
+    }
+}
+
+static void
+s_ccs_asmfunc (int unused ATTRIBUTE_UNUSED)
+{
+  if (codecomposer_syntax)
+    {
+      switch (asmfunc_state)
+	{
+	case OUTSIDE_ASMFUNC:
+	  asmfunc_state = WAITING_ASMFUNC_NAME;
+	  break;
+
+	case WAITING_ASMFUNC_NAME:
+	  as_bad (_(".asmfunc repeated."));
+	  break;
+
+	case WAITING_ENDASMFUNC:
+	  as_bad (_(".asmfunc without function."));
+	  break;
+	}
+      demand_empty_rest_of_line ();
+    }
+  else
+    as_bad (_(".asmfunc pseudo-op only available with -mccs flag."));
+}
+
+static void
+s_ccs_endasmfunc (int unused ATTRIBUTE_UNUSED)
+{
+  if (codecomposer_syntax)
+    {
+      switch (asmfunc_state)
+	{
+	case OUTSIDE_ASMFUNC:
+	  as_bad (_(".endasmfunc without a .asmfunc."));
+	  break;
+
+	case WAITING_ASMFUNC_NAME:
+	  as_bad (_(".endasmfunc without function."));
+	  break;
+
+	case WAITING_ENDASMFUNC:
+	  asmfunc_state = OUTSIDE_ASMFUNC;
+	  asmfunc_debug (NULL);
+	  break;
+	}
+      demand_empty_rest_of_line ();
+    }
+  else
+    as_bad (_(".endasmfunc pseudo-op only available with -mccs flag."));
+}
+
+static void
+s_ccs_def (int name)
+{
+  if (codecomposer_syntax)
+    s_globl (name);
+  else
+    as_bad (_(".def pseudo-op only available with -mccs flag."));
+}
+
 /* Directives: Literal pools.  */
 
 static literal_pool *
@@ -3128,6 +3237,32 @@ add_to_lit_pool (void)
   return SUCCESS;
 }
 
+bfd_boolean
+tc_start_label_without_colon (char unused1 ATTRIBUTE_UNUSED, const char * rest)
+{
+  bfd_boolean ret = TRUE;
+
+  if (codecomposer_syntax && asmfunc_state == WAITING_ASMFUNC_NAME)
+    {
+      const char *label = rest;
+
+      while (!is_end_of_line[(int) label[-1]])
+	--label;
+
+      if (*label == '.')
+	{
+	  as_bad (_("Invalid label '%s'"), label);
+	  ret = FALSE;
+	}
+
+      asmfunc_debug (label);
+
+      asmfunc_state = WAITING_ENDASMFUNC;
+    }
+
+  return ret;
+}
+
 /* Can't use symbol_new here, so have to create a symbol and then at
    a later date assign it a value. Thats what these functions do.  */
 
@@ -3193,8 +3328,6 @@ s_ltorg (int ignored ATTRIBUTE_UNUSED)
       || pool->next_free_entry == 0)
     return;
 
-  mapping_state (MAP_DATA);
-
   /* Align pool as you have word accesses.
      Only make a frag if we have to.  */
   if (!need_pass_2)
@@ -3202,6 +3335,10 @@ s_ltorg (int ignored ATTRIBUTE_UNUSED)
 
   record_alignment (now_seg, 2);
 
+#ifdef OBJ_ELF
+  seg_info (now_seg)->tc_segment_info_data.mapstate = MAP_DATA;
+  make_mapping_symbol (MAP_DATA, (valueT) frag_now_fix (), frag_now);
+#endif
   sprintf (sym_name, "$$lit_\002%x", pool->id);
 
   symbol_locate (pool->symbol, sym_name, now_seg,
@@ -4134,15 +4271,24 @@ s_arm_unwind_save (int arch_v6)
       s_arm_unwind_save_fpa (reg->number);
       return;
 
-    case REG_TYPE_RN:	  s_arm_unwind_save_core ();   return;
+    case REG_TYPE_RN:
+      s_arm_unwind_save_core ();
+      return;
+
     case REG_TYPE_VFD:
       if (arch_v6)
 	s_arm_unwind_save_vfp_armv6 ();
       else
 	s_arm_unwind_save_vfp ();
       return;
-    case REG_TYPE_MMXWR:  s_arm_unwind_save_mmxwr ();  return;
-    case REG_TYPE_MMXWCG: s_arm_unwind_save_mmxwcg (); return;
+
+    case REG_TYPE_MMXWR:
+      s_arm_unwind_save_mmxwr ();
+      return;
+
+    case REG_TYPE_MMXWCG:
+      s_arm_unwind_save_mmxwcg ();
+      return;
 
     default:
       as_bad (_(".unwind_save does not support this kind of register"));
@@ -4477,6 +4623,13 @@ const pseudo_typeS md_pseudo_table[] =
 #ifdef TE_PE
   {"secrel32", pe_directive_secrel, 0},
 #endif
+
+  /* These are for compatibility with CodeComposer Studio.  */
+  {"ref",          s_ccs_ref,        0},
+  {"def",          s_ccs_def,        0},
+  {"asmfunc",      s_ccs_asmfunc,    0},
+  {"endasmfunc",   s_ccs_endasmfunc, 0},
+
   { 0, 0, 0 }
 };
 
@@ -11267,7 +11420,8 @@ do_t_mvn_tst (void)
 	  || inst.operands[1].shifted
 	  || Rn > 7 || Rm > 7)
 	narrow = FALSE;
-      else if (inst.instruction == T_MNEM_cmn)
+      else if (inst.instruction == T_MNEM_cmn
+	       || inst.instruction == T_MNEM_tst)
 	narrow = TRUE;
       else if (THUMB_SETS_FLAGS (inst.instruction))
 	narrow = !in_it_block ();
@@ -11671,12 +11825,11 @@ do_t_push_pop (void)
 	      _("expression too complex"));
 
   mask = inst.operands[0].imm;
-  if ((mask & ~0xff) == 0)
+  if (inst.size_req != 4 && (mask & ~0xff) == 0)
     inst.instruction = THUMB_OP16 (inst.instruction) | mask;
-  else if ((inst.instruction == T_MNEM_push
-	    && (mask & ~0xff) == 1 << REG_LR)
-	   || (inst.instruction == T_MNEM_pop
-	       && (mask & ~0xff) == 1 << REG_PC))
+  else if (inst.size_req != 4
+	   && (mask & ~0xff) == (1 << (inst.instruction == T_MNEM_push
+				       ? REG_LR : REG_PC)))
     {
       inst.instruction = THUMB_OP16 (inst.instruction);
       inst.instruction |= THUMB_PP_PC_LR;
@@ -14671,7 +14824,7 @@ do_vfp_nsyn_cvt_fpv8 (enum neon_cvt_flavour flavour,
     {
     case neon_cvt_flavour_s32_f64:
       sz = 1;
-      op = 0;
+      op = 1;
       break;
     case neon_cvt_flavour_s32_f32:
       sz = 0;
@@ -20841,7 +20994,7 @@ start_unwind_section (const segT text_seg, int idx)
 
 /* Start an unwind table entry.	 HAVE_DATA is nonzero if we have additional
    personality routine data.  Returns zero, or the index table value for
-   and inline entry.  */
+   an inline entry.  */
 
 static valueT
 create_unwind_entry (int have_data)
@@ -20912,7 +21065,12 @@ create_unwind_entry (int have_data)
     }
   else
     {
-      gas_assert (unwind.personality_index == -1);
+      /* PR 16765: Missing or misplaced unwind directives can trigger this.  */
+      if (unwind.personality_index != -1)
+	{
+	  as_bad (_("attempt to recreate an unwind entry"));
+	  return 1;
+	}
 
       /* An extra byte is required for the opcode count.	*/
       size = unwind.opcode_count + 1;
@@ -21019,11 +21177,19 @@ int
 tc_arm_regname_to_dw2regnum (char *regname)
 {
   int reg = arm_reg_parse (&regname, REG_TYPE_RN);
+  if (reg != FAIL)
+    return reg;
 
-  if (reg == FAIL)
-    return -1;
+  /* PR 16694: Allow VFP registers as well.  */
+  reg = arm_reg_parse (&regname, REG_TYPE_VFS);
+  if (reg != FAIL)
+    return 64 + reg;
 
-  return reg;
+  reg = arm_reg_parse (&regname, REG_TYPE_VFD);
+  if (reg != FAIL)
+    return reg + 256;
+
+  return -1;
 }
 
 #ifdef TE_PE
@@ -22995,9 +23161,9 @@ void
 cons_fix_new_arm (fragS *	frag,
 		  int		where,
 		  int		size,
-		  expressionS * exp)
+		  expressionS * exp,
+		  bfd_reloc_code_real_type reloc)
 {
-  bfd_reloc_code_real_type type;
   int pcrel = 0;
 
   /* Pick a reloc.
@@ -23005,17 +23171,17 @@ cons_fix_new_arm (fragS *	frag,
   switch (size)
     {
     case 1:
-      type = BFD_RELOC_8;
+      reloc = BFD_RELOC_8;
       break;
     case 2:
-      type = BFD_RELOC_16;
+      reloc = BFD_RELOC_16;
       break;
     case 4:
     default:
-      type = BFD_RELOC_32;
+      reloc = BFD_RELOC_32;
       break;
     case 8:
-      type = BFD_RELOC_64;
+      reloc = BFD_RELOC_64;
       break;
     }
 
@@ -23023,11 +23189,11 @@ cons_fix_new_arm (fragS *	frag,
   if (exp->X_op == O_secrel)
   {
     exp->X_op = O_symbol;
-    type = BFD_RELOC_32_SECREL;
+    reloc = BFD_RELOC_32_SECREL;
   }
 #endif
 
-  fix_new_exp (frag, where, (int) size, exp, pcrel, type);
+  fix_new_exp (frag, where, size, exp, pcrel, reloc);
 }
 
 #if defined (OBJ_COFF)
@@ -23997,8 +24163,7 @@ static const struct arm_cpu_option_table arm_cpus[] =
   ARM_CPU_OPT ("arm1176jzf-s",	ARM_ARCH_V6ZK,	 FPU_ARCH_VFP_V2, NULL),
   ARM_CPU_OPT ("cortex-a5",	ARM_ARCH_V7A_MP_SEC,
 						 FPU_NONE,	  "Cortex-A5"),
-  ARM_CPU_OPT ("cortex-a7",	ARM_ARCH_V7A_IDIV_MP_SEC_VIRT,
-						 FPU_ARCH_NEON_VFP_V4,
+  ARM_CPU_OPT ("cortex-a7",	ARM_ARCH_V7VE,   FPU_ARCH_NEON_VFP_V4,
 								  "Cortex-A7"),
   ARM_CPU_OPT ("cortex-a8",	ARM_ARCH_V7A_SEC,
 						 ARM_FEATURE (0, FPU_VFP_V3
@@ -24008,11 +24173,9 @@ static const struct arm_cpu_option_table arm_cpus[] =
 						 ARM_FEATURE (0, FPU_VFP_V3
 							| FPU_NEON_EXT_V1),
 								  "Cortex-A9"),
-  ARM_CPU_OPT ("cortex-a12",	ARM_ARCH_V7A_IDIV_MP_SEC_VIRT,
-						 FPU_ARCH_NEON_VFP_V4,
+  ARM_CPU_OPT ("cortex-a12",	ARM_ARCH_V7VE,   FPU_ARCH_NEON_VFP_V4,
 								  "Cortex-A12"),
-  ARM_CPU_OPT ("cortex-a15",	ARM_ARCH_V7A_IDIV_MP_SEC_VIRT,
-						 FPU_ARCH_NEON_VFP_V4,
+  ARM_CPU_OPT ("cortex-a15",	ARM_ARCH_V7VE,   FPU_ARCH_NEON_VFP_V4,
 								  "Cortex-A15"),
   ARM_CPU_OPT ("cortex-a53",    ARM_ARCH_V8A,    FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,
 								  "Cortex-A53"),
@@ -24093,6 +24256,7 @@ static const struct arm_arch_option_table arm_archs[] =
   /* The official spelling of the ARMv7 profile variants is the dashed form.
      Accept the non-dashed form for compatibility with old toolchains.  */
   ARM_ARCH_OPT ("armv7a",	ARM_ARCH_V7A,	 FPU_ARCH_VFP),
+  ARM_ARCH_OPT ("armv7ve",	ARM_ARCH_V7VE,	 FPU_ARCH_VFP),
   ARM_ARCH_OPT ("armv7r",	ARM_ARCH_V7R,	 FPU_ARCH_VFP),
   ARM_ARCH_OPT ("armv7m",	ARM_ARCH_V7M,	 FPU_ARCH_VFP),
   ARM_ARCH_OPT ("armv7-a",	ARM_ARCH_V7A,	 FPU_ARCH_VFP),
@@ -24508,6 +24672,15 @@ arm_parse_it_mode (char * str)
   return ret;
 }
 
+static bfd_boolean
+arm_ccs_mode (char * unused ATTRIBUTE_UNUSED)
+{
+  codecomposer_syntax = TRUE;
+  arm_comment_chars[0] = ';';
+  arm_line_separator_chars[0] = 0;
+  return TRUE;
+}
+
 struct arm_long_option_table arm_long_opts[] =
 {
   {"mcpu=", N_("<cpu name>\t  assemble for CPU <cpu name>"),
@@ -24524,6 +24697,8 @@ struct arm_long_option_table arm_long_opts[] =
 #endif
   {"mimplicit-it=", N_("<mode>\t  controls implicit insertion of IT instructions"),
    arm_parse_it_mode, NULL},
+  {"mccs", N_("\t\t\t  TI CodeComposer Studio syntax compatibility mode"),
+   arm_ccs_mode, NULL},
   {NULL, NULL, 0, NULL}
 };
 
@@ -24672,7 +24847,7 @@ static const cpu_arch_ver_table cpu_arch_ver[] =
     {11, ARM_ARCH_V6M},
     {12, ARM_ARCH_V6SM},
     {8, ARM_ARCH_V6T2},
-    {10, ARM_ARCH_V7A_IDIV_MP_SEC_VIRT},
+    {10, ARM_ARCH_V7VE},
     {10, ARM_ARCH_V7R},
     {10, ARM_ARCH_V7M},
     {14, ARM_ARCH_V8A},

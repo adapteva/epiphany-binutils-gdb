@@ -16,7 +16,7 @@
 @SET_MAKE@
 
 #
-#   Copyright 2012 Free Software Foundation
+#   Copyright (C) 2012-2014 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -325,7 +325,9 @@ EXTRA_DIST = $(BUILT_SOURCES) bbconv.pl $(man_MANS)
 
 # We extract version from bfd/configure.in, make sure to rerun configure
 # when BFD's version changes.
-CONFIG_STATUS_DEPENDENCIES = $(BFDDIR)/configure.in
+CONFIG_STATUS_DEPENDENCIES = $(BFDDIR)/configure.in \
+	$(BFDDIR)/development.sh
+
 POTFILES = $(sources) $(noinst_HEADERS)
 MANCONF = -Dman
 TEXI2POD = perl $(srcdir)/../etc/texi2pod.pl $(AM_MAKEINFOFLAGS)
@@ -1042,9 +1044,9 @@ diststuff: $(BUILT_SOURCES) info $(man_MANS)
 %.o:%.m
 
 .m.c:
-	awk -f $(srcdir)/gen-c-prog.awk > ./$*.c \
+	awk -f $(srcdir)/gen-c-prog.awk > $@ \
 	    FUNCTION=`(echo $*|sed -e 's,.*/,,g' -e 's/_bl//')`_blurb \
-	    FILE=$*.m $(srcdir)/$*.m
+	    FILE=$*.m $<
 po/POTFILES.in: @MAINT@ Makefile
 	for f in $(POTFILES); do echo $$f; done | LC_ALL=C sort > tmp \
 	  && mv tmp $(srcdir)/po/POTFILES.in

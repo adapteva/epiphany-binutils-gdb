@@ -1,5 +1,5 @@
 /* TI C6X assembler.
-   Copyright 2010-2013 Free Software Foundation, Inc.
+   Copyright (C) 2010-2014 Free Software Foundation, Inc.
    Contributed by Joseph Myers <joseph@codesourcery.com>
    		  Bernd Schmidt  <bernds@codesourcery.com>
 
@@ -2012,10 +2012,9 @@ tic6x_fix_new_exp (fragS *frag, int where, int size, expressionS *exp,
    go through the error checking in tic6x_fix_new_exp.  */
 
 void
-tic6x_cons_fix_new (fragS *frag, int where, int size, expressionS *exp)
+tic6x_cons_fix_new (fragS *frag, int where, int size, expressionS *exp,
+		    bfd_reloc_code_real_type r_type)
 {
-  bfd_reloc_code_real_type r_type;
-
   switch (size)
     {
     case 1:

@@ -1,6 +1,6 @@
 /* Ada Ravenscar thread support.
 
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,10 +26,11 @@
 #include "command.h"
 #include "ravenscar-thread.h"
 #include "observer.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "gdbcmd.h"
 #include "top.h"
 #include "regcache.h"
+#include "objfiles.h"
 
 /* If non-null, ravenscar task support is enabled.  */
 static int ravenscar_task_support = 1;
@@ -52,17 +53,17 @@ static const char first_task_name[] = "system__tasking__debug__first_task";
 static const char ravenscar_runtime_initializer[] =
   "system__bb__threads__initialize";
 
-static struct observer *update_target_observer = NULL;
-
 static void ravenscar_find_new_threads (struct target_ops *ops);
 static ptid_t ravenscar_running_thread (void);
-static char *ravenscar_extra_thread_info (struct thread_info *tp);
+static char *ravenscar_extra_thread_info (struct target_ops *self,
+					  struct thread_info *tp);
 static int ravenscar_thread_alive (struct target_ops *ops, ptid_t ptid);
 static void ravenscar_fetch_registers (struct target_ops *ops,
                                        struct regcache *regcache, int regnum);
 static void ravenscar_store_registers (struct target_ops *ops,
                                        struct regcache *regcache, int regnum);
-static void ravenscar_prepare_to_store (struct regcache *regcache);
+static void ravenscar_prepare_to_store (struct target_ops *self,
+					struct regcache *regcache);
 static void ravenscar_resume (struct target_ops *ops, ptid_t ptid, int step,
 			      enum gdb_signal siggnal);
 static void ravenscar_mourn_inferior (struct target_ops *ops);
@@ -102,13 +103,13 @@ ravenscar_update_inferior_ptid (void)
    and return its associated minimal symbol.
    Return NULL if not found.  */
 
-static struct minimal_symbol *
+static struct bound_minimal_symbol
 get_running_thread_msymbol (void)
 {
-  struct minimal_symbol *msym;
+  struct bound_minimal_symbol msym;
 
   msym = lookup_minimal_symbol (running_thread_name, NULL, NULL);
-  if (!msym)
+  if (!msym.minsym)
     /* Older versions of the GNAT runtime were using a different
        (less ideal) name for the symbol where the active thread ID
        is stored.  If we couldn't find the symbol using the latest
@@ -124,17 +125,18 @@ get_running_thread_msymbol (void)
 static int
 has_ravenscar_runtime (void)
 {
-  struct minimal_symbol *msym_ravenscar_runtime_initializer =
+  struct bound_minimal_symbol msym_ravenscar_runtime_initializer =
     lookup_minimal_symbol (ravenscar_runtime_initializer, NULL, NULL);
-  struct minimal_symbol *msym_known_tasks =
+  struct bound_minimal_symbol msym_known_tasks =
     lookup_minimal_symbol (known_tasks_name, NULL, NULL);
-  struct minimal_symbol *msym_first_task =
+  struct bound_minimal_symbol msym_first_task =
     lookup_minimal_symbol (first_task_name, NULL, NULL);
-  struct minimal_symbol *msym_running_thread = get_running_thread_msymbol ();
+  struct bound_minimal_symbol msym_running_thread
+    = get_running_thread_msymbol ();
 
-  return (msym_ravenscar_runtime_initializer
-	  && (msym_known_tasks || msym_first_task)
-	  && msym_running_thread);
+  return (msym_ravenscar_runtime_initializer.minsym
+	  && (msym_known_tasks.minsym || msym_first_task.minsym)
+	  && msym_running_thread.minsym);
 }
 
 /* Return True if the Ada Ravenscar run-time can be found in the
@@ -152,7 +154,7 @@ ravenscar_runtime_initialized (void)
 static CORE_ADDR
 get_running_thread_id (void)
 {
-  const struct minimal_symbol *object_msym = get_running_thread_msymbol ();
+  struct bound_minimal_symbol object_msym = get_running_thread_msymbol ();
   int object_size;
   int buf_size;
   gdb_byte *buf;
@@ -160,10 +162,10 @@ get_running_thread_id (void)
   struct type *builtin_type_void_data_ptr =
     builtin_type (target_gdbarch ())->builtin_data_ptr;
 
-  if (!object_msym)
+  if (!object_msym.minsym)
     return 0;
 
-  object_addr = SYMBOL_VALUE_ADDRESS (object_msym);
+  object_addr = BMSYMBOL_VALUE_ADDRESS (object_msym);
   object_size = TYPE_LENGTH (builtin_type_void_data_ptr);
   buf_size = object_size;
   buf = alloca (buf_size);
@@ -241,7 +243,7 @@ ravenscar_running_thread (void)
 }
 
 static char *
-ravenscar_extra_thread_info (struct thread_info *tp)
+ravenscar_extra_thread_info (struct target_ops *self, struct thread_info *tp)
 {
   return "Ravenscar task";
 }
@@ -303,14 +305,15 @@ ravenscar_store_registers (struct target_ops *ops,
 }
 
 static void
-ravenscar_prepare_to_store (struct regcache *regcache)
+ravenscar_prepare_to_store (struct target_ops *self,
+			    struct regcache *regcache)
 {
   struct target_ops *beneath = find_target_beneath (&ravenscar_ops);
 
   if (!ravenscar_runtime_initialized ()
       || ptid_equal (inferior_ptid, base_magic_null_ptid)
       || ptid_equal (inferior_ptid, ravenscar_running_thread ()))
-    beneath->to_prepare_to_store (regcache);
+    beneath->to_prepare_to_store (beneath, regcache);
   else
     {
       struct gdbarch *gdbarch = get_regcache_arch (regcache);
@@ -349,7 +352,7 @@ ravenscar_inferior_created (struct target_ops *target, int from_tty)
 }
 
 static ptid_t
-ravenscar_get_ada_task_ptid (long lwp, long thread)
+ravenscar_get_ada_task_ptid (struct target_ops *self, long lwp, long thread)
 {
   return ptid_build (ptid_get_pid (base_ptid), 0, thread);
 }

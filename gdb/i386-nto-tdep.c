@@ -1,6 +1,6 @@
 /* Target-dependent code for QNX Neutrino x86.
 
-   Copyright (C) 2003-2013 Free Software Foundation, Inc.
+   Copyright (C) 2003-2014 Free Software Foundation, Inc.
 
    Contributed by QNX Software Systems Ltd.
 
@@ -26,7 +26,7 @@
 #include "target.h"
 
 #include "gdb_assert.h"
-#include "gdb_string.h"
+#include <string.h>
 
 #include "i386-tdep.h"
 #include "i387-tdep.h"
@@ -82,13 +82,9 @@ i386nto_supply_gregset (struct regcache *regcache, char *gpregs)
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  if(tdep->gregset == NULL)
-    tdep->gregset = regset_alloc (gdbarch, i386_supply_gregset,
-				  i386_collect_gregset);
-
   gdb_assert (tdep->gregset_reg_offset == i386nto_gregset_reg_offset);
-  tdep->gregset->supply_regset (tdep->gregset, regcache, -1,
-				gpregs, NUM_GPREGS * 4);
+  i386_gregset.supply_regset (&i386_gregset, regcache, -1,
+			      gpregs, NUM_GPREGS * 4);
 }
 
 static void

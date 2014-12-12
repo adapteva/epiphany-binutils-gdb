@@ -1,6 +1,6 @@
 /* Read a symbol table in MIPS' format (Third-Eye).
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    Contributed by Alessandro Forin (af@cs.cmu.edu) at CMU.  Major work
    by Per Bothner, John Gilmore and Ian Lance Taylor at Cygnus Support.
@@ -24,7 +24,7 @@
    mdebugread.c.  */
 
 #include "defs.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "bfd.h"
 #include "symtab.h"
 #include "objfiles.h"
@@ -367,7 +367,6 @@ read_alphacoff_dynamic_symtab (struct section_offsets *section_offsets,
 		ms_type = mst_text;
 	      else
 		ms_type = mst_file_text;
-	      sym_value += ANOFFSET (section_offsets, SECT_OFF_TEXT (objfile));
 	    }
 	  else if (sym_shndx == SHN_MIPS_DATA)
 	    {
@@ -375,7 +374,6 @@ read_alphacoff_dynamic_symtab (struct section_offsets *section_offsets,
 		ms_type = mst_data;
 	      else
 		ms_type = mst_file_data;
-	      sym_value += ANOFFSET (section_offsets, SECT_OFF_DATA (objfile));
 	    }
 	  else if (sym_shndx == SHN_MIPS_ACOMMON)
 	    {
@@ -383,7 +381,6 @@ read_alphacoff_dynamic_symtab (struct section_offsets *section_offsets,
 		ms_type = mst_bss;
 	      else
 		ms_type = mst_file_bss;
-	      sym_value += ANOFFSET (section_offsets, SECT_OFF_BSS (objfile));
 	    }
 	  else if (sym_shndx == SHN_ABS)
 	    {
@@ -405,7 +402,6 @@ read_alphacoff_dynamic_symtab (struct section_offsets *section_offsets,
 
 static const struct sym_fns ecoff_sym_fns =
 {
-  bfd_target_ecoff_flavour,
   mipscoff_new_init,		/* init anything gbl to entire symtab */
   mipscoff_symfile_init,	/* read initial info, setup for sym_read() */
   mipscoff_symfile_read,	/* read a symbol file into symtab */
@@ -425,5 +421,5 @@ void _initialize_mipsread (void);
 void
 _initialize_mipsread (void)
 {
-  add_symtab_fns (&ecoff_sym_fns);
+  add_symtab_fns (bfd_target_ecoff_flavour, &ecoff_sym_fns);
 }

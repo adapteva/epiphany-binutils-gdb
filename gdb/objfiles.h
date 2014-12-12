@@ -1,6 +1,6 @@
 /* Definitions for symbol file management in GDB.
 
-   Copyright (C) 1992-2013 Free Software Foundation, Inc.
+   Copyright (C) 1992-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -101,11 +101,17 @@ struct objfile_data;
 
 struct entry_info
   {
-    /* The relocated value we should use for this objfile entry point.  */
+    /* The unrelocated value we should use for this objfile entry point.  */
     CORE_ADDR entry_point;
+
+    /* The index of the section in which the entry point appears.  */
+    int the_bfd_section_index;
 
     /* Set to 1 iff ENTRY_POINT contains a valid value.  */
     unsigned entry_point_p : 1;
+
+    /* Set to 1 iff this object was initialized.  */
+    unsigned initialized : 1;
   };
 
 /* Sections in an objfile.  The section offsets are stored in the
@@ -145,7 +151,6 @@ struct obj_section
 
 struct objstats
   {
-    int n_minsyms;		/* Number of minimal symbols read */
     int n_psyms;		/* Number of partial symbols read */
     int n_syms;			/* Number of full symbols read */
     int n_stabs;		/* Number of ".stabs" read (if applicable) */
@@ -185,6 +190,63 @@ struct objfile_per_bfd_storage
      differ from this e.g. with respect to register types and names.  */
 
   struct gdbarch *gdbarch;
+
+  /* Hash table for mapping symbol names to demangled names.  Each
+     entry in the hash table is actually two consecutive strings,
+     both null-terminated; the first one is a mangled or linkage
+     name, and the second is the demangled name or just a zero byte
+     if the name doesn't demangle.  */
+  struct htab *demangled_names_hash;
+
+  /* The per-objfile information about the entry point, the scope (file/func)
+     containing the entry point, and the scope of the user's main() func.  */
+
+  struct entry_info ei;
+
+  /* The name and language of any "main" found in this objfile.  The
+     name can be NULL, which means that the information was not
+     recorded.  */
+
+  const char *name_of_main;
+  enum language language_of_main;
+
+  /* Each file contains a pointer to an array of minimal symbols for all
+     global symbols that are defined within the file.  The array is
+     terminated by a "null symbol", one that has a NULL pointer for the
+     name and a zero value for the address.  This makes it easy to walk
+     through the array when passed a pointer to somewhere in the middle
+     of it.  There is also a count of the number of symbols, which does
+     not include the terminating null symbol.  The array itself, as well
+     as all the data that it points to, should be allocated on the
+     objfile_obstack for this file.  */
+
+  struct minimal_symbol *msymbols;
+  int minimal_symbol_count;
+
+  /* The number of minimal symbols read, before any minimal symbol
+     de-duplication is applied.  Note in particular that this has only
+     a passing relationship with the actual size of the table above;
+     use minimal_symbol_count if you need the true size.  */
+  int n_minsyms;
+
+  /* This is true if minimal symbols have already been read.  Symbol
+     readers can use this to bypass minimal symbol reading.  Also, the
+     minimal symbol table management code in minsyms.c uses this to
+     suppress new minimal symbols.  You might think that MSYMBOLS or
+     MINIMAL_SYMBOL_COUNT could be used for this, but it is possible
+     for multiple readers to install minimal symbols into a given
+     per-BFD.  */
+
+  unsigned int minsyms_read : 1;
+
+  /* This is a hash table used to index the minimal symbols by name.  */
+
+  struct minimal_symbol *msymbol_hash[MINIMAL_SYMBOL_HASH_SIZE];
+
+  /* This hash table is used to index the minimal symbols by their
+     demangled names.  */
+
+  struct minimal_symbol *msymbol_demangled_hash[MINIMAL_SYMBOL_HASH_SIZE];
 };
 
 /* Master structure for keeping track of each file from which
@@ -205,11 +267,13 @@ struct objfile
 
     struct objfile *next;
 
-    /* The object file's name, tilde-expanded and absolute.  This
-       pointer is never NULL.  This does not have to be freed; it is
+    /* The object file's original name as specified by the user,
+       made absolute, and tilde-expanded.  However, it is not canonicalized
+       (i.e., it has not been passed through gdb_realpath).
+       This pointer is never NULL.  This does not have to be freed; it is
        guaranteed to have a lifetime at least as long as the objfile.  */
 
-    char *name;
+    char *original_name;
 
     CORE_ADDR addr_low;
 
@@ -270,40 +334,11 @@ struct objfile
 
     struct psymbol_bcache *psymbol_cache; /* Byte cache for partial syms.  */
 
-    /* Hash table for mapping symbol names to demangled names.  Each
-       entry in the hash table is actually two consecutive strings,
-       both null-terminated; the first one is a mangled or linkage
-       name, and the second is the demangled name or just a zero byte
-       if the name doesn't demangle.  */
-    struct htab *demangled_names_hash;
-
     /* Vectors of all partial symbols read in from file.  The actual data
        is stored in the objfile_obstack.  */
 
     struct psymbol_allocation_list global_psymbols;
     struct psymbol_allocation_list static_psymbols;
-
-    /* Each file contains a pointer to an array of minimal symbols for all
-       global symbols that are defined within the file.  The array is
-       terminated by a "null symbol", one that has a NULL pointer for the
-       name and a zero value for the address.  This makes it easy to walk
-       through the array when passed a pointer to somewhere in the middle
-       of it.  There is also a count of the number of symbols, which does
-       not include the terminating null symbol.  The array itself, as well
-       as all the data that it points to, should be allocated on the
-       objfile_obstack for this file.  */
-
-    struct minimal_symbol *msymbols;
-    int minimal_symbol_count;
-
-    /* This is a hash table used to index the minimal symbols by name.  */
-
-    struct minimal_symbol *msymbol_hash[MINIMAL_SYMBOL_HASH_SIZE];
-
-    /* This hash table is used to index the minimal symbols by their
-       demangled names.  */
-
-    struct minimal_symbol *msymbol_demangled_hash[MINIMAL_SYMBOL_HASH_SIZE];
 
     /* Structure which keeps track of functions that manipulate objfile's
        of the same type as this objfile.  I.e. the function to read partial
@@ -312,11 +347,6 @@ struct objfile
        object module reader of this type.  */
 
     const struct sym_fns *sf;
-
-    /* The per-objfile information about the entry point, the scope (file/func)
-       containing the entry point, and the scope of the user's main() func.  */
-
-    struct entry_info ei;
 
     /* Per objfile data-pointers required by other GDB modules.  */
 
@@ -429,14 +459,14 @@ struct objfile
 
 #define OBJF_MAINLINE (1 << 5)
 
-/* The object file that contains the runtime common minimal symbols
-   for SunOS4.  Note that this objfile has no associated BFD.  */
+/* ORIGINAL_NAME and OBFD->FILENAME correspond to text description unrelated to
+   filesystem names.  It can be for example "<image in memory>".  */
 
-extern struct objfile *rt_common_objfile;
+#define OBJF_NOT_FILENAME (1 << 6)
 
 /* Declarations for functions defined in objfiles.c */
 
-extern struct objfile *allocate_objfile (bfd *, int);
+extern struct objfile *allocate_objfile (bfd *, const char *name, int);
 
 extern struct gdbarch *get_objfile_arch (struct objfile *);
 
@@ -452,8 +482,6 @@ extern struct objfile *objfile_separate_debug_iterate (const struct objfile *,
                                                        const struct objfile *);
 
 extern void put_objfile_before (struct objfile *, struct objfile *);
-
-extern void objfile_to_front (struct objfile *);
 
 extern void add_separate_debug_objfile (struct objfile *, struct objfile *);
 
@@ -480,7 +508,19 @@ extern int have_partial_symbols (void);
 
 extern int have_full_symbols (void);
 
+extern void objfile_set_sym_fns (struct objfile *objfile,
+				 const struct sym_fns *sf);
+
 extern void objfiles_changed (void);
+
+extern int is_addr_in_objfile (CORE_ADDR addr, const struct objfile *objfile);
+
+/* Return true if ADDRESS maps into one of the sections of the
+   userloaded ("add-symbol-file") objfiles of PSPACE and false
+   otherwise.  */
+
+extern int userloaded_objfile_contains_address_p (struct program_space *pspace,
+						  CORE_ADDR address);
 
 /* This operation deletes all objfile entries that represent solibs that
    weren't explicitly loaded by the user, via e.g., the add-symbol-file
@@ -570,8 +610,10 @@ extern void default_iterate_over_objfiles_in_search_order
 
 /* Traverse all minimal symbols in one objfile.  */
 
-#define	ALL_OBJFILE_MSYMBOLS(objfile, m) \
-    for ((m) = (objfile) -> msymbols; SYMBOL_LINKAGE_NAME(m) != NULL; (m)++)
+#define	ALL_OBJFILE_MSYMBOLS(objfile, m)	\
+    for ((m) = (objfile)->per_bfd->msymbols;	\
+	 MSYMBOL_LINKAGE_NAME (m) != NULL;	\
+	 (m)++)
 
 /* Traverse all symtabs in all objfiles in the current symbol
    space.  */
@@ -677,5 +719,12 @@ extern void default_iterate_over_objfiles_in_search_order
 /* Reset the per-BFD storage area on OBJ.  */
 
 void set_objfile_per_bfd (struct objfile *obj);
+
+const char *objfile_name (const struct objfile *objfile);
+
+/* Set the objfile's notion of the "main" name and language.  */
+
+extern void set_objfile_main_name (struct objfile *objfile,
+				   const char *name, enum language lang);
 
 #endif /* !defined (OBJFILES_H) */

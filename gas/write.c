@@ -1,7 +1,5 @@
 /* write.c - emit .o file
-   Copyright 1986, 1987, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010, 2011, 2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -1885,7 +1883,7 @@ write_object_file (void)
 #ifdef TC_CONS_FIX_NEW
 	  TC_CONS_FIX_NEW (lie->frag,
 			   lie->word_goes_here - lie->frag->fr_literal,
-			   2, &exp);
+			   2, &exp, TC_PARSE_CONS_RETURN_NONE);
 #else
 	  fix_new_exp (lie->frag,
 		       lie->word_goes_here - lie->frag->fr_literal,

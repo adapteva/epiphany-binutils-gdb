@@ -1,6 +1,6 @@
 /* Source-language-related definitions for GDB.
 
-   Copyright (C) 1991-2013 Free Software Foundation, Inc.
+   Copyright (C) 1991-2014 Free Software Foundation, Inc.
 
    Contributed by the Department of Computer Science at the State University
    of New York at Buffalo.
@@ -23,6 +23,8 @@
 #if !defined (LANGUAGE_H)
 #define LANGUAGE_H 1
 
+#include "symtab.h"
+
 /* Forward decls for prototypes.  */
 struct value;
 struct objfile;
@@ -31,6 +33,8 @@ struct expression;
 struct ui_file;
 struct value_print_options;
 struct type_print_options;
+struct lang_varobj_ops;
+struct parser_state;
 
 #define MAX_FORTRAN_DIMS  7	/* Maximum number of F77 array dims.  */
 
@@ -131,7 +135,11 @@ struct language_defn
   {
     /* Name of the language.  */
 
-    char *la_name;
+    const char *la_name;
+
+    /* Natural or official name of the language.  */
+
+    const char *la_natural_name;
 
     /* its symtab language-enum (defs.h).  */
 
@@ -157,7 +165,7 @@ struct language_defn
 
     /* Parser function.  */
 
-    int (*la_parser) (void);
+    int (*la_parser) (struct parser_state *);
 
     /* Parser error function.  */
 
@@ -344,6 +352,9 @@ struct language_defn
 				     symbol_found_callback_ftype *callback,
 				     void *data);
 
+    /* Various operations on varobj.  */
+    const struct lang_varobj_ops *la_varobj_ops;
+
     /* Add fields above this point, so the magic number is always last.  */
     /* Magic number for compat checking.  */
 
@@ -464,12 +475,6 @@ extern enum language set_language (enum language);
 
 extern int pointer_type (struct type *);
 
-/* Checks Binary and Unary operations for semantic type correctness.  */
-/* FIXME:  Does not appear to be used.  */
-#define unop_type_check(v,o) binop_type_check((v),NULL,(o))
-
-extern void binop_type_check (struct value *, struct value *, int);
-
 /* Error messages */
 
 extern void range_error (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
@@ -484,7 +489,7 @@ extern enum language language_enum (char *str);
 
 extern const struct language_defn *language_def (enum language);
 
-extern char *language_str (enum language);
+extern const char *language_str (enum language);
 
 /* Add a language to the set known by GDB (at initialization time).  */
 

@@ -1,6 +1,6 @@
 /* Support for printing D values for GDB, the GNU debugger.
 
-   Copyright (C) 2008-2013 Free Software Foundation, Inc.
+   Copyright (C) 2008-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -59,6 +59,7 @@ dynamic_array_type (struct type *type, const gdb_byte *valaddr,
 
       true_type = lookup_array_range_type (true_type, 0, length - 1);
       ival = value_at (true_type, addr);
+      true_type = value_type (ival);
 
       d_val_print (true_type,
 		   value_contents_for_printing (ival),

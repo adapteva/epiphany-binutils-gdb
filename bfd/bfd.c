@@ -1,5 +1,5 @@
 /* Generic BFD library interface and support routines.
-   Copyright 1990-2013 Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -310,6 +310,14 @@ CODE_FRAGMENT
 .     this object.  Used by VMS linkers.  *}
 .  unsigned int selective_search : 1;
 .};
+.
+.{* See note beside bfd_set_section_userdata.  *}
+.static inline bfd_boolean
+.bfd_set_cacheable (bfd * abfd, bfd_boolean val)
+.{
+.  abfd->cacheable = val;
+.  return TRUE;
+.}
 .
 */
 
@@ -1065,9 +1073,11 @@ SYNOPSIS
  	int bfd_get_arch_size (bfd *abfd);
 
 DESCRIPTION
-	Returns the architecture address size, in bits, as determined
-	by the object file's format.  For ELF, this information is
-	included in the header.
+	Returns the normalized architecture address size, in bits, as
+	determined by the object file's format.  By normalized, we mean
+	either 32 or 64.  For ELF, this information is included in the
+	header.  Use bfd_arch_bits_per_address for number of bits in
+	the architecture address.
 
 RETURNS
 	Returns the arch size in bits if known, <<-1>> otherwise.
@@ -1079,7 +1089,7 @@ bfd_get_arch_size (bfd *abfd)
   if (abfd->xvec->flavour == bfd_target_elf_flavour)
     return get_elf_backend_data (abfd)->s->arch_size;
 
-  return -1;
+  return bfd_arch_bits_per_address (abfd) > 32 ? 64 : 32;
 }
 
 /*

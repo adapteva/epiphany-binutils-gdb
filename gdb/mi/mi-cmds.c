@@ -1,5 +1,5 @@
 /* MI Command Set for GDB, the GNU debugger.
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -21,7 +21,7 @@
 #include "defs.h"
 #include "top.h"
 #include "mi-cmds.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "mi-main.h"
 
 extern void _initialize_mi_cmds (void);
@@ -68,6 +68,10 @@ static struct mi_cmd mi_cmds[] =
 		   &mi_suppress_notification.breakpoint),
   DEF_MI_CMD_MI_1 ("break-watch", mi_cmd_break_watch,
 		   &mi_suppress_notification.breakpoint),
+  DEF_MI_CMD_MI_1 ("catch-assert", mi_cmd_catch_assert,
+                   &mi_suppress_notification.breakpoint),
+  DEF_MI_CMD_MI_1 ("catch-exception", mi_cmd_catch_exception,
+                   &mi_suppress_notification.breakpoint),
   DEF_MI_CMD_MI_1 ("catch-load", mi_cmd_catch_load,
                    &mi_suppress_notification.breakpoint),
   DEF_MI_CMD_MI_1 ("catch-unload", mi_cmd_catch_unload,
@@ -120,6 +124,8 @@ static struct mi_cmd mi_cmds[] =
   DEF_MI_CMD_CLI ("gdb-version", "show version", 0),
   DEF_MI_CMD_MI ("inferior-tty-set", mi_cmd_inferior_tty_set),
   DEF_MI_CMD_MI ("inferior-tty-show", mi_cmd_inferior_tty_show),
+  DEF_MI_CMD_MI ("info-ada-exceptions", mi_cmd_info_ada_exceptions),
+  DEF_MI_CMD_MI ("info-gdb-mi-command", mi_cmd_info_gdb_mi_command),
   DEF_MI_CMD_MI ("info-os", mi_cmd_info_os),
   DEF_MI_CMD_MI ("interpreter-exec", mi_cmd_interpreter_exec),
   DEF_MI_CMD_MI ("list-features", mi_cmd_list_features),
@@ -241,10 +247,8 @@ build_table (struct mi_cmd *commands)
   int nr_rehash = 0;
   int nr_entries = 0;
   struct mi_cmd *command;
-  int sizeof_table = sizeof (struct mi_cmd **) * MI_TABLE_SIZE;
 
-  mi_table = xmalloc (sizeof_table);
-  memset (mi_table, 0, sizeof_table);
+  mi_table = XCNEWVEC (struct mi_cmd *, MI_TABLE_SIZE);
   for (command = commands; command->name != 0; command++)
     {
       struct mi_cmd **entry = lookup_table (command->name);

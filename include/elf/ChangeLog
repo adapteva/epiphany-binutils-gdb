@@ -1,3 +1,85 @@
+2014-04-22  Christian Svensson  <blue@cmd.nu>
+
+	* common.h: Remove openrisc and or32 support.  Add support for or1k.
+	* or1k.h: New file.
+	* openrisc.h: Delete.
+	* or32.h: Delete.
+
+2014-03-05  Alan Modra  <amodra@gmail.com>
+
+	Update copyright years.
+
+2014-03-05  Alan Modra  <amodra@gmail.com>
+
+	* ppc64.h (R_PPC64_REL24_NOTOC, R_PPC64_ADDR64_LOCAL): Define.
+
+2014-02-06  Andrew Pinski  <apinski@cavium.com>
+
+	* mips.h (E_MIPS_MACH_OCTEON3): New machine flag.
+
+2014-02-03  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* nios2.h (R_NIOS2_GOT_LO, R_NIOS2_GOT_HA): New.
+	(R_NIOS2_CALL_LO, R_NIOS2_CALL_HA): New.
+	(R_NIOS2_ILLEGAL): Adjust.
+
+2014-01-30  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* nios2.h (elf_nios2_reloc_type): Add R_NIOS2_CALL26_NOAT.
+
+2014-01-30  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* common.h (AT_HWCAP2): Define.
+
+2013-12-13  Kuan-Lin Chen  <kuanlinchentw@gmail.com>
+	    Wei-Cheng Wang  <cole945@gmail.com>
+
+	* nds32.h: New file for Andes NDS32.
+
+2013-12-07  Mike Frysinger  <vapier@gentoo.org>
+
+	* epiphany.h: Remove +x file mode.
+
+2013-11-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* x86-64.h: Add R_X86_64_PC32_BND and R_X86_64_PLT32_BND.
+
+2013-11-13  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64.h: Define R_AARCH64_TLS_DTPMOD64,
+	R_AARCH64_TLS_DTPREL64 and R_AARCH64_TLS_TPREL64; guard
+	R_AARCH64_TLS_DTPMOD, R_AARCH64_TLS_DTPREL and
+	R_AARCH64_TLS_TPREL with RELOC_MACROS_GEN_FUNC.
+
+2013-10-30  Alan Modra  <amodra@gmail.com>
+
+	* ppc.h (DT_PPC_TLSOPT): Delete.
+	(DT_PPC_OPT, PPC_OPT_TLS): Define.
+	* ppc64.h (DT_PPC64_TLSOPT): Delete.
+	(DT_PPC64_OPT, PPC64_OPT_TLS, PPC64_OPT_MULTI_TOC): Define.
+
+2013-10-30  Alan Modra  <amodra@gmail.com>
+
+	* ppc64.h (STO_PPC64_LOCAL_BIT, STO_PPC64_LOCAL_MASK): Define.
+	(ppc64_decode_local_entry, ppc64_encode_local_entry): New functions.
+	(PPC64_LOCAL_ENTRY_OFFSET, PPC64_SET_LOCAL_ENTRY_OFFSET): Define.
+
+2013-10-30  Alan Modra  <amodra@gmail.com>
+
+	* ppc64.h (EF_PPC64_ABI): Define.
+
+2013-10-30  Alan Modra  <amodra@gmail.com>
+
+	* ppc64.h (R_PPC64_ADDR16_HIGH, R_PPC64_ADDR16_HIGHA,
+	R_PPC64_TPREL16_HIGH, R_PPC64_TPREL16_HIGHA,
+	R_PPC64_DTPREL16_HIGH, R_PPC64_DTPREL16_HIGHA): New.
+	(IS_PPC64_TLS_RELOC): Match new tls relocs.
+
+2013-10-14  Chao-ying Fu  <Chao-ying.Fu@imgtec.com>
+
+	* mips.h (enum): Add Tag_GNU_MIPS_ABI_MSA.
+	(enum): Add Val_GNU_MIPS_ABI_MSA_ANY and Val_GNU_MIPS_ABI_MSA_128.
+
 2013-09-17  Doug Gilmore  <Doug.Gilmore@imgtec.com>
 
 	* mips.h (EF_MIPS_FP64): New e_flags bit.
@@ -1873,7 +1955,7 @@
 
 For older changes see ChangeLog-9103
 
-Copyright (C) 2004-2012 Free Software Foundation, Inc.
+Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

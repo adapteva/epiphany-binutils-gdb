@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -28,10 +28,10 @@
 #include "getopt.h"
 
 #include <sys/types.h>
-#include "gdb_stat.h"
+#include <sys/stat.h>
 #include <ctype.h>
 
-#include "gdb_string.h"
+#include <string.h>
 #include "event-loop.h"
 #include "ui-out.h"
 
@@ -39,7 +39,6 @@
 #include "main.h"
 #include "source.h"
 #include "cli/cli-cmds.h"
-#include "python/python.h"
 #include "objfiles.h"
 #include "auto-load.h"
 #include "maint.h"
@@ -98,7 +97,49 @@ int return_child_result_value = -1;
 /* GDB as it has been invoked from the command line (i.e. argv[0]).  */
 static char *gdb_program_name;
 
+/* Return read only pointer to GDB_PROGRAM_NAME.  */
+const char *
+get_gdb_program_name (void)
+{
+  return gdb_program_name;
+}
+
 static void print_gdb_help (struct ui_file *);
+
+/* Set the data-directory parameter to NEW_DATADIR.
+   If NEW_DATADIR is not a directory then a warning is printed.
+   We don't signal an error for backward compatibility.  */
+
+void
+set_gdb_data_directory (const char *new_datadir)
+{
+  struct stat st;
+
+  if (stat (new_datadir, &st) < 0)
+    {
+      int save_errno = errno;
+
+      fprintf_unfiltered (gdb_stderr, "Warning: ");
+      print_sys_errmsg (new_datadir, save_errno);
+    }
+  else if (!S_ISDIR (st.st_mode))
+    warning (_("%s is not a directory."), new_datadir);
+
+  xfree (gdb_datadir);
+  gdb_datadir = gdb_realpath (new_datadir);
+
+  /* gdb_realpath won't return an absolute path if the path doesn't exist,
+     but we still want to record an absolute path here.  If the user entered
+     "../foo" and "../foo" doesn't exist then we'll record $(pwd)/../foo which
+     isn't canonical, but that's ok.  */
+  if (!IS_ABSOLUTE_PATH (gdb_datadir))
+    {
+      char *abs_datadir = gdb_abspath (gdb_datadir);
+
+      xfree (gdb_datadir);
+      gdb_datadir = abs_datadir;
+    }
+}
 
 /* Relocate a file or directory.  PROGNAME is the name by which gdb
    was invoked (i.e., argv[0]).  INITIAL is the default value for the
@@ -511,6 +552,7 @@ captured_main (void *data)
       {"directory", required_argument, 0, 'd'},
       {"d", required_argument, 0, 'd'},
       {"data-directory", required_argument, 0, 'D'},
+      {"D", required_argument, 0, 'D'},
       {"cd", required_argument, 0, OPT_CD},
       {"tty", required_argument, 0, 't'},
       {"baud", required_argument, 0, 'b'},
@@ -581,19 +623,14 @@ captured_main (void *data)
 	    xfree (interpreter_p);
 	    interpreter_p = xstrdup (INTERP_INSIGHT);
 #endif
-	    use_windows = 1;
 	    break;
 	  case OPT_NOWINDOWS:
 	    /* -nw is equivalent to -i=console.  */
 	    xfree (interpreter_p);
 	    interpreter_p = xstrdup (INTERP_CONSOLE);
-	    use_windows = 0;
 	    break;
 	  case 'f':
 	    annotation_level = 1;
-	    /* We have probably been invoked from emacs.  Disable
-	       window interface.  */
-	    use_windows = 0;
 	    break;
 	  case 's':
 	    symarg = optarg;
@@ -640,8 +677,15 @@ captured_main (void *data)
 	    gdb_stdout = ui_file_new();
 	    break;
 	  case 'D':
-	    xfree (gdb_datadir);
-	    gdb_datadir = xstrdup (optarg);
+	    if (optarg[0] == '\0')
+	      {
+		fprintf_unfiltered (gdb_stderr,
+				    _("%s: empty path for"
+				      " `--data-directory'\n"),
+				    argv[0]);
+		exit (1);
+	      }
+	    set_gdb_data_directory (optarg);
 	    gdb_datadir_provided = 1;
 	    break;
 #ifdef GDBTK
@@ -735,13 +779,6 @@ captured_main (void *data)
 				argv[0]);
 	    exit (1);
 	  }
-      }
-
-    /* If --help or --version or --configuration, disable window
-       interface.  */
-    if (print_help || print_version || print_configuration)
-      {
-	use_windows = 0;
       }
 
     if (batch_flag)
@@ -950,8 +987,8 @@ captured_main (void *data)
          catch_command_errors returns non-zero on success!  */
       if (catch_command_errors (exec_file_attach, execarg,
 				!batch_flag, RETURN_MASK_ALL))
-	catch_command_errors (symbol_file_add_main, symarg,
-			      !batch_flag, RETURN_MASK_ALL);
+	catch_command_errors_const (symbol_file_add_main, symarg,
+				    !batch_flag, RETURN_MASK_ALL);
     }
   else
     {
@@ -959,8 +996,8 @@ captured_main (void *data)
 	catch_command_errors (exec_file_attach, execarg,
 			      !batch_flag, RETURN_MASK_ALL);
       if (symarg != NULL)
-	catch_command_errors (symbol_file_add_main, symarg,
-			      !batch_flag, RETURN_MASK_ALL);
+	catch_command_errors_const (symbol_file_add_main, symarg,
+				    !batch_flag, RETURN_MASK_ALL);
     }
 
   if (corearg && pidarg)
@@ -1065,7 +1102,6 @@ captured_main (void *data)
 int
 gdb_main (struct captured_main_args *args)
 {
-  use_windows = args->use_windows;
   catch_errors (captured_main, args, "", RETURN_MASK_ALL);
   /* The only way to end up here is by an error (normal exit is
      handled by quit_force()), hence always return an error status.  */
@@ -1137,7 +1173,8 @@ Output and user interface control:\n\n\
   fputs_unfiltered (_("\
   --dbx              DBX compatibility mode.\n\
   --xdb              XDB compatibility mode.\n\
-  --quiet            Do not print version number on startup.\n\n\
+  -q, --quiet, --silent\n\
+                     Do not print version number on startup.\n\n\
 "), stream);
   fputs_unfiltered (_("\
 Operating modes:\n\n\
@@ -1153,6 +1190,8 @@ Remote debugging options:\n\n\
   -l TIMEOUT         Set timeout in seconds for remote debugging.\n\n\
 Other options:\n\n\
   --cd=DIR           Change current directory to DIR.\n\
+  --data-directory=DIR, -D\n\
+                     Set GDB's data-directory to DIR.\n\
 "), stream);
   fputs_unfiltered (_("\n\
 At startup, GDB reads the following init files and executes their commands:\n\

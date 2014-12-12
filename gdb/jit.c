@@ -1,6 +1,6 @@
 /* Handle JIT code generation in the inferior for GDB, the GNU Debugger.
 
-   Copyright (C) 2009-2013 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -37,7 +37,7 @@
 #include "symtab.h"
 #include "target.h"
 #include "gdb-dlfcn.h"
-#include "gdb_stat.h"
+#include <sys/stat.h>
 #include "exceptions.h"
 #include "gdb_bfd.h"
 
@@ -189,7 +189,7 @@ jit_reader_load (const char *file_name)
   if (funcs->reader_version != GDB_READER_INTERFACE_VERSION)
     error (_("Reader version does not match GDB version."));
 
-  new_reader = XZALLOC (struct jit_reader);
+  new_reader = XCNEW (struct jit_reader);
   new_reader->functions = funcs;
   new_reader->handle = so;
 
@@ -214,7 +214,7 @@ jit_reader_load_command (char *args, int from_tty)
   if (IS_ABSOLUTE_PATH (args))
     so_name = xstrdup (args);
   else
-    so_name = xstrprintf ("%s%s%s", SLASH_STRING, jit_reader_dir, args);
+    so_name = xstrprintf ("%s%s%s", jit_reader_dir, SLASH_STRING, args);
   prev_cleanup = make_cleanup (xfree, so_name);
 
   loaded_jit_reader = jit_reader_load (so_name);
@@ -288,7 +288,7 @@ get_jit_objfile_data (struct objfile *objf)
   objf_data = objfile_data (objf, jit_objfile_data);
   if (objf_data == NULL)
     {
-      objf_data = XZALLOC (struct jit_objfile_data);
+      objf_data = XCNEW (struct jit_objfile_data);
       set_objfile_data (objf, jit_objfile_data, objf_data);
     }
 
@@ -318,7 +318,7 @@ get_jit_program_space_data (void)
   ps_data = program_space_data (current_program_space, jit_program_space_data);
   if (ps_data == NULL)
     {
-      ps_data = XZALLOC (struct jit_program_space_data);
+      ps_data = XCNEW (struct jit_program_space_data);
       set_program_space_data (current_program_space, jit_program_space_data,
 			      ps_data);
     }
@@ -357,7 +357,8 @@ jit_read_descriptor (struct gdbarch *gdbarch,
   if (jit_debug)
     fprintf_unfiltered (gdb_stdlog,
 			"jit_read_descriptor, descriptor_addr = %s\n",
-			paddress (gdbarch, SYMBOL_VALUE_ADDRESS (objf_data->descriptor)));
+			paddress (gdbarch, MSYMBOL_VALUE_ADDRESS (ps_data->objfile,
+								  objf_data->descriptor)));
 
   /* Figure out how big the descriptor is on the remote and how to read it.  */
   ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
@@ -366,7 +367,8 @@ jit_read_descriptor (struct gdbarch *gdbarch,
   desc_buf = alloca (desc_size);
 
   /* Read the descriptor.  */
-  err = target_read_memory (SYMBOL_VALUE_ADDRESS (objf_data->descriptor),
+  err = target_read_memory (MSYMBOL_VALUE_ADDRESS (ps_data->objfile,
+						   objf_data->descriptor),
 			    desc_buf, desc_size);
   if (err)
     {
@@ -504,7 +506,7 @@ jit_object_open_impl (struct gdb_symbol_callbacks *cb)
   /* CB is not required right now, but sometime in the future we might
      need a handle to it, and we'd like to do that without breaking
      the ABI.  */
-  return XZALLOC (struct gdb_object);
+  return XCNEW (struct gdb_object);
 }
 
 /* Readers call into this function to open a new gdb_symtab, which,
@@ -519,7 +521,7 @@ jit_symtab_open_impl (struct gdb_symbol_callbacks *cb,
 
   /* CB stays unused.  See comment in jit_object_open_impl.  */
 
-  ret = XZALLOC (struct gdb_symtab);
+  ret = XCNEW (struct gdb_symtab);
   ret->file_name = file_name ? xstrdup (file_name) : xstrdup ("");
   ret->next = object->symtabs;
   object->symtabs = ret;
@@ -557,7 +559,7 @@ jit_block_open_impl (struct gdb_symbol_callbacks *cb,
                      struct gdb_symtab *symtab, struct gdb_block *parent,
                      GDB_CORE_ADDR begin, GDB_CORE_ADDR end, const char *name)
 {
-  struct gdb_block *block = XZALLOC (struct gdb_block);
+  struct gdb_block *block = XCNEW (struct gdb_block);
 
   block->next = symtab->blocks;
   block->begin = (CORE_ADDR) begin;
@@ -665,7 +667,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 
   /* (begin, end) will contain the PC range this entire blockvector
      spans.  */
-  symtab->primary = 1;
+  set_symtab_primary (symtab, 1);
   BLOCKVECTOR_MAP (symtab->blockvector) = NULL;
   begin = stab->blocks->begin;
   end = stab->blocks->end;
@@ -785,12 +787,11 @@ jit_object_close_impl (struct gdb_symbol_callbacks *cb,
 
   priv_data = cb->priv_data;
 
-  objfile = allocate_objfile (NULL, 0);
+  objfile = allocate_objfile (NULL, "<< JIT compiled code >>",
+			      OBJF_NOT_FILENAME);
   objfile->per_bfd->gdbarch = target_gdbarch ();
 
   terminate_minimal_symbol_table (objfile);
-
-  objfile->name = "<< JIT compiled code >>";
 
   j = NULL;
   for (i = obj->symtabs; i; i = j)
@@ -927,7 +928,8 @@ JITed symbol file is not an object file, ignoring it.\n"));
 
   /* This call does not take ownership of SAI.  */
   make_cleanup_bfd_unref (nbfd);
-  objfile = symbol_file_add_from_bfd (nbfd, 0, sai, OBJF_SHARED, NULL);
+  objfile = symbol_file_add_from_bfd (nbfd, bfd_get_filename (nbfd), 0, sai,
+				      OBJF_SHARED | OBJF_NOT_FILENAME, NULL);
 
   do_cleanups (old_cleanups);
   add_objfile_entry (objfile, entry_addr);
@@ -1016,7 +1018,7 @@ jit_breakpoint_re_set_internal (struct gdbarch *gdbarch,
 				struct jit_program_space_data *ps_data)
 {
   struct bound_minimal_symbol reg_symbol;
-  struct minimal_symbol *desc_symbol;
+  struct bound_minimal_symbol desc_symbol;
   struct jit_objfile_data *objf_data;
   CORE_ADDR addr;
 
@@ -1026,24 +1028,25 @@ jit_breakpoint_re_set_internal (struct gdbarch *gdbarch,
 	 assume we are not attached to a JIT.  */
       reg_symbol = lookup_minimal_symbol_and_objfile (jit_break_name);
       if (reg_symbol.minsym == NULL
-	  || SYMBOL_VALUE_ADDRESS (reg_symbol.minsym) == 0)
+	  || BMSYMBOL_VALUE_ADDRESS (reg_symbol) == 0)
 	return 1;
 
       desc_symbol = lookup_minimal_symbol (jit_descriptor_name, NULL,
 					   reg_symbol.objfile);
-      if (desc_symbol == NULL || SYMBOL_VALUE_ADDRESS (desc_symbol) == 0)
+      if (desc_symbol.minsym == NULL
+	  || BMSYMBOL_VALUE_ADDRESS (desc_symbol) == 0)
 	return 1;
 
       objf_data = get_jit_objfile_data (reg_symbol.objfile);
       objf_data->register_code = reg_symbol.minsym;
-      objf_data->descriptor = desc_symbol;
+      objf_data->descriptor = desc_symbol.minsym;
 
       ps_data->objfile = reg_symbol.objfile;
     }
   else
     objf_data = get_jit_objfile_data (ps_data->objfile);
 
-  addr = SYMBOL_VALUE_ADDRESS (objf_data->register_code);
+  addr = MSYMBOL_VALUE_ADDRESS (ps_data->objfile, objf_data->register_code);
 
   if (jit_debug)
     fprintf_unfiltered (gdb_stdlog,
@@ -1181,11 +1184,11 @@ jit_frame_sniffer (const struct frame_unwind *self,
 
   gdb_assert (!*cache);
 
-  *cache = XZALLOC (struct jit_unwind_private);
+  *cache = XCNEW (struct jit_unwind_private);
   priv_data = *cache;
   priv_data->registers =
-    XCALLOC (gdbarch_num_regs (get_frame_arch (this_frame)),
-             struct gdb_reg_value *);
+    XCNEWVEC (struct gdb_reg_value *,	      
+	      gdbarch_num_regs (get_frame_arch (this_frame)));
   priv_data->this_frame = this_frame;
 
   callbacks.priv_data = priv_data;

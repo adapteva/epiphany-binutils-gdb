@@ -1,5 +1,5 @@
 /* Low level interface to SPUs, for the remote server for GDB.
-   Copyright (C) 2006-2013 Free Software Foundation, Inc.
+   Copyright (C) 2006-2014 Free Software Foundation, Inc.
 
    Contributed by Ulrich Weigand <uweigand@de.ibm.com>.
 
@@ -659,6 +659,7 @@ static struct target_ops spu_target_ops = {
   spu_look_up_symbols,
   spu_request_interrupt,
   NULL,
+  NULL,  /* supports_z_point_type */
   NULL,
   NULL,
   NULL,

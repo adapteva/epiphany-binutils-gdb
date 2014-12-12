@@ -1,5 +1,5 @@
 /* This file is tc-pj.h
-   Copyright 1999, 2000, 2001, 2002, 2003, 2005, 2007 Free Software Foundation, Inc.
+   Copyright (C) 1999-2014 Free Software Foundation, Inc.
 
    Contributed by Steve Chamberlain of Transmeta, sac@pobox.com
 
@@ -31,7 +31,8 @@
    ? "Pico Java GAS Big Endian"           				\
    : "Pico Java GAS Little Endian")
 
-void pj_cons_fix_new_pj (struct frag *, int, int, expressionS *);
+void pj_cons_fix_new_pj (struct frag *, int, int, expressionS *,
+			 bfd_reloc_code_real_type);
 arelent *tc_gen_reloc (asection *, struct fix *);
 
 #define md_section_align(SEGMENT, SIZE)     (SIZE)
@@ -45,8 +46,8 @@ arelent *tc_gen_reloc (asection *, struct fix *);
 #define md_pcrel_from(FIX) 						\
 	((FIX)->fx_where + (FIX)->fx_frag->fr_address - 1)
 
-#define TC_CONS_FIX_NEW(FRAG, WHERE, NBYTES, EXP) \
-	pj_cons_fix_new_pj (FRAG, WHERE, NBYTES, EXP)
+#define TC_CONS_FIX_NEW(FRAG, WHERE, NBYTES, EXP, RELOC)	\
+	pj_cons_fix_new_pj (FRAG, WHERE, NBYTES, EXP, RELOC)
 
 /* No shared lib support, so we don't need to ensure externally
    visible symbols can be overridden.  */

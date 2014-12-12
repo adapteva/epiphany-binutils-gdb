@@ -1,6 +1,6 @@
 /* MI Command Set for GDB, the GNU debugger.
 
-   Copyright (C) 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -39,6 +39,8 @@ extern mi_cmd_argv_ftype mi_cmd_dprintf_insert;
 extern mi_cmd_argv_ftype mi_cmd_break_commands;
 extern mi_cmd_argv_ftype mi_cmd_break_passcount;
 extern mi_cmd_argv_ftype mi_cmd_break_watch;
+extern mi_cmd_argv_ftype mi_cmd_catch_assert;
+extern mi_cmd_argv_ftype mi_cmd_catch_exception;
 extern mi_cmd_argv_ftype mi_cmd_catch_load;
 extern mi_cmd_argv_ftype mi_cmd_catch_unload;
 extern mi_cmd_argv_ftype mi_cmd_disassemble;
@@ -71,6 +73,8 @@ extern mi_cmd_argv_ftype mi_cmd_file_list_exec_source_files;
 extern mi_cmd_argv_ftype mi_cmd_gdb_exit;
 extern mi_cmd_argv_ftype mi_cmd_inferior_tty_set;
 extern mi_cmd_argv_ftype mi_cmd_inferior_tty_show;
+extern mi_cmd_argv_ftype mi_cmd_info_ada_exceptions;
+extern mi_cmd_argv_ftype mi_cmd_info_gdb_mi_command;
 extern mi_cmd_argv_ftype mi_cmd_info_os;
 extern mi_cmd_argv_ftype mi_cmd_interpreter_exec;
 extern mi_cmd_argv_ftype mi_cmd_list_features;

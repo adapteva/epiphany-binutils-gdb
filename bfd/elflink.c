@@ -1,5 +1,5 @@
 /* ELF linking support for BFD.
-   Copyright 1995-2013 Free Software Foundation, Inc.
+   Copyright (C) 1995-2014 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1087,34 +1087,32 @@ _bfd_elf_merge_symbol (bfd *abfd,
 
   /* When we try to create a default indirect symbol from the dynamic
      definition with the default version, we skip it if its type and
-     the type of existing regular definition mismatch.  We only do it
-     if the existing regular definition won't be dynamic.  */
+     the type of existing regular definition mismatch.  */
   if (pold_alignment == NULL
-      && !info->shared
-      && !info->export_dynamic
-      && !h->ref_dynamic
       && newdyn
       && newdef
       && !olddyn
-      && (olddef || h->root.type == bfd_link_hash_common)
-      && ELF_ST_TYPE (sym->st_info) != h->type
-      && ELF_ST_TYPE (sym->st_info) != STT_NOTYPE
-      && h->type != STT_NOTYPE
-      && !(newfunc && oldfunc))
+      && (((olddef || h->root.type == bfd_link_hash_common)
+	   && ELF_ST_TYPE (sym->st_info) != h->type
+	   && ELF_ST_TYPE (sym->st_info) != STT_NOTYPE
+	   && h->type != STT_NOTYPE
+	   && !(newfunc && oldfunc))
+	  || (olddef
+	      && ((h->type == STT_GNU_IFUNC)
+		  != (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC)))))
     {
       *skip = TRUE;
       return TRUE;
     }
 
-  /* Plugin symbol type isn't currently set.  Stop bogus errors.  */
-  if (oldbfd != NULL && (oldbfd->flags & BFD_PLUGIN) != 0)
-    *type_change_ok = TRUE;
-
-  /* Check TLS symbol.  We don't check undefined symbol introduced by
-     "ld -u".  */
-  else if (oldbfd != NULL
-	   && ELF_ST_TYPE (sym->st_info) != h->type
-	   && (ELF_ST_TYPE (sym->st_info) == STT_TLS || h->type == STT_TLS))
+  /* Check TLS symbols.  We don't check undefined symbols introduced
+     by "ld -u" which have no type (and oldbfd NULL), and we don't
+     check symbols from plugins because they also have no type.  */
+  if (oldbfd != NULL
+      && (oldbfd->flags & BFD_PLUGIN) == 0
+      && (abfd->flags & BFD_PLUGIN) == 0
+      && ELF_ST_TYPE (sym->st_info) != h->type
+      && (ELF_ST_TYPE (sym->st_info) == STT_TLS || h->type == STT_TLS))
     {
       bfd *ntbfd, *tbfd;
       bfd_boolean ntdef, tdef;
@@ -1437,7 +1435,10 @@ _bfd_elf_merge_symbol (bfd *abfd,
       if (!(oldbfd != NULL
 	    && (oldbfd->flags & BFD_PLUGIN) != 0
 	    && (abfd->flags & BFD_PLUGIN) == 0))
-	*skip = TRUE;
+	{
+	  newdef = FALSE;
+	  *skip = TRUE;
+	}
 
       /* Merge st_other.  If the symbol already has a dynamic index,
 	 but visibility says it should not be visible, turn it into a
@@ -1702,6 +1703,12 @@ _bfd_elf_add_default_symbol (bfd *abfd,
       ht = (struct elf_link_hash_entry *) hi->root.u.i.link;
       (*bed->elf_backend_copy_indirect_symbol) (info, ht, hi);
 
+      /* A reference to the SHORTNAME symbol from a dynamic library
+	 will be satisfied by the versioned symbol at runtime.  In
+	 effect, we have a reference to the versioned symbol.  */
+      ht->ref_dynamic_nonweak |= hi->ref_dynamic_nonweak;
+      hi->dynamic_def |= ht->dynamic_def;
+
       /* See if the new flags lead us to realize that the symbol must
 	 be dynamic.  */
       if (! *dynsym)
@@ -1737,7 +1744,7 @@ nondefault:
   size_change_ok = FALSE;
   tmp_sec = sec;
   if (!_bfd_elf_merge_symbol (abfd, info, shortname, sym, &tmp_sec, &value,
-			      &hi, NULL, NULL, NULL, &skip, &override,
+			      &hi, poldbfd, NULL, NULL, &skip, &override,
 			      &type_change_ok, &size_change_ok))
     return FALSE;
 
@@ -1771,6 +1778,8 @@ nondefault:
       if (hi->root.type == bfd_link_hash_indirect)
 	{
 	  (*bed->elf_backend_copy_indirect_symbol) (info, h, hi);
+	  h->ref_dynamic_nonweak |= hi->ref_dynamic_nonweak;
+	  hi->dynamic_def |= h->dynamic_def;
 
 	  /* See if the new flags lead us to realize that the symbol
 	     must be dynamic.  */
@@ -4426,6 +4435,9 @@ error_free_dyn:
 	    {
 	      int ret;
 	      const char *soname = elf_dt_name (abfd);
+
+	      info->callbacks->minfo ("%!", soname, old_bfd,
+				      h->root.root.string);
 
 	      /* A symbol from a library loaded via DT_NEEDED of some
 		 other library is referenced by a regular object.
@@ -7460,6 +7472,7 @@ struct elf_outext_info
   bfd_boolean localsyms;
   bfd_boolean need_second_pass;
   bfd_boolean second_pass;
+  bfd_boolean file_sym_done;
   struct elf_final_link_info *flinfo;
 };
 
@@ -8678,6 +8691,22 @@ elf_link_output_extsym (struct bfd_hash_entry *bh, void *data)
 		|| h->root.type == bfd_link_hash_defweak)
 	       && h->root.u.def.section->output_section != NULL))
 	return TRUE;
+
+      if (!eoinfo->file_sym_done
+	  && (eoinfo->second_pass ? eoinfo->flinfo->filesym_count == 1
+				  : eoinfo->flinfo->filesym_count > 1))
+	{
+	  /* Output a FILE symbol so that following locals are not associated
+	     with the wrong input file.  */
+	  memset (&sym, 0, sizeof (sym));
+	  sym.st_info = ELF_ST_INFO (STB_LOCAL, STT_FILE);
+	  sym.st_shndx = SHN_ABS;
+	  if (!elf_link_output_sym (eoinfo->flinfo, NULL, &sym,
+				    bfd_und_section_ptr, NULL))
+	    return FALSE;
+
+	  eoinfo->file_sym_done = TRUE;
+	}
     }
   else
     {
@@ -9519,7 +9548,16 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 	 file, so the contents field will not have been set by any of
 	 the routines which work on output files.  */
       if (elf_section_data (o)->this_hdr.contents != NULL)
-	contents = elf_section_data (o)->this_hdr.contents;
+	{
+	  contents = elf_section_data (o)->this_hdr.contents;
+	  if (bed->caches_rawsize
+	      && o->rawsize != 0
+	      && o->rawsize < o->size)
+	    {
+	      memcpy (flinfo->contents, contents, o->rawsize);
+	      contents = flinfo->contents;
+	    }
+	}
       else
 	{
 	  contents = flinfo->contents;
@@ -10962,17 +11000,6 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	  }
     }
 
-  /* Output a FILE symbol so that following locals are not associated
-     with the wrong input file.  */
-  memset (&elfsym, 0, sizeof (elfsym));
-  elfsym.st_info = ELF_ST_INFO (STB_LOCAL, STT_FILE);
-  elfsym.st_shndx = SHN_ABS;
-
-  if (flinfo.filesym_count > 1
-      && !elf_link_output_sym (&flinfo, NULL, &elfsym,
-			       bfd_und_section_ptr, NULL))
-    return FALSE;
-
   /* Output any global symbols that got converted to local in a
      version script or due to symbol visibility.  We do this in a
      separate step since ELF requires all local symbols to appear
@@ -10984,13 +11011,9 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
   eoinfo.localsyms = TRUE;
   eoinfo.need_second_pass = FALSE;
   eoinfo.second_pass = FALSE;
+  eoinfo.file_sym_done = FALSE;
   bfd_hash_traverse (&info->hash->table, elf_link_output_extsym, &eoinfo);
   if (eoinfo.failed)
-    return FALSE;
-
-  if (flinfo.filesym_count == 1
-      && !elf_link_output_sym (&flinfo, NULL, &elfsym,
-			       bfd_und_section_ptr, NULL))
     return FALSE;
 
   if (eoinfo.need_second_pass)
@@ -11968,7 +11991,9 @@ elf_gc_sweep (bfd *abfd, struct bfd_link_info *info)
 	     info we collected before.  */
 	  if (gc_sweep_hook
 	      && (o->flags & SEC_RELOC) != 0
-	      && o->reloc_count > 0
+	      && o->reloc_count != 0
+	      && !((info->strip == strip_all || info->strip == strip_debugger)
+		   && (o->flags & SEC_DEBUGGING) != 0)
 	      && !bfd_is_abs_section (o->output_section))
 	    {
 	      Elf_Internal_Rela *internal_relocs;
@@ -12116,14 +12141,19 @@ bfd_boolean
 bfd_elf_gc_mark_dynamic_ref_symbol (struct elf_link_hash_entry *h, void *inf)
 {
   struct bfd_link_info *info = (struct bfd_link_info *) inf;
+  struct bfd_elf_dynamic_list *d = info->dynamic_list;
 
   if ((h->root.type == bfd_link_hash_defined
        || h->root.type == bfd_link_hash_defweak)
       && (h->ref_dynamic
-	  || ((!info->executable || info->export_dynamic)
-	      && h->def_regular
+	  || (h->def_regular
 	      && ELF_ST_VISIBILITY (h->other) != STV_INTERNAL
 	      && ELF_ST_VISIBILITY (h->other) != STV_HIDDEN
+	      && (!info->executable
+		  || info->export_dynamic
+		  || (h->dynamic
+		      && d != NULL
+		      && (*d->match) (&d->head, NULL, h->root.root.string)))
 	      && (strchr (h->root.root.string, ELF_VER_CHR) != NULL
 		  || !bfd_hide_sym_by_version (info->version_info,
 					       h->root.root.string)))))

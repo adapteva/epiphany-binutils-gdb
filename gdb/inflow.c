@@ -1,5 +1,5 @@
 /* Low level interface to ptrace, for GDB when running under Unix.
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,7 +26,7 @@
 #include "gdbthread.h"
 #include "observer.h"
 
-#include "gdb_string.h"
+#include <string.h>
 #include <signal.h>
 #include <fcntl.h>
 #include "gdb_select.h"
@@ -46,7 +46,7 @@ extern void _initialize_inflow (void);
 
 static void pass_signal (int);
 
-static void terminal_ours_1 (int);
+static void child_terminal_ours_1 (int);
 
 /* Record terminal status separately for debugger and inferior.  */
 
@@ -209,13 +209,11 @@ gdb_has_a_terminal (void)
     fprintf_unfiltered(gdb_stderr, "[%s failed in terminal_inferior: %s]\n", \
 	    what, safe_strerror (errno))
 
-static void terminal_ours_1 (int);
-
 /* Initialize the terminal settings we record for the inferior,
    before we actually run the inferior.  */
 
 void
-terminal_init_inferior_with_pgrp (int pgrp)
+child_terminal_init_with_pgrp (int pgrp)
 {
   struct inferior *inf = current_inferior ();
   struct terminal_info *tinfo = get_inflow_inferior_data (inf);
@@ -245,7 +243,7 @@ terminal_init_inferior_with_pgrp (int pgrp)
    and gdb must be able to restore it correctly.  */
 
 void
-terminal_save_ours (void)
+child_terminal_save_ours (struct target_ops *self)
 {
   if (gdb_has_a_terminal ())
     {
@@ -255,16 +253,16 @@ terminal_save_ours (void)
 }
 
 void
-terminal_init_inferior (void)
+child_terminal_init (struct target_ops *self)
 {
 #ifdef PROCESS_GROUP_TYPE
-  /* This is for Lynx, and should be cleaned up by having Lynx be a separate
-     debugging target with a version of target_terminal_init_inferior which
-     passes in the process group to a generic routine which does all the work
-     (and the non-threaded child_terminal_init_inferior can just pass in
-     inferior_ptid to the same routine).  */
+  /* This is for Lynx, and should be cleaned up by having Lynx be a
+     separate debugging target with a version of target_terminal_init
+     which passes in the process group to a generic routine which does
+     all the work (and the non-threaded child_terminal_init can just
+     pass in inferior_ptid to the same routine).  */
   /* We assume INFERIOR_PID is also the child's process group.  */
-  terminal_init_inferior_with_pgrp (PIDGET (inferior_ptid));
+  child_terminal_init_with_pgrp (ptid_get_pid (inferior_ptid));
 #endif /* PROCESS_GROUP_TYPE */
 }
 
@@ -272,7 +270,7 @@ terminal_init_inferior (void)
    This is preparation for starting or resuming the inferior.  */
 
 void
-terminal_inferior (void)
+child_terminal_inferior (struct target_ops *self)
 {
   struct inferior *inf;
   struct terminal_info *tinfo;
@@ -353,9 +351,9 @@ terminal_inferior (void)
    should be called to get back to a normal state of affairs.  */
 
 void
-terminal_ours_for_output (void)
+child_terminal_ours_for_output (struct target_ops *self)
 {
-  terminal_ours_1 (1);
+  child_terminal_ours_1 (1);
 }
 
 /* Put our terminal settings into effect.
@@ -363,9 +361,9 @@ terminal_ours_for_output (void)
    so they can be restored properly later.  */
 
 void
-terminal_ours (void)
+child_terminal_ours (struct target_ops *self)
 {
-  terminal_ours_1 (0);
+  child_terminal_ours_1 (0);
 }
 
 /* output_only is not used, and should not be used unless we introduce
@@ -373,7 +371,7 @@ terminal_ours (void)
    flags.  */
 
 static void
-terminal_ours_1 (int output_only)
+child_terminal_ours_1 (int output_only)
 {
   struct inferior *inf;
   struct terminal_info *tinfo;
@@ -446,7 +444,7 @@ terminal_ours_1 (int output_only)
 	     such situations as well.  */
 	  if (result == -1)
 	    fprintf_unfiltered (gdb_stderr,
-				"[tcsetpgrp failed in terminal_ours: %s]\n",
+				"[tcsetpgrp failed in child_terminal_ours: %s]\n",
 				safe_strerror (errno));
 #endif
 #endif /* termios */
@@ -487,15 +485,11 @@ static const struct inferior_data *inflow_inferior_data;
 static void
 inflow_inferior_data_cleanup (struct inferior *inf, void *arg)
 {
-  struct terminal_info *info;
+  struct terminal_info *info = arg;
 
-  info = inferior_data (inf, inflow_inferior_data);
-  if (info != NULL)
-    {
-      xfree (info->run_terminal);
-      xfree (info->ttystate);
-      xfree (info);
-    }
+  xfree (info->run_terminal);
+  xfree (info->ttystate);
+  xfree (info);
 }
 
 /* Get the current svr4 data.  If none is found yet, add it now.  This
@@ -509,7 +503,7 @@ get_inflow_inferior_data (struct inferior *inf)
   info = inferior_data (inf, inflow_inferior_data);
   if (info == NULL)
     {
-      info = XZALLOC (struct terminal_info);
+      info = XCNEW (struct terminal_info);
       set_inferior_data (inf, inflow_inferior_data, info);
     }
 
@@ -566,7 +560,7 @@ term_info (char *arg, int from_tty)
 }
 
 void
-child_terminal_info (const char *args, int from_tty)
+child_terminal_info (struct target_ops *self, const char *args, int from_tty)
 {
   struct inferior *inf;
   struct terminal_info *tinfo;
@@ -769,7 +763,7 @@ static void
 pass_signal (int signo)
 {
 #ifndef _WIN32
-  kill (PIDGET (inferior_ptid), SIGINT);
+  kill (ptid_get_pid (inferior_ptid), SIGINT);
 #endif
 }
 

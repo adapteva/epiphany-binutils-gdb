@@ -1,4 +1,4 @@
-# Copyright 2013 Free Software Foundation, Inc.
+# Copyright 2013-2014 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@ proc add_gdb_index { program } {
     }
 
     set program_with_index ${program}.with-index
-    if {[run_on_host "objcopy" [transform objcopy] "--remove-section .gdb_index --add-section .gdb_index=$index_file --set-section-flags .gdb_index=readonly ${program} ${program_with_index}"]} {
+    if {[run_on_host "objcopy" [gdb_find_objcopy] "--remove-section .gdb_index --add-section .gdb_index=$index_file --set-section-flags .gdb_index=readonly ${program} ${program_with_index}"]} {
 	return ""
     }
     return ${program_with_index}

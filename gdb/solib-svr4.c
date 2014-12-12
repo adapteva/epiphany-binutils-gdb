@@ -1,6 +1,6 @@
 /* Handle SVR4 shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 1990-2013 Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,6 +30,7 @@
 #include "gdbcore.h"
 #include "target.h"
 #include "inferior.h"
+#include "infrun.h"
 #include "regcache.h"
 #include "gdbthread.h"
 #include "observer.h"
@@ -407,11 +408,7 @@ free_solib_list (struct svr4_info *info)
 static void
 svr4_pspace_data_cleanup (struct program_space *pspace, void *arg)
 {
-  struct svr4_info *info;
-
-  info = program_space_data (pspace, solib_svr4_pspace_data);
-  if (info == NULL)
-    return;
+  struct svr4_info *info = arg;
 
   free_probes_table (info);
   free_solib_list (info);
@@ -431,7 +428,7 @@ get_svr4_info (void)
   if (info != NULL)
     return info;
 
-  info = XZALLOC (struct svr4_info);
+  info = XCNEW (struct svr4_info);
   set_program_space_data (current_program_space, solib_svr4_pspace_data, info);
   return info;
 }
@@ -791,7 +788,7 @@ scan_dyntag_auxv (int dyntag, CORE_ADDR *ptr)
 static CORE_ADDR
 elf_locate_base (void)
 {
-  struct minimal_symbol *msymbol;
+  struct bound_minimal_symbol msymbol;
   CORE_ADDR dyn_ptr;
 
   /* Look for DT_MIPS_RLD_MAP first.  MIPS executables use this
@@ -820,8 +817,8 @@ elf_locate_base (void)
   /* This may be a static executable.  Look for the symbol
      conventionally named _r_debug, as a last resort.  */
   msymbol = lookup_minimal_symbol ("_r_debug", NULL, symfile_objfile);
-  if (msymbol != NULL)
-    return SYMBOL_VALUE_ADDRESS (msymbol);
+  if (msymbol.minsym != NULL)
+    return BMSYMBOL_VALUE_ADDRESS (msymbol);
 
   /* DT_DEBUG entry not found.  */
   return 0;
@@ -953,7 +950,7 @@ svr4_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
   if (!ldsomap)
     return 0;
 
-  new = XZALLOC (struct so_list);
+  new = XCNEW (struct so_list);
   old_chain = make_cleanup (xfree, new);
   new->lm_info = lm_info_read (ldsomap);
   make_cleanup (xfree, new->lm_info);
@@ -1130,8 +1127,8 @@ library_list_start_library (struct gdb_xml_parser *parser,
   ULONGEST *l_ldp = xml_find_attribute (attributes, "l_ld")->value;
   struct so_list *new_elem;
 
-  new_elem = XZALLOC (struct so_list);
-  new_elem->lm_info = XZALLOC (struct lm_info);
+  new_elem = XCNEW (struct so_list);
+  new_elem->lm_info = XCNEW (struct lm_info);
   new_elem->lm_info->lm_addr = *lmp;
   new_elem->lm_info->l_addr_inferior = *l_addrp;
   new_elem->lm_info->l_ld = *l_ldp;
@@ -1283,7 +1280,7 @@ svr4_default_sos (void)
   if (!info->debug_loader_offset_p)
     return NULL;
 
-  new = XZALLOC (struct so_list);
+  new = XCNEW (struct so_list);
 
   new->lm_info = xzalloc (sizeof (struct lm_info));
 
@@ -1310,6 +1307,7 @@ static int
 svr4_read_so_list (CORE_ADDR lm, CORE_ADDR prev_lm,
 		   struct so_list ***link_ptr_ptr, int ignore_first)
 {
+  CORE_ADDR first_l_name = 0;
   CORE_ADDR next_lm;
 
   for (; lm != 0; prev_lm = lm, lm = next_lm)
@@ -1319,7 +1317,7 @@ svr4_read_so_list (CORE_ADDR lm, CORE_ADDR prev_lm,
       int errcode;
       char *buffer;
 
-      new = XZALLOC (struct so_list);
+      new = XCNEW (struct so_list);
       old_chain = make_cleanup_free_so (new);
 
       new->lm_info = lm_info_read (lm);
@@ -1349,6 +1347,7 @@ svr4_read_so_list (CORE_ADDR lm, CORE_ADDR prev_lm,
 	{
 	  struct svr4_info *info = get_svr4_info ();
 
+	  first_l_name = new->lm_info->l_name;
 	  info->main_lm_addr = new->lm_info->lm_addr;
 	  do_cleanups (old_chain);
 	  continue;
@@ -1359,8 +1358,13 @@ svr4_read_so_list (CORE_ADDR lm, CORE_ADDR prev_lm,
 			  SO_NAME_MAX_PATH_SIZE - 1, &errcode);
       if (errcode != 0)
 	{
-	  warning (_("Can't read pathname for load map: %s."),
-		   safe_strerror (errcode));
+	  /* If this entry's l_name address matches that of the
+	     inferior executable, then this is not a normal shared
+	     object, but (most likely) a vDSO.  In this case, silently
+	     skip it; otherwise emit a warning. */
+	  if (first_l_name == 0 || new->lm_info->l_name != first_l_name)
+	    warning (_("Can't read pathname for load map: %s."),
+		     safe_strerror (errcode));
 	  do_cleanups (old_chain);
 	  continue;
 	}
@@ -1565,6 +1569,9 @@ struct probe_and_action
   /* The probe.  */
   struct probe *probe;
 
+  /* The relocated address of the probe.  */
+  CORE_ADDR address;
+
   /* The action.  */
   enum probe_action action;
 };
@@ -1576,7 +1583,7 @@ hash_probe_and_action (const void *p)
 {
   const struct probe_and_action *pa = p;
 
-  return (hashval_t) pa->probe->address;
+  return (hashval_t) pa->address;
 }
 
 /* Returns non-zero if the probe_and_actions referenced by p1 and p2
@@ -1588,14 +1595,15 @@ equal_probe_and_action (const void *p1, const void *p2)
   const struct probe_and_action *pa1 = p1;
   const struct probe_and_action *pa2 = p2;
 
-  return pa1->probe->address == pa2->probe->address;
+  return pa1->address == pa2->address;
 }
 
 /* Register a solib event probe and its associated action in the
    probes table.  */
 
 static void
-register_solib_event_probe (struct probe *probe, enum probe_action action)
+register_solib_event_probe (struct probe *probe, CORE_ADDR address,
+			    enum probe_action action)
 {
   struct svr4_info *info = get_svr4_info ();
   struct probe_and_action lookup, *pa;
@@ -1608,11 +1616,13 @@ register_solib_event_probe (struct probe *probe, enum probe_action action)
 					    xfree, xcalloc, xfree);
 
   lookup.probe = probe;
+  lookup.address = address;
   slot = htab_find_slot (info->probes_table, &lookup, INSERT);
   gdb_assert (*slot == HTAB_EMPTY_ENTRY);
 
   pa = XCNEW (struct probe_and_action);
   pa->probe = probe;
+  pa->address = address;
   pa->action = action;
 
   *slot = pa;
@@ -1625,12 +1635,10 @@ register_solib_event_probe (struct probe *probe, enum probe_action action)
 static struct probe_and_action *
 solib_event_probe_at (struct svr4_info *info, CORE_ADDR address)
 {
-  struct probe lookup_probe;
   struct probe_and_action lookup;
   void **slot;
 
-  lookup_probe.address = address;
-  lookup.probe = &lookup_probe;
+  lookup.address = address;
   slot = htab_find_slot (info->probes_table, &lookup, NO_INSERT);
 
   if (slot == NULL)
@@ -1647,6 +1655,7 @@ solib_event_probe_action (struct probe_and_action *pa)
 {
   enum probe_action action;
   unsigned probe_argc;
+  struct frame_info *frame = get_current_frame ();
 
   action = pa->action;
   if (action == DO_NOTHING || action == PROBES_INTERFACE_FAILED)
@@ -1659,7 +1668,7 @@ solib_event_probe_action (struct probe_and_action *pa)
        arg0: Lmid_t lmid (mandatory)
        arg1: struct r_debug *debug_base (mandatory)
        arg2: struct link_map *new (optional, for incremental updates)  */
-  probe_argc = get_probe_argument_count (pa->probe);
+  probe_argc = get_probe_argument_count (pa->probe, frame);
   if (probe_argc == 2)
     action = FULL_RELOAD;
   else if (probe_argc < 2)
@@ -1768,6 +1777,7 @@ svr4_handle_solib_event (void)
   struct value *val;
   CORE_ADDR pc, debug_base, lm = 0;
   int is_initial_ns;
+  struct frame_info *frame = get_current_frame ();
 
   /* Do nothing if not using the probes interface.  */
   if (info->probes_table == NULL)
@@ -1812,7 +1822,7 @@ svr4_handle_solib_event (void)
   usm_chain = make_cleanup (resume_section_map_updates_cleanup,
 			    current_program_space);
 
-  val = evaluate_probe_argument (pa->probe, 1);
+  val = evaluate_probe_argument (pa->probe, 1, frame);
   if (val == NULL)
     {
       do_cleanups (old_chain);
@@ -1843,7 +1853,7 @@ svr4_handle_solib_event (void)
 
   if (action == UPDATE_OR_RELOAD)
     {
-      val = evaluate_probe_argument (pa->probe, 2);
+      val = evaluate_probe_argument (pa->probe, 2, frame);
       if (val != NULL)
 	lm = value_as_address (val);
 
@@ -1929,7 +1939,8 @@ svr4_update_solib_event_breakpoints (void)
 
 static void
 svr4_create_probe_breakpoints (struct gdbarch *gdbarch,
-			       VEC (probe_p) **probes)
+			       VEC (probe_p) **probes,
+			       struct objfile *objfile)
 {
   int i;
 
@@ -1943,8 +1954,10 @@ svr4_create_probe_breakpoints (struct gdbarch *gdbarch,
 	   VEC_iterate (probe_p, probes[i], ix, probe);
 	   ++ix)
 	{
-	  create_solib_event_breakpoint (gdbarch, probe->address);
-	  register_solib_event_probe (probe, action);
+	  CORE_ADDR address = get_probe_address (probe, objfile);
+
+	  create_solib_event_breakpoint (gdbarch, address);
+	  register_solib_event_probe (probe, address, action);
 	}
     }
 
@@ -2029,7 +2042,7 @@ svr4_create_solib_event_breakpoints (struct gdbarch *gdbarch,
 	    }
 
 	  if (all_probes_found)
-	    svr4_create_probe_breakpoints (gdbarch, probes);
+	    svr4_create_probe_breakpoints (gdbarch, probes, os->objfile);
 
 	  for (i = 0; i < NUM_PROBES; i++)
 	    VEC_free (probe_p, probes[i]);
@@ -2085,7 +2098,7 @@ cmp_name_and_sec_flags (asymbol *sym, void *data)
 static int
 enable_break (struct svr4_info *info, int from_tty)
 {
-  struct minimal_symbol *msymbol;
+  struct bound_minimal_symbol msymbol;
   const char * const *bkpt_namep;
   asection *interp_sect;
   char *interp_name;
@@ -2342,9 +2355,10 @@ enable_break (struct svr4_info *info, int from_tty)
   for (bkpt_namep = solib_break_names; *bkpt_namep != NULL; bkpt_namep++)
     {
       msymbol = lookup_minimal_symbol (*bkpt_namep, NULL, symfile_objfile);
-      if ((msymbol != NULL) && (SYMBOL_VALUE_ADDRESS (msymbol) != 0))
+      if ((msymbol.minsym != NULL)
+	  && (BMSYMBOL_VALUE_ADDRESS (msymbol) != 0))
 	{
-	  sym_addr = SYMBOL_VALUE_ADDRESS (msymbol);
+	  sym_addr = BMSYMBOL_VALUE_ADDRESS (msymbol);
 	  sym_addr = gdbarch_convert_from_func_ptr_addr (target_gdbarch (),
 							 sym_addr,
 							 &current_target);
@@ -2358,9 +2372,10 @@ enable_break (struct svr4_info *info, int from_tty)
       for (bkpt_namep = bkpt_names; *bkpt_namep != NULL; bkpt_namep++)
 	{
 	  msymbol = lookup_minimal_symbol (*bkpt_namep, NULL, symfile_objfile);
-	  if ((msymbol != NULL) && (SYMBOL_VALUE_ADDRESS (msymbol) != 0))
+	  if ((msymbol.minsym != NULL)
+	      && (BMSYMBOL_VALUE_ADDRESS (msymbol) != 0))
 	    {
-	      sym_addr = SYMBOL_VALUE_ADDRESS (msymbol);
+	      sym_addr = BMSYMBOL_VALUE_ADDRESS (msymbol);
 	      sym_addr = gdbarch_convert_from_func_ptr_addr (target_gdbarch (),
 							     sym_addr,
 							     &current_target);
@@ -2600,6 +2615,28 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
 		  if (memcmp (phdrp, phdr2p, sizeof (*phdrp)) == 0)
 		    continue;
 
+		  /* Strip modifies the flags and alignment of PT_GNU_RELRO.
+		     CentOS-5 has problems with filesz, memsz as well.
+		     See PR 11786.  */
+		  if (phdr2[i].p_type == PT_GNU_RELRO)
+		    {
+		      Elf32_External_Phdr tmp_phdr = *phdrp;
+		      Elf32_External_Phdr tmp_phdr2 = *phdr2p;
+
+		      memset (tmp_phdr.p_filesz, 0, 4);
+		      memset (tmp_phdr.p_memsz, 0, 4);
+		      memset (tmp_phdr.p_flags, 0, 4);
+		      memset (tmp_phdr.p_align, 0, 4);
+		      memset (tmp_phdr2.p_filesz, 0, 4);
+		      memset (tmp_phdr2.p_memsz, 0, 4);
+		      memset (tmp_phdr2.p_flags, 0, 4);
+		      memset (tmp_phdr2.p_align, 0, 4);
+
+		      if (memcmp (&tmp_phdr, &tmp_phdr2, sizeof (tmp_phdr))
+			  == 0)
+			continue;
+		    }
+
 		  /* prelink can convert .plt SHT_NOBITS to SHT_PROGBITS.  */
 		  plt2_asect = bfd_get_section_by_name (exec_bfd, ".plt");
 		  if (plt2_asect)
@@ -2708,6 +2745,28 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
 
 		  if (memcmp (phdrp, phdr2p, sizeof (*phdrp)) == 0)
 		    continue;
+
+		  /* Strip modifies the flags and alignment of PT_GNU_RELRO.
+		     CentOS-5 has problems with filesz, memsz as well.
+		     See PR 11786.  */
+		  if (phdr2[i].p_type == PT_GNU_RELRO)
+		    {
+		      Elf64_External_Phdr tmp_phdr = *phdrp;
+		      Elf64_External_Phdr tmp_phdr2 = *phdr2p;
+
+		      memset (tmp_phdr.p_filesz, 0, 8);
+		      memset (tmp_phdr.p_memsz, 0, 8);
+		      memset (tmp_phdr.p_flags, 0, 4);
+		      memset (tmp_phdr.p_align, 0, 8);
+		      memset (tmp_phdr2.p_filesz, 0, 8);
+		      memset (tmp_phdr2.p_memsz, 0, 8);
+		      memset (tmp_phdr2.p_flags, 0, 4);
+		      memset (tmp_phdr2.p_align, 0, 8);
+
+		      if (memcmp (&tmp_phdr, &tmp_phdr2, sizeof (tmp_phdr))
+			  == 0)
+			continue;
+		    }
 
 		  /* prelink can convert .plt SHT_NOBITS to SHT_PROGBITS.  */
 		  plt2_asect = bfd_get_section_by_name (exec_bfd, ".plt");

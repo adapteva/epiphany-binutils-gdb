@@ -1,5 +1,5 @@
 /* TILE-Gx-specific support for ELF.
-   Copyright 2011, 2012 Free Software Foundation, Inc.
+   Copyright (C) 2011-2014 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1220,7 +1220,7 @@ tilegx64_short_plt_entry[PLT_ENTRY_SIZE] =
 };
 
 /* Reuse an existing info 10 bundle.  */
-static const bfd_byte const *tilegx64_plt_tail_entry =
+static const bfd_byte *const tilegx64_plt_tail_entry =
   &tilegx64_short_plt_entry[4 * TILEGX_BUNDLE_SIZE_IN_BYTES];
 
 static const bfd_byte
@@ -1265,7 +1265,7 @@ tilegx32_short_plt_entry[PLT_ENTRY_SIZE] =
 };
 
 /* Reuse an existing info 10 bundle.  */
-static const bfd_byte const *tilegx32_plt_tail_entry =
+static const bfd_byte *const tilegx32_plt_tail_entry =
   &tilegx64_short_plt_entry[4 * TILEGX_BUNDLE_SIZE_IN_BYTES];
 
 static int
@@ -3191,12 +3191,13 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	}
       else
 	{
-	  bfd_boolean warned;
+	  bfd_boolean warned ATTRIBUTE_UNUSED;
+	  bfd_boolean ignored ATTRIBUTE_UNUSED;
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
 				   h, sec, relocation,
-				   unresolved_reloc, warned);
+				   unresolved_reloc, warned, ignored);
 	  if (warned)
 	    {
 	      /* To avoid generating warning messages about truncated

@@ -1,5 +1,5 @@
 # Expect script for various ARM ELF tests.
-#   Copyright 2002-2013 Free Software Foundation, Inc.
+#   Copyright (C) 2002-2014 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -456,6 +456,10 @@ set armelftests_nonacl {
       {objdump {-s -j.data -j.got} ifunc-17.gd}
       {readelf -r ifunc-17.rd}}
      "ifunc-17"}
+    {"Long PLT entries in executables" "--long-plt -shared --section-start=.plt=0x1000 --section-start=.got=0xf0001100" ""
+     "" {long-plt-format.s}
+     {{objdump "-d -j .plt" long-plt-format.d}}
+     "long-plt-format"}
 }
 
 run_ld_link_tests $armelftests_common

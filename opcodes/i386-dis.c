@@ -1,7 +1,5 @@
 /* Print i386 instructions for GDB, the GNU debugger.
-   Copyright 1988, 1989, 1991, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1988-2014 Free Software Foundation, Inc.
 
    This file is part of the GNU opcodes library.
 
@@ -133,7 +131,7 @@ struct dis_private {
   bfd_byte the_buffer[MAX_MNEM_SIZE];
   bfd_vma insn_start;
   int orig_sizeflag;
-  jmp_buf bailout;
+  OPCODES_SIGJMP_BUF bailout;
 };
 
 enum address_mode
@@ -216,7 +214,7 @@ fetch_data (struct disassemble_info *info, bfd_byte *addr)
 	 STATUS.  */
       if (priv->max_fetched == priv->the_buffer)
 	(*info->memory_error_func) (status, start, info);
-      longjmp (priv->bailout, 1);
+      OPCODES_SIGLONGJMP (priv->bailout, 1);
     }
   else
     priv->max_fetched = addr;
@@ -429,7 +427,9 @@ fetch_data (struct disassemble_info *info, bfd_byte *addr)
 #define MaskVex { OP_VEX, mask_mode }
 
 #define MVexVSIBDWpX { OP_M, vex_vsib_d_w_dq_mode }
+#define MVexVSIBDQWpX { OP_M, vex_vsib_d_w_d_mode }
 #define MVexVSIBQWpX { OP_M, vex_vsib_q_w_dq_mode }
+#define MVexVSIBQDWpX { OP_M, vex_vsib_q_w_d_mode }
 
 /* Used handle "rep" prefix for string instructions.  */
 #define Xbr { REP_Fixup, eSI_reg }
@@ -558,8 +558,12 @@ enum
 
   /* Similar to vex_w_dq_mode, with VSIB dword indices.  */
   vex_vsib_d_w_dq_mode,
+  /* Similar to vex_vsib_d_w_dq_mode, with smaller memory.  */
+  vex_vsib_d_w_d_mode,
   /* Similar to vex_w_dq_mode, with VSIB qword indices.  */
   vex_vsib_q_w_dq_mode,
+  /* Similar to vex_vsib_q_w_dq_mode, with smaller memory.  */
+  vex_vsib_q_w_d_mode,
 
   /* scalar, ignore vector length.  */
   scalar_mode,
@@ -715,6 +719,8 @@ enum
   MOD_8D = 0,
   MOD_C6_REG_7,
   MOD_C7_REG_7,
+  MOD_FF_REG_3,
+  MOD_FF_REG_5,
   MOD_0F01_REG_0,
   MOD_0F01_REG_1,
   MOD_0F01_REG_2,
@@ -767,6 +773,9 @@ enum
   MOD_0FB2,
   MOD_0FB4,
   MOD_0FB5,
+  MOD_0FC7_REG_3,
+  MOD_0FC7_REG_4,
+  MOD_0FC7_REG_5,
   MOD_0FC7_REG_6,
   MOD_0FC7_REG_7,
   MOD_0FD7,
@@ -882,6 +891,7 @@ enum
   PREFIX_0FAE_REG_1,
   PREFIX_0FAE_REG_2,
   PREFIX_0FAE_REG_3,
+  PREFIX_0FAE_REG_7,
   PREFIX_0FB8,
   PREFIX_0FBC,
   PREFIX_0FBD,
@@ -2835,6 +2845,29 @@ static const unsigned char twobyte_has_modrm[256] = {
   /*       0 1 2 3 4 5 6 7 8 9 a b c d e f        */
 };
 
+static const unsigned char twobyte_has_mandatory_prefix[256] = {
+  /*       0 1 2 3 4 5 6 7 8 9 a b c d e f        */
+  /*       -------------------------------        */
+  /* 00 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0f */
+  /* 10 */ 1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0, /* 1f */
+  /* 20 */ 0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0, /* 2f */
+  /* 30 */ 0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0, /* 3f */
+  /* 40 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 4f */
+  /* 50 */ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 5f */
+  /* 60 */ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 6f */
+  /* 70 */ 1,0,0,0,1,1,1,1,0,0,1,1,1,1,1,1, /* 7f */
+  /* 80 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 8f */
+  /* 90 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 9f */
+  /* a0 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* af */
+  /* b0 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* bf */
+  /* c0 */ 0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0, /* cf */
+  /* d0 */ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* df */
+  /* e0 */ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* ef */
+  /* f0 */ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0  /* ff */
+  /*       -------------------------------        */
+  /*       0 1 2 3 4 5 6 7 8 9 a b c d e f        */
+};
+
 static char obuf[100];
 static char *obufp;
 static char *mnemonicendp;
@@ -2842,6 +2875,7 @@ static char scratchbuf[100];
 static unsigned char *start_codep;
 static unsigned char *insn_codep;
 static unsigned char *codep;
+static unsigned char *end_codep;
 static int last_lock_prefix;
 static int last_repz_prefix;
 static int last_repnz_prefix;
@@ -2849,6 +2883,11 @@ static int last_data_prefix;
 static int last_addr_prefix;
 static int last_rex_prefix;
 static int last_seg_prefix;
+static int fwait_prefix;
+/* The PREFIX_REPZ/PREFIX_REPNZ/PREFIX_DATA prefix is mandatory.  */
+static int mandatory_prefix;
+/* The active segment register prefix.  */
+static int active_seg_prefix;
 #define MAX_CODE_LENGTH 15
 /* We can up to 14 prefixes since the maximum instruction length is
    15bytes.  */
@@ -3229,9 +3268,9 @@ static const struct dis386 reg_table[][8] = {
     { "incQ",	{ Evh1 } },
     { "decQ",	{ Evh1 } },
     { "call{T|}", { indirEv, BND } },
-    { "Jcall{T|}", { indirEp } },
+    { MOD_TABLE (MOD_FF_REG_3) },
     { "jmp{T|}", { indirEv, BND } },
-    { "Jjmp{T|}", { indirEp } },
+    { MOD_TABLE (MOD_FF_REG_5) },
     { "pushU",	{ stackEv } },
     { Bad_Opcode },
   },
@@ -3352,9 +3391,9 @@ static const struct dis386 reg_table[][8] = {
     { Bad_Opcode },
     { "cmpxchg8b", { { CMPXCHG8B_Fixup, q_mode } } },
     { Bad_Opcode },
-    { Bad_Opcode },
-    { Bad_Opcode },
-    { Bad_Opcode },
+    { MOD_TABLE (MOD_0FC7_REG_3) },
+    { MOD_TABLE (MOD_0FC7_REG_4) },
+    { MOD_TABLE (MOD_0FC7_REG_5) },
     { MOD_TABLE (MOD_0FC7_REG_6) },
     { MOD_TABLE (MOD_0FC7_REG_7) },
   },
@@ -3755,6 +3794,13 @@ static const struct dis386 prefix_table[][4] = {
   {
     { Bad_Opcode },
     { "wrgsbase", { Ev } },
+  },
+
+  /* PREFIX_0FAE_REG_7 */
+  {
+    { "clflush",	{ Mb } },
+    { Bad_Opcode },
+    { "clflushopt",	{ Mb } },
   },
 
   /* PREFIX_0FB8 */
@@ -11050,6 +11096,14 @@ static const struct dis386 mod_table[][2] = {
     { RM_TABLE (RM_C7_REG_7) },
   },
   {
+    /* MOD_FF_REG_3 */
+    { "Jcall{T|}", { indirEp } },
+  },
+  {
+    /* MOD_FF_REG_5 */
+    { "Jjmp{T|}", { indirEp } },
+  },
+  {
     /* MOD_0F01_REG_0 */
     { X86_64_TABLE (X86_64_0F01_REG_0) },
     { RM_TABLE (RM_0F01_REG_0) },
@@ -11276,7 +11330,7 @@ static const struct dis386 mod_table[][2] = {
   },
   {
     /* MOD_0FAE_REG_7 */
-    { "clflush",	{ Mb } },
+    { PREFIX_TABLE (PREFIX_0FAE_REG_7) },
     { RM_TABLE (RM_0FAE_REG_7) },
   },
   {
@@ -11290,6 +11344,18 @@ static const struct dis386 mod_table[][2] = {
   {
     /* MOD_0FB5 */
     { "lgsS",		{ Gv, Mp } },
+  },
+  {
+    /* MOD_0FC7_REG_3 */
+    { "xrstors",		{ FXSAVE } },
+  },
+  {
+    /* MOD_0FC7_REG_4 */
+    { "xsavec",		{ FXSAVE } },
+  },
+  {
+    /* MOD_0FC7_REG_5 */
+    { "xsaves",		{ FXSAVE } },
   },
   {
     /* MOD_0FC7_REG_6 */
@@ -11495,6 +11561,10 @@ static const struct dis386 rm_table[][8] = {
     { "mwait",		{ { OP_Mwait, 0 } } },
     { "clac",		{ Skip_MODRM } },
     { "stac",		{ Skip_MODRM } },
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { "encls",		{ Skip_MODRM } },
   },
   {
     /* RM_0F01_REG_2 */
@@ -11505,7 +11575,7 @@ static const struct dis386 rm_table[][8] = {
     { "vmfunc",		{ Skip_MODRM } },
     { "xend",		{ Skip_MODRM } },
     { "xtest",		{ Skip_MODRM } },
-    { Bad_Opcode },
+    { "enclu",		{ Skip_MODRM } },
   },
   {
     /* RM_0F01_REG_3 */
@@ -11541,10 +11611,6 @@ static const struct dis386 rm_table[][8] = {
 
 /* We use the high bit to indicate different name for the same
    prefix.  */
-#define ADDR16_PREFIX	(0x67 | 0x100)
-#define ADDR32_PREFIX	(0x67 | 0x200)
-#define DATA16_PREFIX	(0x66 | 0x100)
-#define DATA32_PREFIX	(0x66 | 0x200)
 #define REP_PREFIX	(0xf3 | 0x100)
 #define XACQUIRE_PREFIX	(0xf2 | 0x200)
 #define XRELEASE_PREFIX	(0xf3 | 0x400)
@@ -11566,6 +11632,8 @@ ckprefix (void)
   last_addr_prefix = -1;
   last_rex_prefix = -1;
   last_seg_prefix = -1;
+  fwait_prefix = -1;
+  active_seg_prefix = 0;
   for (i = 0; i < (int) ARRAY_SIZE (all_prefixes); i++)
     all_prefixes[i] = 0;
   i = 0;
@@ -11615,26 +11683,32 @@ ckprefix (void)
 	case 0x2e:
 	  prefixes |= PREFIX_CS;
 	  last_seg_prefix = i;
+	  active_seg_prefix = PREFIX_CS;
 	  break;
 	case 0x36:
 	  prefixes |= PREFIX_SS;
 	  last_seg_prefix = i;
+	  active_seg_prefix = PREFIX_SS;
 	  break;
 	case 0x3e:
 	  prefixes |= PREFIX_DS;
 	  last_seg_prefix = i;
+	  active_seg_prefix = PREFIX_DS;
 	  break;
 	case 0x26:
 	  prefixes |= PREFIX_ES;
 	  last_seg_prefix = i;
+	  active_seg_prefix = PREFIX_ES;
 	  break;
 	case 0x64:
 	  prefixes |= PREFIX_FS;
 	  last_seg_prefix = i;
+	  active_seg_prefix = PREFIX_FS;
 	  break;
 	case 0x65:
 	  prefixes |= PREFIX_GS;
 	  last_seg_prefix = i;
+	  active_seg_prefix = PREFIX_GS;
 	  break;
 	case 0x66:
 	  prefixes |= PREFIX_DATA;
@@ -11648,6 +11722,7 @@ ckprefix (void)
 	  /* fwait is really an instruction.  If there are prefixes
 	     before the fwait, they belong to the fwait, *not* to the
 	     following instruction.  */
+	  fwait_prefix = i;
 	  if (prefixes || rex)
 	    {
 	      prefixes |= PREFIX_FWAIT;
@@ -11675,28 +11750,6 @@ ckprefix (void)
       length++;
     }
   return 0;
-}
-
-static int
-seg_prefix (int pref)
-{
-  switch (pref)
-    {
-    case 0x2e:
-      return PREFIX_CS;
-    case 0x36:
-      return PREFIX_SS;
-    case 0x3e:
-      return PREFIX_DS;
-    case 0x26:
-      return PREFIX_ES;
-    case 0x64:
-      return PREFIX_FS;
-    case 0x65:
-      return PREFIX_GS;
-    default:
-      return 0;
-    }
 }
 
 /* Return the name of the prefix byte PREF, or NULL if PREF is not a
@@ -11772,14 +11825,6 @@ prefix_name (int pref, int sizeflag)
 	return (sizeflag & AFLAG) ? "addr16" : "addr32";
     case FWAIT_OPCODE:
       return "fwait";
-    case ADDR16_PREFIX:
-      return "addr16";
-    case ADDR32_PREFIX:
-      return "addr32";
-    case DATA16_PREFIX:
-      return "data16";
-    case DATA32_PREFIX:
-      return "data32";
     case REP_PREFIX:
       return "rep";
     case XACQUIRE_PREFIX:
@@ -11920,32 +11965,47 @@ get_valid_dis386 (const struct dis386 *dp, disassemble_info *info)
 	}
       else
 	{
+	  int last_prefix = -1;
+	  int prefix = 0;
 	  vindex = 0;
-	  used_prefixes |= (prefixes & PREFIX_REPZ);
-	  if (prefixes & PREFIX_REPZ)
+	  /* We check PREFIX_REPNZ and PREFIX_REPZ before PREFIX_DATA.
+	     When there are multiple PREFIX_REPNZ and PREFIX_REPZ, the
+	     last one wins.  */
+	  if ((prefixes & (PREFIX_REPZ | PREFIX_REPNZ)) != 0)
 	    {
-	      vindex = 1;
-	      all_prefixes[last_repz_prefix] = 0;
-	    }
-	  else
-	    {
-	      /* We should check PREFIX_REPNZ and PREFIX_REPZ before
-		 PREFIX_DATA.  */
-	      used_prefixes |= (prefixes & PREFIX_REPNZ);
-	      if (prefixes & PREFIX_REPNZ)
+	      if (last_repz_prefix > last_repnz_prefix)
 		{
-		  vindex = 3;
-		  all_prefixes[last_repnz_prefix] = 0;
+		  vindex = 1;
+		  prefix = PREFIX_REPZ;
+		  last_prefix = last_repz_prefix;
 		}
 	      else
 		{
-		  used_prefixes |= (prefixes & PREFIX_DATA);
-		  if (prefixes & PREFIX_DATA)
-		    {
-		      vindex = 2;
-		      all_prefixes[last_data_prefix] = 0;
-		    }
+		  vindex = 3;
+		  prefix = PREFIX_REPNZ;
+		  last_prefix = last_repnz_prefix;
 		}
+
+	      /* Ignore the invalid index if it isn't mandatory.  */
+	      if (!mandatory_prefix
+		  && (prefix_table[dp->op[1].bytemode][vindex].name
+		      == NULL)
+		  && (prefix_table[dp->op[1].bytemode][vindex].op[0].bytemode
+		      == 0))
+		vindex = 0;
+	    }
+
+	  if (vindex == 0 && (prefixes & PREFIX_DATA) != 0)
+	    {
+	      vindex = 2;
+	      prefix = PREFIX_DATA;
+	      last_prefix = last_data_prefix;
+	    }
+
+	  if (vindex != 0)
+	    {
+	      used_prefixes |= prefix;
+	      all_prefixes[last_prefix] = 0;
 	    }
 	}
       dp = &prefix_table[dp->op[1].bytemode][vindex];
@@ -11960,6 +12020,7 @@ get_valid_dis386 (const struct dis386 *dp, disassemble_info *info)
       FETCH_DATA (info, codep + 2);
       vindex = *codep++;
       dp = &three_byte_table[dp->op[1].bytemode][vindex];
+      end_codep = codep;
       modrm.mod = (*codep >> 6) & 3;
       modrm.reg = (*codep >> 3) & 7;
       modrm.rm = *codep & 7;
@@ -12042,6 +12103,7 @@ get_valid_dis386 (const struct dis386 *dp, disassemble_info *info)
       vindex = *codep++;
       dp = &xop_table[vex_table_index][vindex];
 
+      end_codep = codep;
       FETCH_DATA (info, codep + 1);
       modrm.mod = (*codep >> 6) & 3;
       modrm.reg = (*codep >> 3) & 7;
@@ -12103,6 +12165,7 @@ get_valid_dis386 (const struct dis386 *dp, disassemble_info *info)
       codep++;
       vindex = *codep++;
       dp = &vex_table[vex_table_index][vindex];
+      end_codep = codep;
       /* There is no MODRM byte for VEX [82|77].  */
       if (vindex != 0x77 && vindex != 0x82)
 	{
@@ -12151,6 +12214,7 @@ get_valid_dis386 (const struct dis386 *dp, disassemble_info *info)
       codep++;
       vindex = *codep++;
       dp = &vex_table[dp->op[1].bytemode][vindex];
+      end_codep = codep;
       /* There is no MODRM byte for VEX [82|77].  */
       if (vindex != 0x77 && vindex != 0x82)
 	{
@@ -12245,6 +12309,7 @@ get_valid_dis386 (const struct dis386 *dp, disassemble_info *info)
       codep++;
       vindex = *codep++;
       dp = &evex_table[vex_table_index][vindex];
+      end_codep = codep;
       FETCH_DATA (info, codep + 1);
       modrm.mod = (*codep >> 6) & 3;
       modrm.reg = (*codep >> 3) & 7;
@@ -12309,11 +12374,10 @@ print_insn (bfd_vma pc, disassemble_info *info)
   int i;
   char *op_txt[MAX_OPERANDS];
   int needcomma;
-  int sizeflag;
+  int sizeflag, orig_sizeflag;
   const char *p;
   struct dis_private priv;
   int prefix_length;
-  int default_prefixes;
 
   priv.orig_sizeflag = AFLAG | DFLAG;
   if ((info->mach & bfd_mach_i386_i386) != 0)
@@ -12459,7 +12523,7 @@ print_insn (bfd_vma pc, disassemble_info *info)
   start_codep = priv.the_buffer;
   codep = priv.the_buffer;
 
-  if (setjmp (priv.bailout) != 0)
+  if (OPCODES_SIGSETJMP (priv.bailout) != 0)
     {
       const char *name;
 
@@ -12507,8 +12571,13 @@ print_insn (bfd_vma pc, disassemble_info *info)
   if (((prefixes & PREFIX_FWAIT)
        && ((*codep < 0xd8) || (*codep > 0xdf))))
     {
+      /* Handle prefixes before fwait.  */
+      for (i = 0; i < fwait_prefix && all_prefixes[i];
+	   i++)
+	(*info->fprintf_func) (info->stream, "%s ",
+			       prefix_name (all_prefixes[i], sizeflag));
       (*info->fprintf_func) (info->stream, "fwait");
-      return 1;
+      return i + 1;
     }
 
   if (*codep == 0x0f)
@@ -12518,56 +12587,27 @@ print_insn (bfd_vma pc, disassemble_info *info)
       threebyte = *++codep;
       dp = &dis386_twobyte[threebyte];
       need_modrm = twobyte_has_modrm[*codep];
+      mandatory_prefix = twobyte_has_mandatory_prefix[*codep];
       codep++;
     }
   else
     {
       dp = &dis386[*codep];
       need_modrm = onebyte_has_modrm[*codep];
+      mandatory_prefix = 0;
       codep++;
     }
 
-  if ((prefixes & PREFIX_REPZ))
-    used_prefixes |= PREFIX_REPZ;
-  if ((prefixes & PREFIX_REPNZ))
-    used_prefixes |= PREFIX_REPNZ;
-  if ((prefixes & PREFIX_LOCK))
-    used_prefixes |= PREFIX_LOCK;
-
-  default_prefixes = 0;
+  /* Save sizeflag for printing the extra prefixes later before updating
+     it for mnemonic and operand processing.  The prefix names depend
+     only on the address mode.  */
+  orig_sizeflag = sizeflag;
   if (prefixes & PREFIX_ADDR)
-    {
-      sizeflag ^= AFLAG;
-      if (dp->op[2].bytemode != loop_jcxz_mode || intel_syntax)
-	{
-	  if ((sizeflag & AFLAG) || address_mode == mode_64bit)
-	    all_prefixes[last_addr_prefix] = ADDR32_PREFIX;
-	  else
-	    all_prefixes[last_addr_prefix] = ADDR16_PREFIX;
-	  default_prefixes |= PREFIX_ADDR;
-	}
-    }
-
+    sizeflag ^= AFLAG;
   if ((prefixes & PREFIX_DATA))
-    {
-      sizeflag ^= DFLAG;
-      if (dp->op[2].bytemode == cond_jump_mode
-	  && dp->op[0].bytemode == v_mode
-	  && !intel_syntax)
-	{
-	  if (sizeflag & DFLAG)
-	    all_prefixes[last_data_prefix] = DATA32_PREFIX;
-	  else
-	    all_prefixes[last_data_prefix] = DATA16_PREFIX;
-	  default_prefixes |= PREFIX_DATA;
-	}
-      else if (rex & REX_W)
-	{
-	  /* REX_W will override PREFIX_DATA.  */
-	  default_prefixes |= PREFIX_DATA;
-	}
-    }
+    sizeflag ^= DFLAG;
 
+  end_codep = codep;
   if (need_modrm)
     {
       FETCH_DATA (info, codep + 1);
@@ -12616,33 +12656,14 @@ print_insn (bfd_vma pc, disassemble_info *info)
 	}
     }
 
-  /* See if any prefixes were not used.  If so, print the first one
-     separately.  If we don't do this, we'll wind up printing an
-     instruction stream which does not precisely correspond to the
-     bytes we are disassembling.  */
-  if ((prefixes & ~(used_prefixes | default_prefixes)) != 0)
-    {
-      for (i = 0; i < (int) ARRAY_SIZE (all_prefixes); i++)
-	if (all_prefixes[i])
-	  {
-	    const char *name;
-	    name = prefix_name (all_prefixes[i], priv.orig_sizeflag);
-	    if (name == NULL)
-	      name = INTERNAL_DISASSEMBLER_ERROR;
-	    (*info->fprintf_func) (info->stream, "%s", name);
-	    return 1;
-	  }
-    }
-
   /* Check if the REX prefix is used.  */
-  if (rex_ignored == 0 && (rex ^ rex_used) == 0)
+  if (rex_ignored == 0 && (rex ^ rex_used) == 0 && last_rex_prefix >= 0)
     all_prefixes[last_rex_prefix] = 0;
 
   /* Check if the SEG prefix is used.  */
   if ((prefixes & (PREFIX_CS | PREFIX_SS | PREFIX_DS | PREFIX_ES
 		   | PREFIX_FS | PREFIX_GS)) != 0
-      && (used_prefixes
-	  & seg_prefix (all_prefixes[last_seg_prefix])) != 0)
+      && (used_prefixes & active_seg_prefix) != 0)
     all_prefixes[last_seg_prefix] = 0;
 
   /* Check if the ADDR prefix is used.  */
@@ -12655,17 +12676,38 @@ print_insn (bfd_vma pc, disassemble_info *info)
       && (used_prefixes & PREFIX_DATA) != 0)
     all_prefixes[last_data_prefix] = 0;
 
+  /* Print the extra prefixes.  */
   prefix_length = 0;
   for (i = 0; i < (int) ARRAY_SIZE (all_prefixes); i++)
     if (all_prefixes[i])
       {
 	const char *name;
-	name = prefix_name (all_prefixes[i], sizeflag);
+	name = prefix_name (all_prefixes[i], orig_sizeflag);
 	if (name == NULL)
 	  abort ();
 	prefix_length += strlen (name) + 1;
 	(*info->fprintf_func) (info->stream, "%s ", name);
       }
+
+  /* If the mandatory PREFIX_REPZ/PREFIX_REPNZ/PREFIX_DATA prefix is
+     unused, opcode is invalid.  Since the PREFIX_DATA prefix may be
+     used by putop and MMX/SSE operand and may be overriden by the
+     PREFIX_REPZ/PREFIX_REPNZ fix, we check the PREFIX_DATA prefix
+     separately.  */
+  if (mandatory_prefix
+      && dp != &bad_opcode
+      && (((prefixes
+	    & (PREFIX_REPZ | PREFIX_REPNZ)) != 0
+	   && (used_prefixes
+	       & (PREFIX_REPZ | PREFIX_REPNZ)) == 0)
+	  || ((((prefixes
+		 & (PREFIX_REPZ | PREFIX_REPNZ | PREFIX_DATA))
+		== PREFIX_DATA)
+	       && (used_prefixes & PREFIX_DATA) == 0))))
+    {
+      (*info->fprintf_func) (info->stream, "(bad)");
+      return end_codep - priv.the_buffer;
+    }
 
   /* Check maximum code length.  */
   if ((codep - start_codep) > MAX_CODE_LENGTH)
@@ -13095,17 +13137,25 @@ dofloat (int sizeflag)
     }
 }
 
+/* Like oappend (below), but S is a string starting with '%'.
+   In Intel syntax, the '%' is elided.  */
+static void
+oappend_maybe_intel (const char *s)
+{
+  oappend (s + intel_syntax);
+}
+
 static void
 OP_ST (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
-  oappend ("%st" + intel_syntax);
+  oappend_maybe_intel ("%st");
 }
 
 static void
 OP_STi (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
   sprintf (scratchbuf, "%%st(%d)", modrm.rm);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 /* Capital letters in template are macros.  */
@@ -13626,35 +13676,33 @@ oappend (const char *s)
 static void
 append_seg (void)
 {
-  if (prefixes & PREFIX_CS)
+  /* Only print the active segment register.  */
+  if (!active_seg_prefix)
+    return;
+
+  used_prefixes |= active_seg_prefix;
+  switch (active_seg_prefix)
     {
-      used_prefixes |= PREFIX_CS;
-      oappend ("%cs:" + intel_syntax);
-    }
-  if (prefixes & PREFIX_DS)
-    {
-      used_prefixes |= PREFIX_DS;
-      oappend ("%ds:" + intel_syntax);
-    }
-  if (prefixes & PREFIX_SS)
-    {
-      used_prefixes |= PREFIX_SS;
-      oappend ("%ss:" + intel_syntax);
-    }
-  if (prefixes & PREFIX_ES)
-    {
-      used_prefixes |= PREFIX_ES;
-      oappend ("%es:" + intel_syntax);
-    }
-  if (prefixes & PREFIX_FS)
-    {
-      used_prefixes |= PREFIX_FS;
-      oappend ("%fs:" + intel_syntax);
-    }
-  if (prefixes & PREFIX_GS)
-    {
-      used_prefixes |= PREFIX_GS;
-      oappend ("%gs:" + intel_syntax);
+    case PREFIX_CS:
+      oappend_maybe_intel ("%cs:");
+      break;
+    case PREFIX_DS:
+      oappend_maybe_intel ("%ds:");
+      break;
+    case PREFIX_SS:
+      oappend_maybe_intel ("%ss:");
+      break;
+    case PREFIX_ES:
+      oappend_maybe_intel ("%es:");
+      break;
+    case PREFIX_FS:
+      oappend_maybe_intel ("%fs:");
+      break;
+    case PREFIX_GS:
+      oappend_maybe_intel ("%gs:");
+      break;
+    default:
+      break;
     }
 }
 
@@ -13800,7 +13848,6 @@ intel_operand_size (int bytemode, int sizeflag)
 	}
       /* FALLTHRU */
     case v_mode:
-    case v_bnd_mode:
     case v_swap_mode:
     case dq_mode:
       USED_REX (REX_W);
@@ -14072,6 +14119,14 @@ intel_operand_size (int bytemode, int sizeflag)
 	  oappend ("ZMMWORD PTR ");
 	}
       break;
+    case vex_vsib_q_w_d_mode:
+    case vex_vsib_d_w_d_mode:
+      if (!need_vex || !vex.evex || vex.length != 512)
+	abort ();
+
+      oappend ("YMMWORD PTR ");
+
+      break;
     case mask_mode:
       if (!need_vex)
 	abort ();
@@ -14082,6 +14137,7 @@ intel_operand_size (int bytemode, int sizeflag)
 	abort ();
       oappend ("WORD PTR ");
       break;
+    case v_bnd_mode:
     default:
       break;
     }
@@ -14121,6 +14177,7 @@ OP_E_register (int bytemode, int sizeflag)
       names = names64;
       break;
     case m_mode:
+    case v_bnd_mode:
       names = address_mode == mode_64bit ? names64 : names32;
       break;
     case bnd_mode:
@@ -14135,7 +14192,6 @@ OP_E_register (int bytemode, int sizeflag)
       bytemode = v_mode;
       /* FALLTHRU */
     case v_mode:
-    case v_bnd_mode:
     case v_swap_mode:
     case dq_mode:
     case dqb_mode:
@@ -14188,12 +14244,12 @@ OP_E_memory (int bytemode, int sizeflag)
       switch (bytemode)
 	{
 	case vex_vsib_d_w_dq_mode:
+	case vex_vsib_d_w_d_mode:
+	case vex_vsib_q_w_dq_mode:
+	case vex_vsib_q_w_d_mode:
 	case evex_x_gscat_mode:
 	case xmm_mdq_mode:
 	  shift = vex.w ? 3 : 2;
-	  break;
-	case vex_vsib_q_w_dq_mode:
-	  shift = 3;
 	  break;
 	case x_mode:
 	case evex_half_bcst_xmmq_mode:
@@ -14309,7 +14365,9 @@ OP_E_memory (int bytemode, int sizeflag)
 	  switch (bytemode)
 	    {
 	    case vex_vsib_d_w_dq_mode:
+	    case vex_vsib_d_w_d_mode:
 	    case vex_vsib_q_w_dq_mode:
+	    case vex_vsib_q_w_d_mode:
 	      if (!need_vex)
 		abort ();
 	      if (vex.evex)
@@ -14325,13 +14383,17 @@ OP_E_memory (int bytemode, int sizeflag)
 		  indexes64 = indexes32 = names_xmm;
 		  break;
 		case 256:
-		  if (!vex.w || bytemode == vex_vsib_q_w_dq_mode)
+		  if (!vex.w
+		      || bytemode == vex_vsib_q_w_dq_mode
+		      || bytemode == vex_vsib_q_w_d_mode)
 		    indexes64 = indexes32 = names_ymm;
 		  else
 		    indexes64 = indexes32 = names_xmm;
 		  break;
 		case 512:
-		  if (!vex.w || bytemode == vex_vsib_q_w_dq_mode)
+		  if (!vex.w
+		      || bytemode == vex_vsib_q_w_dq_mode
+		      || bytemode == vex_vsib_q_w_d_mode)
 		    indexes64 = indexes32 = names_zmm;
 		  else
 		    indexes64 = indexes32 = names_ymm;
@@ -14472,10 +14534,7 @@ OP_E_memory (int bytemode, int sizeflag)
 	{
 	  if (modrm.mod != 0 || base == 5)
 	    {
-	      if (prefixes & (PREFIX_CS | PREFIX_SS | PREFIX_DS
-			      | PREFIX_ES | PREFIX_FS | PREFIX_GS))
-		;
-	      else
+	      if (!active_seg_prefix)
 		{
 		  oappend (names_seg[ds_reg - es_reg]);
 		  oappend (":");
@@ -14548,10 +14607,7 @@ OP_E_memory (int bytemode, int sizeflag)
 	}
       else if (intel_syntax)
 	{
-	  if (prefixes & (PREFIX_CS | PREFIX_SS | PREFIX_DS
-			  | PREFIX_ES | PREFIX_FS | PREFIX_GS))
-	    ;
-	  else
+	  if (!active_seg_prefix)
 	    {
 	      oappend (names_seg[ds_reg - es_reg]);
 	      oappend (":");
@@ -14904,7 +14960,7 @@ OP_I (int bytemode, int sizeflag)
   op &= mask;
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
   scratchbuf[0] = '\0';
 }
 
@@ -14958,7 +15014,7 @@ OP_I64 (int bytemode, int sizeflag)
   op &= mask;
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
   scratchbuf[0] = '\0';
 }
 
@@ -15012,7 +15068,7 @@ OP_sI (int bytemode, int sizeflag)
 
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 static void
@@ -15109,8 +15165,7 @@ OP_OFF (int bytemode, int sizeflag)
 
   if (intel_syntax)
     {
-      if (!(prefixes & (PREFIX_CS | PREFIX_SS | PREFIX_DS
-			| PREFIX_ES | PREFIX_FS | PREFIX_GS)))
+      if (!active_seg_prefix)
 	{
 	  oappend (names_seg[ds_reg - es_reg]);
 	  oappend (":");
@@ -15140,8 +15195,7 @@ OP_OFF64 (int bytemode, int sizeflag)
 
   if (intel_syntax)
     {
-      if (!(prefixes & (PREFIX_CS | PREFIX_SS | PREFIX_DS
-			| PREFIX_ES | PREFIX_FS | PREFIX_GS)))
+      if (!active_seg_prefix)
 	{
 	  oappend (names_seg[ds_reg - es_reg]);
 	  oappend (":");
@@ -15194,7 +15248,7 @@ OP_ESreg (int code, int sizeflag)
 	  intel_operand_size (b_mode, sizeflag);
 	}
     }
-  oappend ("%es:" + intel_syntax);
+  oappend_maybe_intel ("%es:");
   ptr_reg (code, sizeflag);
 }
 
@@ -15217,14 +15271,10 @@ OP_DSreg (int code, int sizeflag)
 	  intel_operand_size (b_mode, sizeflag);
 	}
     }
-  if ((prefixes
-       & (PREFIX_CS
-	  | PREFIX_DS
-	  | PREFIX_SS
-	  | PREFIX_ES
-	  | PREFIX_FS
-	  | PREFIX_GS)) == 0)
-    prefixes |= PREFIX_DS;
+  /* Set active_seg_prefix to PREFIX_DS if it is unset so that the
+     default segment register DS is printed.  */
+  if (!active_seg_prefix)
+    active_seg_prefix = PREFIX_DS;
   append_seg ();
   ptr_reg (code, sizeflag);
 }
@@ -15247,7 +15297,7 @@ OP_C (int dummy ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
   else
     add = 0;
   sprintf (scratchbuf, "%%cr%d", modrm.reg + add);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 static void
@@ -15270,7 +15320,7 @@ static void
 OP_T (int dummy ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
   sprintf (scratchbuf, "%%tr%d", modrm.reg);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 static void
@@ -15329,7 +15379,9 @@ OP_XMM (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	  names = names_xmm;
 	  break;
 	case 256:
-	  if (vex.w || bytemode != vex_vsib_q_w_dq_mode)
+	  if (vex.w
+	      || (bytemode != vex_vsib_q_w_dq_mode
+		  && bytemode != vex_vsib_q_w_d_mode))
 	    names = names_ymm;
 	  else
 	    names = names_xmm;
@@ -15715,7 +15767,7 @@ CMP_Fixup (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, cmp_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }
@@ -16035,6 +16087,7 @@ OP_VEX (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	case vex_mode:
 	case vex128_mode:
 	case vex_vsib_q_w_dq_mode:
+	case vex_vsib_q_w_d_mode:
 	  names = names_xmm;
 	  break;
 	case dq_mode:
@@ -16059,6 +16112,7 @@ OP_VEX (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	  names = names_ymm;
 	  break;
 	case vex_vsib_q_w_dq_mode:
+	case vex_vsib_q_w_d_mode:
 	  names = vex.w ? names_ymm : names_xmm;
 	  break;
 	case mask_mode:
@@ -16240,7 +16294,7 @@ OP_EX_VexImmW (int bytemode, int sizeflag)
       /* Output the imm8 directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, vex_imm8 & 0xf);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
       codep++;
     }
@@ -16469,7 +16523,7 @@ VCMP_Fixup (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, cmp_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }
@@ -16516,7 +16570,7 @@ VPCMP_Fixup (int bytemode ATTRIBUTE_UNUSED,
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, cmp_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }
@@ -16564,7 +16618,7 @@ PCLMUL_Fixup (int bytemode ATTRIBUTE_UNUSED,
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, pclmul_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }

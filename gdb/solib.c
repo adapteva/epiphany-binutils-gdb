@@ -1,6 +1,6 @@
 /* Handle shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 1990-2013 Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,7 +21,7 @@
 
 #include <sys/types.h>
 #include <fcntl.h>
-#include "gdb_string.h"
+#include <string.h>
 #include "symtab.h"
 #include "bfd.h"
 #include "symfile.h"
@@ -230,8 +230,25 @@ solib_find (char *in_pathname, int *fd)
     {
       int need_dir_separator;
 
-      need_dir_separator = (!IS_DIR_SEPARATOR (in_pathname[0])
-			    && !HAS_TARGET_DRIVE_SPEC (fskind, in_pathname));
+      /* Concatenate the sysroot and the target reported filename.  We
+	 may need to glue them with a directory separator.  Cases to
+	 consider:
+
+        | sysroot         | separator | in_pathname    |
+        |-----------------+-----------+----------------|
+        | /some/dir       | /         | c:/foo/bar.dll |
+        | /some/dir       |           | /foo/bar.dll   |
+        | remote:         |           | c:/foo/bar.dll |
+        | remote:         |           | /foo/bar.dll   |
+        | remote:some/dir | /         | c:/foo/bar.dll |
+        | remote:some/dir |           | /foo/bar.dll   |
+
+	IOW, we don't need to add a separator if IN_PATHNAME already
+	has one, or when the the sysroot is exactly "remote:".
+	There's no need to check for drive spec explicitly, as we only
+	get here if IN_PATHNAME is considered an absolute path.  */
+      need_dir_separator = !(IS_DIR_SEPARATOR (in_pathname[0])
+			     || strcmp (REMOTE_SYSROOT_PREFIX, sysroot) == 0);
 
       /* Cat the prefixed pathname together.  */
       temp_pathname = concat (sysroot,
@@ -469,6 +486,16 @@ solib_map_sections (struct so_list *so)
   /* Leave bfd open, core_xfer_memory and "info files" need it.  */
   so->abfd = abfd;
 
+  /* Copy the full path name into so_name, allowing symbol_file_add
+     to find it later.  This also affects the =library-loaded GDB/MI
+     event, and in particular the part of that notification providing
+     the library's host-side path.  If we let the target dictate
+     that objfile's path, and the target is different from the host,
+     GDB/MI will not provide the correct host-side path.  */
+  if (strlen (bfd_get_filename (abfd)) >= SO_NAME_MAX_PATH_SIZE)
+    error (_("Shared library file name is too long."));
+  strcpy (so->so_name, bfd_get_filename (abfd));
+
   if (build_section_table (abfd, &so->sections, &so->sections_end))
     {
       error (_("Can't find the file sections in `%s': %s"),
@@ -601,7 +628,7 @@ solib_read_symbols (struct so_list *so, int flags)
 	  /* Have we already loaded this shared object?  */
 	  ALL_OBJFILES (so->objfile)
 	    {
-	      if (filename_cmp (so->objfile->name, so->so_name) == 0
+	      if (filename_cmp (objfile_name (so->objfile), so->so_name) == 0
 		  && so->objfile->addr_low == so->addr_low)
 		break;
 	    }
@@ -610,7 +637,7 @@ solib_read_symbols (struct so_list *so, int flags)
 
 	  sap = build_section_addr_info_from_section_table (so->sections,
 							    so->sections_end);
-	  so->objfile = symbol_file_add_from_bfd (so->abfd,
+	  so->objfile = symbol_file_add_from_bfd (so->abfd, so->so_name,
 						  flags, sap, OBJF_SHARED,
 						  NULL);
 	  so->objfile->addr_low = so->addr_low;
@@ -623,7 +650,7 @@ solib_read_symbols (struct so_list *so, int flags)
 			   so->so_name);
       else
 	{
-	  if (from_tty || info_verbose)
+	  if (print_symbol_loading_p (from_tty, 0, 1))
 	    printf_unfiltered (_("Loaded symbols for %s\n"), so->so_name);
 	  so->symbols_loaded = 1;
 	}
@@ -877,6 +904,17 @@ solib_add (char *pattern, int from_tty,
 	   struct target_ops *target, int readsyms)
 {
   struct so_list *gdb;
+
+  if (print_symbol_loading_p (from_tty, 0, 0))
+    {
+      if (pattern != NULL)
+	{
+	  printf_unfiltered (_("Loading symbols for shared libraries: %s\n"),
+			     pattern);
+	}
+      else
+	printf_unfiltered (_("Loading symbols for shared libraries.\n"));
+    }
 
   current_program_space->solib_add_generation++;
 
@@ -1250,6 +1288,9 @@ reload_shared_libraries_1 (int from_tty)
   struct so_list *so;
   struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
 
+  if (print_symbol_loading_p (from_tty, 0, 0))
+    printf_unfiltered (_("Loading symbols for shared libraries.\n"));
+
   for (so = so_list_head; so != NULL; so = so->next)
     {
       char *filename, *found_pathname = NULL;
@@ -1479,12 +1520,31 @@ gdb_bfd_lookup_symbol (bfd *abfd,
   return symaddr;
 }
 
+/* SO_LIST_HEAD may contain user-loaded object files that can be removed
+   out-of-band by the user.  So upon notification of free_objfile remove
+   all references to any user-loaded file that is about to be freed.  */
+
+static void
+remove_user_added_objfile (struct objfile *objfile)
+{
+  struct so_list *so;
+
+  if (objfile != 0 && objfile->flags & OBJF_USERLOADED)
+    {
+      for (so = so_list_head; so != NULL; so = so->next)
+	if (so->objfile == objfile)
+	  so->objfile = NULL;
+    }
+}
+
 extern initialize_file_ftype _initialize_solib; /* -Wmissing-prototypes */
 
 void
 _initialize_solib (void)
 {
   solib_data = gdbarch_data_register_pre_init (solib_init);
+
+  observer_attach_free_objfile (remove_user_added_objfile);
 
   add_com ("sharedlibrary", class_files, sharedlibrary_command,
 	   _("Load shared object library symbols for files matching REGEXP."));

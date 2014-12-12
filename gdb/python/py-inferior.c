@@ -1,6 +1,6 @@
 /* Python interface to inferiors.
 
-   Copyright (C) 2009-2013 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -210,7 +210,7 @@ find_thread_object (ptid_t ptid)
   PyObject *inf_obj;
   thread_object *found = NULL;
 
-  pid = PIDGET (ptid);
+  pid = ptid_get_pid (ptid);
   if (pid == 0)
     return NULL;
 
@@ -274,13 +274,14 @@ delete_thread_object (struct thread_info *tp, int ignore)
   struct cleanup *cleanup;
   inferior_object *inf_obj;
   struct threadlist_entry **entry, *tmp;
-  
+
   if (!gdb_python_initialized)
     return;
 
   cleanup = ensure_python_env (python_gdbarch, python_language);
 
-  inf_obj = (inferior_object *) find_inferior_object (PIDGET(tp->ptid));
+  inf_obj
+    = (inferior_object *) find_inferior_object (ptid_get_pid (tp->ptid));
   if (!inf_obj)
     {
       do_cleanups (cleanup);
@@ -558,9 +559,9 @@ get_buffer (PyObject *self, Py_buffer *buf, int flags)
 {
   membuf_object *membuf_obj = (membuf_object *) self;
   int ret;
-  
+
   ret = PyBuffer_FillInfo (buf, self, membuf_obj->buffer,
-			   membuf_obj->length, 0, 
+			   membuf_obj->length, 0,
 			   PyBUF_CONTIG);
   buf->format = "c";
 
@@ -646,7 +647,7 @@ infpy_search_memory (PyObject *self, PyObject *args, PyObject *kw)
   pattern_size = pybuf.len;
 #else
   PyObject *pattern;
-  
+
   if (! PyArg_ParseTupleAndKeywords (args, kw, "OOO", keywords,
  				     &start_addr_obj, &length_obj,
 				     &pattern))
@@ -666,7 +667,7 @@ infpy_search_memory (PyObject *self, PyObject *args, PyObject *kw)
 
   if (get_addr_from_python (start_addr_obj, &start_addr) < 0)
     goto fail;
- 
+
   if (get_addr_from_python (length_obj, &length) < 0)
     goto fail;
 

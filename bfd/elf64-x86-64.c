@@ -1,7 +1,5 @@
 /* X86-64 specific support for ELF
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010, 2011, 2012, 2013
-   Free Software Foundation, Inc.
+   Copyright (C) 2000-2014 Free Software Foundation, Inc.
    Contributed by Jan Hubicka <jh@suse.cz>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -172,12 +170,18 @@ static reloc_howto_type x86_64_elf_howto_table[] =
   HOWTO(R_X86_64_RELATIVE64, 0, 4, 64, FALSE, 0, complain_overflow_bitfield,
 	bfd_elf_generic_reloc, "R_X86_64_RELATIVE64", FALSE, MINUS_ONE,
 	MINUS_ONE, FALSE),
+  HOWTO(R_X86_64_PC32_BND, 0, 2, 32, TRUE, 0, complain_overflow_signed,
+	bfd_elf_generic_reloc, "R_X86_64_PC32_BND", FALSE, 0xffffffff, 0xffffffff,
+	TRUE),
+  HOWTO(R_X86_64_PLT32_BND, 0, 2, 32, TRUE, 0, complain_overflow_signed,
+	bfd_elf_generic_reloc, "R_X86_64_PLT32_BND", FALSE, 0xffffffff, 0xffffffff,
+	TRUE),
 
   /* We have a gap in the reloc numbers here.
      R_X86_64_standard counts the number up to this point, and
      R_X86_64_vt_offset is the value to subtract from a reloc type of
      R_X86_64_GNU_VT* to form an index into this table.  */
-#define R_X86_64_standard (R_X86_64_RELATIVE64 + 1)
+#define R_X86_64_standard (R_X86_64_PLT32_BND + 1)
 #define R_X86_64_vt_offset (R_X86_64_GNU_VTINHERIT - R_X86_64_standard)
 
 /* GNU extension to record C++ vtable hierarchy.  */
@@ -199,6 +203,7 @@ static reloc_howto_type x86_64_elf_howto_table[] =
   (   ((TYPE) == R_X86_64_PC8)		\
    || ((TYPE) == R_X86_64_PC16)		\
    || ((TYPE) == R_X86_64_PC32)		\
+   || ((TYPE) == R_X86_64_PC32_BND)	\
    || ((TYPE) == R_X86_64_PC64))
 
 /* Map BFD relocs to the x86_64 elf relocs.  */
@@ -248,6 +253,8 @@ static const struct elf_reloc_map x86_64_reloc_map[] =
   { BFD_RELOC_X86_64_TLSDESC_CALL, R_X86_64_TLSDESC_CALL, },
   { BFD_RELOC_X86_64_TLSDESC,	R_X86_64_TLSDESC, },
   { BFD_RELOC_X86_64_IRELATIVE,	R_X86_64_IRELATIVE, },
+  { BFD_RELOC_X86_64_PC32_BND,	R_X86_64_PC32_BND,},
+  { BFD_RELOC_X86_64_PLT32_BND,	R_X86_64_PLT32_BND,},
   { BFD_RELOC_VTABLE_INHERIT,	R_X86_64_GNU_VTINHERIT, },
   { BFD_RELOC_VTABLE_ENTRY,	R_X86_64_GNU_VTENTRY, },
 };
@@ -553,6 +560,56 @@ static const bfd_byte elf_x86_64_plt_entry[PLT_ENTRY_SIZE] =
   0, 0, 0, 0	/* replaced with offset to start of .plt0.  */
 };
 
+/* The first entry in a procedure linkage table with BND relocations
+   like this.  */
+
+static const bfd_byte elf_x86_64_bnd_plt0_entry[PLT_ENTRY_SIZE] =
+{
+  0xff, 0x35, 8, 0, 0, 0,         /* pushq GOT+8(%rip)        */
+  0xf2, 0xff, 0x25, 16, 0, 0, 0,  /* bnd jmpq *GOT+16(%rip)   */
+  0x0f, 0x1f, 0                   /* nopl (%rax)              */
+};
+
+/* Subsequent entries for legacy branches in a procedure linkage table
+   with BND relocations look like this.  */
+
+static const bfd_byte elf_x86_64_legacy_plt_entry[PLT_ENTRY_SIZE] =
+{
+  0x68, 0, 0, 0, 0,             /* pushq immediate            */
+  0xe9, 0, 0, 0, 0,             /* jmpq relative              */
+  0x66, 0x0f, 0x1f, 0x44, 0, 0  /* nopw (%rax,%rax,1)         */
+};
+
+/* Subsequent entries for branches with BND prefx in a procedure linkage
+   table with BND relocations look like this.  */
+
+static const bfd_byte elf_x86_64_bnd_plt_entry[PLT_ENTRY_SIZE] =
+{
+  0x68, 0, 0, 0, 0,             /* pushq immediate            */
+  0xf2, 0xe9, 0, 0, 0, 0,       /* bnd jmpq relative          */
+  0x0f, 0x1f, 0x44, 0, 0        /* nopl 0(%rax,%rax,1)        */
+};
+
+/* Entries for legacy branches in the second procedure linkage table
+   look like this.  */
+
+static const bfd_byte elf_x86_64_legacy_plt2_entry[8] =
+{
+  0xff, 0x25,                    /* jmpq *name@GOTPC(%rip)      */
+  0, 0, 0, 0,  /* replaced with offset to this symbol in .got.  */
+  0x66, 0x90                     /* xchg %ax,%ax                */
+};
+
+/* Entries for branches with BND prefix in the second procedure linkage
+   table look like this.  */
+
+static const bfd_byte elf_x86_64_bnd_plt2_entry[8] =
+{
+  0xf2, 0xff, 0x25,              /* bnd jmpq *name@GOTPC(%rip)  */
+  0, 0, 0, 0,  /* replaced with offset to this symbol in .got.  */
+  0x90                           /* nop                         */
+};
+
 /* .eh_frame covering the .plt section.  */
 
 static const bfd_byte elf_x86_64_eh_frame_plt[] =
@@ -656,6 +713,24 @@ static const struct elf_x86_64_backend_data elf_x86_64_arch_bed =
     sizeof (elf_x86_64_eh_frame_plt),   /* eh_frame_plt_size */
   };
 
+static const struct elf_x86_64_backend_data elf_x86_64_bnd_arch_bed =
+  {
+    elf_x86_64_bnd_plt0_entry,          /* plt0_entry */
+    elf_x86_64_bnd_plt_entry,           /* plt_entry */
+    sizeof (elf_x86_64_bnd_plt_entry),  /* plt_entry_size */
+    2,                                  /* plt0_got1_offset */
+    1+8,                                /* plt0_got2_offset */
+    1+12,                               /* plt0_got2_insn_end */
+    1+2,                                /* plt_got_offset */
+    1,                                  /* plt_reloc_offset */
+    7,                                  /* plt_plt_offset */
+    1+6,                                /* plt_got_insn_size */
+    11,                                 /* plt_plt_insn_end */
+    0,                                  /* plt_lazy_offset */
+    elf_x86_64_eh_frame_plt,            /* eh_frame_plt */
+    sizeof (elf_x86_64_eh_frame_plt),   /* eh_frame_plt_size */
+  };
+
 #define	elf_backend_arch_data	&elf_x86_64_arch_bed
 
 /* x86-64 ELF linker hash entry.  */
@@ -681,6 +756,13 @@ struct elf_x86_64_link_hash_entry
 #define GOT_TLS_GD_ANY_P(type) \
   (GOT_TLS_GD_P (type) || GOT_TLS_GDESC_P (type))
   unsigned char tls_type;
+
+  /* TRUE if symbol has at least one BND relocation.  */
+  bfd_boolean has_bnd_reloc;
+
+  /* Information about the second PLT entry. Filled when has_bnd_reloc is
+     set.  */
+  union gotplt_union plt_bnd;
 
   /* Offset of the GOTPLT entry reserved for the TLS descriptor,
      starting at the end of the jump table.  */
@@ -732,6 +814,7 @@ struct elf_x86_64_link_hash_table
   asection *sdynbss;
   asection *srelbss;
   asection *plt_eh_frame;
+  asection *plt_bnd;
 
   union
   {
@@ -809,6 +892,8 @@ elf_x86_64_link_hash_newfunc (struct bfd_hash_entry *entry,
       eh = (struct elf_x86_64_link_hash_entry *) entry;
       eh->dyn_relocs = NULL;
       eh->tls_type = GOT_UNKNOWN;
+      eh->has_bnd_reloc = FALSE;
+      eh->plt_bnd.offset = (bfd_vma) -1;
       eh->tlsdesc_got = (bfd_vma) -1;
     }
 
@@ -1001,6 +1086,9 @@ elf_x86_64_copy_indirect_symbol (struct bfd_link_info *info,
 
   edir = (struct elf_x86_64_link_hash_entry *) dir;
   eind = (struct elf_x86_64_link_hash_entry *) ind;
+
+  if (!edir->has_bnd_reloc)
+    edir->has_bnd_reloc = eind->has_bnd_reloc;
 
   if (eind->dyn_relocs != NULL)
     {
@@ -1538,6 +1626,53 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    default:
 	      break;
 
+	    case R_X86_64_PC32_BND:
+	    case R_X86_64_PLT32_BND:
+	      /* MPX PLT is supported only if elf_x86_64_arch_bed
+		 is used in 64-bit mode.  */
+	      if (ABI_64_P (abfd)
+		  && (get_elf_x86_64_backend_data (abfd)
+		      == &elf_x86_64_arch_bed))
+		{
+		  elf_x86_64_hash_entry (h)->has_bnd_reloc = TRUE;
+
+		  /* Create the second PLT for Intel MPX support.  */
+		  if (htab->plt_bnd == NULL)
+		    {
+		      unsigned int plt_bnd_align;
+		      const struct elf_backend_data *bed;
+
+		      bed = get_elf_backend_data (info->output_bfd);
+		      switch (sizeof (elf_x86_64_bnd_plt2_entry))
+			{
+			case 8:
+			  plt_bnd_align = 3;
+			  break;
+			case 16:
+			  plt_bnd_align = 4;
+			  break;
+			default:
+			  abort ();
+			}
+
+		      if (htab->elf.dynobj == NULL)
+			htab->elf.dynobj = abfd;
+		      htab->plt_bnd
+			= bfd_make_section_anyway_with_flags (htab->elf.dynobj,
+							      ".plt.bnd",
+							     (bed->dynamic_sec_flags
+							      | SEC_ALLOC
+							      | SEC_CODE
+							      | SEC_LOAD
+							      | SEC_READONLY));
+		      if (htab->plt_bnd == NULL
+			  || !bfd_set_section_alignment (htab->elf.dynobj,
+							 htab->plt_bnd,
+							 plt_bnd_align))
+			return FALSE;
+		    }
+		}
+
 	    case R_X86_64_32S:
 	    case R_X86_64_32:
 	    case R_X86_64_64:
@@ -1706,6 +1841,7 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  break;
 
 	case R_X86_64_PLT32:
+	case R_X86_64_PLT32_BND:
 	  /* This symbol requires a procedure linkage table entry.  We
 	     actually build the entry in adjust_dynamic_symbol,
 	     because this might be a case of linking PIC code which is
@@ -1766,6 +1902,7 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_X86_64_PC8:
 	case R_X86_64_PC16:
 	case R_X86_64_PC32:
+	case R_X86_64_PC32_BND:
 	case R_X86_64_PC64:
 	case R_X86_64_64:
 pointer:
@@ -1782,7 +1919,9 @@ pointer:
 	      /* We may need a .plt entry if the function this reloc
 		 refers to is in a shared lib.  */
 	      h->plt.refcount += 1;
-	      if (r_type != R_X86_64_PC32 && r_type != R_X86_64_PC64)
+	      if (r_type != R_X86_64_PC32
+		  && r_type != R_X86_64_PC32_BND
+		  && r_type != R_X86_64_PC64)
 		h->pointer_equality_needed = 1;
 	    }
 
@@ -2066,6 +2205,7 @@ elf_x86_64_gc_sweep_hook (bfd *abfd, struct bfd_link_info *info,
 	case R_X86_64_PC8:
 	case R_X86_64_PC16:
 	case R_X86_64_PC32:
+	case R_X86_64_PC32_BND:
 	case R_X86_64_PC64:
 	case R_X86_64_SIZE32:
 	case R_X86_64_SIZE64:
@@ -2075,6 +2215,7 @@ elf_x86_64_gc_sweep_hook (bfd *abfd, struct bfd_link_info *info,
 	  /* Fall thru */
 
 	case R_X86_64_PLT32:
+	case R_X86_64_PLT32_BND:
 	case R_X86_64_PLTOFF64:
 	  if (h != NULL)
 	    {
@@ -2293,11 +2434,28 @@ elf_x86_64_allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
      here if it is defined and referenced in a non-shared object.  */
   if (h->type == STT_GNU_IFUNC
       && h->def_regular)
-    return _bfd_elf_allocate_ifunc_dyn_relocs (info, h,
-					       &eh->dyn_relocs,
-					       plt_entry_size,
-					       plt_entry_size,
-					       GOT_ENTRY_SIZE);
+    {
+      if (_bfd_elf_allocate_ifunc_dyn_relocs (info, h,
+					      &eh->dyn_relocs,
+					      plt_entry_size,
+					      plt_entry_size,
+					      GOT_ENTRY_SIZE))
+	{
+	  asection *s = htab->plt_bnd;
+	  if (h->plt.offset != (bfd_vma) -1 && s != NULL)
+	    {
+	      /* Use the .plt.bnd section if it is created.  */
+	      eh->plt_bnd.offset = s->size;
+
+	      /* Make room for this entry in the .plt.bnd section.  */
+	      s->size += sizeof (elf_x86_64_legacy_plt2_entry);
+	    }
+
+	  return TRUE;
+	}
+      else
+	return FALSE;
+    }
   else if (htab->elf.dynamic_sections_created
 	   && h->plt.refcount > 0)
     {
@@ -2314,13 +2472,16 @@ elf_x86_64_allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
 	  || WILL_CALL_FINISH_DYNAMIC_SYMBOL (1, 0, h))
 	{
 	  asection *s = htab->elf.splt;
+	  asection *bnd_s = htab->plt_bnd;
 
 	  /* If this is the first .plt entry, make room for the special
 	     first entry.  */
 	  if (s->size == 0)
-	    s->size += plt_entry_size;
+	    s->size = plt_entry_size;
 
 	  h->plt.offset = s->size;
+	  if (bnd_s)
+	    eh->plt_bnd.offset = bnd_s->size;
 
 	  /* If this symbol is not defined in a regular file, and we are
 	     not generating a shared library, then set the symbol to this
@@ -2330,12 +2491,28 @@ elf_x86_64_allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
 	  if (! info->shared
 	      && !h->def_regular)
 	    {
-	      h->root.u.def.section = s;
-	      h->root.u.def.value = h->plt.offset;
+	      if (bnd_s)
+		{
+		  /* We need to make a call to the entry of the second
+		     PLT instead of regular PLT entry.  */
+		  h->root.u.def.section = bnd_s;
+		  h->root.u.def.value = eh->plt_bnd.offset;
+		}
+	      else
+		{
+		  h->root.u.def.section = s;
+		  h->root.u.def.value = h->plt.offset;
+		}
 	    }
 
 	  /* Make room for this entry.  */
 	  s->size += plt_entry_size;
+	  if (bnd_s)
+	    {
+	      BFD_ASSERT (sizeof (elf_x86_64_bnd_plt2_entry)
+			  == sizeof (elf_x86_64_legacy_plt2_entry));
+	      bnd_s->size += sizeof (elf_x86_64_legacy_plt2_entry);
+	    }
 
 	  /* We also need to make an entry in the .got.plt section, which
 	     will be placed in the .got section by the linker script.  */
@@ -2959,6 +3136,7 @@ elf_x86_64_size_dynamic_sections (bfd *output_bfd,
 	  || s == htab->elf.sgotplt
 	  || s == htab->elf.iplt
 	  || s == htab->elf.igotplt
+	  || s == htab->plt_bnd
 	  || s == htab->plt_eh_frame
 	  || s == htab->sdynbss)
 	{
@@ -3237,14 +3415,15 @@ elf_x86_64_relocate_section (bfd *output_bfd,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
+      struct elf_x86_64_link_hash_entry *eh;
       Elf_Internal_Sym *sym;
       asection *sec;
-      bfd_vma off, offplt;
+      bfd_vma off, offplt, plt_offset;
       bfd_vma relocation;
       bfd_boolean unresolved_reloc;
       bfd_reloc_status_type r;
       int tls_type;
-      asection *base_got;
+      asection *base_got, *resolved_plt;
       bfd_vma st_size;
 
       r_type = ELF32_R_TYPE (rel->r_info);
@@ -3298,11 +3477,12 @@ elf_x86_64_relocate_section (bfd *output_bfd,
       else
 	{
 	  bfd_boolean warned ATTRIBUTE_UNUSED;
+	  bfd_boolean ignored ATTRIBUTE_UNUSED;
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
 				   h, sec, relocation,
-				   unresolved_reloc, warned);
+				   unresolved_reloc, warned, ignored);
 	  st_size = h->size;
 	}
 
@@ -3331,13 +3511,14 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	    }
 	}
 
+      eh = (struct elf_x86_64_link_hash_entry *) h;
+
       /* Since STT_GNU_IFUNC symbol must go through PLT, we handle
 	 it here if it is defined in a non-shared object.  */
       if (h != NULL
 	  && h->type == STT_GNU_IFUNC
 	  && h->def_regular)
 	{
-	  asection *plt;
 	  bfd_vma plt_index;
 	  const char *name;
 
@@ -3346,9 +3527,27 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	    abort ();
 
 	  /* STT_GNU_IFUNC symbol must go through PLT.  */
-	  plt = htab->elf.splt ? htab->elf.splt : htab->elf.iplt;
-	  relocation = (plt->output_section->vma
-			+ plt->output_offset + h->plt.offset);
+	  if (htab->elf.splt != NULL)
+	    {
+	      if (htab->plt_bnd != NULL)
+		{
+		  resolved_plt = htab->plt_bnd;
+		  plt_offset = eh->plt_bnd.offset;
+		}
+	      else
+		{
+		  resolved_plt = htab->elf.splt;
+		  plt_offset =  h->plt.offset;
+		}
+	    }
+	  else
+	    {
+	      resolved_plt = htab->elf.iplt;
+	      plt_offset =  h->plt.offset;
+	    }
+
+	  relocation = (resolved_plt->output_section->vma
+			+ resolved_plt->output_offset + plt_offset);
 
 	  switch (r_type)
 	    {
@@ -3440,8 +3639,10 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 		}
 	      /* FALLTHROUGH */
 	    case R_X86_64_PC32:
+	    case R_X86_64_PC32_BND:
 	    case R_X86_64_PC64:
 	    case R_X86_64_PLT32:
+	    case R_X86_64_PLT32_BND:
 	      goto do_relocation;
 
 	    case R_X86_64_GOTPCREL:
@@ -3675,9 +3876,20 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	      && h->plt.offset != (bfd_vma) -1
 	      && htab->elf.splt != NULL)
 	    {
-	      relocation = (htab->elf.splt->output_section->vma
-			    + htab->elf.splt->output_offset
-			    + h->plt.offset);
+	      if (htab->plt_bnd != NULL)
+		{
+		  resolved_plt = htab->plt_bnd;
+		  plt_offset = eh->plt_bnd.offset;
+		}
+	      else
+		{
+		  resolved_plt = htab->elf.splt;
+		  plt_offset = h->plt.offset;
+		}
+
+	      relocation = (resolved_plt->output_section->vma
+			    + resolved_plt->output_offset
+			    + plt_offset);
 	      unresolved_reloc = FALSE;
 	    }
 
@@ -3686,6 +3898,7 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	  break;
 
 	case R_X86_64_PLT32:
+	case R_X86_64_PLT32_BND:
 	  /* Relocation is to the entry for this symbol in the
 	     procedure linkage table.  */
 
@@ -3703,9 +3916,20 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	      break;
 	    }
 
-	  relocation = (htab->elf.splt->output_section->vma
-			+ htab->elf.splt->output_offset
-			+ h->plt.offset);
+	  if (htab->plt_bnd != NULL)
+	    {
+	      resolved_plt = htab->plt_bnd;
+	      plt_offset = eh->plt_bnd.offset;
+	    }
+	  else
+	    {
+	      resolved_plt = htab->elf.splt;
+	      plt_offset = h->plt.offset;
+	    }
+
+	  relocation = (resolved_plt->output_section->vma
+			+ resolved_plt->output_offset
+			+ plt_offset);
 	  unresolved_reloc = FALSE;
 	  break;
 
@@ -3718,6 +3942,7 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	case R_X86_64_PC8:
 	case R_X86_64_PC16:
 	case R_X86_64_PC32:
+	case R_X86_64_PC32_BND:
 	  if (info->shared
 	      && (input_section->flags & SEC_ALLOC) != 0
 	      && (input_section->flags & SEC_READONLY) != 0
@@ -3725,7 +3950,8 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	    {
 	      bfd_boolean fail = FALSE;
 	      bfd_boolean branch
-		= (r_type == R_X86_64_PC32
+		= ((r_type == R_X86_64_PC32
+		    || r_type == R_X86_64_PC32_BND)
 		   && is_32bit_relative_branch (contents, rel->r_offset));
 
 	      if (SYMBOL_REFERENCES_LOCAL (info, h))
@@ -4501,20 +4727,28 @@ elf_x86_64_finish_dynamic_symbol (bfd *output_bfd,
 				  Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {
   struct elf_x86_64_link_hash_table *htab;
-  const struct elf_x86_64_backend_data *const abed
-    = get_elf_x86_64_backend_data (output_bfd);
+  const struct elf_x86_64_backend_data *abed;
+  bfd_boolean use_plt_bnd;
 
   htab = elf_x86_64_hash_table (info);
   if (htab == NULL)
     return FALSE;
 
+  /* Use MPX backend data in case of BND relocation.  Use .plt_bnd
+     section only if there is .plt section.  */
+  use_plt_bnd = htab->elf.splt != NULL && htab->plt_bnd != NULL;
+  abed = (use_plt_bnd
+	  ? &elf_x86_64_bnd_arch_bed
+	  : get_elf_x86_64_backend_data (output_bfd));
+
   if (h->plt.offset != (bfd_vma) -1)
     {
       bfd_vma plt_index;
-      bfd_vma got_offset;
+      bfd_vma got_offset, plt_offset, plt_plt_offset, plt_got_offset;
+      bfd_vma plt_plt_insn_end, plt_got_insn_size;
       Elf_Internal_Rela rela;
       bfd_byte *loc;
-      asection *plt, *gotplt, *relplt;
+      asection *plt, *gotplt, *relplt, *resolved_plt;
       const struct elf_backend_data *bed;
 
       /* When building a static executable, use .iplt, .igot.plt and
@@ -4565,9 +4799,56 @@ elf_x86_64_finish_dynamic_symbol (bfd *output_bfd,
 	  got_offset = got_offset * GOT_ENTRY_SIZE;
 	}
 
-      /* Fill in the entry in the procedure linkage table.  */
-      memcpy (plt->contents + h->plt.offset, abed->plt_entry,
-	      abed->plt_entry_size);
+      plt_plt_insn_end = abed->plt_plt_insn_end;
+      plt_plt_offset = abed->plt_plt_offset;
+      plt_got_insn_size = abed->plt_got_insn_size;
+      plt_got_offset = abed->plt_got_offset;
+      if (use_plt_bnd)
+	{
+	  /* Use the second PLT with BND relocations.  */
+	  const bfd_byte *plt_entry, *plt2_entry;
+	  struct elf_x86_64_link_hash_entry *eh
+	    = (struct elf_x86_64_link_hash_entry *) h;
+
+	  if (eh->has_bnd_reloc)
+	    {
+	      plt_entry = elf_x86_64_bnd_plt_entry;
+	      plt2_entry = elf_x86_64_bnd_plt2_entry;
+	    }
+	  else
+	    {
+	      plt_entry = elf_x86_64_legacy_plt_entry;
+	      plt2_entry = elf_x86_64_legacy_plt2_entry;
+
+	      /* Subtract 1 since there is no BND prefix.  */
+	      plt_plt_insn_end -= 1;
+	      plt_plt_offset -= 1;
+	      plt_got_insn_size -= 1;
+	      plt_got_offset -= 1;
+	    }
+
+	  BFD_ASSERT (sizeof (elf_x86_64_bnd_plt_entry)
+		      == sizeof (elf_x86_64_legacy_plt_entry));
+
+	  /* Fill in the entry in the procedure linkage table.  */
+	  memcpy (plt->contents + h->plt.offset,
+		  plt_entry, sizeof (elf_x86_64_legacy_plt_entry));
+	  /* Fill in the entry in the second PLT.  */
+	  memcpy (htab->plt_bnd->contents + eh->plt_bnd.offset,
+		  plt2_entry, sizeof (elf_x86_64_legacy_plt2_entry));
+
+	  resolved_plt = htab->plt_bnd;
+	  plt_offset = eh->plt_bnd.offset;
+	}
+      else
+	{
+	  /* Fill in the entry in the procedure linkage table.  */
+	  memcpy (plt->contents + h->plt.offset, abed->plt_entry,
+		  abed->plt_entry_size);
+
+	  resolved_plt = plt;
+	  plt_offset = h->plt.offset;
+	}
 
       /* Insert the relocation positions of the plt section.  */
 
@@ -4577,11 +4858,11 @@ elf_x86_64_finish_dynamic_symbol (bfd *output_bfd,
 		  (gotplt->output_section->vma
 		   + gotplt->output_offset
 		   + got_offset
-		   - plt->output_section->vma
-		   - plt->output_offset
-		   - h->plt.offset
-		   - abed->plt_got_insn_size),
-		  plt->contents + h->plt.offset + abed->plt_got_offset);
+		   - resolved_plt->output_section->vma
+		   - resolved_plt->output_offset
+		   - plt_offset
+		   - plt_got_insn_size),
+		  resolved_plt->contents + plt_offset + plt_got_offset);
 
       /* Fill in the entry in the global offset table, initially this
 	 points to the second part of the PLT entry.  */
@@ -4623,8 +4904,8 @@ elf_x86_64_finish_dynamic_symbol (bfd *output_bfd,
 	  bfd_put_32 (output_bfd, plt_index,
 		      plt->contents + h->plt.offset + abed->plt_reloc_offset);
 	  /* Put offset for jmp .PLT0.  */
-	  bfd_put_32 (output_bfd, - (h->plt.offset + abed->plt_plt_insn_end),
-		      plt->contents + h->plt.offset + abed->plt_plt_offset);
+	  bfd_put_32 (output_bfd, - (h->plt.offset + plt_plt_insn_end),
+		      plt->contents + h->plt.offset + plt_plt_offset);
 	}
 
       bed = get_elf_backend_data (output_bfd);
@@ -4786,12 +5067,17 @@ elf_x86_64_finish_dynamic_sections (bfd *output_bfd,
   struct elf_x86_64_link_hash_table *htab;
   bfd *dynobj;
   asection *sdyn;
-  const struct elf_x86_64_backend_data *const abed
-    = get_elf_x86_64_backend_data (output_bfd);
+  const struct elf_x86_64_backend_data *abed;
 
   htab = elf_x86_64_hash_table (info);
   if (htab == NULL)
     return FALSE;
+
+  /* Use MPX backend data in case of BND relocation.  Use .plt_bnd
+     section only if there is .plt section.  */
+  abed = (htab->elf.splt != NULL && htab->plt_bnd != NULL
+	  ? &elf_x86_64_bnd_arch_bed
+	  : get_elf_x86_64_backend_data (output_bfd));
 
   dynobj = htab->elf.dynobj;
   sdyn = bfd_get_linker_section (dynobj, ".dynamic");
@@ -4933,6 +5219,10 @@ elf_x86_64_finish_dynamic_sections (bfd *output_bfd,
 	}
     }
 
+  if (htab->plt_bnd != NULL)
+    elf_section_data (htab->plt_bnd->output_section)
+      ->this_hdr.sh_entsize = sizeof (elf_x86_64_bnd_plt2_entry);
+
   if (htab->elf.sgotplt)
     {
       if (bfd_is_abs_section (htab->elf.sgotplt->output_section))
@@ -5011,14 +5301,119 @@ elf_x86_64_plt_sym_val (bfd_vma i, const asection *plt,
   return plt->vma + (i + 1) * GET_PLT_ENTRY_SIZE (plt->owner);
 }
 
+/* Similar to _bfd_elf_get_synthetic_symtab, with .plt.bnd section
+   support.  */
+
+static long
+elf_x86_64_get_synthetic_symtab (bfd *abfd,
+				 long symcount,
+				 asymbol **syms,
+				 long dynsymcount,
+				 asymbol **dynsyms,
+				 asymbol **ret)
+{
+  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  asection *relplt;
+  asymbol *s;
+  bfd_boolean (*slurp_relocs) (bfd *, asection *, asymbol **, bfd_boolean);
+  arelent *p;
+  long count, i, n;
+  size_t size;
+  Elf_Internal_Shdr *hdr;
+  char *names;
+  asection *plt;
+  bfd_vma addr;
+
+  plt = bfd_get_section_by_name (abfd, ".plt.bnd");
+  /* Use the generic ELF version if there is no .plt.bnd section.  */
+  if (plt == NULL)
+    return _bfd_elf_get_synthetic_symtab (abfd, symcount, syms,
+					  dynsymcount, dynsyms, ret);
+
+  *ret = NULL;
+
+  if ((abfd->flags & (DYNAMIC | EXEC_P)) == 0)
+    return 0;
+
+  if (dynsymcount <= 0)
+    return 0;
+
+  relplt = bfd_get_section_by_name (abfd, ".rela.plt");
+  if (relplt == NULL)
+    return 0;
+
+  hdr = &elf_section_data (relplt)->this_hdr;
+  if (hdr->sh_link != elf_dynsymtab (abfd)
+      || (hdr->sh_type != SHT_REL && hdr->sh_type != SHT_RELA))
+    return 0;
+
+  slurp_relocs = get_elf_backend_data (abfd)->s->slurp_reloc_table;
+  if (! (*slurp_relocs) (abfd, relplt, dynsyms, TRUE))
+    return -1;
+
+  count = relplt->size / hdr->sh_entsize;
+  size = count * sizeof (asymbol);
+  p = relplt->relocation;
+  for (i = 0; i < count; i++, p += bed->s->int_rels_per_ext_rel)
+    {
+      size += strlen ((*p->sym_ptr_ptr)->name) + sizeof ("@plt");
+      if (p->addend != 0)
+	size += sizeof ("+0x") - 1 + 8 + 8;
+    }
+
+  s = *ret = (asymbol *) bfd_malloc (size);
+  if (s == NULL)
+    return -1;
+
+  names = (char *) (s + count);
+  p = relplt->relocation;
+  n = 0;
+  addr = 0;
+  for (i = 0; i < count; i++, p++)
+    {
+      size_t len;
+
+      *s = **p->sym_ptr_ptr;
+      /* Undefined syms won't have BSF_LOCAL or BSF_GLOBAL set.  Since
+	 we are defining a symbol, ensure one of them is set.  */
+      if ((s->flags & BSF_LOCAL) == 0)
+	s->flags |= BSF_GLOBAL;
+      s->flags |= BSF_SYNTHETIC;
+      s->section = plt;
+      s->value = addr;
+      s->name = names;
+      s->udata.p = NULL;
+      len = strlen ((*p->sym_ptr_ptr)->name);
+      memcpy (names, (*p->sym_ptr_ptr)->name, len);
+      names += len;
+      if (p->addend != 0)
+	{
+	  char buf[30], *a;
+
+	  memcpy (names, "+0x", sizeof ("+0x") - 1);
+	  names += sizeof ("+0x") - 1;
+	  bfd_sprintf_vma (abfd, buf, p->addend);
+	  for (a = buf; *a == '0'; ++a)
+	    ;
+	  len = strlen (a);
+	  memcpy (names, a, len);
+	  names += len;
+	}
+      memcpy (names, "@plt", sizeof ("@plt"));
+      names += sizeof ("@plt");
+      ++s, ++n;
+      addr += sizeof (elf_x86_64_legacy_plt2_entry);
+    }
+
+  return n;
+}
+
 /* Handle an x86-64 specific section when reading an object file.  This
    is called when elfcode.h finds a section with an unknown type.  */
 
 static bfd_boolean
-elf_x86_64_section_from_shdr (bfd *abfd,
-				Elf_Internal_Shdr *hdr,
-				const char *name,
-				int shindex)
+elf_x86_64_section_from_shdr (bfd *abfd, Elf_Internal_Shdr *hdr,
+			      const char *name, int shindex)
 {
   if (hdr->sh_type != SHT_X86_64_UNWIND)
     return FALSE;
@@ -5223,7 +5618,7 @@ static const struct bfd_elf_special_section
   { NULL,	                0,          0, 0,            0 }
 };
 
-#define TARGET_LITTLE_SYM		    bfd_elf64_x86_64_vec
+#define TARGET_LITTLE_SYM		    x86_64_elf64_vec
 #define TARGET_LITTLE_NAME		    "elf64-x86-64"
 #define ELF_ARCH			    bfd_arch_i386
 #define ELF_TARGET_ID			    X86_64_ELF_DATA
@@ -5273,6 +5668,7 @@ static const struct bfd_elf_special_section
 #define elf_backend_plt_sym_val		    elf_x86_64_plt_sym_val
 #define elf_backend_object_p		    elf64_x86_64_elf_object_p
 #define bfd_elf64_mkobject		    elf_x86_64_mkobject
+#define bfd_elf64_get_synthetic_symtab	    elf_x86_64_get_synthetic_symtab
 
 #define elf_backend_section_from_shdr \
 	elf_x86_64_section_from_shdr
@@ -5298,14 +5694,12 @@ static const struct bfd_elf_special_section
 #define elf_backend_hash_symbol \
   elf_x86_64_hash_symbol
 
-#define elf_backend_post_process_headers  _bfd_elf_set_osabi
-
 #include "elf64-target.h"
 
 /* FreeBSD support.  */
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    bfd_elf64_x86_64_freebsd_vec
+#define TARGET_LITTLE_SYM		    x86_64_elf64_fbsd_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf64-x86-64-freebsd"
 
@@ -5320,7 +5714,7 @@ static const struct bfd_elf_special_section
 /* Solaris 2 support.  */
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    bfd_elf64_x86_64_sol2_vec
+#define TARGET_LITTLE_SYM		    x86_64_elf64_sol2_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf64-x86-64-sol2"
 
@@ -5345,10 +5739,20 @@ static const struct bfd_elf_special_section
 
 #include "elf64-target.h"
 
+#undef bfd_elf64_get_synthetic_symtab
+
 /* Native Client support.  */
 
+static bfd_boolean
+elf64_x86_64_nacl_elf_object_p (bfd *abfd)
+{
+  /* Set the right machine number for a NaCl x86-64 ELF64 file.  */
+  bfd_default_set_arch_mach (abfd, bfd_arch_i386, bfd_mach_x86_64_nacl);
+  return TRUE;
+}
+
 #undef	TARGET_LITTLE_SYM
-#define	TARGET_LITTLE_SYM		bfd_elf64_x86_64_nacl_vec
+#define	TARGET_LITTLE_SYM		x86_64_elf64_nacl_vec
 #undef	TARGET_LITTLE_NAME
 #define	TARGET_LITTLE_NAME		"elf64-x86-64-nacl"
 #undef	elf64_bed
@@ -5383,7 +5787,7 @@ static const bfd_byte elf_x86_64_nacl_plt0_entry[NACL_PLT_ENTRY_SIZE] =
     0x41, 0xff, 0xe3,             	/* jmpq *%r11			*/
 
     /* 9-byte nop sequence to pad out to the next 32-byte boundary.  */
-    0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, /* nopl %cs:0x0(%rax,%rax,1)	*/
+    0x66, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, /* nopw 0x0(%rax,%rax,1)	*/
 
     /* 32 bytes of nop to pad out to the standard size.  */
     0x66, 0x66, 0x66, 0x66, 0x66, 0x66,    /* excess data32 prefixes	*/
@@ -5479,6 +5883,8 @@ static const struct elf_x86_64_backend_data elf_x86_64_nacl_arch_bed =
 #undef	elf_backend_arch_data
 #define	elf_backend_arch_data	&elf_x86_64_nacl_arch_bed
 
+#undef	elf_backend_object_p
+#define elf_backend_object_p			elf64_x86_64_nacl_elf_object_p
 #undef	elf_backend_modify_segment_map
 #define	elf_backend_modify_segment_map		nacl_modify_segment_map
 #undef	elf_backend_modify_program_headers
@@ -5490,8 +5896,16 @@ static const struct elf_x86_64_backend_data elf_x86_64_nacl_arch_bed =
 
 /* Native Client x32 support.  */
 
+static bfd_boolean
+elf32_x86_64_nacl_elf_object_p (bfd *abfd)
+{
+  /* Set the right machine number for a NaCl x86-64 ELF32 file.  */
+  bfd_default_set_arch_mach (abfd, bfd_arch_i386, bfd_mach_x64_32_nacl);
+  return TRUE;
+}
+
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		bfd_elf32_x86_64_nacl_vec
+#define TARGET_LITTLE_SYM		x86_64_elf32_nacl_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		"elf32-x86-64-nacl"
 #undef	elf32_bed
@@ -5510,7 +5924,7 @@ static const struct elf_x86_64_backend_data elf_x86_64_nacl_arch_bed =
 
 #undef elf_backend_object_p
 #define elf_backend_object_p \
-  elf32_x86_64_elf_object_p
+  elf32_x86_64_nacl_elf_object_p
 
 #undef elf_backend_bfd_from_remote_memory
 #define elf_backend_bfd_from_remote_memory \
@@ -5542,7 +5956,7 @@ elf64_l1om_elf_object_p (bfd *abfd)
 }
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    bfd_elf64_l1om_vec
+#define TARGET_LITTLE_SYM		    l1om_elf64_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf64-l1om"
 #undef ELF_ARCH
@@ -5576,7 +5990,7 @@ elf64_l1om_elf_object_p (bfd *abfd)
 /* FreeBSD L1OM support.  */
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    bfd_elf64_l1om_freebsd_vec
+#define TARGET_LITTLE_SYM		    l1om_elf64_fbsd_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf64-l1om-freebsd"
 
@@ -5599,7 +6013,7 @@ elf64_k1om_elf_object_p (bfd *abfd)
 }
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    bfd_elf64_k1om_vec
+#define TARGET_LITTLE_SYM		    k1om_elf64_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf64-k1om"
 #undef ELF_ARCH
@@ -5626,7 +6040,7 @@ elf64_k1om_elf_object_p (bfd *abfd)
 /* FreeBSD K1OM support.  */
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    bfd_elf64_k1om_freebsd_vec
+#define TARGET_LITTLE_SYM		    k1om_elf64_fbsd_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf64-k1om-freebsd"
 
@@ -5641,7 +6055,7 @@ elf64_k1om_elf_object_p (bfd *abfd)
 /* 32bit x86-64 support.  */
 
 #undef  TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    bfd_elf32_x86_64_vec
+#define TARGET_LITTLE_SYM		    x86_64_elf32_vec
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf32-x86-64"
 #undef	elf32_bed

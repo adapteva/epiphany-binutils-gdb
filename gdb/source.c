@@ -1,5 +1,5 @@
 /* List lines of source files for GDB, the GNU debugger.
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,8 +30,8 @@
 #include "filestuff.h"
 
 #include <sys/types.h>
-#include "gdb_string.h"
-#include "gdb_stat.h"
+#include <string.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include "gdbcore.h"
 #include "gdb_regex.h"
@@ -133,7 +133,9 @@ show_filename_display_string (struct ui_file *file, int from_tty,
 
 static int last_line_listed;
 
-/* First line number listed by last listing command.  */
+/* First line number listed by last listing command.  If 0, then no
+   source lines have yet been listed since the last time the current
+   source line was changed.  */
 
 static int first_line_listed;
 
@@ -151,6 +153,16 @@ int
 get_first_line_listed (void)
 {
   return first_line_listed;
+}
+
+/* Clear line listed range.  This makes the next "list" center the
+   printed source lines around the current source line.  */
+
+static void
+clear_lines_listed_range (void)
+{
+  first_line_listed = 0;
+  last_line_listed = 0;
 }
 
 /* Return the default number of lines to print with commands like the
@@ -219,6 +231,9 @@ set_current_source_symtab_and_line (const struct symtab_and_line *sal)
   current_source_pspace = sal->pspace;
   current_source_symtab = sal->symtab;
   current_source_line = sal->line;
+
+  /* Force the next "list" to center around the current line.  */
+  clear_lines_listed_range ();
 
   return cursal;
 }
@@ -574,17 +589,33 @@ add_path (char *dirname, char **which_path, int parse_separators)
 	char tinybuf[2];
 
 	p = *which_path;
-	/* FIXME: we should use realpath() or its work-alike
-	   before comparing.  Then all the code above which
-	   removes excess slashes and dots could simply go away.  */
-	if (!filename_cmp (p, name))
+	while (1)
 	  {
-	    /* Found it in the search path, remove old copy.  */
-	    if (p > *which_path)
-	      p--;		/* Back over leading separator.  */
-	    if (prefix > p - *which_path)
-	      goto skip_dup;	/* Same dir twice in one cmd.  */
-	    memmove (p, &p[len + 1], strlen (&p[len + 1]) + 1);	/* Copy from next \0 or  : */
+	    /* FIXME: we should use realpath() or its work-alike
+	       before comparing.  Then all the code above which
+	       removes excess slashes and dots could simply go away.  */
+	    if (!filename_ncmp (p, name, len)
+		&& (p[len] == '\0' || p[len] == DIRNAME_SEPARATOR))
+	      {
+		/* Found it in the search path, remove old copy.  */
+		if (p > *which_path)
+		  {
+		    /* Back over leading separator.  */
+		    p--;
+		  }
+		if (prefix > p - *which_path)
+		  {
+		    /* Same dir twice in one cmd.  */
+		    goto skip_dup;
+		  }
+		/* Copy from next '\0' or ':'.  */
+		memmove (p, &p[len + 1], strlen (&p[len + 1]) + 1);
+	      }
+	    p = strchr (p, DIRNAME_SEPARATOR);
+	    if (p != 0)
+	      ++p;
+	    else
+	      break;
 	  }
 
 	tinybuf[0] = DIRNAME_SEPARATOR;
@@ -853,28 +884,10 @@ done:
       /* If a file was opened, canonicalize its filename.  */
       if (fd < 0)
 	*filename_opened = NULL;
+      else if ((opts & OPF_RETURN_REALPATH) != 0)
+	*filename_opened = gdb_realpath (filename);
       else
-	{
-	  char *(*realpath_fptr) (const char *);
-
-	  realpath_fptr = ((opts & OPF_RETURN_REALPATH) != 0
-			   ? gdb_realpath : xstrdup);
-
-	  if (IS_ABSOLUTE_PATH (filename))
-	    *filename_opened = realpath_fptr (filename);
-	  else
-	    {
-	      /* Beware the // my son, the Emacs barfs, the botch that catch...  */
-
-	      char *f = concat (current_directory,
-				IS_DIR_SEPARATOR (current_directory[strlen (current_directory) - 1])
-				? "" : SLASH_STRING,
-				filename, (char *)NULL);
-
-	      *filename_opened = realpath_fptr (f);
-	      xfree (f);
-	    }
-	}
+	*filename_opened = gdb_abspath (filename);
     }
 
   return fd;
@@ -919,27 +932,20 @@ substitute_path_rule_matches (const struct substitute_path_rule *rule,
 {
   const int from_len = strlen (rule->from);
   const int path_len = strlen (path);
-  char *path_start;
 
   if (path_len < from_len)
     return 0;
 
   /* The substitution rules are anchored at the start of the path,
-     so the path should start with rule->from.  There is no filename
-     comparison routine, so we need to extract the first FROM_LEN
-     characters from PATH first and use that to do the comparison.  */
+     so the path should start with rule->from.  */
 
-  path_start = alloca (from_len + 1);
-  strncpy (path_start, path, from_len);
-  path_start[from_len] = '\0';
-
-  if (FILENAME_CMP (path_start, rule->from) != 0)
+  if (filename_ncmp (path, rule->from, from_len) != 0)
     return 0;
 
   /* Make sure that the region in the path that matches the substitution
      rule is immediately followed by a directory separator (or the end of
      string character).  */
-  
+
   if (path[from_len] != '\0' && !IS_DIR_SEPARATOR (path[from_len]))
     return 0;
 
@@ -1296,9 +1302,8 @@ identify_source_line (struct symtab *s, int line, int mid_statement,
 		   mid_statement, get_objfile_arch (s->objfile), pc);
 
   current_source_line = line;
-  first_line_listed = line;
-  last_line_listed = line;
   current_source_symtab = s;
+  clear_lines_listed_range ();
   return 1;
 }
 
@@ -1490,7 +1495,11 @@ line_info (char *arg, int from_tty)
     {
       sal.symtab = current_source_symtab;
       sal.pspace = current_program_space;
-      sal.line = last_line_listed;
+      if (last_line_listed != 0)
+	sal.line = last_line_listed;
+      else
+	sal.line = current_source_line;
+
       sals.nelts = 1;
       sals.sals = (struct symtab_and_line *)
 	xmalloc (sizeof (struct symtab_and_line));
@@ -1881,7 +1890,7 @@ show_substitute_path_command (char *args, int from_tty)
 
   while (rule != NULL)
     {
-      if (from == NULL || FILENAME_CMP (rule->from, from) == 0)
+      if (from == NULL || substitute_path_rule_matches (rule, from) != 0)
         printf_filtered ("  `%s' -> `%s'.\n", rule->from, rule->to);
       rule = rule->next;
     }

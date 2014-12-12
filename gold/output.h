@@ -1,7 +1,6 @@
 // output.h -- manage the output file for gold   -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2013
-// Free Software Foundation, Inc.
+// Copyright (C) 2006-2014 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -573,7 +572,7 @@ class Output_segment_headers : public Output_data
 class Output_file_header : public Output_data
 {
  public:
-  Output_file_header(const Target*,
+  Output_file_header(Target*,
 		     const Symbol_table*,
 		     const Output_segment_headers*);
 
@@ -617,7 +616,7 @@ class Output_file_header : public Output_data
   off_t
   do_size() const;
 
-  const Target* target_;
+  Target* target_;
   const Symbol_table* symtab_;
   const Output_segment_headers* segment_header_;
   const Output_section_headers* section_header_;
@@ -2380,10 +2379,13 @@ class Output_data_got : public Output_data_got_base
   // entry from the start of the GOT.
   unsigned int
   add_constant(Valtype constant)
-  {
-    unsigned int got_offset = this->add_got_entry(Got_entry(constant));
-    return got_offset;
-  }
+  { return this->add_got_entry(Got_entry(constant)); }
+
+  // Add a pair of constants to the GOT.  This returns the offset of
+  // the new entry from the start of the GOT.
+  unsigned int
+  add_constant_pair(Valtype c1, Valtype c2)
+  { return this->add_got_entry_pair(Got_entry(c1), Got_entry(c2)); }
 
   // Replace GOT entry I with a new constant.
   void
@@ -2575,6 +2577,11 @@ class Output_data_dynamic : public Output_section_data
   add_string(elfcpp::DT tag, const std::string& str)
   { this->add_string(tag, str.c_str()); }
 
+  // Add a new dynamic entry with custom value.
+  void
+  add_custom(elfcpp::DT tag)
+  { this->add_entry(Dynamic_entry(tag)); }
+
  protected:
   // Adjust the output section to set the entry size.
   void
@@ -2639,6 +2646,11 @@ class Output_data_dynamic : public Output_section_data
       : tag_(tag), offset_(DYNAMIC_STRING)
     { this->u_.str = str; }
 
+    // Create an entry with a custom value.
+    Dynamic_entry(elfcpp::DT tag)
+      : tag_(tag), offset_(DYNAMIC_CUSTOM)
+    { }
+
     // Return the tag of this entry.
     elfcpp::DT
     tag() const
@@ -2662,7 +2674,9 @@ class Output_data_dynamic : public Output_section_data
       // Symbol adress.
       DYNAMIC_SYMBOL = -3U,
       // String.
-      DYNAMIC_STRING = -4U
+      DYNAMIC_STRING = -4U,
+      // Custom value.
+      DYNAMIC_CUSTOM = -5U
       // Any other value indicates a section address plus OFFSET.
     };
 

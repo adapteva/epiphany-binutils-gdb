@@ -1,7 +1,6 @@
 // output.cc -- manage the output file for gold
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
-// Free Software Foundation, Inc.
+// Copyright (C) 2006-2014 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -435,7 +434,7 @@ Output_segment_headers::do_size() const
 
 // Output_file_header methods.
 
-Output_file_header::Output_file_header(const Target* target,
+Output_file_header::Output_file_header(Target* target,
 				       const Symbol_table* symtab,
 				       const Output_segment_headers* osh)
   : target_(target),
@@ -577,7 +576,7 @@ Output_file_header::do_sized_write(Output_file* of)
 
   // Let the target adjust the ELF header, e.g., to set EI_OSABI in
   // the e_ident field.
-  parameters->target().adjust_elf_header(view, ehdr_size);
+  this->target_->adjust_elf_header(view, ehdr_size);
 
   of->write_output_view(0, ehdr_size, view);
 }
@@ -1795,6 +1794,10 @@ Output_data_dynamic::Dynamic_entry::write(
 
     case DYNAMIC_STRING:
       val = pool->get_offset(this->u_.str);
+      break;
+
+    case DYNAMIC_CUSTOM:
+      val = parameters->target().dynamic_tag_custom_value(this->tag_);
       break;
 
     default:

@@ -1,6 +1,6 @@
 /* Print and select stack frames for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -47,13 +47,14 @@
 #include "inline-frame.h"
 #include "linespec.h"
 #include "cli/cli-utils.h"
+#include "objfiles.h"
 
 #include "gdb_assert.h"
 #include <ctype.h>
-#include "gdb_string.h"
+#include <string.h>
 
 #include "symfile.h"
-#include "python/python.h"
+#include "extension.h"
 
 void (*deprecated_selected_frame_level_changed_hook) (int);
 
@@ -165,12 +166,10 @@ print_stack_frame (struct frame_info *frame, int print_level,
 
   TRY_CATCH (e, RETURN_MASK_ERROR)
     {
-      int center = (print_what == SRC_LINE || print_what == SRC_AND_LOC);
-
       print_frame_info (frame, print_level, print_what, 1 /* print_args */,
 			set_current_sal);
       if (set_current_sal)
-	set_current_sal_from_frame (frame, center);
+	set_current_sal_from_frame (frame);
     }
 }
 
@@ -715,17 +714,13 @@ print_frame_args (struct symbol *func, struct frame_info *frame,
    line is in the center of the next 'list'.  */
 
 void
-set_current_sal_from_frame (struct frame_info *frame, int center)
+set_current_sal_from_frame (struct frame_info *frame)
 {
   struct symtab_and_line sal;
 
   find_frame_sal (frame, &sal);
-  if (sal.symtab)
-    {
-      if (center)
-        sal.line = max (sal.line - get_lines_to_list () / 2, 1);
-      set_current_source_symtab_and_line (&sal);
-    }
+  if (sal.symtab != NULL)
+    set_current_source_symtab_and_line (&sal);
 }
 
 /* If ON, GDB will display disassembly of the next source line when
@@ -834,6 +829,13 @@ print_frame_info (struct frame_info *frame, int print_level,
 	}
       ui_out_text (uiout, "\n");
       annotate_frame_end ();
+
+      /* If disassemble-next-line is set to auto or on output the next
+	 instruction.  */
+      if (disassemble_next_line == AUTO_BOOLEAN_AUTO
+	  || disassemble_next_line == AUTO_BOOLEAN_TRUE)
+	do_gdb_disassembly (get_frame_arch (frame), 1,
+			    get_frame_pc (frame), get_frame_pc (frame) + 1);
 
       do_cleanups (uiout_cleanup);
       return;
@@ -1076,14 +1078,14 @@ find_frame_funname (struct frame_info *frame, char **funname,
 	memset (&msymbol, 0, sizeof (msymbol));
 
       if (msymbol.minsym != NULL
-	  && (SYMBOL_VALUE_ADDRESS (msymbol.minsym)
+	  && (BMSYMBOL_VALUE_ADDRESS (msymbol)
 	      > BLOCK_START (SYMBOL_BLOCK_VALUE (func))))
 	{
 	  /* We also don't know anything about the function besides
 	     its address and name.  */
 	  func = 0;
-	  *funname = xstrdup (SYMBOL_PRINT_NAME (msymbol.minsym));
-	  *funlang = SYMBOL_LANGUAGE (msymbol.minsym);
+	  *funname = xstrdup (MSYMBOL_PRINT_NAME (msymbol.minsym));
+	  *funlang = MSYMBOL_LANGUAGE (msymbol.minsym);
 	}
       else
 	{
@@ -1119,8 +1121,8 @@ find_frame_funname (struct frame_info *frame, char **funname,
       msymbol = lookup_minimal_symbol_by_pc (pc);
       if (msymbol.minsym != NULL)
 	{
-	  *funname = xstrdup (SYMBOL_PRINT_NAME (msymbol.minsym));
-	  *funlang = SYMBOL_LANGUAGE (msymbol.minsym);
+	  *funname = xstrdup (MSYMBOL_PRINT_NAME (msymbol.minsym));
+	  *funlang = MSYMBOL_LANGUAGE (msymbol.minsym);
 	}
     }
 }
@@ -1407,7 +1409,9 @@ frame_info (char *addr_exp, int from_tty)
   struct cleanup *back_to = make_cleanup (null_cleanup, NULL);
   CORE_ADDR frame_pc;
   int frame_pc_p;
-  CORE_ADDR caller_pc;
+  /* Initialize it to avoid "may be used uninitialized" warning.  */
+  CORE_ADDR caller_pc = 0;
+  volatile struct gdb_exception ex;
 
   fi = parse_frame_specification_1 (addr_exp, "No stack.", &selected_frame_p);
   gdbarch = get_frame_arch (fi);
@@ -1457,8 +1461,8 @@ frame_info (char *addr_exp, int from_tty)
       msymbol = lookup_minimal_symbol_by_pc (frame_pc);
       if (msymbol.minsym != NULL)
 	{
-	  funname = SYMBOL_PRINT_NAME (msymbol.minsym);
-	  funlang = SYMBOL_LANGUAGE (msymbol.minsym);
+	  funname = MSYMBOL_PRINT_NAME (msymbol.minsym);
+	  funlang = MSYMBOL_LANGUAGE (msymbol.minsym);
 	}
     }
   calling_frame_info = get_prev_frame (fi);
@@ -1493,11 +1497,29 @@ frame_info (char *addr_exp, int from_tty)
 		     sal.line);
   puts_filtered ("; ");
   wrap_here ("    ");
-  printf_filtered ("saved %s ", pc_regname);
-  if (frame_unwind_caller_pc_if_available (fi, &caller_pc))
-    fputs_filtered (paddress (gdbarch, caller_pc), gdb_stdout);
+  printf_filtered ("saved %s = ", pc_regname);
+
+  TRY_CATCH (ex, RETURN_MASK_ERROR)
+    {
+      caller_pc = frame_unwind_caller_pc (fi);
+    }
+  if (ex.reason < 0)
+    {
+      switch (ex.error)
+	{
+	case NOT_AVAILABLE_ERROR:
+	  val_print_unavailable (gdb_stdout);
+	  break;
+	case OPTIMIZED_OUT_ERROR:
+	  val_print_not_saved (gdb_stdout);
+	  break;
+	default:
+	  fprintf_filtered (gdb_stdout, _("<error: %s>"), ex.message);
+	  break;
+	}
+    }
   else
-    fputs_filtered ("<unavailable>", gdb_stdout);
+    fputs_filtered (paddress (gdbarch, caller_pc), gdb_stdout);
   printf_filtered ("\n");
 
   if (calling_frame_info == NULL)
@@ -1507,7 +1529,7 @@ frame_info (char *addr_exp, int from_tty)
       reason = get_frame_unwind_stop_reason (fi);
       if (reason != UNWIND_NO_REASON)
 	printf_filtered (_(" Outermost frame: %s\n"),
-			 frame_stop_reason_string (reason));
+			 frame_stop_reason_string (fi));
     }
   else if (get_frame_type (fi) == TAILCALL_FRAME)
     puts_filtered (" tail call frame");
@@ -1688,7 +1710,7 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
   int i;
   struct frame_info *trailing;
   int trailing_level, py_start = 0, py_end = 0;
-  enum py_bt_status result = PY_BT_ERROR;
+  enum ext_lang_bt_status result = EXT_LANG_BT_ERROR;
 
   if (!target_has_stack)
     error (_("No stack."));
@@ -1762,7 +1784,7 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
   if (! no_filters)
     {
       int flags = PRINT_LEVEL | PRINT_FRAME_INFO | PRINT_ARGS;
-      enum py_frame_args arg_type;
+      enum ext_lang_frame_args arg_type;
 
       if (show_locals)
 	flags |= PRINT_LOCALS;
@@ -1774,13 +1796,14 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
       else
 	arg_type = NO_VALUES;
 
-      result = apply_frame_filter (get_current_frame (), flags, arg_type,
-				   current_uiout, py_start, py_end);
-
+      result = apply_ext_lang_frame_filter (get_current_frame (), flags,
+					    arg_type, current_uiout,
+					    py_start, py_end);
     }
+
   /* Run the inbuilt backtrace if there are no filters registered, or
      "no-filters" has been specified from the command.  */
-  if (no_filters ||  result == PY_BT_NO_FILTERS)
+  if (no_filters ||  result == EXT_LANG_BT_NO_FILTERS)
     {
       for (i = 0, fi = trailing; fi && count--; i++, fi = get_prev_frame (fi))
 	{
@@ -1825,7 +1848,7 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
 	  reason = get_frame_unwind_stop_reason (trailing);
 	  if (reason >= UNWIND_FIRST_ERROR)
 	    printf_filtered (_("Backtrace stopped: %s\n"),
-			     frame_stop_reason_string (reason));
+			     frame_stop_reason_string (trailing));
 	}
     }
 }

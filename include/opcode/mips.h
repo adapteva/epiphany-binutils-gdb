@@ -1,7 +1,5 @@
 /* mips.h.  Mips opcode list for GDB, the GNU debugger.
-   Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2008, 2009, 2010, 2013
-   Free Software Foundation, Inc.
+   Copyright (C) 1993-2014 Free Software Foundation, Inc.
    Contributed by Ralph Campbell and OSF
    Commented and modified by Ian Lance Taylor, Cygnus Support
 
@@ -413,7 +411,13 @@ enum mips_operand_type {
 
   /* Like OP_VU0_SUFFIX, but used when the operand's value has already
      been set.  Any suffix used here must match the previous value.  */
-  OP_VU0_MATCH_SUFFIX
+  OP_VU0_MATCH_SUFFIX,
+
+  /* An index selected by an integer, e.g. [1].  */
+  OP_IMM_INDEX,
+
+  /* An index selected by a register, e.g. [$2].  */
+  OP_REG_INDEX
 };
 
 /* Enumerates the types of MIPS register.  */
@@ -454,7 +458,13 @@ enum mips_reg_operand_type {
   OP_REG_R5900_I,
   OP_REG_R5900_Q,
   OP_REG_R5900_R,
-  OP_REG_R5900_ACC
+  OP_REG_R5900_ACC,
+
+  /* MSA registers $w0-$w31.  */
+  OP_REG_MSA,
+
+  /* MSA control registers $0-$31.  */
+  OP_REG_MSA_CTRL
 };
 
 /* Base class for all operands.  */
@@ -891,6 +901,32 @@ struct mips_opcode
    Enhanced VA Scheme:
    "+j" 9-bit signed offset in bit 7 (OP_*_EVAOFFSET)
 
+   MSA Extension:
+   "+d" 5-bit MSA register (FD)
+   "+e" 5-bit MSA register (FS)
+   "+h" 5-bit MSA register (FT)
+   "+k" 5-bit GPR at bit 6
+   "+l" 5-bit MSA control register at bit 6
+   "+n" 5-bit MSA control register at bit 11
+   "+o" 4-bit vector element index at bit 16
+   "+u" 3-bit vector element index at bit 16
+   "+v" 2-bit vector element index at bit 16
+   "+w" 1-bit vector element index at bit 16
+   "+T" (-512 .. 511) << 0 at bit 16
+   "+U" (-512 .. 511) << 1 at bit 16
+   "+V" (-512 .. 511) << 2 at bit 16
+   "+W" (-512 .. 511) << 3 at bit 16
+   "+~" 2 bit LSA/DLSA shift amount from 1 to 4 at bit 6
+   "+!" 3 bit unsigned bit position at bit 16
+   "+@" 4 bit unsigned bit position at bit 16
+   "+#" 6 bit unsigned bit position at bit 16
+   "+$" 5 bit unsigned immediate at bit 16
+   "+%" 5 bit signed immediate at bit 16
+   "+^" 10 bit signed immediate at bit 11
+   "+&" 0 vector element index
+   "+*" 5-bit register vector element index at bit 16
+   "+|" 8-bit mask at bit 16
+
    Other:
    "()" parens surrounding optional value
    ","  separates operands
@@ -905,8 +941,9 @@ struct mips_opcode
    Extension character sequences used so far ("+" followed by the
    following), for quick reference when adding more:
    "1234567890"
-   "ABCEFGHJKLMNPQSXZ"
-   "abcfgijmpqrstxyz"
+   "~!@#$%^&*|"
+   "ABCEFGHJKLMNPQSTUVWXZ"
+   "abcdefghijklmnopqrstuvwxyz"
 */
 
 /* These are the bits which may be set in the pinfo field of an
@@ -934,8 +971,8 @@ struct mips_opcode
 #define INSN_TLB                    0x00000200
 /* Reads coprocessor register other than floating point register.  */
 #define INSN_COP                    0x00000400
-/* Instruction loads value from memory, requiring delay.  */
-#define INSN_LOAD_MEMORY_DELAY      0x00000800
+/* Instruction loads value from memory.  */
+#define INSN_LOAD_MEMORY	    0x00000800
 /* Instruction loads value from coprocessor, requiring delay.  */
 #define INSN_LOAD_COPROC_DELAY	    0x00001000
 /* Instruction has unconditional branch delay slot.  */
@@ -1021,7 +1058,7 @@ struct mips_opcode
    word constructed using these macros is a bitmask of the remaining
    INSN_* values below.  */
 
-#define INSN_ISA_MASK		  0x0000000ful
+#define INSN_ISA_MASK		  0x0000001ful
 
 /* We cannot start at zero due to ISA_UNKNOWN below.  */
 #define INSN_ISA1                 1
@@ -1031,28 +1068,58 @@ struct mips_opcode
 #define INSN_ISA5                 5
 #define INSN_ISA32                6
 #define INSN_ISA32R2              7
-#define INSN_ISA64                8
-#define INSN_ISA64R2              9
+#define INSN_ISA32R3              8
+#define INSN_ISA32R5              9
+#define INSN_ISA64                11 
+#define INSN_ISA64R2              12
+#define INSN_ISA64R3              13
+#define INSN_ISA64R5              14
 /* Below this point the INSN_* values correspond to combinations of ISAs.
    They are only for use in the opcodes table to indicate membership of
    a combination of ISAs that cannot be expressed using the usual inclusion
    ordering on the above INSN_* values.  */
-#define INSN_ISA3_32              10
-#define INSN_ISA3_32R2            11
-#define INSN_ISA4_32              12
-#define INSN_ISA4_32R2            13
-#define INSN_ISA5_32R2            14
+#define INSN_ISA3_32              16
+#define INSN_ISA3_32R2            17
+#define INSN_ISA4_32              18
+#define INSN_ISA4_32R2            19
+#define INSN_ISA5_32R2            20
 
-/* Given INSN_ISA* values X and Y, where X ranges over INSN_ISA1 through
-   INSN_ISA5_32R2 and Y ranges over INSN_ISA1 through INSN_ISA64R2,
-   this table describes whether at least one of the ISAs described by X
-   is/are implemented by ISA Y.  (Think of Y as the ISA level supported by
-   a particular core and X as the ISA level(s) at which a certain instruction
-   is defined.)  The ISA(s) described by X is/are implemented by Y iff
-   (mips_isa_table[(Y & INSN_ISA_MASK) - 1] >> ((X & INSN_ISA_MASK) - 1)) & 1
-   is non-zero.  */
-static const unsigned int mips_isa_table[] =
-  { 0x0001, 0x0003, 0x0607, 0x1e0f, 0x3e1f, 0x0a23, 0x3e63, 0x3ebf, 0x3fff };
+/* Bit INSN_ISA<X> - 1 of INSN_UPTO<Y> is set if ISA Y includes ISA X.  */
+#define ISAF(X) (1 << (INSN_ISA##X - 1))
+#define INSN_UPTO1    ISAF(1)
+#define INSN_UPTO2    INSN_UPTO1 | ISAF(2)
+#define INSN_UPTO3    INSN_UPTO2 | ISAF(3) | ISAF(3_32) | ISAF(3_32R2)
+#define INSN_UPTO4    INSN_UPTO3 | ISAF(4) | ISAF(4_32) | ISAF(4_32R2)
+#define INSN_UPTO5    INSN_UPTO4 | ISAF(5) | ISAF(5_32R2)
+#define INSN_UPTO32   INSN_UPTO2 | ISAF(32) | ISAF(3_32) | ISAF(4_32)
+#define INSN_UPTO32R2 INSN_UPTO32 | ISAF(32R2) \
+			| ISAF(3_32R2) | ISAF(4_32R2) | ISAF(5_32R2)
+#define INSN_UPTO32R3 INSN_UPTO32R2 | ISAF(32R3)
+#define INSN_UPTO32R5 INSN_UPTO32R3 | ISAF(32R5)
+#define INSN_UPTO64   INSN_UPTO5 | ISAF(64) | ISAF(32)
+#define INSN_UPTO64R2 INSN_UPTO64 | ISAF(64R2) | ISAF(32R2)
+#define INSN_UPTO64R3 INSN_UPTO64R2 | ISAF(64R3) | ISAF(32R3)
+#define INSN_UPTO64R5 INSN_UPTO64R3 | ISAF(64R5) | ISAF(32R5)
+
+/* The same information in table form: bit INSN_ISA<X> - 1 of index
+   INSN_UPTO<Y> - 1 is set if ISA Y includes ISA X.  */
+static const unsigned int mips_isa_table[] = {
+  INSN_UPTO1,
+  INSN_UPTO2,
+  INSN_UPTO3,
+  INSN_UPTO4,
+  INSN_UPTO5,
+  INSN_UPTO32,
+  INSN_UPTO32R2,
+  INSN_UPTO32R3,
+  INSN_UPTO32R5,
+  0,
+  INSN_UPTO64,
+  INSN_UPTO64R2,
+  INSN_UPTO64R3,
+  INSN_UPTO64R5
+};
+#undef ISAF
 
 /* Masks used for Chip specific instructions.  */
 #define INSN_CHIP_MASK		  0xc3ff0f20
@@ -1115,6 +1182,11 @@ static const unsigned int mips_isa_table[] =
 /* Virtualization ASE */
 #define ASE_VIRT		0x00000200
 #define ASE_VIRT64		0x00000400
+/* MSA Extension  */
+#define ASE_MSA			0x00000800
+#define ASE_MSA64		0x00001000
+/* eXtended Physical Address (XPA) Extension.  */
+#define ASE_XPA			0x00002000
 
 /* MIPS ISA defines, use instead of hardcoding ISA level.  */
 
@@ -1129,7 +1201,11 @@ static const unsigned int mips_isa_table[] =
 #define       ISA_MIPS64      INSN_ISA64
 
 #define       ISA_MIPS32R2    INSN_ISA32R2
+#define       ISA_MIPS32R3    INSN_ISA32R3
+#define       ISA_MIPS32R5    INSN_ISA32R5
 #define       ISA_MIPS64R2    INSN_ISA64R2
+#define       ISA_MIPS64R3    INSN_ISA64R3
+#define       ISA_MIPS64R5    INSN_ISA64R5
 
 
 /* CPU defines, use instead of hardcoding processor number. Keep this
@@ -1161,9 +1237,13 @@ static const unsigned int mips_isa_table[] =
 #define CPU_MIPS16	16
 #define CPU_MIPS32	32
 #define CPU_MIPS32R2	33
+#define CPU_MIPS32R3	34
+#define CPU_MIPS32R5	36
 #define CPU_MIPS5       5
 #define CPU_MIPS64      64
 #define CPU_MIPS64R2	65
+#define CPU_MIPS64R3	66
+#define CPU_MIPS64R5	68
 #define CPU_SB1         12310201        /* octal 'SB', 01.  */
 #define CPU_LOONGSON_2E 3001
 #define CPU_LOONGSON_2F 3002
@@ -2044,6 +2124,33 @@ extern const int bfd_mips16_num_opcodes;
    microMIPS Enhanced VA Scheme:
    "+j" 9-bit signed offset in bit 0 (OP_*_EVAOFFSET)
 
+   MSA Extension:
+   "+d" 5-bit MSA register (FD)
+   "+e" 5-bit MSA register (FS)
+   "+h" 5-bit MSA register (FT)
+   "+k" 5-bit GPR at bit 6
+   "+l" 5-bit MSA control register at bit 6
+   "+n" 5-bit MSA control register at bit 11
+   "+o" 4-bit vector element index at bit 16
+   "+u" 3-bit vector element index at bit 16
+   "+v" 2-bit vector element index at bit 16
+   "+w" 1-bit vector element index at bit 16
+   "+x" 5-bit shift amount at bit 16
+   "+T" (-512 .. 511) << 0 at bit 16
+   "+U" (-512 .. 511) << 1 at bit 16
+   "+V" (-512 .. 511) << 2 at bit 16
+   "+W" (-512 .. 511) << 3 at bit 16
+   "+~" 2 bit LSA/DLSA shift amount from 1 to 4 at bit 6
+   "+!" 3 bit unsigned bit position at bit 16
+   "+@" 4 bit unsigned bit position at bit 16
+   "+#" 6 bit unsigned bit position at bit 16
+   "+$" 5 bit unsigned immediate at bit 16
+   "+%" 5 bit signed immediate at bit 16
+   "+^" 10 bit signed immediate at bit 11
+   "+&" 0 vector element index
+   "+*" 5-bit register vector element index at bit 16
+   "+|" 8-bit mask at bit 16
+
    Other:
    "()" parens surrounding optional value
    ","  separates operands
@@ -2059,9 +2166,9 @@ extern const int bfd_mips16_num_opcodes;
    Extension character sequences used so far ("+" followed by the
    following), for quick reference when adding more:
    ""
-   ""
-   "ABCEFGH"
-   "ij"
+   "~!@#$%^&*|"
+   "ABCEFGHTUVW"
+   "dehijklnouvwx"
 
    Extension character sequences used so far ("m" followed by the
    following), for quick reference when adding more:

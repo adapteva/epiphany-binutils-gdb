@@ -1,6 +1,6 @@
 /* Linux-specific functions to retrieve OS data.
    
-   Copyright (C) 2009-2013 Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -42,9 +42,11 @@
 #include "xml-utils.h"
 #include "buffer.h"
 #include "gdb_assert.h"
-#include "gdb_dirent.h"
-#include "gdb_stat.h"
+#include <dirent.h>
+#include <sys/stat.h>
 #include "filestuff.h"
+
+#define NAMELEN(dirent) strlen ((dirent)->d_name)
 
 /* Define PID_T to be a fixed size that is at least as large as pid_t,
    so that reading pid values embedded in /proc works
@@ -94,11 +96,8 @@ linux_common_core_of_thread (ptid_t ptid)
 	}
     }
 
-  p = strchr (content, '(');
-
-  /* Skip ")".  */
-  if (p != NULL)
-    p = strchr (p, ')');
+  /* ps command also relies on no trailing fields ever contain ')'.  */
+  p = strrchr (content, ')');
   if (p != NULL)
     p++;
 
@@ -135,9 +134,9 @@ command_from_pid (char *command, int maxlen, PID_T pid)
       /* sizeof (cmd) should be greater or equal to TASK_COMM_LEN (in
 	 include/linux/sched.h in the Linux kernel sources) plus two
 	 (for the brackets).  */
-      char cmd[32]; 
+      char cmd[18];
       PID_T stat_pid;
-      int items_read = fscanf (fp, "%lld %32s", &stat_pid, cmd);
+      int items_read = fscanf (fp, "%lld %17s", &stat_pid, cmd);
 	  
       if (items_read == 2 && pid == stat_pid)
 	{
@@ -256,11 +255,10 @@ get_process_owner (uid_t *owner, PID_T pid)
 }
 
 /* Find the CPU cores used by process PID and return them in CORES.
-   CORES points to an array of at least sysconf(_SC_NPROCESSOR_ONLN)
-   elements.  */
+   CORES points to an array of NUM_CORES elements.  */
 
 static int
-get_cores_used_by_process (PID_T pid, int *cores)
+get_cores_used_by_process (PID_T pid, int *cores, const int num_cores)
 {
   char taskdir[sizeof ("/proc/") + MAX_PID_T_STRLEN + sizeof ("/task") - 1];
   DIR *dir;
@@ -284,7 +282,7 @@ get_cores_used_by_process (PID_T pid, int *cores)
 	  core = linux_common_core_of_thread (ptid_build ((pid_t) pid,
 							  (pid_t) tid, 0));
 
-	  if (core >= 0)
+	  if (core >= 0 && core < num_cores)
 	    {
 	      ++cores[core];
 	      ++task_count;
@@ -299,7 +297,7 @@ get_cores_used_by_process (PID_T pid, int *cores)
 
 static LONGEST
 linux_xfer_osdata_processes (gdb_byte *readbuf,
-			     ULONGEST offset, LONGEST len)
+			     ULONGEST offset, ULONGEST len)
 {
   /* We make the process list snapshot when the object starts to be read.  */
   static const char *buf;
@@ -348,7 +346,7 @@ linux_xfer_osdata_processes (gdb_byte *readbuf,
 
 	      /* Find CPU cores used by the process.  */
 	      cores = (int *) xcalloc (num_cores, sizeof (int));
-	      task_count = get_cores_used_by_process (pid, cores);
+	      task_count = get_cores_used_by_process (pid, cores, num_cores);
 	      cores_str = (char *) xcalloc (task_count, sizeof ("4294967295") + 1);
 
 	      for (i = 0; i < num_cores && task_count > 0; ++i)
@@ -447,7 +445,7 @@ compare_processes (const void *process1, const void *process2)
 
 static LONGEST
 linux_xfer_osdata_processgroups (gdb_byte *readbuf,
-				 ULONGEST offset, LONGEST len)
+				 ULONGEST offset, ULONGEST len)
 {
   /* We make the process list snapshot when the object starts to be read.  */
   static const char *buf;
@@ -563,7 +561,7 @@ linux_xfer_osdata_processgroups (gdb_byte *readbuf,
 
 static LONGEST
 linux_xfer_osdata_threads (gdb_byte *readbuf,
-			   ULONGEST offset, LONGEST len)
+			   ULONGEST offset, ULONGEST len)
 {
   /* We make the process list snapshot when the object starts to be read.  */
   static const char *buf;
@@ -677,7 +675,7 @@ linux_xfer_osdata_threads (gdb_byte *readbuf,
 
 static LONGEST
 linux_xfer_osdata_fds (gdb_byte *readbuf,
-		       ULONGEST offset, LONGEST len)
+		       ULONGEST offset, ULONGEST len)
 {
   /* We make the process list snapshot when the object starts to be read.  */
   static const char *buf;
@@ -871,29 +869,22 @@ print_sockets (unsigned short family, int tcp, struct buffer *buffer)
 	  if (fgets (buf, sizeof (buf), fp))
 	    {
 	      uid_t uid;
-	      unsigned long tlen, inode;
-	      int sl, timeout;
 	      unsigned int local_port, remote_port, state;
-	      unsigned int txq, rxq, trun, retn;
 	      char local_address[NI_MAXHOST], remote_address[NI_MAXHOST];
-	      char extra[512];
 	      int result;
 
+#if NI_MAXHOST <= 32
+#error "local_address and remote_address buffers too small"
+#endif
+
 	      result = sscanf (buf,
-			       "%d: %33[0-9A-F]:%X %33[0-9A-F]:%X %X %X:%X %X:%lX %X %d %d %lu %512s\n",
-			       &sl,
+			       "%*d: %32[0-9A-F]:%X %32[0-9A-F]:%X %X %*X:%*X %*X:%*X %*X %d %*d %*u %*s\n",
 			       local_address, &local_port,
 			       remote_address, &remote_port,
 			       &state,
-			       &txq, &rxq,
-			       &trun, &tlen,
-			       &retn,
-			       &uid,
-			       &timeout,
-			       &inode,
-			       extra);
+			       &uid);
 	      
-	      if (result == 15)
+	      if (result == 6)
 		{
 		  union socket_addr locaddr, remaddr;
 		  size_t addr_size;
@@ -991,7 +982,7 @@ print_sockets (unsigned short family, int tcp, struct buffer *buffer)
 
 static LONGEST
 linux_xfer_osdata_isockets (gdb_byte *readbuf,
-			    ULONGEST offset, LONGEST len)
+			    ULONGEST offset, ULONGEST len)
 {
   static const char *buf;
   static LONGEST len_avail = -1;
@@ -1072,7 +1063,7 @@ group_from_gid (char *group, int maxlen, gid_t gid)
 
 static LONGEST
 linux_xfer_osdata_shm (gdb_byte *readbuf,
-		       ULONGEST offset, LONGEST len)
+		       ULONGEST offset, ULONGEST len)
 {
   static const char *buf;
   static LONGEST len_avail = -1;
@@ -1200,7 +1191,7 @@ linux_xfer_osdata_shm (gdb_byte *readbuf,
 
 static LONGEST
 linux_xfer_osdata_sem (gdb_byte *readbuf,
-		       ULONGEST offset, LONGEST len)
+		       ULONGEST offset, ULONGEST len)
 {
   static const char *buf;
   static LONGEST len_avail = -1;
@@ -1312,7 +1303,7 @@ linux_xfer_osdata_sem (gdb_byte *readbuf,
 
 static LONGEST
 linux_xfer_osdata_msg (gdb_byte *readbuf,
-		       ULONGEST offset, LONGEST len)
+		       ULONGEST offset, ULONGEST len)
 {
   static const char *buf;
   static LONGEST len_avail = -1;
@@ -1438,7 +1429,7 @@ linux_xfer_osdata_msg (gdb_byte *readbuf,
 
 static LONGEST
 linux_xfer_osdata_modules (gdb_byte *readbuf,
-			   ULONGEST offset, LONGEST len)
+			   ULONGEST offset, ULONGEST len)
 {
   static const char *buf;
   static LONGEST len_avail = -1;
@@ -1464,19 +1455,42 @@ linux_xfer_osdata_modules (gdb_byte *readbuf,
 	    {
 	      if (fgets (buf, sizeof (buf), fp))
 		{
-		  char name[64], dependencies[256], status[16];
+		  char *name, *dependencies, *status, *tmp;
 		  unsigned int size;
 		  unsigned long long address;
 		  int uses;
-		  int items_read;
-		  
-		  items_read = sscanf (buf,
-				       "%64s %d %d %256s %16s 0x%llx",
-				       name, &size, &uses,
-				       dependencies, status, &address);
 
-		  if (items_read == 6)
-		    buffer_xml_printf (
+		  name = strtok (buf, " ");
+		  if (name == NULL)
+		    continue;
+
+		  tmp = strtok (NULL, " ");
+		  if (tmp == NULL)
+		    continue;
+		  if (sscanf (tmp, "%u", &size) != 1)
+		    continue;
+
+		  tmp = strtok (NULL, " ");
+		  if (tmp == NULL)
+		    continue;
+		  if (sscanf (tmp, "%d", &uses) != 1)
+		    continue;
+
+		  dependencies = strtok (NULL, " ");
+		  if (dependencies == NULL)
+		    continue;
+
+		  status = strtok (NULL, " ");
+		  if (status == NULL)
+		    continue;
+
+		  tmp = strtok (NULL, "\n");
+		  if (tmp == NULL)
+		    continue;
+		  if (sscanf (tmp, "%llx", &address) != 1)
+		    continue;
+
+		  buffer_xml_printf (
 			&buffer,
 			"<item>"
 			"<column name=\"name\">%s</column>"
@@ -1524,7 +1538,7 @@ struct osdata_type {
   char *type;
   char *title;
   char *description;
-  LONGEST (*getter) (gdb_byte *readbuf, ULONGEST offset, LONGEST len);
+  LONGEST (*getter) (gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
 } osdata_table[] = {
   { "processes", "Processes", "Listing of all processes",
     linux_xfer_osdata_processes },
@@ -1549,7 +1563,7 @@ struct osdata_type {
 
 LONGEST
 linux_common_xfer_osdata (const char *annex, gdb_byte *readbuf,
-			  ULONGEST offset, LONGEST len)
+			  ULONGEST offset, ULONGEST len)
 {
   if (!annex || *annex == '\0')
     {

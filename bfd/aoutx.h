@@ -1,7 +1,5 @@
 /* BFD semi-generic back-end for a.out binaries.
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -68,12 +66,12 @@ DESCRIPTION
 	from @file{sunos.c}:
 
 |	#define TARGET_NAME "a.out-sunos-big"
-|	#define VECNAME    sunos_big_vec
+|	#define VECNAME    sparc_aout_sunos_be_vec
 |	#include "aoutf1.h"
 
 	requires all the names from @file{aout32.c}, and produces the jump vector
 
-|	sunos_big_vec
+|	sparc_aout_sunos_be_vec
 
 	The file @file{host-aout.c} is a special case.  It is for a large set
 	of hosts that use ``more or less standard'' a.out files, and
@@ -793,9 +791,13 @@ NAME (aout, machine_type) (enum bfd_architecture arch,
 	case bfd_mach_mips16:
 	case bfd_mach_mipsisa32:
 	case bfd_mach_mipsisa32r2:
+	case bfd_mach_mipsisa32r3:
+	case bfd_mach_mipsisa32r5:
 	case bfd_mach_mips5:
 	case bfd_mach_mipsisa64:
 	case bfd_mach_mipsisa64r2:
+	case bfd_mach_mipsisa64r3:
+	case bfd_mach_mipsisa64r5:
 	case bfd_mach_mips_sb1:
 	case bfd_mach_mips_xlr:
 	  /* FIXME: These should be MIPS3, MIPS4, MIPS16, MIPS32, etc.  */

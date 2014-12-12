@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2013 Free Software Foundation, Inc.
+# Copyright (C) 2003-2014 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -221,7 +221,11 @@ proc check_different {var msymfile} {
     return 1
 }
 
-set msymfile [standard_output_file shreloc.txt]
+if [is_remote host] {
+    set msymfile shreloc.txt
+} else {
+    set msymfile [standard_output_file shreloc.txt]
+}
 
 if [send_gdb_discard "maint print msymbols ${msymfile}"] {
     if {[check_different "static_var_\[12\]" "${msymfile}"]} {

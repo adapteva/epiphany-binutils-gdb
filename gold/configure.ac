@@ -1,18 +1,17 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-dnl   Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
-dnl   Free Software Foundation, Inc.
+dnl   Copyright (C) 2006-2014 Free Software Foundation, Inc.
 dnl
 dnl This file is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
 dnl the Free Software Foundation; either version 3 of the License, or
 dnl (at your option) any later version.
-dnl 
+dnl
 dnl This program is distributed in the hope that it will be useful,
 dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
 dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 dnl GNU General Public License for more details.
-dnl 
+dnl
 dnl You should have received a copy of the GNU General Public License
 dnl along with this program; see the file COPYING3.  If not see
 dnl <http://www.gnu.org/licenses/>.
@@ -338,6 +337,19 @@ dnl Whether we can test -mcmodel=medium.
 AM_CONDITIONAL(MCMODEL_MEDIUM,
 [test "$target_cpu" = "x86_64" -a "$have_mcmodel_medium" = "yes" -a "$gold_cv_prog_gcc41" = "yes"])
 
+AC_CACHE_CHECK([whether $CC supports -fmerge-constants],
+	       [gold_cv_merge_constants], [
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -fmerge-constants"
+AC_COMPILE_IFELSE([const char *s = "foo";],
+		  [gold_cv_merge_constants=yes],
+		  [gold_cv_merge_constants=no])
+CFLAGS="$save_CFLAGS"])
+AC_SUBST([MERGE_CONSTANTS_FLAG])
+AS_IF([test "$gold_cv_merge_constants" = yes],
+      [MERGE_CONSTANTS_FLAG=-fmerge-constants],
+      [MERGE_CONSTANTS_FLAG=])
+
 dnl Test for __thread support.
 AC_CACHE_CHECK([for thread support], [gold_cv_c_thread],
 [AC_COMPILE_IFELSE([__thread int i = 1;],
@@ -376,8 +388,13 @@ fi
 AM_CONDITIONAL(OMP_SUPPORT, test "$gold_cv_c_threadprivate" = "yes")
 
 dnl Test for the -ftls-dialect=gnu2 option.
+dnl Use -Werror in case of compilers that make unknown -m options warnings.
+dnl They would pass the test here, but fail in actual use when $WARN_CFLAGS
+dnl gets set later by default Autoconf magic to include -Werror.  (We are
+dnl assuming here that there is no compiler that groks -mtls-dialect=gnu2
+dnl but does not grok -Werror.)
 save_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -fpic -mtls-dialect=gnu2"
+CFLAGS="$CFLAGS -Werror -fpic -mtls-dialect=gnu2"
 AC_COMPILE_IFELSE([
 __thread int i;
 void foo (void)
@@ -503,16 +520,41 @@ dnl multiple declarations of functions like basename when compiling
 dnl with C++.
 AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp])
 
+dnl Check if gcc supports the -gpubnames option.
+dnl Use -Werror in case of compilers that make unknown -g options warnings.
+dnl They would pass the test here, but fail in actual use when $WARN_CFLAGS
+dnl gets set later by default Autoconf magic to include -Werror.  (We are
+dnl assuming here that there is no compiler that groks -gpubnames
+dnl but does not grok -Werror.)
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror -gpubnames"
+AC_COMPILE_IFELSE([int i;], [have_pubnames=yes], [have_pubnames=no])
+CFLAGS="$save_CFLAGS"
+AM_CONDITIONAL(HAVE_PUBNAMES, test "$have_pubnames" = "yes")
+
+dnl Check if gcc supports the -fno-use-linker-plugin option.
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror -fno-use-linker-plugin"
+AC_COMPILE_IFELSE([int i;], [have_no_use_linker_plugin=yes], [have_no_use_linker_plugin=no])
+CFLAGS="$save_CFLAGS"
+AM_CONDITIONAL(HAVE_NO_USE_LINKER_PLUGIN, test "$have_no_use_linker_plugin" = "yes")
+
 AC_LANG_PUSH(C++)
 
+AC_CHECK_HEADERS(unordered_set unordered_map)
 AC_CHECK_HEADERS(tr1/unordered_set tr1/unordered_map)
 AC_CHECK_HEADERS(ext/hash_map ext/hash_set)
 AC_CHECK_HEADERS(byteswap.h)
 
 dnl When plugins enabled dynamic loader interface is required. Check headers
-dnl which may provide this interface. In case of dlfcn.h add libdl to link.
+dnl which may provide this interface. Add the necessary library to link.
 AC_CHECK_HEADERS(windows.h)
-AC_CHECK_HEADERS(dlfcn.h, [DLOPEN_LIBS="-ldl"], [DLOPEN_LIBS=""])
+AC_CHECK_HEADERS(dlfcn.h)
+AC_SEARCH_LIBS(dlopen, [dl dld])
+case "$ac_cv_search_dlopen" in
+  no*) DLOPEN_LIBS="";;
+  *)   DLOPEN_LIBS="$ac_cv_search_dlopen";;
+esac
 AC_SUBST(DLOPEN_LIBS)
 
 AC_CHECK_FUNCS(mallinfo posix_fallocate fallocate readv sysconf times)
@@ -577,13 +619,6 @@ if test "$gold_cv_stat_st_mtim" = "yes"; then
   AC_DEFINE(HAVE_STAT_ST_MTIM, 1,
 	    [Define if struct stat has a field st_mtim with timespec for mtime])
 fi
-
-dnl Check if gcc supports the -gpubnames option.
-save_CXXFLAGS="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS -gpubnames"
-AC_COMPILE_IFELSE([int i;], [have_pubnames=yes], [have_pubnames=no])
-CXXFLAGS="$save_CXXFLAGS"
-AM_CONDITIONAL(HAVE_PUBNAMES, test "$have_pubnames" = "yes")
 
 AC_LANG_POP(C++)
 

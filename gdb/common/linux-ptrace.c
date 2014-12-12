@@ -1,5 +1,5 @@
 /* Linux-specific ptrace manipulation routines.
-   Copyright (C) 2012-2013 Free Software Foundation, Inc.
+   Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,7 +20,7 @@
 #include "server.h"
 #else
 #include "defs.h"
-#include "gdb_string.h"
+#include <string.h>
 #endif
 
 #include "linux-ptrace.h"
@@ -37,24 +37,24 @@
    there are no supported features.  */
 static int current_ptrace_options = -1;
 
-/* Find all possible reasons we could fail to attach PID and append these
-   newline terminated reason strings to initialized BUFFER.  '\0' termination
-   of BUFFER must be done by the caller.  */
+/* Find all possible reasons we could fail to attach PID and append
+   these as strings to the already initialized BUFFER.  '\0'
+   termination of BUFFER must be done by the caller.  */
 
 void
-linux_ptrace_attach_warnings (pid_t pid, struct buffer *buffer)
+linux_ptrace_attach_fail_reason (pid_t pid, struct buffer *buffer)
 {
   pid_t tracerpid;
 
   tracerpid = linux_proc_get_tracerpid (pid);
   if (tracerpid > 0)
-    buffer_xml_printf (buffer, _("warning: process %d is already traced "
-				 "by process %d\n"),
+    buffer_xml_printf (buffer, _("process %d is already traced "
+				 "by process %d"),
 		       (int) pid, (int) tracerpid);
 
   if (linux_proc_pid_is_zombie (pid))
-    buffer_xml_printf (buffer, _("warning: process %d is a zombie "
-				 "- the process has already terminated\n"),
+    buffer_xml_printf (buffer, _("process %d is a zombie "
+				 "- the process has already terminated"),
 		       (int) pid);
 }
 
@@ -308,13 +308,15 @@ linux_child_function (gdb_byte *child_stack)
   _exit (0);
 }
 
+static void linux_test_for_tracesysgood (int child_pid);
+static void linux_test_for_tracefork (int child_pid);
+
 /* Determine ptrace features available on this target.  */
 
 static void
 linux_check_ptrace_features (void)
 {
   int child_pid, ret, status;
-  long second_pid;
 
   /* Initialize the options.  */
   current_ptrace_options = 0;
@@ -335,42 +337,60 @@ linux_check_ptrace_features (void)
     error (_("linux_check_ptrace_features: waitpid: unexpected status %d."),
 	   status);
 
+  linux_test_for_tracesysgood (child_pid);
+
+  linux_test_for_tracefork (child_pid);
+
+  /* Clean things up and kill any pending children.  */
+  do
+    {
+      ret = ptrace (PTRACE_KILL, child_pid, (PTRACE_TYPE_ARG3) 0,
+		    (PTRACE_TYPE_ARG4) 0);
+      if (ret != 0)
+	warning (_("linux_check_ptrace_features: failed to kill child"));
+      my_waitpid (child_pid, &status, 0);
+    }
+  while (WIFSTOPPED (status));
+}
+
+/* Determine if PTRACE_O_TRACESYSGOOD can be used to catch
+   syscalls.  */
+
+static void
+linux_test_for_tracesysgood (int child_pid)
+{
+#ifdef GDBSERVER
+  /* gdbserver does not support PTRACE_O_TRACESYSGOOD.  */
+#else
+  int ret;
+
+  ret = ptrace (PTRACE_SETOPTIONS, child_pid, (PTRACE_TYPE_ARG3) 0,
+		(PTRACE_TYPE_ARG4) PTRACE_O_TRACESYSGOOD);
+  if (ret == 0)
+    current_ptrace_options |= PTRACE_O_TRACESYSGOOD;
+#endif
+}
+
+/* Determine if PTRACE_O_TRACEFORK can be used to follow fork
+   events.  */
+
+static void
+linux_test_for_tracefork (int child_pid)
+{
+  int ret, status;
+  long second_pid;
+
   /* First, set the PTRACE_O_TRACEFORK option.  If this fails, we
      know for sure that it is not supported.  */
   ret = ptrace (PTRACE_SETOPTIONS, child_pid, (PTRACE_TYPE_ARG3) 0,
 		(PTRACE_TYPE_ARG4) PTRACE_O_TRACEFORK);
 
   if (ret != 0)
-    {
-      ret = ptrace (PTRACE_KILL, child_pid, (PTRACE_TYPE_ARG3) 0,
-		    (PTRACE_TYPE_ARG4) 0);
-      if (ret != 0)
-	{
-	  warning (_("linux_check_ptrace_features: failed to kill child"));
-	  return;
-	}
-
-      ret = my_waitpid (child_pid, &status, 0);
-      if (ret != child_pid)
-	warning (_("linux_check_ptrace_features: failed "
-		   "to wait for killed child"));
-      else if (!WIFSIGNALED (status))
-	warning (_("linux_check_ptrace_features: unexpected "
-		   "wait status 0x%x from killed child"), status);
-
-      return;
-    }
+    return;
 
 #ifdef GDBSERVER
-  /* gdbserver does not support PTRACE_O_TRACESYSGOOD or
-     PTRACE_O_TRACEVFORKDONE yet.  */
+  /* gdbserver does not support PTRACE_O_TRACEVFORKDONE yet.  */
 #else
-  /* Check if the target supports PTRACE_O_TRACESYSGOOD.  */
-  ret = ptrace (PTRACE_SETOPTIONS, child_pid, (PTRACE_TYPE_ARG3) 0,
-		(PTRACE_TYPE_ARG4) PTRACE_O_TRACESYSGOOD);
-  if (ret == 0)
-    current_ptrace_options |= PTRACE_O_TRACESYSGOOD;
-
   /* Check if the target supports PTRACE_O_TRACEVFORKDONE.  */
   ret = ptrace (PTRACE_SETOPTIONS, child_pid, (PTRACE_TYPE_ARG3) 0,
 		(PTRACE_TYPE_ARG4) (PTRACE_O_TRACEFORK
@@ -394,7 +414,7 @@ linux_check_ptrace_features (void)
   ret = ptrace (PTRACE_CONT, child_pid, (PTRACE_TYPE_ARG3) 0,
 		(PTRACE_TYPE_ARG4) 0);
   if (ret != 0)
-    warning (_("linux_check_ptrace_features: failed to resume child"));
+    warning (_("linux_test_for_tracefork: failed to resume child"));
 
   ret = my_waitpid (child_pid, &status, 0);
 
@@ -431,25 +451,14 @@ linux_check_ptrace_features (void)
 	  ret = ptrace (PTRACE_KILL, second_pid, (PTRACE_TYPE_ARG3) 0,
 			(PTRACE_TYPE_ARG4) 0);
 	  if (ret != 0)
-	    warning (_("linux_check_ptrace_features: "
+	    warning (_("linux_test_for_tracefork: "
 		       "failed to kill second child"));
 	  my_waitpid (second_pid, &status, 0);
 	}
     }
   else
-    warning (_("linux_check_ptrace_features: unexpected result from waitpid "
+    warning (_("linux_test_for_tracefork: unexpected result from waitpid "
 	     "(%d, status 0x%x)"), ret, status);
-
-  /* Clean things up and kill any pending children.  */
-  do
-    {
-      ret = ptrace (PTRACE_KILL, child_pid, (PTRACE_TYPE_ARG3) 0,
-		    (PTRACE_TYPE_ARG4) 0);
-      if (ret != 0)
-	warning (_("linux_check_ptrace_features: failed to kill child"));
-      my_waitpid (child_pid, &status, 0);
-    }
-  while (WIFSTOPPED (status));
 }
 
 /* Enable reporting of all currently supported ptrace events.  */
@@ -465,6 +474,15 @@ linux_enable_event_reporting (pid_t pid)
   /* Set the options.  */
   ptrace (PTRACE_SETOPTIONS, pid, (PTRACE_TYPE_ARG3) 0,
 	  (PTRACE_TYPE_ARG4) (uintptr_t) current_ptrace_options);
+}
+
+/* Disable reporting of all currently supported ptrace events.  */
+
+void
+linux_disable_event_reporting (pid_t pid)
+{
+  /* Set the options.  */
+  ptrace (PTRACE_SETOPTIONS, pid, (PTRACE_TYPE_ARG3) 0, 0);
 }
 
 /* Returns non-zero if PTRACE_OPTIONS is contained within

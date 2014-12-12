@@ -1,6 +1,6 @@
 /* Support for GDB maintenance commands.
 
-   Copyright (C) 1992-2013 Free Software Foundation, Inc.
+   Copyright (C) 1992-2014 Free Software Foundation, Inc.
 
    Written by Fred Fish at Cygnus Support.
 
@@ -490,11 +490,11 @@ maintenance_translate_address (char *arg, int from_tty)
 
   if (sym.minsym)
     {
-      const char *symbol_name = SYMBOL_PRINT_NAME (sym.minsym);
+      const char *symbol_name = MSYMBOL_PRINT_NAME (sym.minsym);
       const char *symbol_offset
-	= pulongest (address - SYMBOL_VALUE_ADDRESS (sym.minsym));
+	= pulongest (address - BMSYMBOL_VALUE_ADDRESS (sym));
 
-      sect = SYMBOL_OBJ_SECTION(sym.objfile, sym.minsym);
+      sect = MSYMBOL_OBJ_SECTION(sym.objfile, sym.minsym);
       if (sect != NULL)
 	{
 	  const char *section_name;
@@ -503,8 +503,8 @@ maintenance_translate_address (char *arg, int from_tty)
 	  gdb_assert (sect->the_bfd_section && sect->the_bfd_section->name);
 	  section_name = sect->the_bfd_section->name;
 
-	  gdb_assert (sect->objfile && sect->objfile->name);
-	  obj_name = sect->objfile->name;
+	  gdb_assert (sect->objfile && objfile_name (sect->objfile));
+	  obj_name = objfile_name (sect->objfile);
 
 	  if (MULTI_OBJFILE_P ())
 	    printf_filtered (_("%s + %s in section %s of %s\n"),
@@ -615,28 +615,40 @@ maintenance_do_deprecate (char *text, int deprecate)
      memory.  */
   if (alias)
     {
-      if (alias->flags & MALLOCED_REPLACEMENT)
+      if (alias->malloced_replacement)
 	xfree (alias->replacement);
 
       if (deprecate)
-	alias->flags |= (DEPRECATED_WARN_USER | CMD_DEPRECATED);
+	{
+	  alias->deprecated_warn_user = 1;
+	  alias->cmd_deprecated = 1;
+	}
       else
-	alias->flags &= ~(DEPRECATED_WARN_USER | CMD_DEPRECATED);
+	{
+	  alias->deprecated_warn_user = 0;
+	  alias->cmd_deprecated = 0;
+	}
       alias->replacement = replacement;
-      alias->flags |= MALLOCED_REPLACEMENT;
+      alias->malloced_replacement = 1;
       return;
     }
   else if (cmd)
     {
-      if (cmd->flags & MALLOCED_REPLACEMENT)
+      if (cmd->malloced_replacement)
 	xfree (cmd->replacement);
 
       if (deprecate)
-	cmd->flags |= (DEPRECATED_WARN_USER | CMD_DEPRECATED);
+	{
+	  cmd->deprecated_warn_user = 1;
+	  cmd->cmd_deprecated = 1;
+	}
       else
-	cmd->flags &= ~(DEPRECATED_WARN_USER | CMD_DEPRECATED);
+	{
+	  cmd->deprecated_warn_user = 0;
+	  cmd->cmd_deprecated = 0;
+	}
       cmd->replacement = replacement;
-      cmd->flags |= MALLOCED_REPLACEMENT;
+      cmd->malloced_replacement = 1;
       return;
     }
   xfree (replacement);
@@ -902,7 +914,7 @@ make_command_stats_cleanup (int msg_type)
       && !per_command_symtab)
     return make_cleanup (null_cleanup, 0);
 
-  new_stat = XZALLOC (struct cmd_stats);
+  new_stat = XCNEW (struct cmd_stats);
 
   new_stat->msg_type = msg_type;
 

@@ -1,6 +1,6 @@
 /* Target waitstatus implementations.
 
-   Copyright (C) 1990-2013 Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -40,10 +40,12 @@ target_waitstatus_to_string (const struct target_waitstatus *ws)
 			 kind_str, ws->value.integer);
     case TARGET_WAITKIND_STOPPED:
       return xstrprintf ("%sstopped, signal = %s",
-			 kind_str, gdb_signal_to_name (ws->value.sig));
+			 kind_str,
+			 gdb_signal_to_symbol_string (ws->value.sig));
     case TARGET_WAITKIND_SIGNALLED:
       return xstrprintf ("%ssignalled, signal = %s",
-			 kind_str, gdb_signal_to_name (ws->value.sig));
+			 kind_str,
+			 gdb_signal_to_symbol_string (ws->value.sig));
     case TARGET_WAITKIND_LOADED:
       return xstrprintf ("%sloaded", kind_str);
     case TARGET_WAITKIND_FORKED:

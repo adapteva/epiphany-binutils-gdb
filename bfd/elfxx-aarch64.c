@@ -1,5 +1,5 @@
 /* AArch64-specific support for ELF.
-   Copyright 2009-2013  Free Software Foundation, Inc.
+   Copyright (C) 2009-2014 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -500,7 +500,7 @@ _bfd_aarch64_elf_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
       default:
 	return FALSE;
 
-      case 408:		/* sizeof(struct elf_prstatus) on Linux/arm64.  */
+      case 392:		/* sizeof(struct elf_prstatus) on Linux/arm64.  */
 	/* pr_cursig */
 	elf_tdata (abfd)->core->signal
 	  = bfd_get_16 (abfd, note->descdata + 12);

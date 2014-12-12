@@ -1,7 +1,5 @@
 /* SPARC-specific support for 64-bit ELF
-   Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1993-2014 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -823,7 +821,7 @@ const struct elf_size_info elf64_sparc_size_info =
   bfd_elf64_swap_reloca_out
 };
 
-#define TARGET_BIG_SYM	bfd_elf64_sparc_vec
+#define TARGET_BIG_SYM	sparc_elf64_vec
 #define TARGET_BIG_NAME	"elf64-sparc"
 #define ELF_ARCH	bfd_arch_sparc
 #define ELF_MAXPAGESIZE 0x100000
@@ -922,13 +920,11 @@ const struct elf_size_info elf64_sparc_size_info =
 /* Section 5.2.4 of the ABI specifies a 256-byte boundary for the table.  */
 #define elf_backend_plt_alignment 8
 
-#define elf_backend_post_process_headers	_bfd_elf_set_osabi
-
 #include "elf64-target.h"
 
 /* FreeBSD support */
 #undef  TARGET_BIG_SYM
-#define TARGET_BIG_SYM bfd_elf64_sparc_freebsd_vec
+#define TARGET_BIG_SYM sparc_elf64_fbsd_vec
 #undef  TARGET_BIG_NAME
 #define TARGET_BIG_NAME "elf64-sparc-freebsd"
 #undef	ELF_OSABI
@@ -942,7 +938,7 @@ const struct elf_size_info elf64_sparc_size_info =
 /* Solaris 2.  */
 
 #undef	TARGET_BIG_SYM
-#define	TARGET_BIG_SYM				bfd_elf64_sparc_sol2_vec
+#define	TARGET_BIG_SYM				sparc_elf64_sol2_vec
 #undef	TARGET_BIG_NAME
 #define	TARGET_BIG_NAME				"elf64-sparc-sol2"
 

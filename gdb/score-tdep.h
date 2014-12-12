@@ -1,7 +1,7 @@
 /* Target-dependent code for the S+core architecture, for GDB,
    the GNU Debugger.
 
-   Copyright (C) 2006-2013 Free Software Foundation, Inc.
+   Copyright (C) 2006-2014 Free Software Foundation, Inc.
 
    Contributed by Qinwei (qinwei@sunnorth.com.cn)
    Contributed by Ching-Peng Lin (cplin@sunplus.com)
@@ -48,13 +48,6 @@ enum gdb_regnum
 
 /* Forward declarations.  */
 struct regset;
-
-/* Target-dependent structure in gdbarch */
-struct gdbarch_tdep
-{
-    /* Cached core file helpers.  */
-    struct regset *gregset;
-};
 
 /* Linux Core file support (dirty hack)
   

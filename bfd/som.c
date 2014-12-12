@@ -1,7 +1,5 @@
 /* bfd back-end for HP PA-RISC SOM objects.
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
-   2012, 2013  Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
 
    Contributed by the Center for Software Science at the
    University of Utah.
@@ -5351,7 +5349,7 @@ som_canonicalize_reloc (bfd *abfd,
   return section->reloc_count;
 }
 
-extern const bfd_target som_vec;
+extern const bfd_target hppa_som_vec;
 
 /* A hook to set up object file dependent section information.  */
 
@@ -6752,7 +6750,7 @@ som_bfd_link_split_section (bfd *abfd ATTRIBUTE_UNUSED, asection *sec)
 #define som_bfd_set_private_flags		_bfd_generic_bfd_set_private_flags
 #define som_find_inliner_info			_bfd_nosymbols_find_inliner_info
 
-const bfd_target som_vec =
+const bfd_target hppa_som_vec =
 {
   "som",			/* Name.  */
   bfd_target_som_flavour,

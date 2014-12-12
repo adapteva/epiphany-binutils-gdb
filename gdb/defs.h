@@ -1,7 +1,7 @@
 /* *INDENT-OFF* */ /* ATTRIBUTE_PRINTF confuses indent, avoid running it
 		      for now.  */
 /* Basic, host-specific, and target-specific definitions for GDB.
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -48,9 +48,7 @@
    included, so it's ok to blank out gstdint.h.  */
 #define GCC_GENERATED_STDINT_H 1
 
-#ifdef HAVE_STDDEF_H
 #include <stddef.h>
-#endif
 
 #include <unistd.h>
 
@@ -105,13 +103,13 @@
 
 #include "bfd.h"
 
-/* A byte from the program being debugged.  */
+/* * A byte from the program being debugged.  */
 typedef bfd_byte gdb_byte;
 
-/* An address in the program being debugged.  Host byte order.  */
+/* * An address in the program being debugged.  Host byte order.  */
 typedef bfd_vma CORE_ADDR;
 
-/* The largest CORE_ADDR value.  */
+/* * The largest CORE_ADDR value.  */
 #define CORE_ADDR_MAX (~ (CORE_ADDR) 0)
 
 /* This is to make sure that LONGEST is at least as big as CORE_ADDR.  */
@@ -137,23 +135,23 @@ typedef bfd_vma CORE_ADDR;
 
 #include "ptid.h"
 
-/* Enable xdb commands if set.  */
+/* * Enable xdb commands if set.  */
 extern int xdb_commands;
 
-/* Enable dbx commands if set.  */
+/* * Enable dbx commands if set.  */
 extern int dbx_commands;
 
-/* System root path, used to find libraries etc.  */
+/* * System root path, used to find libraries etc.  */
 extern char *gdb_sysroot;
 
-/* GDB datadir, used to store data files.  */
+/* * GDB datadir, used to store data files.  */
 extern char *gdb_datadir;
 
-/* If non-NULL, the possibly relocated path to python's "lib" directory
+/* * If non-NULL, the possibly relocated path to python's "lib" directory
    specified with --with-python.  */
 extern char *python_libdir;
 
-/* Search path for separate debug files.  */
+/* * Search path for separate debug files.  */
 extern char *debug_file_directory;
 
 /* GDB has two methods for handling SIGINT.  When immediate_quit is
@@ -161,21 +159,20 @@ extern char *debug_file_directory;
    handler.  Otherwise, SIGINT simply sets a flag; code that might
    take a long time, and which ought to be interruptible, checks this
    flag using the QUIT macro.
-   
-   If GDB is built with Python support, it uses Python's low-level
-   interface to implement the flag.  This approach makes it possible
-   for Python and GDB SIGINT handling to coexist seamlessly.
 
-   If GDB is built without Python, it instead uses its traditional
-   variables.  */
+   These functions use the extension_language_ops API to allow extension
+   language(s) and GDB SIGINT handling to coexist seamlessly.  */
 
-/* Clear the quit flag.  */
+/* * Clear the quit flag.  */
 extern void clear_quit_flag (void);
-/* Evaluate to non-zero if the quit flag is set, zero otherwise.  This
+/* * Evaluate to non-zero if the quit flag is set, zero otherwise.  This
    will clear the quit flag as a side effect.  */
 extern int check_quit_flag (void);
-/* Set the quit flag.  */
+/* * Set the quit flag.  */
 extern void set_quit_flag (void);
+
+/* Flag that function quit should call quit_force.  */
+extern volatile int sync_quit_force_run;
 
 extern int immediate_quit;
 
@@ -189,11 +186,11 @@ extern void quit (void);
    needed.  */
 
 #define QUIT { \
-  if (check_quit_flag ()) quit (); \
+  if (check_quit_flag () || sync_quit_force_run) quit (); \
   if (deprecated_interactive_hook) deprecated_interactive_hook (); \
 }
 
-/* Languages represented in the symbol table and elsewhere.
+/* * Languages represented in the symbol table and elsewhere.
    This should probably be in language.h, but since enum's can't
    be forward declared to satisfy opaque references before their
    actual definition, needs to be here.  */
@@ -225,7 +222,8 @@ enum precision_type
     unspecified_precision
   };
 
-/* A generic, not quite boolean, enumeration.  */
+/* * A generic, not quite boolean, enumeration.  This is used for
+   set/show commands in which the options are on/off/automatic.  */
 enum auto_boolean
 {
   AUTO_BOOLEAN_TRUE,
@@ -233,26 +231,28 @@ enum auto_boolean
   AUTO_BOOLEAN_AUTO
 };
 
-/* Potential ways that a function can return a value of a given type.  */
+/* * Potential ways that a function can return a value of a given
+   type.  */
+
 enum return_value_convention
 {
-  /* Where the return value has been squeezed into one or more
+  /* * Where the return value has been squeezed into one or more
      registers.  */
   RETURN_VALUE_REGISTER_CONVENTION,
-  /* Commonly known as the "struct return convention".  The caller
+  /* * Commonly known as the "struct return convention".  The caller
      passes an additional hidden first parameter to the caller.  That
      parameter contains the address at which the value being returned
      should be stored.  While typically, and historically, used for
      large structs, this is convention is applied to values of many
      different types.  */
   RETURN_VALUE_STRUCT_CONVENTION,
-  /* Like the "struct return convention" above, but where the ABI
+  /* * Like the "struct return convention" above, but where the ABI
      guarantees that the called function stores the address at which
      the value being returned is stored in a well-defined location,
      such as a register or memory slot in the stack frame.  Don't use
      this if the ABI doesn't explicitly guarantees this.  */
   RETURN_VALUE_ABI_RETURNS_ADDRESS,
-  /* Like the "struct return convention" above, but where the ABI
+  /* * Like the "struct return convention" above, but where the ABI
      guarantees that the address at which the value being returned is
      stored will be available in a well-defined location, such as a
      register or memory slot in the stack frame.  Don't use this if
@@ -290,16 +290,16 @@ extern char *re_comp (const char *);
 
 extern void symbol_file_command (char *, int);
 
-/* Remote targets may wish to use this as their load function.  */
+/* * Remote targets may wish to use this as their load function.  */
 extern void generic_load (char *name, int from_tty);
 
-/* Report on STREAM the performance of memory transfer operation,
+/* * Report on STREAM the performance of memory transfer operation,
    such as 'load'.
-   DATA_COUNT is the number of bytes transferred.
-   WRITE_COUNT is the number of separate write operations, or 0,
+   @param DATA_COUNT is the number of bytes transferred.
+   @param WRITE_COUNT is the number of separate write operations, or 0,
    if that information is not available.
-   START_TIME is the time at which an operation was started.
-   END_TIME is the time at which an operation ended.  */
+   @param START_TIME is the time at which an operation was started.
+   @param END_TIME is the time at which an operation ended.  */
 struct timeval;
 extern void print_transfer_performance (struct ui_file *stream,
 					unsigned long data_count,
@@ -310,8 +310,6 @@ extern void print_transfer_performance (struct ui_file *stream,
 /* From top.c */
 
 typedef void initialize_file_ftype (void);
-
-extern char *skip_quoted (char *);
 
 extern char *gdb_readline (char *);
 
@@ -367,40 +365,39 @@ extern void init_source_path (void);
 
 /* From exec.c */
 
-/* Process memory area starting at ADDR with length SIZE.  Area is readable iff
-   READ is non-zero, writable if WRITE is non-zero, executable if EXEC is
-   non-zero.  Area is possibly changed against its original file based copy if
-   MODIFIED is non-zero.  DATA is passed without changes from a caller.  */
+/* * Process memory area starting at ADDR with length SIZE.  Area is
+   readable iff READ is non-zero, writable if WRITE is non-zero,
+   executable if EXEC is non-zero.  Area is possibly changed against
+   its original file based copy if MODIFIED is non-zero.  DATA is
+   passed without changes from a caller.  */
 
 typedef int (*find_memory_region_ftype) (CORE_ADDR addr, unsigned long size,
 					 int read, int write, int exec,
 					 int modified, void *data);
 
-/* Take over the 'find_mapped_memory' vector from exec.c.  */
-extern void exec_set_find_memory_regions
-  (int (*func) (find_memory_region_ftype func, void *data));
-
-/* Possible lvalue types.  Like enum language, this should be in
+/* * Possible lvalue types.  Like enum language, this should be in
    value.h, but needs to be here for the same reason.  */
 
 enum lval_type
   {
-    /* Not an lval.  */
+    /* * Not an lval.  */
     not_lval,
-    /* In memory.  */
+    /* * In memory.  */
     lval_memory,
-    /* In a register.  Registers are relative to a frame.  */
+    /* * In a register.  Registers are relative to a frame.  */
     lval_register,
-    /* In a gdb internal variable.  */
+    /* * In a gdb internal variable.  */
     lval_internalvar,
-    /* Part of a gdb internal variable (structure field).  */
+    /* * Value encapsulates a callable defined in an extension language.  */
+    lval_xcallable,
+    /* * Part of a gdb internal variable (structure field).  */
     lval_internalvar_component,
-    /* Value's bits are fetched and stored using functions provided by
-       its creator.  */
+    /* * Value's bits are fetched and stored using functions provided
+       by its creator.  */
     lval_computed
   };
 
-/* Control types for commands */
+/* * Control types for commands.  */
 
 enum misc_command_type
   {
@@ -419,21 +416,22 @@ enum command_control_type
     if_control,
     commands_control,
     python_control,
+    guile_control,
     while_stepping_control,
     invalid_control
   };
 
-/* Structure for saved commands lines
-   (for breakpoints, defined commands, etc).  */
+/* * Structure for saved commands lines (for breakpoints, defined
+   commands, etc).  */
 
 struct command_line
   {
     struct command_line *next;
     char *line;
     enum command_control_type control_type;
-    /* The number of elements in body_list.  */
+    /* * The number of elements in body_list.  */
     int body_count;
-    /* For composite commands, the nested lists of commands.  For
+    /* * For composite commands, the nested lists of commands.  For
        example, for "if" command this will contain the then branch and
        the else branch, if that is available.  */
     struct command_line **body_list;
@@ -448,44 +446,44 @@ extern struct command_line *read_command_lines_1 (char * (*) (void), int,
 
 extern void free_command_lines (struct command_line **);
 
-/* Parameters of the "info proc" command.  */
+/* * Parameters of the "info proc" command.  */
 
 enum info_proc_what
   {
-    /* Display the default cmdline, cwd and exe outputs.  */
+    /* * Display the default cmdline, cwd and exe outputs.  */
     IP_MINIMAL,
 
-    /* Display `info proc mappings'.  */
+    /* * Display `info proc mappings'.  */
     IP_MAPPINGS,
 
-    /* Display `info proc status'.  */
+    /* * Display `info proc status'.  */
     IP_STATUS,
 
-    /* Display `info proc stat'.  */
+    /* * Display `info proc stat'.  */
     IP_STAT,
 
-    /* Display `info proc cmdline'.  */
+    /* * Display `info proc cmdline'.  */
     IP_CMDLINE,
 
-    /* Display `info proc exe'.  */
+    /* * Display `info proc exe'.  */
     IP_EXE,
 
-    /* Display `info proc cwd'.  */
+    /* * Display `info proc cwd'.  */
     IP_CWD,
 
-    /* Display all of the above.  */
+    /* * Display all of the above.  */
     IP_ALL
   };
 
-/* String containing the current directory (what getwd would return).  */
+/* * String containing the current directory (what getwd would return).  */
 
 extern char *current_directory;
 
-/* Default radixes for input and output.  Only some values supported.  */
+/* * Default radixes for input and output.  Only some values supported.  */
 extern unsigned input_radix;
 extern unsigned output_radix;
 
-/* Possibilities for prettyformat parameters to routines which print
+/* * Possibilities for prettyformat parameters to routines which print
    things.  Like enum language, this should be in value.h, but needs
    to be here for the same reason.  FIXME:  If we can eliminate this
    as an arg to LA_VAL_PRINT, then we can probably move it back to
@@ -495,11 +493,11 @@ enum val_prettyformat
   {
     Val_no_prettyformat = 0,
     Val_prettyformat,
-    /* Use the default setting which the user has specified.  */
+    /* * Use the default setting which the user has specified.  */
     Val_prettyformat_default
   };
 
-/* Optional native machine support.  Non-native (and possibly pure
+/* * Optional native machine support.  Non-native (and possibly pure
    multi-arch) targets do not need a "nm.h" file.  This will be a
    symlink to one of the nm-*.h files, built by the `configure'
    script.  */
@@ -551,22 +549,15 @@ enum val_prettyformat
 #define	LONGEST_MAX ((LONGEST)(ULONGEST_MAX >> 1))
 #endif
 
-/* Convert a LONGEST to an int.  This is used in contexts (e.g. number of
+/* * Convert a LONGEST to an int.  This is used in contexts (e.g. number of
    arguments to a function, number in a value history, register number, etc.)
    where the value must not be larger than can fit in an int.  */
 
 extern int longest_to_int (LONGEST);
 
-/* Utility macros to allocate typed memory.  Avoids errors like:
-   struct foo *foo = xmalloc (sizeof struct bar); and memset (foo,
-   sizeof (struct foo), 0).  */
-#define XZALLOC(TYPE) ((TYPE*) xzalloc (sizeof (TYPE)))
-#define XMALLOC(TYPE) ((TYPE*) xmalloc (sizeof (TYPE)))
-#define XCALLOC(NMEMB, TYPE) ((TYPE*) xcalloc ((NMEMB), sizeof (TYPE)))
-
 #include "common-utils.h"
 
-/* List of known OS ABIs.  If you change this, make sure to update the
+/* * List of known OS ABIs.  If you change this, make sure to update the
    table in osabi.c.  */
 enum gdb_osabi
 {
@@ -608,13 +599,7 @@ enum gdb_osabi
 
 /* From other system libraries */
 
-#ifdef HAVE_STDDEF_H
-#include <stddef.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
 
 
 #ifndef atof
@@ -645,20 +630,20 @@ extern void *alloca ();
 /* Dynamic target-system-dependent parameters for GDB.  */
 #include "gdbarch.h"
 
-/* Maximum size of a register.  Something small, but large enough for
+/* * Maximum size of a register.  Something small, but large enough for
    all known ISAs.  If it turns out to be too small, make it bigger.  */
 
 enum { MAX_REGISTER_SIZE = 64 };
 
 /* Static target-system-dependent parameters for GDB.  */
 
-/* Number of bits in a char or unsigned char for the target machine.
+/* * Number of bits in a char or unsigned char for the target machine.
    Just like CHAR_BIT in <limits.h> but describes the target machine.  */
 #if !defined (TARGET_CHAR_BIT)
 #define TARGET_CHAR_BIT 8
 #endif
 
-/* If we picked up a copy of CHAR_BIT from a configuration file
+/* * If we picked up a copy of CHAR_BIT from a configuration file
    (which may get it by including <limits.h>) then use it to set
    the number of bits in a host char.  If not, use the same size
    as the target.  */
@@ -699,7 +684,7 @@ extern int watchdog;
 
 /* Hooks for alternate command interfaces.  */
 
-/* The name of the interpreter if specified on the command line.  */
+/* * The name of the interpreter if specified on the command line.  */
 extern char *interpreter_p;
 
 /* If a given interpreter matches INTERPRETER_P then it should update
@@ -727,7 +712,6 @@ extern int (*deprecated_query_hook) (const char *, va_list)
      ATTRIBUTE_FPTR_PRINTF(1,0);
 extern void (*deprecated_warning_hook) (const char *, va_list)
      ATTRIBUTE_FPTR_PRINTF(1,0);
-extern void (*deprecated_flush_hook) (struct ui_file * stream);
 extern void (*deprecated_interactive_hook) (void);
 extern void (*deprecated_readline_begin_hook) (char *, ...)
      ATTRIBUTE_FPTR_PRINTF_1;
@@ -744,26 +728,8 @@ extern void (*deprecated_detach_hook) (void);
 extern void (*deprecated_call_command_hook) (struct cmd_list_element * c,
 					     char *cmd, int from_tty);
 
-extern void (*deprecated_set_hook) (struct cmd_list_element * c);
-
 extern int (*deprecated_ui_load_progress_hook) (const char *section,
 						unsigned long num);
-
-/* Inhibit window interface if non-zero.  */
-
-extern int use_windows;
-
-/* Provide default definitions of PIDGET, TIDGET, and MERGEPID.
-   The name ``TIDGET'' is a historical accident.  Many uses of TIDGET
-   in the code actually refer to a lightweight process id, i.e,
-   something that can be considered a process id in its own right for
-   certain purposes.  */
-
-#ifndef PIDGET
-#define PIDGET(PTID) (ptid_get_pid (PTID))
-#define TIDGET(PTID) (ptid_get_lwp (PTID))
-#define MERGEPID(PID, TID) ptid_build (PID, TID, 0)
-#endif
 
 /* If this definition isn't overridden by the header files, assume
    that isatty and fileno exist on this system.  */
@@ -771,7 +737,7 @@ extern int use_windows;
 #define ISATTY(FP)	(isatty (fileno (FP)))
 #endif
 
-/* A width that can achieve a better legibility for GDB MI mode.  */
+/* * A width that can achieve a better legibility for GDB MI mode.  */
 #define GDB_MI_MSG_WIDTH  80
 
 /* From progspace.c */
@@ -779,7 +745,7 @@ extern int use_windows;
 extern void initialize_progspace (void);
 extern void initialize_inferiors (void);
 
-/* Special block numbers */
+/* * Special block numbers */
 
 enum block_enum
 {

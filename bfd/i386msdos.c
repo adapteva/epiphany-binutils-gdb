@@ -1,7 +1,5 @@
 /* BFD back-end for MS-DOS executables.
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2009, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
    Written by Bryan Ford of the University of Utah.
 
    Contributed by the Center for Software Science at the
@@ -178,7 +176,7 @@ msdos_set_section_contents (bfd *abfd,
 #define msdos_get_reloc_upper_bound _bfd_norelocs_get_reloc_upper_bound
 #define msdos_32_bfd_link_split_section  _bfd_generic_link_split_section
 
-const bfd_target i386msdos_vec =
+const bfd_target i386_msdos_vec =
   {
     "msdos",			/* name */
     bfd_target_msdos_flavour,

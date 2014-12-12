@@ -1,7 +1,5 @@
 /* chew
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 2000, 2001,
-   2002, 2003, 2005, 2007, 2009, 2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-2014 Free Software Foundation, Inc.
    Contributed by steve chamberlain @cygnus
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1256,7 +1254,7 @@ perform ()
 		fprintf (stderr, "warning, %s is not recognised\n", next);
 	      skip_past_newline ();
 	    }
-
+	  free (next);
 	}
       else
 	skip_past_newline ();

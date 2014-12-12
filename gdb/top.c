@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2013 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,9 +25,11 @@
 #include "cli/cli-decode.h"
 #include "symtab.h"
 #include "inferior.h"
+#include "infrun.h"
 #include "exceptions.h"
 #include <signal.h>
 #include "target.h"
+#include "target-dcache.h"
 #include "breakpoint.h"
 #include "gdbtypes.h"
 #include "expression.h"
@@ -44,7 +46,7 @@
 #include "main.h"
 #include "event-loop.h"
 #include "gdbthread.h"
-#include "python/python.h"
+#include "extension.h"
 #include "interps.h"
 #include "observer.h"
 #include "maint.h"
@@ -60,8 +62,8 @@
 #include <sys/types.h>
 
 #include "event-top.h"
-#include "gdb_string.h"
-#include "gdb_stat.h"
+#include <string.h>
+#include <sys/stat.h>
 #include <ctype.h>
 #include "ui-out.h"
 #include "cli-out.h"
@@ -84,11 +86,6 @@ extern void initialize_all_files (void);
 const char gdbinit[] = GDBINIT;
 
 int inhibit_gdbinit = 0;
-
-/* If nonzero, and GDB has been configured to be able to use windows,
-   attempt to open them upon startup.  */
-
-int use_windows = 0;
 
 extern char lang_frame_mismatch_warn[];		/* language.c */
 
@@ -143,13 +140,6 @@ int saved_command_line_size = 100;
    from the user, and have the user not notice that the user interface
    is issuing commands too.  */
 int server_command;
-
-/* Baud rate specified for talking to serial target systems.  Default
-   is left as -1, so targets can choose their own defaults.  */
-/* FIXME: This means that "show remotebaud" and gr_files_info can
-   print -1 or (unsigned int)-1.  This is a Bad User Interface.  */
-
-int baud_rate = -1;
 
 /* Timeout limit for response from target.  */
 
@@ -258,11 +248,6 @@ ptid_t (*deprecated_target_wait_hook) (ptid_t ptid,
 
 void (*deprecated_call_command_hook) (struct cmd_list_element * c, 
 				      char *cmd, int from_tty);
-
-/* Called after a `set' command has finished.  Is only run if the
-   `set' command succeeded.  */
-
-void (*deprecated_set_hook) (struct cmd_list_element * c);
 
 /* Called when the current thread changes.  Argument is thread id.  */
 
@@ -422,6 +407,8 @@ execute_command (char *p, int from_tty)
     {
       const char *cmd = p;
       char *arg;
+      int was_sync = sync_execution;
+
       line = p;
 
       /* If trace-commands is set then this will print this command.  */
@@ -456,7 +443,7 @@ execute_command (char *p, int from_tty)
       /* If this command has been pre-hooked, run the hook first.  */
       execute_cmd_pre_hook (c);
 
-      if (c->flags & DEPRECATED_WARN_USER)
+      if (c->deprecated_warn_user)
 	deprecated_cmd_warning (line);
 
       /* c->user_commands would be NULL in the case of a python command.  */
@@ -477,7 +464,7 @@ execute_command (char *p, int from_tty)
 	 command's list, running command hooks or similars), and we
 	 just ran a synchronous command that started the target, wait
 	 for that command to end.  */
-      if (!interpreter_async && sync_execution)
+      if (!interpreter_async && !was_sync && sync_execution)
 	{
 	  while (gdb_do_one_event () >= 0)
 	    if (!sync_execution)
@@ -574,11 +561,14 @@ command_loop (void)
 
       make_command_stats_cleanup (1);
 
-      execute_command (command, instream == stdin);
+      /* Do not execute commented lines.  */
+      if (command[0] != '#')
+	{
+	  execute_command (command, instream == stdin);
 
-      /* Do any commands attached to breakpoint we are stopped at.  */
-      bpstat_do_actions ();
-
+	  /* Do any commands attached to breakpoint we are stopped at.  */
+	  bpstat_do_actions ();
+	}
       do_cleanups (old_chain);
     }
 }
@@ -1068,18 +1058,8 @@ command_line_input (char *prompt_arg, int repeat, char *annotation_suffix)
   *p = 0;
 
   /* Add line to history if appropriate.  */
-  if (instream == stdin
-      && ISATTY (stdin) && *linebuffer)
+  if (*linebuffer && input_from_terminal_p ())
     add_history (linebuffer);
-
-  /* Note: lines consisting solely of comments are added to the command
-     history.  This is useful when you type a command, and then
-     realize you don't want to execute it quite yet.  You can comment
-     out the command and then later fetch it from the value history
-     and remove the '#'.  The kill ring is probably better, but some
-     people are in the habit of commenting things out.  */
-  if (*p1 == '#')
-    *p1 = '\0';			/* Found a comment.  */
 
   /* Save into global buffer if appropriate.  */
   if (repeat)
@@ -1109,7 +1089,7 @@ print_gdb_version (struct ui_file *stream)
   /* Second line is a copyright notice.  */
 
   fprintf_filtered (stream,
-		    "Copyright (C) 2013 Free Software Foundation, Inc.\n");
+		    "Copyright (C) 2014 Free Software Foundation, Inc.\n");
 
   /* Following the copyright is a brief statement that the program is
      free software, that users are free to copy and change it on
@@ -1683,12 +1663,26 @@ show_exec_done_display_p (struct ui_file *file, int from_tty,
 		    value);
 }
 
+/* New values of the "data-directory" parameter are staged here.  */
+static char *staged_gdb_datadir;
+
 /* "set" command for the gdb_datadir configuration variable.  */
 
 static void
 set_gdb_datadir (char *args, int from_tty, struct cmd_list_element *c)
 {
+  set_gdb_data_directory (staged_gdb_datadir);
   observer_notify_gdb_datadir_changed ();
+}
+
+/* "show" command for the gdb_datadir configuration variable.  */
+
+static void
+show_gdb_datadir (struct ui_file *file, int from_tty,
+		  struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("GDB's data directory is \"%s\".\n"),
+		    gdb_datadir);
 }
 
 static void
@@ -1808,11 +1802,11 @@ Use \"on\" to enable the notification, and \"off\" to disable it."),
 			   &setlist, &showlist);
 
   add_setshow_filename_cmd ("data-directory", class_maintenance,
-                           &gdb_datadir, _("Set GDB's data directory."),
+                           &staged_gdb_datadir, _("Set GDB's data directory."),
                            _("Show GDB's data directory."),
                            _("\
 When set, GDB uses the specified path to search for data files."),
-                           set_gdb_datadir, NULL,
+                           set_gdb_datadir, show_gdb_datadir,
                            &setlist,
                            &showlist);
 }
@@ -1867,11 +1861,9 @@ gdb_init (char *argv0)
   if (deprecated_init_ui_hook)
     deprecated_init_ui_hook (argv0);
 
-#ifdef HAVE_PYTHON
-  /* Python initialization can require various commands to be
+  /* Python initialization, for example, can require various commands to be
      installed.  For example "info pretty-printer" needs the "info"
      prefix to be installed.  Keep things simple and just do final
-     python initialization here.  */
-  finish_python_initialization ();
-#endif
+     script initialization here.  */
+  finish_ext_lang_initialization ();
 }

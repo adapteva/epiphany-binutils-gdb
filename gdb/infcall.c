@@ -1,6 +1,6 @@
 /* Perform an inferior function call, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -14,7 +14,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should haave received a copy of the GNU General Public License
+   You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
@@ -23,6 +23,7 @@
 #include "target.h"
 #include "regcache.h"
 #include "inferior.h"
+#include "infrun.h"
 #include "gdb_assert.h"
 #include "block.h"
 #include "gdbcore.h"
@@ -30,12 +31,13 @@
 #include "objfiles.h"
 #include "gdbcmd.h"
 #include "command.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "infcall.h"
 #include "dummy-frame.h"
 #include "ada-lang.h"
 #include "gdbthread.h"
 #include "exceptions.h"
+#include "event-top.h"
 
 /* If we can't find a function's name from its address,
    we print this instead.  */
@@ -88,7 +90,7 @@ show_coerce_float_to_double_p (struct ui_file *file, int from_tty,
 
    The default is to stop in the frame where the signal was received.  */
 
-int unwind_on_signal_p = 0;
+static int unwind_on_signal_p = 0;
 static void
 show_unwind_on_signal_p (struct ui_file *file, int from_tty,
 			 struct cmd_list_element *c, const char *value)
@@ -359,7 +361,7 @@ get_function_name (CORE_ADDR funaddr, char *buf, int buf_size)
     struct bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (funaddr);
 
     if (msymbol.minsym)
-      return SYMBOL_PRINT_NAME (msymbol.minsym);
+      return MSYMBOL_PRINT_NAME (msymbol.minsym);
   }
 
   {
@@ -399,15 +401,24 @@ run_inferior_call (struct thread_info *call_thread, CORE_ADDR real_pc)
 
   TRY_CATCH (e, RETURN_MASK_ALL)
     {
+      int was_sync = sync_execution;
+
       proceed (real_pc, GDB_SIGNAL_0, 0);
 
       /* Inferior function calls are always synchronous, even if the
 	 target supports asynchronous execution.  Do here what
 	 `proceed' itself does in sync mode.  */
-      if (target_can_async_p () && is_running (inferior_ptid))
+      if (target_can_async_p ())
 	{
 	  wait_for_inferior ();
 	  normal_stop ();
+	  /* If GDB was previously in sync execution mode, then ensure
+	     that it remains so.  normal_stop calls
+	     async_enable_stdin, so reset it again here.  In other
+	     cases, stdin will be re-enabled by
+	     inferior_event_handler, when an exception is thrown.  */
+	  if (was_sync)
+	    async_disable_stdin ();
 	}
     }
 
@@ -464,7 +475,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
 {
   CORE_ADDR sp;
   struct type *values_type, *target_values_type;
-  unsigned char struct_return = 0, lang_struct_return = 0;
+  unsigned char struct_return = 0, hidden_first_param_p = 0;
   CORE_ADDR struct_addr = 0;
   struct infcall_control_state *inf_status;
   struct cleanup *inf_status_cleanup;
@@ -598,9 +609,9 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
      the first argument is passed in out0 but the hidden structure
      return pointer would normally be passed in r8.  */
 
-  if (language_pass_by_reference (values_type))
+  if (gdbarch_return_in_first_hidden_param_p (gdbarch, values_type))
     {
-      lang_struct_return = 1;
+      hidden_first_param_p = 1;
 
       /* Tell the target specific argument pushing routine not to
 	 expect a value.  */
@@ -608,8 +619,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
     }
   else
     {
-      struct_return = using_struct_return (gdbarch,
-					   value_type (function), values_type);
+      struct_return = using_struct_return (gdbarch, function, values_type);
       target_values_type = values_type;
     }
 
@@ -625,9 +635,35 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
   switch (gdbarch_call_dummy_location (gdbarch))
     {
     case ON_STACK:
-      sp = push_dummy_code (gdbarch, sp, funaddr,
-				args, nargs, target_values_type,
-				&real_pc, &bp_addr, get_current_regcache ());
+      {
+	const gdb_byte *bp_bytes;
+	CORE_ADDR bp_addr_as_address;
+	int bp_size;
+
+	/* Be careful BP_ADDR is in inferior PC encoding while
+	   BP_ADDR_AS_ADDRESS is a plain memory address.  */
+
+	sp = push_dummy_code (gdbarch, sp, funaddr, args, nargs,
+			      target_values_type, &real_pc, &bp_addr,
+			      get_current_regcache ());
+
+	/* Write a legitimate instruction at the point where the infcall
+	   breakpoint is going to be inserted.  While this instruction
+	   is never going to be executed, a user investigating the
+	   memory from GDB would see this instruction instead of random
+	   uninitialized bytes.  We chose the breakpoint instruction
+	   as it may look as the most logical one to the user and also
+	   valgrind 3.7.0 needs it for proper vgdb inferior calls.
+
+	   If software breakpoints are unsupported for this target we
+	   leave the user visible memory content uninitialized.  */
+
+	bp_addr_as_address = bp_addr;
+	bp_bytes = gdbarch_breakpoint_from_pc (gdbarch, &bp_addr_as_address,
+					       &bp_size);
+	if (bp_bytes != NULL)
+	  write_memory (bp_addr_as_address, bp_bytes, bp_size);
+      }
       break;
     case AT_ENTRY_POINT:
       {
@@ -635,8 +671,12 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
 
 	real_pc = funaddr;
 	dummy_addr = entry_point_address ();
+
 	/* A call dummy always consists of just a single breakpoint, so
-	   its address is the same as the address of the dummy.  */
+	   its address is the same as the address of the dummy.
+
+	   The actual breakpoint is inserted separatly so there is no need to
+	   write that out.  */
 	bp_addr = dummy_addr;
 	break;
       }
@@ -681,10 +721,9 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
      stack, if necessary.  Make certain that the value is correctly
      aligned.  */
 
-  if (struct_return || lang_struct_return)
+  if (struct_return || hidden_first_param_p)
     {
       int len = TYPE_LENGTH (values_type);
-
       if (gdbarch_inner_than (gdbarch, 1, 2))
 	{
 	  /* Stack grows downward.  Align STRUCT_ADDR and SP after
@@ -713,7 +752,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
 	}
     }
 
-  if (lang_struct_return)
+  if (hidden_first_param_p)
     {
       struct value **new_args;
 
@@ -751,7 +790,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
      inferior.  That way it breaks when it returns.  */
 
   {
-    struct breakpoint *bpt;
+    struct breakpoint *bpt, *longjmp_b;
     struct symtab_and_line sal;
 
     init_sal (&sal);		/* initialize to zeroes */
@@ -762,7 +801,22 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
        PUSH_DUMMY_CALL, saved as the dummy-frame TOS, and used by
        dummy_id to form the frame ID's stack address.  */
     bpt = set_momentary_breakpoint (gdbarch, sal, dummy_id, bp_call_dummy);
+
+    /* set_momentary_breakpoint invalidates FRAME.  */
+    frame = NULL;
+
     bpt->disposition = disp_del;
+    gdb_assert (bpt->related_breakpoint == bpt);
+
+    longjmp_b = set_longjmp_breakpoint_for_call_dummy ();
+    if (longjmp_b)
+      {
+	/* Link BPT into the chain of LONGJMP_B.  */
+	bpt->related_breakpoint = longjmp_b;
+	while (longjmp_b->related_breakpoint != bpt->related_breakpoint)
+	  longjmp_b = longjmp_b->related_breakpoint;
+	longjmp_b->related_breakpoint = bpt;
+      }
   }
 
   /* Create a breakpoint in std::terminate.
@@ -1015,7 +1069,7 @@ When the function is done executing, GDB will silently stop."),
     /* Figure out the value returned by the function.  */
     retval = allocate_value (values_type);
 
-    if (lang_struct_return)
+    if (hidden_first_param_p)
       read_value_memory (retval, 0, 1, struct_addr,
 			 value_contents_raw (retval),
 			 TYPE_LENGTH (values_type));
@@ -1023,13 +1077,13 @@ When the function is done executing, GDB will silently stop."),
       {
 	/* If the function returns void, don't bother fetching the
 	   return value.  */
-	switch (gdbarch_return_value (gdbarch, value_type (function),
-				      target_values_type, NULL, NULL, NULL))
+	switch (gdbarch_return_value (gdbarch, function, target_values_type,
+				      NULL, NULL, NULL))
 	  {
 	  case RETURN_VALUE_REGISTER_CONVENTION:
 	  case RETURN_VALUE_ABI_RETURNS_ADDRESS:
 	  case RETURN_VALUE_ABI_PRESERVES_ADDRESS:
-	    gdbarch_return_value (gdbarch, value_type (function), values_type,
+	    gdbarch_return_value (gdbarch, function, values_type,
 				  retbuf, value_contents_raw (retval), NULL);
 	    break;
 	  case RETURN_VALUE_STRUCT_CONVENTION:

@@ -1,6 +1,6 @@
 /* Character set conversion support for GDB.
 
-   Copyright (C) 2001-2013 Free Software Foundation, Inc.
+   Copyright (C) 2001-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,7 +30,7 @@
 #include "gdb_vecs.h"
 
 #include <stddef.h>
-#include "gdb_string.h"
+#include <string.h>
 #include <ctype.h>
 
 #ifdef USE_WIN32API
@@ -954,7 +954,7 @@ extern char your_gdb_wchar_t_is_bogus[(sizeof (gdb_wchar_t) == 2
 				       || sizeof (gdb_wchar_t) == 4)
 				      ? 1 : -1];
 
-/* intermediate_encoding returns the charset unsed internally by
+/* intermediate_encoding returns the charset used internally by
    GDB to convert between target and host encodings. As the test above
    compiled, sizeof (gdb_wchar_t) is either 2 or 4 bytes.
    UTF-16/32 is tested first, UCS-2/4 is tested as a second option,

@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux running on PA-RISC, for GDB.
 
-   Copyright (C) 2004-2013 Free Software Foundation, Inc.
+   Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -491,13 +491,13 @@ hppa_linux_supply_fpregset (const struct regset *regset,
 }
 
 /* HPPA Linux kernel register set.  */
-static struct regset hppa_linux_regset =
+static const struct regset hppa_linux_regset =
 {
   NULL,
   hppa_linux_supply_regset
 };
 
-static struct regset hppa_linux_fpregset =
+static const struct regset hppa_linux_fpregset =
 {
   NULL,
   hppa_linux_supply_fpregset

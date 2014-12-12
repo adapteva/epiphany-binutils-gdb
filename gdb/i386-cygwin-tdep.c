@@ -1,6 +1,6 @@
 /* Target-dependent code for Cygwin running on i386's, for GDB.
 
-   Copyright (C) 2003-2013 Free Software Foundation, Inc.
+   Copyright (C) 2003-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,15 +19,13 @@
 
 #include "defs.h"
 #include "osabi.h"
-#include "gdb_string.h"
+#include <string.h>
 #include "i386-tdep.h"
 #include "windows-tdep.h"
 #include "regset.h"
 #include "gdb_obstack.h"
 #include "xml-support.h"
 #include "gdbcore.h"
-#include "solib.h"
-#include "solib-target.h"
 #include "inferior.h"
 
 /* Core file support.  */
@@ -98,16 +96,9 @@ static const struct regset *
 i386_windows_regset_from_core_section (struct gdbarch *gdbarch,
 				     const char *sect_name, size_t sect_size)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-
   if (strcmp (sect_name, ".reg") == 0
       && sect_size == I386_WINDOWS_SIZEOF_GREGSET)
-    {
-      if (tdep->gregset == NULL)
-        tdep->gregset = regset_alloc (gdbarch, i386_supply_gregset,
-                                      i386_collect_gregset);
-      return tdep->gregset;
-    }
+    return &i386_gregset;
 
   return NULL;
 }
@@ -170,14 +161,14 @@ out:
   return;
 }
 
-static LONGEST
+static ULONGEST
 windows_core_xfer_shared_libraries (struct gdbarch *gdbarch,
 				  gdb_byte *readbuf,
-				  ULONGEST offset, LONGEST len)
+				  ULONGEST offset, ULONGEST len)
 {
   struct obstack obstack;
   const char *buf;
-  LONGEST len_avail;
+  ULONGEST len_avail;
   struct cpms_data data = { gdbarch, &obstack, 0 };
 
   obstack_init (&obstack);
@@ -233,6 +224,8 @@ i386_cygwin_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
+  windows_init_abi (info, gdbarch);
+
   set_gdbarch_skip_trampoline_code (gdbarch, i386_cygwin_skip_trampoline_code);
 
   set_gdbarch_skip_main_prologue (gdbarch, i386_skip_main_prologue);
@@ -243,8 +236,6 @@ i386_cygwin_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->gregset_num_regs = ARRAY_SIZE (i386_windows_gregset_reg_offset);
   tdep->sizeof_gregset = I386_WINDOWS_SIZEOF_GREGSET;
 
-  set_solib_ops (gdbarch, &solib_target_so_ops);
-
   /* Core file support.  */
   set_gdbarch_regset_from_core_section
     (gdbarch, i386_windows_regset_from_core_section);
@@ -253,13 +244,6 @@ i386_cygwin_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_core_pid_to_str (gdbarch, i386_windows_core_pid_to_str);
 
   set_gdbarch_auto_wide_charset (gdbarch, i386_cygwin_auto_wide_charset);
-
-  /* Canonical paths on this target look like
-     `c:\Program Files\Foo App\mydll.dll', for example.  */
-  set_gdbarch_has_dos_based_file_system (gdbarch, 1);
-
-  set_gdbarch_iterate_over_objfiles_in_search_order
-    (gdbarch, windows_iterate_over_objfiles_in_search_order);
 }
 
 static enum gdb_osabi

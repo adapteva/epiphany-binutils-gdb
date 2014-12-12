@@ -1,6 +1,6 @@
 /* Target-dependent code for the IA-64 for GDB, the GNU debugger.
 
-   Copyright (C) 1999-2013 Free Software Foundation, Inc.
+   Copyright (C) 1999-2014 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -3655,7 +3655,8 @@ ia64_convert_from_func_ptr_addr (struct gdbarch *gdbarch, CORE_ADDR addr,
 
       minsym = lookup_minimal_symbol_by_pc (addr);
 
-      if (minsym.minsym && is_vtable_name (SYMBOL_LINKAGE_NAME (minsym.minsym)))
+      if (minsym.minsym
+	  && is_vtable_name (MSYMBOL_LINKAGE_NAME (minsym.minsym)))
 	return read_memory_unsigned_integer (addr, 8, byte_order);
     }
 
