@@ -1063,7 +1063,8 @@ aarch64_logical_immediate_p (uint64_t value, int is32, aarch64_insn *encoding)
       /* Allow all zeros or all ones in top 32-bits, so that
 	 constant expressions like ~1 are permitted.  */
       if (value >> 32 != 0 && value >> 32 != 0xffffffff)
-	return 0xffffffff;
+	return FALSE;
+
       /* Replicate the 32 lower bits to the 32 upper bits.  */
       value &= 0xffffffff;
       value |= value << 32;
@@ -1724,10 +1725,10 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  assert (idx == 1);
 	  if (aarch64_get_qualifier_esize (opnds[0].qualifier) != 8)
 	    {
-	      /* uimm8 */
-	      if (!value_in_range_p (opnd->imm.value, 0, 255))
+	      /* uimm8 or simm8 */
+	      if (!value_in_range_p (opnd->imm.value, -128, 255))
 		{
-		  set_imm_out_of_range_error (mismatch_detail, idx, 0, 255);
+		  set_imm_out_of_range_error (mismatch_detail, idx, -128, 255);
 		  return 0;
 		}
 	    }

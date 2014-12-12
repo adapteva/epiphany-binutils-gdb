@@ -38,10 +38,13 @@ enum return_reason
   };
 
 #define RETURN_MASK(reason)	(1 << (int)(-reason))
-#define RETURN_MASK_QUIT	RETURN_MASK (RETURN_QUIT)
-#define RETURN_MASK_ERROR	RETURN_MASK (RETURN_ERROR)
-#define RETURN_MASK_ALL		(RETURN_MASK_QUIT | RETURN_MASK_ERROR)
-typedef int return_mask;
+
+typedef enum
+{
+  RETURN_MASK_QUIT = RETURN_MASK (RETURN_QUIT),
+  RETURN_MASK_ERROR = RETURN_MASK (RETURN_ERROR),
+  RETURN_MASK_ALL = (RETURN_MASK_QUIT | RETURN_MASK_ERROR)
+} return_mask;
 
 /* Describe all exceptions.  */
 
@@ -85,6 +88,10 @@ enum errors {
 
   /* DW_OP_GNU_entry_value resolving failed.  */
   NO_ENTRY_VALUE_ERROR,
+
+  /* Target throwing an error has been closed.  Current command should be
+     aborted as the inferior state is no longer valid.  */
+  TARGET_CLOSE_ERROR,
 
   /* Add more errors here.  */
   NR_ERRORS
@@ -182,11 +189,6 @@ extern void throw_vfatal (const char *fmt, va_list ap)
 extern void throw_error (enum errors error, const char *fmt, ...)
      ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (2, 3);
 
-/* Instead of deprecated_throw_reason, code should use
-   throw_exception.  */
-extern void deprecated_throw_reason (enum return_reason reason)
-     ATTRIBUTE_NORETURN;
-
 /* Call FUNC(UIOUT, FUNC_ARGS) but wrapped within an exception
    handler.  If an exception (enum return_reason) is thrown using
    throw_exception() than all cleanups installed since
@@ -251,6 +253,12 @@ extern int catch_errors (catch_errors_ftype *, void *, char *, return_mask);
 
 typedef void (catch_command_errors_ftype) (char *, int);
 extern int catch_command_errors (catch_command_errors_ftype *func,
-				 char *command, int from_tty, return_mask);
+				 char *arg, int from_tty, return_mask);
+
+/* Like catch_command_errors, but works with const command and args.  */
+
+typedef void (catch_command_errors_const_ftype) (const char *, int);
+extern int catch_command_errors_const (catch_command_errors_const_ftype *func,
+				       const char *arg, int from_tty, return_mask);
 
 #endif

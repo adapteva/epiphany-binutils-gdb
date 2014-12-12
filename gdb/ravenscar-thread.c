@@ -155,7 +155,7 @@ get_running_thread_id (void)
   const struct minimal_symbol *object_msym = get_running_thread_msymbol ();
   int object_size;
   int buf_size;
-  char *buf;
+  gdb_byte *buf;
   CORE_ADDR object_addr;
   struct type *builtin_type_void_data_ptr =
     builtin_type (target_gdbarch ())->builtin_data_ptr;
@@ -433,7 +433,7 @@ _initialize_ravenscar (void)
      ravenscar ops if needed.  */
   observer_attach_inferior_created (ravenscar_inferior_created);
 
-  add_target (&ravenscar_ops);
+  complete_target_initialization (&ravenscar_ops);
 
   add_prefix_cmd ("ravenscar", no_class, set_ravenscar_command,
                   _("Prefix command for changing Ravenscar-specific settings"),

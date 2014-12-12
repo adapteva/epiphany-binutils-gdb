@@ -1,6 +1,6 @@
 // layout.h -- lay out output file sections for gold  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
 // Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
@@ -892,6 +892,13 @@ class Layout
 			  const Output_data_reloc_generic* dyn_rel,
 			  bool add_debug, bool dynrel_includes_plt);
 
+  // If a treehash is necessary to compute the build ID, then queue
+  // the necessary tasks and return a blocker that will unblock when
+  // they finish.  Otherwise return BUILD_ID_BLOCKER.
+  Task_token*
+  queue_build_id_tasks(Workqueue* workqueue, Task_token* build_id_blocker,
+		       Output_file* of);
+
   // Compute and write out the build ID if needed.
   void
   write_build_id(Output_file*) const;
@@ -969,7 +976,17 @@ class Layout
   // be mapped to an output section that should be KEPT.
   bool
   keep_input_section(const Relobj*, const char*);
-  
+
+  // Add a special output object that will be recreated afresh
+  // if there is another relaxation iteration.
+  void
+  add_relax_output(Output_data* data)
+  { this->relax_output_list_.push_back(data); }
+
+  // Clear out (and free) everything added by add_relax_output.
+  void
+  reset_relax_output();
+
  private:
   Layout(const Layout&);
   Layout& operator=(const Layout&);
@@ -1265,7 +1282,8 @@ class Layout
     // Check that sections and special data are in reset states.
     void
     check_output_data_for_reset_values(const Layout::Section_list&,
-				       const Layout::Data_list&);
+				       const Layout::Data_list& special_outputs,
+				       const Layout::Data_list& relax_outputs);
 
     // Record information of a section list.
     void
@@ -1317,6 +1335,9 @@ class Layout
   // The list of unattached Output_data objects which require special
   // handling because they are not Output_sections.
   Data_list special_output_list_;
+  // Like special_output_list_, but cleared and recreated on each
+  // iteration of relaxation.
+  Data_list relax_output_list_;
   // The section headers.
   Output_section_headers* section_headers_;
   // A pointer to the PT_TLS segment if there is one.
@@ -1354,6 +1375,12 @@ class Layout
   Gdb_index* gdb_index_data_;
   // The space for the build ID checksum if there is one.
   Output_section_data* build_id_note_;
+  // Temporary storage for tree hash of build ID.
+  unsigned char* array_of_hashes_;
+  // Size of array_of_hashes_ (in bytes).
+  size_t size_of_array_of_hashes_;
+  // Input view for computing tree hash of build ID.  Freed in write_build_id().
+  const unsigned char* input_view_;
   // The output section containing dwarf abbreviations
   Output_reduced_debug_abbrev_section* debug_abbrev_;
   // The output section containing the dwarf debug info tree

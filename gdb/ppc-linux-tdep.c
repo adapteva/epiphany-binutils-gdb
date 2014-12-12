@@ -332,7 +332,7 @@ static struct ppc_insn_pattern powerpc32_plt_stub_so[] =
 static int
 powerpc_linux_in_dynsym_resolve_code (CORE_ADDR pc)
 {
-  struct minimal_symbol *sym;
+  struct bound_minimal_symbol sym;
 
   /* Check whether PC is in the dynamic linker.  This also checks
      whether it is in the .plt section, used by non-PIC executables.  */
@@ -341,9 +341,10 @@ powerpc_linux_in_dynsym_resolve_code (CORE_ADDR pc)
 
   /* Check if we are in the resolver.  */
   sym = lookup_minimal_symbol_by_pc (pc);
-  if (sym != NULL
-      && (strcmp (SYMBOL_LINKAGE_NAME (sym), "__glink") == 0
-	  || strcmp (SYMBOL_LINKAGE_NAME (sym), "__glink_PLTresolve") == 0))
+  if (sym.minsym != NULL
+      && (strcmp (SYMBOL_LINKAGE_NAME (sym.minsym), "__glink") == 0
+	  || strcmp (SYMBOL_LINKAGE_NAME (sym.minsym),
+		     "__glink_PLTresolve") == 0))
     return 1;
 
   return 0;
@@ -354,13 +355,13 @@ powerpc_linux_in_dynsym_resolve_code (CORE_ADDR pc)
 static CORE_ADDR
 ppc_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
 {
-  int insnbuf[POWERPC32_PLT_STUB_LEN];
+  unsigned int insnbuf[POWERPC32_PLT_STUB_LEN];
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR target = 0;
 
-  if (ppc_insns_match_pattern (pc, powerpc32_plt_stub, insnbuf))
+  if (ppc_insns_match_pattern (frame, pc, powerpc32_plt_stub, insnbuf))
     {
       /* Insn pattern is
 		lis   r11, xxxx
@@ -372,7 +373,7 @@ ppc_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
       target = read_memory_unsigned_integer (target, 4, byte_order);
     }
 
-  if (ppc_insns_match_pattern (pc, powerpc32_plt_stub_so, insnbuf))
+  if (ppc_insns_match_pattern (frame, pc, powerpc32_plt_stub_so, insnbuf))
     {
       /* Insn pattern is
 		lwz   r11, xxxx(r30)

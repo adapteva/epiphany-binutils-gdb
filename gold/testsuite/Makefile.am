@@ -71,7 +71,10 @@ endif
 # the right choice for files 'make' builds that people rebuild.
 MOSTLYCLEANFILES = *.so *.syms *.stdout
 
-
+# Export make variables to the shell scripts so that they can see
+# (for example) DEFAULT_TARGET.
+.EXPORT_ALL_VARIABLES:
+ 
 # We will add to these later, for each individual test.  Note
 # that we add each test under check_SCRIPTS or check_PROGRAMS;
 # the TESTS variable is automatically populated from these.
@@ -201,14 +204,12 @@ pr14265.stdout: pr14265
 	$(TEST_NM) --format=bsd --numeric-sort $< > $@
 
 check_SCRIPTS += icf_test.sh
-check_DATA += icf_test.stdout
-MOSTLYCLEANFILES += icf_test
+check_DATA += icf_test.map
+MOSTLYCLEANFILES += icf_test icf_test.map
 icf_test.o: icf_test.cc 
 	$(CXXCOMPILE) -O0 -c -ffunction-sections -g -o $@ $<
-icf_test: icf_test.o gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_test.o
-icf_test.stdout: icf_test
-	$(TEST_NM) -C icf_test > icf_test.stdout
+icf_test icf_test.map: icf_test.o gcctestdir/ld
+	$(CXXLINK) -o icf_test -Bgcctestdir/ -Wl,--icf=all,-Map,icf_test.map icf_test.o
 
 check_SCRIPTS += icf_keep_unique_test.sh
 check_DATA += icf_keep_unique_test.stdout
@@ -218,31 +219,31 @@ icf_keep_unique_test.o: icf_keep_unique_test.cc
 icf_keep_unique_test: icf_keep_unique_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all -Wl,--keep-unique,_Z11unique_funcv icf_keep_unique_test.o
 icf_keep_unique_test.stdout: icf_keep_unique_test
-	$(TEST_NM) -C icf_keep_unique_test > icf_keep_unique_test.stdout
+	$(TEST_NM) -C $< > $@
 
 check_SCRIPTS += icf_safe_test.sh
-check_DATA += icf_safe_test_1.stdout icf_safe_test_2.stdout
-MOSTLYCLEANFILES += icf_safe_test
+check_DATA += icf_safe_test_1.stdout icf_safe_test_2.stdout icf_safe_test.map
+MOSTLYCLEANFILES += icf_safe_test icf_safe_test.map
 icf_safe_test.o: icf_safe_test.cc
 	$(CXXCOMPILE) -O0 -c -ffunction-sections -g -o $@ $<
-icf_safe_test: icf_safe_test.o gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=safe icf_safe_test.o
+icf_safe_test icf_safe_test.map: icf_safe_test.o gcctestdir/ld
+	$(CXXLINK) -o icf_safe_test -Bgcctestdir/ -Wl,--icf=safe,-Map,icf_safe_test.map icf_safe_test.o
 icf_safe_test_1.stdout: icf_safe_test
-	$(TEST_NM) icf_safe_test > icf_safe_test_1.stdout
+	$(TEST_NM) $< > $@
 icf_safe_test_2.stdout: icf_safe_test
-	$(TEST_READELF) -h icf_safe_test > icf_safe_test_2.stdout
+	$(TEST_READELF) -h $< > $@
 
 check_SCRIPTS += icf_safe_so_test.sh
-check_DATA += icf_safe_so_test_1.stdout icf_safe_so_test_2.stdout
-MOSTLYCLEANFILES += icf_safe_so_test
+check_DATA += icf_safe_so_test_1.stdout icf_safe_so_test_2.stdout icf_safe_so_test.map
+MOSTLYCLEANFILES += icf_safe_so_test icf_safe_so_test.map
 icf_safe_so_test.o: icf_safe_so_test.cc
 	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
-icf_safe_so_test: icf_safe_so_test.o gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=safe icf_safe_so_test.o -fPIC -shared
+icf_safe_so_test icf_safe_so_test.map: icf_safe_so_test.o gcctestdir/ld
+	$(CXXLINK) -o icf_safe_so_test -Bgcctestdir/ -Wl,--icf=safe,-Map,icf_safe_so_test.map icf_safe_so_test.o -fPIC -shared
 icf_safe_so_test_1.stdout: icf_safe_so_test
-	$(TEST_NM) icf_safe_so_test > icf_safe_so_test_1.stdout
+	$(TEST_NM) $< > $@
 icf_safe_so_test_2.stdout: icf_safe_so_test
-	$(TEST_READELF) -h icf_safe_so_test > icf_safe_so_test_2.stdout
+	$(TEST_READELF) -h $< > $@
 
 check_SCRIPTS += final_layout.sh
 check_DATA += final_layout.stdout
@@ -271,6 +272,16 @@ text_section_grouping.stdout: text_section_grouping
 	$(TEST_NM) -n --synthetic text_section_grouping > text_section_grouping.stdout
 text_section_no_grouping.stdout: text_section_no_grouping
 	$(TEST_NM) -n --synthetic text_section_no_grouping > text_section_no_grouping.stdout 
+
+check_SCRIPTS += section_sorting_name.sh
+check_DATA += section_sorting_name.stdout
+MOSTLYCLEANFILES += section_sorting_name
+section_sorting_name.o: section_sorting_name.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -g -o $@ $<
+section_sorting_name: section_sorting_name.o gcctestdir/ld
+	$(CXXLINK)  -Bgcctestdir/ -Wl,--sort-section=name section_sorting_name.o
+section_sorting_name.stdout: section_sorting_name
+	$(TEST_NM) -n --synthetic section_sorting_name > section_sorting_name.stdout
 
 check_PROGRAMS += icf_virtual_function_folding_test
 MOSTLYCLEANFILES += icf_virtual_function_folding_test icf_virtual_function_folding_test.map
@@ -310,6 +321,23 @@ icf_sht_rel_addend_test: icf_sht_rel_addend_test_1.o icf_sht_rel_addend_test_2.o
 	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_sht_rel_addend_test_1.o icf_sht_rel_addend_test_2.o
 icf_sht_rel_addend_test.stdout: icf_sht_rel_addend_test
 	$(TEST_NM) icf_sht_rel_addend_test > icf_sht_rel_addend_test.stdout
+
+check_PROGRAMS += large_symbol_alignment
+large_symbol_alignment_SOURCES = large_symbol_alignment.cc
+large_symbol_alignment_DEPENDENCIES = gcctestdir/ld
+large_symbol_alignment_LDFLAGS = -Bgcctestdir/
+
+check_SCRIPTS += merge_string_literals.sh
+check_DATA += merge_string_literals.stdout
+MOSTLYCLEANFILES += merge_string_literals
+merge_string_literals_1.o: merge_string_literals_1.c
+	$(CXXCOMPILE) -O2 -c -fPIC -g -o $@ $<
+merge_string_literals_2.o: merge_string_literals_2.c
+	$(CXXCOMPILE) -O2 -c -fPIC -g -o $@ $<
+merge_string_literals: merge_string_literals_1.o merge_string_literals_2.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ merge_string_literals_1.o merge_string_literals_2.o -O2 -shared -nostdlib
+merge_string_literals.stdout: merge_string_literals
+	$(TEST_OBJDUMP) -s -j.rodata merge_string_literals > merge_string_literals.stdout
 
 check_PROGRAMS += basic_test
 check_PROGRAMS += basic_pic_test
@@ -961,6 +989,20 @@ debug_msg.err: debug_msg.o odr_violation1.o odr_violation2.o gcctestdir/ld
 	  exit 1; \
 	fi
 
+# Test error message when a vtable is undefined.
+check_SCRIPTS += missing_key_func.sh
+check_DATA += missing_key_func.err
+MOSTLYCLEANFILES += missing_key_func.err
+missing_key_func.o: missing_key_func.cc
+	$(CXXCOMPILE) -O0 -g -c -o $@ $(srcdir)/missing_key_func.cc
+missing_key_func.err: missing_key_func.o gcctestdir/ld
+	@echo $(CXXLINK) -Bgcctestdir/ -o missing_key_func missing_key_func.o "2>$@"
+	@if $(CXXLINK) -Bgcctestdir/ -o missing_key_func missing_key_func.o 2>$@; \
+	then \
+	  echo 1>&2 "Link of missing_key_func should have failed"; \
+	  rm -f $@; \
+	  exit 1; \
+	fi
 
 if HAVE_ZLIB
 
@@ -1380,7 +1422,6 @@ script_test_8: basic_test.o gcctestdir/ld $(srcdir)/script_test_7.t
 script_test_8.stdout: script_test_8
 	$(TEST_READELF) -SlW script_test_8 > script_test_8.stdout
 
-
 check_SCRIPTS += script_test_9.sh
 check_DATA += script_test_9.stdout
 MOSTLYCLEANFILES += script_test_9
@@ -1391,6 +1432,16 @@ script_test_9: gcctestdir/ld $(srcdir)/script_test_9.t script_test_9.o
 script_test_9.stdout: script_test_9
 	$(TEST_READELF) -lW script_test_9 > script_test_9.stdout
 
+# Test scripts with a relocatable link.
+# The -g option is necessary to trigger a bug where a section
+# declared in a script file is assigned a non-zero starting address.
+check_PROGRAMS += script_test_11
+script_test_11: gcctestdir/ld script_test_11_r.o
+	$(LINK) -Bgcctestdir/ script_test_11_r.o
+script_test_11_r.o: gcctestdir/ld $(srcdir)/script_test_11.t script_test_11.o
+	gcctestdir/ld -r -o $@ -T $(srcdir)/script_test_11.t script_test_11.o
+script_test_11.o: script_test_11.c
+	$(COMPILE) -c -g -o $@ $<
 
 # Test --dynamic-list, --dynamic-list-data, --dynamic-list-cpp-new,
 # and --dynamic-list-cpp-typeinfo
@@ -1565,6 +1616,22 @@ plugin_common_test_2.syms: plugin_common_test_2.o
 empty.syms:
 	@echo "" >$@
 	@echo "Symbol table" >>$@
+
+if TLS
+
+check_PROGRAMS += plugin_test_tls
+check_SCRIPTS += plugin_test_tls.sh
+check_DATA += plugin_test_tls.err
+MOSTLYCLEANFILES += plugin_test_tls.err
+plugin_test_tls: two_file_test_tls.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2_tls.syms gcctestdir/ld plugin_test.so
+	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so",--plugin-opt,"_Z4f13iv" two_file_test_tls.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2_tls.syms 2>plugin_test_tls.err
+plugin_test_tls.err: plugin_test_tls
+	@touch plugin_test_tls.err
+
+two_file_test_2_tls.syms: two_file_test_2_tls.o
+	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+
+endif TLS
 
 MOSTLYCLEANFILES += unused.c
 unused.syms: unused.o

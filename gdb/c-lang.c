@@ -658,7 +658,7 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
 	    if (obstack_object_size (&output) != TYPE_LENGTH (type))
 	      error (_("Could not convert character "
 		       "constant to target character set"));
-	    value = unpack_long (type, obstack_base (&output));
+	    value = unpack_long (type, (gdb_byte *) obstack_base (&output));
 	    result = value_from_longest (type, value);
 	  }
 	else
@@ -959,7 +959,7 @@ const struct language_defn cplus_language_defn =
   "this",                       /* name_of_this */
   cp_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
   cp_lookup_transparent_type,   /* lookup_transparent_type */
-  cplus_demangle,		/* Language specific symbol demangler */
+  gdb_demangle,			/* Language specific symbol demangler */
   cp_class_name_from_physname,  /* Language specific
 				   class_name_from_physname */
   c_op_print_tab,		/* expression operators for printing */

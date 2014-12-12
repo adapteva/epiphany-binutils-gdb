@@ -241,6 +241,7 @@ struct gdbarch
   gdbarch_elfcore_write_linux_prpsinfo_ftype *elfcore_write_linux_prpsinfo;
   gdbarch_find_memory_regions_ftype *find_memory_regions;
   gdbarch_core_xfer_shared_libraries_ftype *core_xfer_shared_libraries;
+  gdbarch_core_xfer_shared_libraries_aix_ftype *core_xfer_shared_libraries_aix;
   gdbarch_core_pid_to_str_ftype *core_pid_to_str;
   const char * gcore_bfd_target;
   int vtable_function_descriptors;
@@ -260,6 +261,7 @@ struct gdbarch
   gdbarch_process_record_ftype *process_record;
   gdbarch_process_record_signal_ftype *process_record_signal;
   gdbarch_gdb_signal_from_target_ftype *gdb_signal_from_target;
+  gdbarch_gdb_signal_to_target_ftype *gdb_signal_to_target;
   gdbarch_get_siginfo_type_ftype *get_siginfo_type;
   gdbarch_record_special_symbol_ftype *record_special_symbol;
   gdbarch_get_syscall_number_ftype *get_syscall_number;
@@ -412,6 +414,7 @@ struct gdbarch startup_gdbarch =
   0,  /* elfcore_write_linux_prpsinfo */
   0,  /* find_memory_regions */
   0,  /* core_xfer_shared_libraries */
+  0,  /* core_xfer_shared_libraries_aix */
   0,  /* core_pid_to_str */
   0,  /* gcore_bfd_target */
   0,  /* vtable_function_descriptors */
@@ -431,6 +434,7 @@ struct gdbarch startup_gdbarch =
   0,  /* process_record */
   0,  /* process_record_signal */
   0,  /* gdb_signal_from_target */
+  0,  /* gdb_signal_to_target */
   0,  /* get_siginfo_type */
   0,  /* record_special_symbol */
   0,  /* get_syscall_number */
@@ -714,6 +718,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of elfcore_write_linux_prpsinfo, has predicate.  */
   /* Skip verify of find_memory_regions, has predicate.  */
   /* Skip verify of core_xfer_shared_libraries, has predicate.  */
+  /* Skip verify of core_xfer_shared_libraries_aix, has predicate.  */
   /* Skip verify of core_pid_to_str, has predicate.  */
   /* Skip verify of gcore_bfd_target, has predicate.  */
   /* Skip verify of vtable_function_descriptors, invalid_p == 0 */
@@ -735,6 +740,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of process_record, has predicate.  */
   /* Skip verify of process_record_signal, has predicate.  */
   /* Skip verify of gdb_signal_from_target, has predicate.  */
+  /* Skip verify of gdb_signal_to_target, has predicate.  */
   /* Skip verify of get_siginfo_type, has predicate.  */
   /* Skip verify of record_special_symbol, has predicate.  */
   /* Skip verify of get_syscall_number, has predicate.  */
@@ -904,6 +910,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
                       "gdbarch_dump: core_xfer_shared_libraries = <%s>\n",
                       host_address_to_string (gdbarch->core_xfer_shared_libraries));
   fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_core_xfer_shared_libraries_aix_p() = %d\n",
+                      gdbarch_core_xfer_shared_libraries_aix_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: core_xfer_shared_libraries_aix = <%s>\n",
+                      host_address_to_string (gdbarch->core_xfer_shared_libraries_aix));
+  fprintf_unfiltered (file,
                       "gdbarch_dump: decr_pc_after_break = %s\n",
                       core_addr_to_string_nz (gdbarch->decr_pc_after_break));
   fprintf_unfiltered (file,
@@ -1023,6 +1035,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: gdb_signal_from_target = <%s>\n",
                       host_address_to_string (gdbarch->gdb_signal_from_target));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_gdb_signal_to_target_p() = %d\n",
+                      gdbarch_gdb_signal_to_target_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdb_signal_to_target = <%s>\n",
+                      host_address_to_string (gdbarch->gdb_signal_to_target));
   fprintf_unfiltered (file,
                       "gdbarch_dump: gen_return_address = <%s>\n",
                       host_address_to_string (gdbarch->gen_return_address));
@@ -3449,6 +3467,30 @@ set_gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch,
 }
 
 int
+gdbarch_core_xfer_shared_libraries_aix_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->core_xfer_shared_libraries_aix != NULL;
+}
+
+LONGEST
+gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, LONGEST len)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->core_xfer_shared_libraries_aix != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_core_xfer_shared_libraries_aix called\n");
+  return gdbarch->core_xfer_shared_libraries_aix (gdbarch, readbuf, offset, len);
+}
+
+void
+set_gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch,
+                                            gdbarch_core_xfer_shared_libraries_aix_ftype core_xfer_shared_libraries_aix)
+{
+  gdbarch->core_xfer_shared_libraries_aix = core_xfer_shared_libraries_aix;
+}
+
+int
 gdbarch_core_pid_to_str_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -3864,6 +3906,30 @@ set_gdbarch_gdb_signal_from_target (struct gdbarch *gdbarch,
                                     gdbarch_gdb_signal_from_target_ftype gdb_signal_from_target)
 {
   gdbarch->gdb_signal_from_target = gdb_signal_from_target;
+}
+
+int
+gdbarch_gdb_signal_to_target_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->gdb_signal_to_target != NULL;
+}
+
+int
+gdbarch_gdb_signal_to_target (struct gdbarch *gdbarch, enum gdb_signal signal)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->gdb_signal_to_target != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_gdb_signal_to_target called\n");
+  return gdbarch->gdb_signal_to_target (gdbarch, signal);
+}
+
+void
+set_gdbarch_gdb_signal_to_target (struct gdbarch *gdbarch,
+                                  gdbarch_gdb_signal_to_target_ftype gdb_signal_to_target)
+{
+  gdbarch->gdb_signal_to_target = gdb_signal_to_target;
 }
 
 int

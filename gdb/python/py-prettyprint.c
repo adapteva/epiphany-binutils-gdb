@@ -69,6 +69,7 @@ search_pp_list (PyObject *list, PyObject *value)
 	  if (!attr)
 	    return NULL;
 	  cmp = PyObject_IsTrue (attr);
+	  Py_DECREF (attr);
 	  if (cmp == -1)
 	    return NULL;
 
@@ -343,13 +344,13 @@ print_string_repr (PyObject *printer, const char *hint,
 	  string = python_string_to_target_python_string (py_str);
 	  if (string)
 	    {
-	      gdb_byte *output;
+	      char *output;
 	      long length;
 	      struct type *type;
 
 	      make_cleanup_py_decref (string);
 #ifdef IS_PY3K
-	      output = (gdb_byte *) PyBytes_AS_STRING (string);
+	      output = PyBytes_AS_STRING (string);
 	      length = PyBytes_GET_SIZE (string);
 #else
 	      output = PyString_AsString (string);
@@ -358,8 +359,8 @@ print_string_repr (PyObject *printer, const char *hint,
 	      type = builtin_type (gdbarch)->builtin_char;
 
 	      if (hint && !strcmp (hint, "string"))
-		LA_PRINT_STRING (stream, type, output, length, NULL,
-				 0, options);
+		LA_PRINT_STRING (stream, type, (gdb_byte *) output,
+				 length, NULL, 0, options);
 	      else
 		fputs_filtered (output, stream);
 	    }
@@ -510,16 +511,16 @@ print_children (PyObject *printer, const char *hint,
     }
   make_cleanup_py_decref (iter);
 
-  /* Use the prettyprint_arrays option if we are printing an array,
+  /* Use the prettyformat_arrays option if we are printing an array,
      and the pretty option otherwise.  */
   if (is_array)
-    pretty = options->prettyprint_arrays;
+    pretty = options->prettyformat_arrays;
   else
     {
-      if (options->pretty == Val_prettyprint)
+      if (options->prettyformat == Val_prettyformat)
 	pretty = 1;
       else
-	pretty = options->prettyprint_structs;
+	pretty = options->prettyformat_structs;
     }
 
   /* Manufacture a dummy Python frame to work around Python 2.4 bug,
@@ -629,12 +630,10 @@ print_children (PyObject *printer, const char *hint,
 	  local_opts.addressprint = 0;
 	  val_print_string (type, encoding, addr, (int) length, stream,
 			    &local_opts);
-
-	  do_cleanups (inner_cleanup);
 	}
       else if (gdbpy_is_string (py_v))
 	{
-	  gdb_byte *output;
+	  char *output;
 
 	  output = python_string_to_host_string (py_v);
 	  if (!output)
@@ -708,6 +707,9 @@ apply_val_pretty_printer (struct type *type, const gdb_byte *valaddr,
   if (!value_bytes_available (val, embedded_offset, TYPE_LENGTH (type)))
     return 0;
 
+  if (!gdb_python_initialized)
+    return 0;
+
   cleanups = ensure_python_env (gdbarch, language);
 
   /* Instantiate the printer.  */
@@ -731,8 +733,12 @@ apply_val_pretty_printer (struct type *type, const gdb_byte *valaddr,
   /* Find the constructor.  */
   printer = find_pretty_printer (val_obj);
   Py_DECREF (val_obj);
+
+  if (printer == NULL)
+    goto done;
+
   make_cleanup_py_decref (printer);
-  if (! printer || printer == Py_None)
+  if (printer == Py_None)
     goto done;
 
   /* If we are printing a map, we want some special formatting.  */

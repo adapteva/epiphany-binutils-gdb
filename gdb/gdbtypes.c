@@ -37,6 +37,7 @@
 #include "gdb_assert.h"
 #include "hashtab.h"
 #include "exceptions.h"
+#include "cp-support.h"
 
 /* Initialize BADNESS constants.  */
 
@@ -107,8 +108,8 @@ const struct floatformat *floatformats_vax_d[BFD_ENDIAN_UNKNOWN] = {
   &floatformat_vax_d
 };
 const struct floatformat *floatformats_ibm_long_double[BFD_ENDIAN_UNKNOWN] = {
-  &floatformat_ibm_long_double,
-  &floatformat_ibm_long_double
+  &floatformat_ibm_long_double_big,
+  &floatformat_ibm_long_double_little
 };
 
 /* Should opaque types be resolved?  */
@@ -1764,8 +1765,8 @@ check_stub_method (struct type *type, int method_id, int signature_id)
   struct gdbarch *gdbarch = get_type_arch (type);
   struct fn_field *f;
   char *mangled_name = gdb_mangle_name (type, method_id, signature_id);
-  char *demangled_name = cplus_demangle (mangled_name,
-					 DMGL_PARAMS | DMGL_ANSI);
+  char *demangled_name = gdb_demangle (mangled_name,
+				       DMGL_PARAMS | DMGL_ANSI);
   char *argtypetext, *p;
   int depth = 0, argcount = 1;
   struct field *argtypes;
@@ -2455,6 +2456,25 @@ types_equal (struct type *a, struct type *b)
   /* Check if identical after resolving typedefs.  */
   if (a == b)
     return 1;
+
+  /* Two function types are equal if their argument and return types
+     are equal.  */
+  if (TYPE_CODE (a) == TYPE_CODE_FUNC)
+    {
+      int i;
+
+      if (TYPE_NFIELDS (a) != TYPE_NFIELDS (b))
+	return 0;
+      
+      if (!types_equal (TYPE_TARGET_TYPE (a), TYPE_TARGET_TYPE (b)))
+	return 0;
+
+      for (i = 0; i < TYPE_NFIELDS (a); ++i)
+	if (!types_equal (TYPE_FIELD_TYPE (a, i), TYPE_FIELD_TYPE (b, i)))
+	  return 0;
+
+      return 1;
+    }
 
   return 0;
 }
@@ -4049,9 +4069,7 @@ objfile_type (struct objfile *objfile)
 		 "<thread local variable, no debug info>", objfile);
 
   /* NOTE: on some targets, addresses and pointers are not necessarily
-     the same --- for example, on the D10V, pointers are 16 bits long,
-     but addresses are 32 bits long.  See doc/gdbint.texinfo,
-     ``Pointers Are Not Always Addresses''.
+     the same.
 
      The upshot is:
      - gdb's `struct type' always describes the target's
@@ -4063,12 +4081,6 @@ objfile_type (struct objfile *objfile)
        since target_read_memory takes a CORE_ADDR as an argument, it
        can access any memory on the target, even if the processor has
        separate code and data address spaces.
-
-     So, for example:
-     - If v is a value holding a D10V code pointer, its contents are
-       in target form: a big-endian address left-shifted two bits.
-     - If p is a D10V pointer type, TYPE_LENGTH (p) == 2, just as
-       sizeof (void *) == 2 on the target.
 
      In this context, objfile_type->builtin_core_addr is a bit odd:
      it's a target type for a value the target will never see.  It's

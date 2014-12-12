@@ -171,8 +171,9 @@ def main ():
 #
 # Filenames are relative to the root directory.
 EXCLUDE_LIST = (
+    'gdb/common/glibc_thread_db.h',
     'gdb/CONTRIBUTE',
-    'gdb/gnulib'
+    'gdb/gnulib/import'
 )
 
 # Files which should not be modified, either because they are

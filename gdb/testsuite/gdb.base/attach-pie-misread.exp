@@ -21,13 +21,11 @@ if { ![isnative] || [is_remote host] || [target_info exists use_gdb_stub]
 
 load_lib prelink-support.exp
 
-set test "attach-pie-misread"
-set srcfile ${test}.c
-set genfile ${objdir}/${subdir}/${test}-gen.h
-set executable ${test}
-set binfile ${objdir}/${subdir}/${executable}
+standard_testfile .c
+set genfile [standard_output_file ${testfile}-gen.h]
+set executable $testfile
 
-if {[build_executable_own_libs ${test}.exp $executable $srcfile [list additional_flags=-fPIE ldflags=-pie]] == ""} {
+if {[build_executable_own_libs ${testfile}.exp $executable $srcfile [list additional_flags=-fPIE ldflags=-pie]] == ""} {
     return -1
 }
 
@@ -128,7 +126,7 @@ if {$first_offset == 0} {
 set test "start inferior"
 gdb_exit
 
-set res [remote_spawn host $binfile];
+set res [remote_spawn host $binfile]
 if { $res < 0 || $res == "" } {
     perror "Spawning $binfile failed."
     fail $test

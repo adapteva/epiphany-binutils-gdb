@@ -1521,6 +1521,10 @@ tilepro_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       r_type = tilepro_elf_tls_transition (info, r_type, h == NULL);
@@ -3905,8 +3909,9 @@ tilepro_elf_finish_dynamic_sections (bfd *output_bfd,
 		  PLT_ENTRY_SIZE - PLT_HEADER_SIZE);
 	}
 
-      elf_section_data (splt->output_section)->this_hdr.sh_entsize
-	= PLT_ENTRY_SIZE;
+      if (elf_section_data (splt->output_section) != NULL)
+	elf_section_data (splt->output_section)->this_hdr.sh_entsize
+	  = PLT_ENTRY_SIZE;
     }
 
   if (htab->elf.sgotplt)
@@ -3964,7 +3969,9 @@ tilepro_elf_plt_sym_val (bfd_vma i, const asection *plt,
 }
 
 static enum elf_reloc_type_class
-tilepro_reloc_type_class (const Elf_Internal_Rela *rela)
+tilepro_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			  const asection *rel_sec ATTRIBUTE_UNUSED,
+			  const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {

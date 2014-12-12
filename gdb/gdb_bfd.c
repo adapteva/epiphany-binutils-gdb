@@ -24,6 +24,7 @@
 #include "ui-out.h"
 #include "gdbcmd.h"
 #include "hashtab.h"
+#include "filestuff.h"
 #ifdef HAVE_ZLIB_H
 #include <zlib.h>
 #endif
@@ -80,6 +81,12 @@ struct gdb_bfd_data
 
   /* The mtime of the BFD at the point the cache entry was made.  */
   time_t mtime;
+
+  /* This is true if we have successfully computed the file's CRC.  */
+  unsigned int crc_computed : 1;
+
+  /* The file's CRC.  */
+  unsigned long crc;
 
   /* If the BFD comes from an archive, this points to the archive's
      BFD.  Otherwise, this is NULL.  */
@@ -152,7 +159,7 @@ gdb_bfd_open (const char *name, const char *target, int fd)
 
   if (fd == -1)
     {
-      fd = open (name, O_RDONLY | O_BINARY);
+      fd = gdb_open_cloexec (name, O_RDONLY | O_BINARY, 0);
       if (fd == -1)
 	{
 	  bfd_set_error (bfd_error_system_call);
@@ -413,6 +420,58 @@ gdb_bfd_map_section (asection *sectp, bfd_size_type *size)
   return descriptor->data;
 }
 
+/* Return 32-bit CRC for ABFD.  If successful store it to *FILE_CRC_RETURN and
+   return 1.  Otherwise print a warning and return 0.  ABFD seek position is
+   not preserved.  */
+
+static int
+get_file_crc (bfd *abfd, unsigned long *file_crc_return)
+{
+  unsigned long file_crc = 0;
+
+  if (bfd_seek (abfd, 0, SEEK_SET) != 0)
+    {
+      warning (_("Problem reading \"%s\" for CRC: %s"),
+	       bfd_get_filename (abfd), bfd_errmsg (bfd_get_error ()));
+      return 0;
+    }
+
+  for (;;)
+    {
+      gdb_byte buffer[8 * 1024];
+      bfd_size_type count;
+
+      count = bfd_bread (buffer, sizeof (buffer), abfd);
+      if (count == (bfd_size_type) -1)
+	{
+	  warning (_("Problem reading \"%s\" for CRC: %s"),
+		   bfd_get_filename (abfd), bfd_errmsg (bfd_get_error ()));
+	  return 0;
+	}
+      if (count == 0)
+	break;
+      file_crc = bfd_calc_gnu_debuglink_crc32 (file_crc, buffer, count);
+    }
+
+  *file_crc_return = file_crc;
+  return 1;
+}
+
+/* See gdb_bfd.h.  */
+
+int
+gdb_bfd_crc (struct bfd *abfd, unsigned long *crc_out)
+{
+  struct gdb_bfd_data *gdata = bfd_usrdata (abfd);
+
+  if (!gdata->crc_computed)
+    gdata->crc_computed = get_file_crc (abfd, &gdata->crc);
+
+  if (gdata->crc_computed)
+    *crc_out = gdata->crc;
+  return gdata->crc_computed;
+}
+
 
 
 /* See gdb_bfd.h.  */
@@ -543,6 +602,36 @@ gdb_bfd_fdopenr (const char *filename, const char *target, int fd)
     }
 
   return result;
+}
+
+
+
+gdb_static_assert (ARRAY_SIZE (_bfd_std_section) == 4);
+
+/* See gdb_bfd.h.  */
+
+int
+gdb_bfd_section_index (bfd *abfd, asection *section)
+{
+  if (section == NULL)
+    return -1;
+  else if (section == bfd_com_section_ptr)
+    return bfd_count_sections (abfd) + 1;
+  else if (section == bfd_und_section_ptr)
+    return bfd_count_sections (abfd) + 2;
+  else if (section == bfd_abs_section_ptr)
+    return bfd_count_sections (abfd) + 3;
+  else if (section == bfd_ind_section_ptr)
+    return bfd_count_sections (abfd) + 4;
+  return section->index;
+}
+
+/* See gdb_bfd.h.  */
+
+int
+gdb_bfd_count_sections (bfd *abfd)
+{
+  return bfd_count_sections (abfd) + 4;
 }
 
 

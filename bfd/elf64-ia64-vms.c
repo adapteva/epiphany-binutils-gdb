@@ -2095,6 +2095,9 @@ elf64_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	  h->ref_regular = 1;
 	}
       else
@@ -4310,7 +4313,9 @@ elf64_ia64_print_private_bfd_data (bfd *abfd, void * ptr)
 }
 
 static enum elf_reloc_type_class
-elf64_ia64_reloc_type_class (const Elf_Internal_Rela *rela)
+elf64_ia64_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			     const asection *rel_sec ATTRIBUTE_UNUSED,
+			     const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF64_R_TYPE (rela->r_info))
     {

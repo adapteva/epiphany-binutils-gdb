@@ -30,6 +30,8 @@
 #include "gdb_assert.h"
 #include "regcache.h"
 #include "gdbthread.h"
+#include "gdb_wait.h"
+#include "i386-cpuid.h"
 
 #if HAVE_LINUX_PERF_EVENT_H
 
@@ -42,7 +44,6 @@
 #include <sys/user.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <signal.h>
 
 /* A branch trace record in perf_event.  */
@@ -339,49 +340,40 @@ kernel_supports_btrace (void)
 static int
 intel_supports_btrace (void)
 {
-#if defined __i386__ || defined __x86_64__
-    unsigned int cpuid, model, family;
+  unsigned int cpuid, model, family;
 
-    __asm__ __volatile__ ("movl   $1, %%eax;"
-			  "cpuid;"
-			  : "=a" (cpuid)
-			  :: "%ebx", "%ecx", "%edx");
+  if (!i386_cpuid (1, &cpuid, NULL, NULL, NULL))
+    return 0;
 
-    family = (cpuid >> 8) & 0xf;
-    model = (cpuid >> 4) & 0xf;
+  family = (cpuid >> 8) & 0xf;
+  model = (cpuid >> 4) & 0xf;
 
-    switch (family)
-      {
-      case 0x6:
-	model += (cpuid >> 12) & 0xf0;
+  switch (family)
+    {
+    case 0x6:
+      model += (cpuid >> 12) & 0xf0;
 
-	switch (model)
-	  {
-	  case 0x1a: /* Nehalem */
-	  case 0x1f:
-	  case 0x1e:
-	  case 0x2e:
-	  case 0x25: /* Westmere */
-	  case 0x2c:
-	  case 0x2f:
-	  case 0x2a: /* Sandy Bridge */
-	  case 0x2d:
-	  case 0x3a: /* Ivy Bridge */
+      switch (model)
+	{
+	case 0x1a: /* Nehalem */
+	case 0x1f:
+	case 0x1e:
+	case 0x2e:
+	case 0x25: /* Westmere */
+	case 0x2c:
+	case 0x2f:
+	case 0x2a: /* Sandy Bridge */
+	case 0x2d:
+	case 0x3a: /* Ivy Bridge */
 
-	    /* AAJ122: LBR, BTM, or BTS records may have incorrect branch
-	       "from" information afer an EIST transition, T-states, C1E, or
-	       Adaptive Thermal Throttling.  */
-	    return 0;
-	  }
-      }
+	  /* AAJ122: LBR, BTM, or BTS records may have incorrect branch
+	     "from" information afer an EIST transition, T-states, C1E, or
+	     Adaptive Thermal Throttling.  */
+	  return 0;
+	}
+    }
 
   return 1;
-
-#else /* !defined __i386__ && !defined __x86_64__ */
-
-  return 0;
-
-#endif /* !defined __i386__ && !defined __x86_64__ */
 }
 
 /* Check whether the cpu supports branch tracing.  */
@@ -389,35 +381,17 @@ intel_supports_btrace (void)
 static int
 cpu_supports_btrace (void)
 {
-#if defined __i386__ || defined __x86_64__
-  char vendor[13];
+  unsigned int ebx, ecx, edx;
 
-  __asm__ __volatile__ ("xorl   %%ebx, %%ebx;"
-			"xorl   %%ecx, %%ecx;"
-			"xorl   %%edx, %%edx;"
-			"movl   $0,    %%eax;"
-			"cpuid;"
-			"movl   %%ebx,  %0;"
-			"movl   %%edx,  %1;"
-			"movl   %%ecx,  %2;"
-			: "=m" (vendor[0]),
-			  "=m" (vendor[4]),
-			  "=m" (vendor[8])
-			:
-			: "%eax", "%ebx", "%ecx", "%edx");
-  vendor[12] = '\0';
+  if (!i386_cpuid (0, NULL, &ebx, &ecx, &edx))
+    return 0;
 
-  if (strcmp (vendor, "GenuineIntel") == 0)
+  if (ebx == signature_INTEL_ebx && ecx == signature_INTEL_ecx
+      && edx == signature_INTEL_edx)
     return intel_supports_btrace ();
 
   /* Don't know about others.  Let's assume they do.  */
   return 1;
-
-#else /* !defined __i386__ && !defined __x86_64__ */
-
-  return 0;
-
-#endif /* !defined __i386__ && !defined __x86_64__ */
 }
 
 /* See linux-btrace.h.  */

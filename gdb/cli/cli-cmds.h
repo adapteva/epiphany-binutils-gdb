@@ -45,10 +45,6 @@ extern struct cmd_list_element *detachlist;
 
 extern struct cmd_list_element *killlist;
 
-/* Chain containing all defined toggle subcommands.  */
-
-extern struct cmd_list_element *togglelist;
-
 /* Chain containing all defined stop subcommands.  */
 
 extern struct cmd_list_element *stoplist;
@@ -117,7 +113,7 @@ extern void cd_command (char *, int);
 
 extern void quit_command (char *, int);
 
-extern void source_script (char *, int);
+extern void source_script (const char *, int);
 
 /* Exported to objfiles.c.  */
 

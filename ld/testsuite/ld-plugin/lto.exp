@@ -1,5 +1,5 @@
 # Expect script for ld-plugin LTO tests
-#   Copyright 2011
+#   Copyright 2011, 2012, 2013
 #   Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
@@ -125,12 +125,6 @@ set lto_link_tests {
   {"PR ld/12760"
    "-O2 -Wl,-e,foo -nostdlib -flto -fuse-linker-plugin tmpdir/pr12760a.o -Wl,--start-group tmpdir/libpr12760.a -Wl,--end-group" ""
    {dummy.c} {} "pr12760.exe" "c" "warning: Bad bar"}
-  {"Build libdummy.a PR ld/12942 (1)"
-   "" "-flto -O2"
-   {pr12942a.cc pr12942c.cc} {} "libdummy.a" "c++"}
-  {"Build libdummy.a PR ld/12942 (2)"
-   "" "-O0"
-   {pr12942b.cc} {} "libdummy.a" "c++"}
   {"Build libpr13183.a"
    "-T" "-flto -O2"
    {pr13183a.c} {} "libpr13183.a"}
@@ -143,6 +137,20 @@ set lto_link_tests {
   {"PR ld/13287"
    "-flto -fuse-linker-plugin -Wl,--as-needed" "-flto"
    {pr13287.cc} {} "pr13287.exe" "c++"}
+  {"PR ld/15323"
+   "" "-O2"
+   {pr15323a.c} {} "libdummy.a" "c"}
+}
+
+if { [at_least_gcc_version 4 7] } {
+    set lto_link_tests [concat $lto_link_tests {
+      {"Build libdummy.a PR ld/12942 (1)"
+       "" "-flto -O2"
+       {pr12942a.cc pr12942c.cc} {} "libdummy.a" "c++"}
+      {"Build libdummy.a PR ld/12942 (2)"
+       "" "-O0"
+       {pr12942b.cc} {} "libdummy.a" "c++"}
+    }]
 }
 
 # Generate input files for complex LTO tests for ELF.
@@ -254,18 +262,26 @@ set lto_run_tests {
   {"LTO 15"
    "-O2 -flto -fuse-linker-plugin -Wl,--start-group tmpdir/liblto-15.a tmpdir/lto-15a.o -Wl,--end-group" ""
    {dummy.c} "lto-15.exe" "lto-15.out" "" "c"}
-  {"PR ld/12942 (1)"
-   "-O2 -flto -fuse-linker-plugin tmpdir/pr12942a.o tmpdir/pr12942b.o" ""
-   {dummy.c} "pr12942a.exe" "pr12942.out" "" "c++"}
-  {"PR ld/12942 (2)"
-   "-O2 -flto -fuse-linker-plugin tmpdir/pr12942a.o tmpdir/pr12942c.o" ""
-   {dummy.c} "pr12942c.exe" "pr12942.out" "" "c++"}
   {"PR ld/13066"
    "-O2 -flto -fuse-linker-plugin" ""
    {pr13066.cc} "pr13066.exe" "pr13066.out" "" "c++"}
   {"PR ld/13201"
    "-O2 -flto -fuse-linker-plugin -Wl,--as-needed tmpdir/pr13201.o -lm" ""
    {dummy.c} "pr13201.exe" "pr13201.out" "" "c"}
+  {"PR ld/15323"
+   "-O2 -flto -fuse-linker-plugin tmpdir/pr15323a.o" ""
+   {pr15323b.c} "pr15323.exe" "pr15323.out" "-flto -O2" "c"}
+}
+
+if { [at_least_gcc_version 4 7] } {
+    set lto_run_tests [concat $lto_run_tests {
+      {"PR ld/12942 (1)"
+       "-O2 -flto -fuse-linker-plugin tmpdir/pr12942a.o tmpdir/pr12942b.o" ""
+       {dummy.c} "pr12942a.exe" "pr12942.out" "" "c++"}
+      {"PR ld/12942 (2)"
+       "-O2 -flto -fuse-linker-plugin tmpdir/pr12942a.o tmpdir/pr12942c.o" ""
+       {dummy.c} "pr12942c.exe" "pr12942.out" "" "c++"}
+    }]
 }
 
 # LTO run-time tests for ELF
@@ -289,7 +305,7 @@ if { [is_elf_format]
     run_cc_link_tests $lto_link_elf_tests
     set testname "PR ld/15146 (2)"
     set exec_output [run_host_cmd "$CC" "$gcc_gas_flag $gcc_ld_flag -O2 -flto -fuse-linker-plugin -Wl,-rpath-link,. -Wl,--no-copy-dt-needed-entries -Wl,--no-as-needed tmpdir/pr15146d.o tmpdir/pr15146c.so"]
-    if { [ regexp "ltrans.o: undefined reference to symbol 'xxx'" $exec_output ] } {
+    if { [ regexp "undefined reference to symbol 'xxx'" $exec_output ] } {
 	pass $testname
     } {
 	fail $testname
@@ -305,13 +321,15 @@ if {![string match "" $catch_output]} {
     return
 }
 
-# Check expected LTO linker errors.
-set testname "PR ld/12942 (3)"
-set exec_output [run_host_cmd "$CXX" "$gcc_gas_flag $gcc_ld_flag -O2 -flto -fuse-linker-plugin tmpdir/pr12942b.o tmpdir/pr12942a.o"]
-if { [ regexp "pr12942a.h:7: undefined reference to `link_error\\(\\)'" $exec_output ] } {
-    pass $testname
-} {
-    fail $testname
+if { [at_least_gcc_version 4 7] } {
+    # Check expected LTO linker errors.
+    set testname "PR ld/12942 (3)"
+    set exec_output [run_host_cmd "$CXX" "$gcc_gas_flag $gcc_ld_flag -O2 -flto -fuse-linker-plugin tmpdir/pr12942b.o tmpdir/pr12942a.o"]
+    if { [ regexp "undefined reference to `link_error\\(\\)'" $exec_output ] } {
+        pass $testname
+    } {
+        fail $testname
+    }
 }
 
 # Run "ld -r" to generate inputs for complex LTO tests.

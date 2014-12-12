@@ -210,10 +210,10 @@ lookup_symbol_from_bfd (bfd *abfd, char *symname)
 
 /* Return program interpreter string.  */
 
-static gdb_byte *
+static char *
 find_program_interpreter (void)
 {
-  gdb_byte *buf = NULL;
+  char *buf = NULL;
 
   /* If we have an exec_bfd, get the interpreter from the load commands.  */
   if (exec_bfd)
@@ -288,7 +288,7 @@ darwin_current_sos (void)
       path_addr = extract_typed_address (buf + ptr_len, ptr_type);
 
       /* Read Mach-O header from memory.  */
-      if (target_read_memory (load_addr, (char *) &hdr, sizeof (hdr) - 4))
+      if (target_read_memory (load_addr, (gdb_byte *) &hdr, sizeof (hdr) - 4))
 	break;
       /* Discard wrong magic numbers.  Shouldn't happen.  */
       hdr_val = extract_unsigned_integer
@@ -359,7 +359,7 @@ darwin_read_exec_load_addr (struct darwin_info *info)
       load_addr = extract_typed_address (buf, ptr_type);
 
       /* Read Mach-O header from memory.  */
-      if (target_read_memory (load_addr, (char *) &hdr, sizeof (hdr) - 4))
+      if (target_read_memory (load_addr, (gdb_byte *) &hdr, sizeof (hdr) - 4))
 	break;
       /* Discard wrong magic numbers.  Shouldn't happen.  */
       hdr_val = extract_unsigned_integer
@@ -420,7 +420,7 @@ gdb_bfd_mach_o_fat_extract (bfd *abfd, bfd_format format,
 static void
 darwin_solib_get_all_image_info_addr_at_init (struct darwin_info *info)
 {
-  gdb_byte *interp_name;
+  char *interp_name;
   CORE_ADDR load_addr = 0;
   bfd *dyld_bfd = NULL;
   struct cleanup *cleanup;

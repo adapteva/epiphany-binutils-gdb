@@ -86,6 +86,7 @@
 enum exception_event_kind
 {
   EX_EVENT_THROW,
+  EX_EVENT_RETHROW,
   EX_EVENT_CATCH
 };
 
@@ -118,7 +119,6 @@ static void create_sals_from_address_default (char **,
 
 static void create_breakpoints_sal_default (struct gdbarch *,
 					    struct linespec_result *,
-					    struct linespec_sals *,
 					    char *, char *, enum bptype,
 					    enum bpdisp, int, int,
 					    int,
@@ -230,11 +230,6 @@ static void stopin_command (char *arg, int from_tty);
 
 static void stopat_command (char *arg, int from_tty);
 
-static char *ep_parse_optional_if_clause (char **arg);
-
-static void catch_exception_command_1 (enum exception_event_kind ex_event, 
-				       char *arg, int tempflag, int from_tty);
-
 static void tcatch_command (char *arg, int from_tty);
 
 static void detach_single_step_breakpoints (void);
@@ -305,7 +300,7 @@ struct breakpoint_ops bkpt_breakpoint_ops;
 static struct breakpoint_ops bkpt_probe_breakpoint_ops;
 
 /* Dynamic printf class type.  */
-static struct breakpoint_ops dprintf_breakpoint_ops;
+struct breakpoint_ops dprintf_breakpoint_ops;
 
 /* The style in which to perform a dynamic printf.  This is a user
    option because different output options have different tradeoffs;
@@ -991,12 +986,13 @@ set_breakpoint_condition (struct breakpoint *b, char *exp,
 /* Completion for the "condition" command.  */
 
 static VEC (char_ptr) *
-condition_completer (struct cmd_list_element *cmd, char *text, char *word)
+condition_completer (struct cmd_list_element *cmd,
+		     const char *text, const char *word)
 {
-  char *space;
+  const char *space;
 
-  text = skip_spaces (text);
-  space = skip_to_space (text);
+  text = skip_spaces_const (text);
+  space = skip_to_space_const (text);
   if (*space == '\0')
     {
       int len;
@@ -1015,33 +1011,20 @@ condition_completer (struct cmd_list_element *cmd, char *text, char *word)
       len = strlen (text);
 
       ALL_BREAKPOINTS (b)
-      {
-	int single = b->loc->next == NULL;
-	struct bp_location *loc;
-	int count = 1;
+	{
+	  char number[50];
 
-	for (loc = b->loc; loc; loc = loc->next)
-	  {
-	    char location[50];
+	  xsnprintf (number, sizeof (number), "%d", b->number);
 
-	    if (single)
-	      xsnprintf (location, sizeof (location), "%d", b->number);
-	    else
-	      xsnprintf (location, sizeof (location),  "%d.%d", b->number,
-			 count);
-
-	    if (strncmp (location, text, len) == 0)
-	      VEC_safe_push (char_ptr, result, xstrdup (location));
-
-	    ++count;
-	  }
-      }
+	  if (strncmp (number, text, len) == 0)
+	    VEC_safe_push (char_ptr, result, xstrdup (number));
+	}
 
       return result;
     }
 
   /* We're completing the expression part.  */
-  text = skip_spaces (space);
+  text = skip_spaces_const (space);
   return expression_completer (cmd, text, word);
 }
 
@@ -1141,12 +1124,25 @@ validate_commands_for_breakpoint (struct breakpoint *b,
 {
   if (is_tracepoint (b))
     {
-      /* We need to verify that each top-level element of commands is
-	 valid for tracepoints, that there's at most one
-	 while-stepping element, and that while-stepping's body has
-	 valid tracing commands excluding nested while-stepping.  */
+      struct tracepoint *t = (struct tracepoint *) b;
       struct command_line *c;
       struct command_line *while_stepping = 0;
+
+      /* Reset the while-stepping step count.  The previous commands
+         might have included a while-stepping action, while the new
+         ones might not.  */
+      t->step_count = 0;
+
+      /* We need to verify that each top-level element of commands is
+	 valid for tracepoints, that there's at most one
+	 while-stepping element, and that the while-stepping's body
+	 has valid tracing commands excluding nested while-stepping.
+	 We also need to validate the tracepoint action line in the
+	 context of the tracepoint --- validate_actionline actually
+	 has side effects, like setting the tracepoint's
+	 while-stepping STEP_COUNT, in addition to checking if the
+	 collect/teval actions parse and make sense in the
+	 tracepoint's context.  */
       for (c = commands; c; c = c->next)
 	{
 	  if (c->control_type == while_stepping_control)
@@ -1164,6 +1160,8 @@ validate_commands_for_breakpoint (struct breakpoint *b,
 	      else
 		while_stepping = c;
 	    }
+
+	  validate_actionline (c->line, b);
 	}
       if (while_stepping)
 	{
@@ -1264,7 +1262,7 @@ check_tracepoint_command (char *line, void *closure)
 {
   struct breakpoint *b = closure;
 
-  validate_actionline (&line, b);
+  validate_actionline (line, b);
 }
 
 /* A structure used to pass information through
@@ -1809,7 +1807,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
       struct value *val_chain, *v, *result, *next;
       struct program_space *frame_pspace;
 
-      fetch_subexp_value (b->exp, &pc, &v, &result, &val_chain);
+      fetch_subexp_value (b->exp, &pc, &v, &result, &val_chain, 0);
 
       /* Avoid setting b->val if it's already set.  The meaning of
 	 b->val is 'the last value' user saw, and we should update
@@ -2046,7 +2044,6 @@ static struct agent_expr *
 parse_cond_to_aexpr (CORE_ADDR scope, struct expression *cond)
 {
   struct agent_expr *aexpr = NULL;
-  struct cleanup *old_chain = NULL;
   volatile struct gdb_exception ex;
 
   if (!cond)
@@ -2184,7 +2181,6 @@ parse_cmd_to_aexpr (CORE_ADDR scope, char *cmd)
   struct cleanup *old_cleanups = 0;
   struct expression *expr, **argvec;
   struct agent_expr *aexpr = NULL;
-  struct cleanup *old_chain = NULL;
   volatile struct gdb_exception ex;
   const char *cmdrest;
   const char *format_start, *format_end;
@@ -2251,6 +2247,8 @@ parse_cmd_to_aexpr (CORE_ADDR scope, char *cmd)
 			  fpieces, nargs, argvec);
     }
 
+  do_cleanups (old_cleanups);
+
   if (ex.reason < 0)
     {
       /* If we got here, it means the command could not be parsed to a valid
@@ -2258,8 +2256,6 @@ parse_cmd_to_aexpr (CORE_ADDR scope, char *cmd)
 	 It's no use iterating through the other commands.  */
       return NULL;
     }
-
-  do_cleanups (old_cleanups);
 
   /* We have a valid agent expression, return it.  */
   return aexpr;
@@ -2333,11 +2329,11 @@ build_target_command_list (struct bp_location *bl)
 	    {
 	      /* Only go as far as the first NULL bytecode is
 		 located.  */
-	      if (!loc->cond_bytecode)
+	      if (loc->cmd_bytecode == NULL)
 		return;
 
-	      free_agent_expr (loc->cond_bytecode);
-	      loc->cond_bytecode = NULL;
+	      free_agent_expr (loc->cmd_bytecode);
+	      loc->cmd_bytecode = NULL;
 	    }
 	}
     }
@@ -2932,6 +2928,30 @@ remove_breakpoints (void)
   return val;
 }
 
+/* When a thread exits, remove breakpoints that are related to
+   that thread.  */
+
+static void
+remove_threaded_breakpoints (struct thread_info *tp, int silent)
+{
+  struct breakpoint *b, *b_tmp;
+
+  ALL_BREAKPOINTS_SAFE (b, b_tmp)
+    {
+      if (b->thread == tp->num)
+	{
+	  b->disposition = disp_del_at_next_stop;
+
+	  printf_filtered (_("\
+Thread-specific breakpoint %d deleted - thread %d is gone.\n"),
+			  b->number, tp->num);
+
+	  /* Hide it from the user.  */
+	  b->number = 0;
+       }
+    }
+}
+
 /* Remove breakpoints of process PID.  */
 
 int
@@ -3198,8 +3218,23 @@ create_longjmp_master_breakpoint (void)
 
       if (!bp_objfile_data->longjmp_searched)
 	{
-	  bp_objfile_data->longjmp_probes
-	    = find_probes_in_objfile (objfile, "libc", "longjmp");
+	  VEC (probe_p) *ret;
+
+	  ret = find_probes_in_objfile (objfile, "libc", "longjmp");
+	  if (ret != NULL)
+	    {
+	      /* We are only interested in checking one element.  */
+	      struct probe *p = VEC_index (probe_p, ret, 0);
+
+	      if (!can_evaluate_probe_arguments (p))
+		{
+		  /* We cannot use the probe interface here, because it does
+		     not know how to evaluate arguments.  */
+		  VEC_free (probe_p, ret);
+		  ret = NULL;
+		}
+	    }
+	  bp_objfile_data->longjmp_probes = ret;
 	  bp_objfile_data->longjmp_searched = 1;
 	}
 
@@ -3340,8 +3375,24 @@ create_exception_master_breakpoint (void)
       /* We prefer the SystemTap probe point if it exists.  */
       if (!bp_objfile_data->exception_searched)
 	{
-	  bp_objfile_data->exception_probes
-	    = find_probes_in_objfile (objfile, "libgcc", "unwind");
+	  VEC (probe_p) *ret;
+
+	  ret = find_probes_in_objfile (objfile, "libgcc", "unwind");
+
+	  if (ret != NULL)
+	    {
+	      /* We are only interested in checking one element.  */
+	      struct probe *p = VEC_index (probe_p, ret, 0);
+
+	      if (!can_evaluate_probe_arguments (p))
+		{
+		  /* We cannot use the probe interface here, because it does
+		     not know how to evaluate arguments.  */
+		  VEC_free (probe_p, ret);
+		  ret = NULL;
+		}
+	    }
+	  bp_objfile_data->exception_probes = ret;
 	  bp_objfile_data->exception_searched = 1;
 	}
 
@@ -3538,6 +3589,15 @@ detach_breakpoints (ptid_t ptid)
   ALL_BP_LOCATIONS (bl, blp_tmp)
   {
     if (bl->pspace != inf->pspace)
+      continue;
+
+    /* This function must physically remove breakpoints locations
+       from the specified ptid, without modifying the breakpoint
+       package's state.  Locations of type bp_loc_other are only
+       maintained at GDB side.  So, there is no need to remove
+       these bp_loc_other locations.  Moreover, removing these
+       would modify the breakpoint package's state.  */
+    if (bl->loc_type == bp_loc_other)
       continue;
 
     if (bl->inserted)
@@ -4147,7 +4207,7 @@ bpstat_find_breakpoint (bpstat bsp, struct breakpoint *breakpoint)
 /* See breakpoint.h.  */
 
 enum bpstat_signal_value
-bpstat_explains_signal (bpstat bsp)
+bpstat_explains_signal (bpstat bsp, enum gdb_signal sig)
 {
   enum bpstat_signal_value result = BPSTAT_SIGNAL_NO;
 
@@ -4155,10 +4215,20 @@ bpstat_explains_signal (bpstat bsp)
     {
       /* Ensure that, if we ever entered this loop, then we at least
 	 return BPSTAT_SIGNAL_HIDE.  */
-      enum bpstat_signal_value newval = BPSTAT_SIGNAL_HIDE;
+      enum bpstat_signal_value newval;
 
-      if (bsp->breakpoint_at != NULL)
-	newval = bsp->breakpoint_at->ops->explains_signal (bsp->breakpoint_at);
+      if (bsp->breakpoint_at == NULL)
+	{
+	  /* A moribund location can never explain a signal other than
+	     GDB_SIGNAL_TRAP.  */
+	  if (sig == GDB_SIGNAL_TRAP)
+	    newval = BPSTAT_SIGNAL_HIDE;
+	  else
+	    newval = BPSTAT_SIGNAL_NO;
+	}
+      else
+	newval = bsp->breakpoint_at->ops->explains_signal (bsp->breakpoint_at,
+							   sig);
 
       if (newval > result)
 	result = newval;
@@ -4776,7 +4846,7 @@ watchpoint_check (void *p)
 	return WP_VALUE_CHANGED;
 
       mark = value_mark ();
-      fetch_subexp_value (b->exp, &pc, &new_val, NULL, NULL);
+      fetch_subexp_value (b->exp, &pc, &new_val, NULL, NULL, 0);
 
       /* We use value_equal_contents instead of value_equal because
 	 the latter coerces an array to a pointer, thus comparing just
@@ -5293,6 +5363,8 @@ bpstat_stop_status (struct address_space *aspace,
 	      if (command_line_is_silent (bs->commands
 					  ? bs->commands->commands : NULL))
 		bs->print = 0;
+
+	      b->ops->after_condition_true (bs);
 	    }
 
 	}
@@ -5343,25 +5415,6 @@ handle_jit_event (void)
 
   jit_event_handler (gdbarch);
 
-  target_terminal_inferior ();
-}
-
-/* Handle an solib event by calling solib_add.  */
-
-void
-handle_solib_event (void)
-{
-  clear_program_space_solib_cache (current_inferior ()->pspace);
-
-  /* Check for any newly added shared libraries if we're supposed to
-     be adding them automatically.  Switch terminal for any messages
-     produced by breakpoint_re_set.  */
-  target_terminal_ours_for_output ();
-#ifdef SOLIB_ADD
-  SOLIB_ADD (NULL, 0, &current_target, auto_solib_add);
-#else
-  solib_add (NULL, 0, &current_target, auto_solib_add);
-#endif
   target_terminal_inferior ();
 }
 
@@ -5519,7 +5572,10 @@ bpstat_what (bpstat bs_head)
 	  break;
 
 	case bp_dprintf:
-	  this_action = BPSTAT_WHAT_STOP_SILENT;
+	  if (bs->stop)
+	    this_action = BPSTAT_WHAT_STOP_SILENT;
+	  else
+	    this_action = BPSTAT_WHAT_SINGLE;
 	  break;
 
 	default:
@@ -5798,8 +5854,6 @@ bptype_string (enum bptype type)
   return bptypes[(int) type].description;
 }
 
-DEF_VEC_I(int);
-
 /* For MI, output a field named 'thread-groups' with a list as the value.
    For CLI, prefix the list with the string 'inf'. */
 
@@ -5809,8 +5863,7 @@ output_thread_groups (struct ui_out *uiout,
 		      VEC(int) *inf_num,
 		      int mi_only)
 {
-  struct cleanup *back_to = make_cleanup_ui_out_list_begin_end (uiout,
-								field_name);
+  struct cleanup *back_to;
   int is_mi = ui_out_is_mi_like_p (uiout);
   int inf;
   int i;
@@ -5819,6 +5872,8 @@ output_thread_groups (struct ui_out *uiout,
      there are several.  Always display them for MI. */
   if (!is_mi && mi_only)
     return;
+
+  back_to = make_cleanup_ui_out_list_begin_end (uiout, field_name);
 
   for (i = 0; VEC_iterate (int, inf_num, i, inf); ++i)
     {
@@ -7404,11 +7459,7 @@ disable_breakpoints_in_shlibs (void)
 	 || (is_tracepoint (b)))
 	&& loc->pspace == current_program_space
 	&& !loc->shlib_disabled
-#ifdef PC_SOLIB
-	&& PC_SOLIB (loc->address)
-#else
 	&& solib_name_from_address (loc->pspace, loc->address)
-#endif
 	)
       {
 	loc->shlib_disabled = 1;
@@ -8947,25 +8998,16 @@ update_dprintf_command_list (struct breakpoint *b)
 		    _("Invalid dprintf style."));
 
   gdb_assert (printf_line != NULL);
-  /* Manufacture a printf/continue sequence.  */
+  /* Manufacture a printf sequence.  */
   {
-    struct command_line *printf_cmd_line, *cont_cmd_line = NULL;
-
-    if (strcmp (dprintf_style, dprintf_style_agent) != 0)
-      {
-	cont_cmd_line = xmalloc (sizeof (struct command_line));
-	cont_cmd_line->control_type = simple_control;
-	cont_cmd_line->body_count = 0;
-	cont_cmd_line->body_list = NULL;
-	cont_cmd_line->next = NULL;
-	cont_cmd_line->line = xstrdup ("continue");
-      }
+    struct command_line *printf_cmd_line
+      = xmalloc (sizeof (struct command_line));
 
     printf_cmd_line = xmalloc (sizeof (struct command_line));
     printf_cmd_line->control_type = simple_control;
     printf_cmd_line->body_count = 0;
     printf_cmd_line->body_list = NULL;
-    printf_cmd_line->next = cont_cmd_line;
+    printf_cmd_line->next = NULL;
     printf_cmd_line->line = printf_line;
 
     breakpoint_set_commands (b, printf_cmd_line);
@@ -9496,20 +9538,20 @@ decode_static_tracepoint_spec (char **arg_p)
 
 /* Set a breakpoint.  This function is shared between CLI and MI
    functions for setting a breakpoint.  This function has two major
-   modes of operations, selected by the PARSE_CONDITION_AND_THREAD
-   parameter.  If non-zero, the function will parse arg, extracting
-   breakpoint location, address and thread.  Otherwise, ARG is just
-   the location of breakpoint, with condition and thread specified by
-   the COND_STRING and THREAD parameters.  If INTERNAL is non-zero,
-   the breakpoint number will be allocated from the internal
-   breakpoint count.  Returns true if any breakpoint was created;
-   false otherwise.  */
+   modes of operations, selected by the PARSE_ARG parameter.  If
+   non-zero, the function will parse ARG, extracting location,
+   condition, thread and extra string.  Otherwise, ARG is just the
+   breakpoint's location, with condition, thread, and extra string
+   specified by the COND_STRING, THREAD and EXTRA_STRING parameters.
+   If INTERNAL is non-zero, the breakpoint number will be allocated
+   from the internal breakpoint count.  Returns true if any breakpoint
+   was created; false otherwise.  */
 
 int
 create_breakpoint (struct gdbarch *gdbarch,
 		   char *arg, char *cond_string,
 		   int thread, char *extra_string,
-		   int parse_condition_and_thread,
+		   int parse_arg,
 		   int tempflag, enum bptype type_wanted,
 		   int ignore_count,
 		   enum auto_boolean pending_break_support,
@@ -9623,44 +9665,47 @@ create_breakpoint (struct gdbarch *gdbarch,
      breakpoint.  */
   if (!pending)
     {
-      struct linespec_sals *lsal;
-
-      lsal = VEC_index (linespec_sals, canonical.sals, 0);
-
-      if (parse_condition_and_thread)
+      if (parse_arg)
         {
-	    char *rest;
-            /* Here we only parse 'arg' to separate condition
-               from thread number, so parsing in context of first
-               sal is OK.  When setting the breakpoint we'll 
-               re-parse it in context of each sal.  */
+	  char *rest;
+	  struct linespec_sals *lsal;
 
-            find_condition_and_thread (arg, lsal->sals.sals[0].pc, &cond_string,
-                                       &thread, &task, &rest);
-            if (cond_string)
-                make_cleanup (xfree, cond_string);
-	    if (rest)
-	      make_cleanup (xfree, rest);
-	    if (rest)
-	      extra_string = rest;
+	  lsal = VEC_index (linespec_sals, canonical.sals, 0);
+
+	  /* Here we only parse 'arg' to separate condition
+	     from thread number, so parsing in context of first
+	     sal is OK.  When setting the breakpoint we'll
+	     re-parse it in context of each sal.  */
+
+	  find_condition_and_thread (arg, lsal->sals.sals[0].pc, &cond_string,
+				     &thread, &task, &rest);
+	  if (cond_string)
+	    make_cleanup (xfree, cond_string);
+	  if (rest)
+	    make_cleanup (xfree, rest);
+	  if (rest)
+	    extra_string = rest;
         }
       else
         {
-            /* Create a private copy of condition string.  */
-            if (cond_string)
-            {
-                cond_string = xstrdup (cond_string);
-                make_cleanup (xfree, cond_string);
-            }
-            /* Create a private copy of any extra string.  */
-            if (extra_string)
-	      {
-                extra_string = xstrdup (extra_string);
-                make_cleanup (xfree, extra_string);
-	      }
+	  if (*arg != '\0')
+	    error (_("Garbage '%s' at end of location"), arg);
+
+	  /* Create a private copy of condition string.  */
+	  if (cond_string)
+	    {
+	      cond_string = xstrdup (cond_string);
+	      make_cleanup (xfree, cond_string);
+	    }
+	  /* Create a private copy of any extra string.  */
+	  if (extra_string)
+	    {
+	      extra_string = xstrdup (extra_string);
+	      make_cleanup (xfree, extra_string);
+	    }
         }
 
-      ops->create_breakpoints_sal (gdbarch, &canonical, lsal,
+      ops->create_breakpoints_sal (gdbarch, &canonical,
 				   cond_string, extra_string, type_wanted,
 				   tempflag ? disp_del : disp_donttouch,
 				   thread, task, ignore_count, ops,
@@ -9685,7 +9730,7 @@ create_breakpoint (struct gdbarch *gdbarch,
       init_raw_breakpoint_without_location (b, gdbarch, type_wanted, ops);
 
       b->addr_string = copy_arg;
-      if (parse_condition_and_thread)
+      if (parse_arg)
 	b->cond_string = NULL;
       else
 	{
@@ -9797,7 +9842,7 @@ resolve_sal_pc (struct symtab_and_line *sal)
 	  if (sym != NULL)
 	    {
 	      fixup_symbol_section (sym, sal->symtab->objfile);
-	      sal->section = SYMBOL_OBJ_SECTION (sym);
+	      sal->section = SYMBOL_OBJ_SECTION (sal->symtab->objfile, sym);
 	    }
 	  else
 	    {
@@ -9806,14 +9851,14 @@ resolve_sal_pc (struct symtab_and_line *sal)
 	         if we have line numbers but no functions (as can
 	         happen in assembly source).  */
 
-	      struct minimal_symbol *msym;
+	      struct bound_minimal_symbol msym;
 	      struct cleanup *old_chain = save_current_space_and_thread ();
 
 	      switch_to_program_space_and_thread (sal->pspace);
 
 	      msym = lookup_minimal_symbol_by_pc (sal->pc);
-	      if (msym)
-		sal->section = SYMBOL_OBJ_SECTION (msym);
+	      if (msym.minsym)
+		sal->section = SYMBOL_OBJ_SECTION (msym.objfile, msym.minsym);
 
 	      do_cleanups (old_chain);
 	    }
@@ -10299,6 +10344,7 @@ watchpoint_exp_is_const (const struct expression *exp)
 	case OP_TYPE:
 	case OP_TYPEOF:
 	case OP_DECLTYPE:
+	case OP_TYPEID:
 	case OP_NAME:
 	case OP_OBJC_NSSTRING:
 
@@ -10484,7 +10530,6 @@ print_it_watchpoint (bpstat bs)
 {
   struct cleanup *old_chain;
   struct breakpoint *b;
-  const struct bp_location *bl;
   struct ui_file *stb;
   enum print_stop_action result;
   struct watchpoint *w;
@@ -10492,7 +10537,6 @@ print_it_watchpoint (bpstat bs)
 
   gdb_assert (bs->bp_location_at != NULL);
 
-  bl = bs->bp_location_at;
   b = bs->breakpoint_at;
   w = (struct watchpoint *) b;
 
@@ -10639,6 +10683,20 @@ print_recreate_watchpoint (struct breakpoint *b, struct ui_file *fp)
 
   fprintf_unfiltered (fp, " %s", w->exp_string);
   print_recreate_thread (b, fp);
+}
+
+/* Implement the "explains_signal" breakpoint_ops method for
+   watchpoints.  */
+
+static enum bpstat_signal_value
+explains_signal_watchpoint (struct breakpoint *b, enum gdb_signal sig)
+{
+  /* A software watchpoint cannot cause a signal other than
+     GDB_SIGNAL_TRAP.  */
+  if (b->type == bp_watchpoint && sig != GDB_SIGNAL_TRAP)
+    return BPSTAT_SIGNAL_NO;
+
+  return BPSTAT_SIGNAL_HIDE;
 }
 
 /* The breakpoint_ops structure to be used in hardware watchpoints.  */
@@ -10976,7 +11034,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 
   exp_valid_block = innermost_block;
   mark = value_mark ();
-  fetch_subexp_value (exp, &pc, &val, &result, NULL);
+  fetch_subexp_value (exp, &pc, &val, &result, NULL, just_location);
 
   if (just_location)
     {
@@ -11442,7 +11500,7 @@ until_break_command (char *arg, int from_tty, int anywhere)
    it updates arg to point to the first character following the parsed
    if clause in the arg string.  */
 
-static char *
+char *
 ep_parse_optional_if_clause (char **arg)
 {
   char *cond_string;
@@ -11553,180 +11611,6 @@ catch_exec_command_1 (char *arg, int from_tty,
   c->exec_pathname = NULL;
 
   install_breakpoint (0, &c->base, 1);
-}
-
-static enum print_stop_action
-print_it_exception_catchpoint (bpstat bs)
-{
-  struct ui_out *uiout = current_uiout;
-  struct breakpoint *b = bs->breakpoint_at;
-  int bp_temp, bp_throw;
-
-  annotate_catchpoint (b->number);
-
-  bp_throw = strstr (b->addr_string, "throw") != NULL;
-  if (b->loc->address != b->loc->requested_address)
-    breakpoint_adjustment_warning (b->loc->requested_address,
-	                           b->loc->address,
-				   b->number, 1);
-  bp_temp = b->disposition == disp_del;
-  ui_out_text (uiout, 
-	       bp_temp ? "Temporary catchpoint "
-		       : "Catchpoint ");
-  if (!ui_out_is_mi_like_p (uiout))
-    ui_out_field_int (uiout, "bkptno", b->number);
-  ui_out_text (uiout,
-	       bp_throw ? " (exception thrown), "
-		        : " (exception caught), ");
-  if (ui_out_is_mi_like_p (uiout))
-    {
-      ui_out_field_string (uiout, "reason", 
-			   async_reason_lookup (EXEC_ASYNC_BREAKPOINT_HIT));
-      ui_out_field_string (uiout, "disp", bpdisp_text (b->disposition));
-      ui_out_field_int (uiout, "bkptno", b->number);
-    }
-  return PRINT_SRC_AND_LOC;
-}
-
-static void
-print_one_exception_catchpoint (struct breakpoint *b, 
-				struct bp_location **last_loc)
-{
-  struct value_print_options opts;
-  struct ui_out *uiout = current_uiout;
-
-  get_user_print_options (&opts);
-  if (opts.addressprint)
-    {
-      annotate_field (4);
-      if (b->loc == NULL || b->loc->shlib_disabled)
-	ui_out_field_string (uiout, "addr", "<PENDING>");
-      else
-	ui_out_field_core_addr (uiout, "addr",
-				b->loc->gdbarch, b->loc->address);
-    }
-  annotate_field (5);
-  if (b->loc)
-    *last_loc = b->loc;
-  if (strstr (b->addr_string, "throw") != NULL)
-    {
-      ui_out_field_string (uiout, "what", "exception throw");
-      if (ui_out_is_mi_like_p (uiout))
-	ui_out_field_string (uiout, "catch-type", "throw");
-    }
-  else
-    {
-      ui_out_field_string (uiout, "what", "exception catch");
-      if (ui_out_is_mi_like_p (uiout))
-	ui_out_field_string (uiout, "catch-type", "catch");
-    }
-}
-
-static void
-print_mention_exception_catchpoint (struct breakpoint *b)
-{
-  struct ui_out *uiout = current_uiout;
-  int bp_temp;
-  int bp_throw;
-
-  bp_temp = b->disposition == disp_del;
-  bp_throw = strstr (b->addr_string, "throw") != NULL;
-  ui_out_text (uiout, bp_temp ? _("Temporary catchpoint ")
-			      : _("Catchpoint "));
-  ui_out_field_int (uiout, "bkptno", b->number);
-  ui_out_text (uiout, bp_throw ? _(" (throw)")
-			       : _(" (catch)"));
-}
-
-/* Implement the "print_recreate" breakpoint_ops method for throw and
-   catch catchpoints.  */
-
-static void
-print_recreate_exception_catchpoint (struct breakpoint *b, 
-				     struct ui_file *fp)
-{
-  int bp_temp;
-  int bp_throw;
-
-  bp_temp = b->disposition == disp_del;
-  bp_throw = strstr (b->addr_string, "throw") != NULL;
-  fprintf_unfiltered (fp, bp_temp ? "tcatch " : "catch ");
-  fprintf_unfiltered (fp, bp_throw ? "throw" : "catch");
-  print_recreate_thread (b, fp);
-}
-
-static struct breakpoint_ops gnu_v3_exception_catchpoint_ops;
-
-static int
-handle_gnu_v3_exceptions (int tempflag, char *cond_string,
-			  enum exception_event_kind ex_event, int from_tty)
-{
-  char *trigger_func_name;
- 
-  if (ex_event == EX_EVENT_CATCH)
-    trigger_func_name = "__cxa_begin_catch";
-  else
-    trigger_func_name = "__cxa_throw";
-
-  create_breakpoint (get_current_arch (),
-		     trigger_func_name, cond_string, -1, NULL,
-		     0 /* condition and thread are valid.  */,
-		     tempflag, bp_breakpoint,
-		     0,
-		     AUTO_BOOLEAN_TRUE /* pending */,
-		     &gnu_v3_exception_catchpoint_ops, from_tty,
-		     1 /* enabled */,
-		     0 /* internal */,
-		     0);
-
-  return 1;
-}
-
-/* Deal with "catch catch" and "catch throw" commands.  */
-
-static void
-catch_exception_command_1 (enum exception_event_kind ex_event, char *arg,
-			   int tempflag, int from_tty)
-{
-  char *cond_string = NULL;
-
-  if (!arg)
-    arg = "";
-  arg = skip_spaces (arg);
-
-  cond_string = ep_parse_optional_if_clause (&arg);
-
-  if ((*arg != '\0') && !isspace (*arg))
-    error (_("Junk at end of arguments."));
-
-  if (ex_event != EX_EVENT_THROW
-      && ex_event != EX_EVENT_CATCH)
-    error (_("Unsupported or unknown exception event; cannot catch it"));
-
-  if (handle_gnu_v3_exceptions (tempflag, cond_string, ex_event, from_tty))
-    return;
-
-  warning (_("Unsupported with this platform/compiler combination."));
-}
-
-/* Implementation of "catch catch" command.  */
-
-static void
-catch_catch_command (char *arg, int from_tty, struct cmd_list_element *command)
-{
-  int tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
-
-  catch_exception_command_1 (EX_EVENT_CATCH, arg, tempflag, from_tty);
-}
-
-/* Implementation of "catch throw" command.  */
-
-static void
-catch_throw_command (char *arg, int from_tty, struct cmd_list_element *command)
-{
-  int tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
-
-  catch_exception_command_1 (EX_EVENT_THROW, arg, tempflag, from_tty);
 }
 
 void
@@ -12718,7 +12602,6 @@ bpstat_remove_breakpoint_callback (struct thread_info *th, void *data)
 static void
 say_where (struct breakpoint *b)
 {
-  struct ui_out *uiout = current_uiout;
   struct value_print_options opts;
 
   get_user_print_options (&opts);
@@ -12787,6 +12670,7 @@ base_breakpoint_dtor (struct breakpoint *self)
 {
   decref_counted_command_line (&self->commands);
   xfree (self->cond_string);
+  xfree (self->extra_string);
   xfree (self->addr_string);
   xfree (self->filter);
   xfree (self->addr_string_range_end);
@@ -12894,7 +12778,6 @@ base_breakpoint_create_sals_from_address (char **arg,
 static void
 base_breakpoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 					struct linespec_result *c,
-					struct linespec_sals *lsal,
 					char *cond_string,
 					char *extra_string,
 					enum bptype type_wanted,
@@ -12918,9 +12801,17 @@ base_breakpoint_decode_linespec (struct breakpoint *b, char **s,
 /* The default 'explains_signal' method.  */
 
 static enum bpstat_signal_value
-base_breakpoint_explains_signal (struct breakpoint *b)
+base_breakpoint_explains_signal (struct breakpoint *b, enum gdb_signal sig)
 {
   return BPSTAT_SIGNAL_HIDE;
+}
+
+/* The default "after_condition_true" method.  */
+
+static void
+base_breakpoint_after_condition_true (struct bpstats *bs)
+{
+  /* Nothing to do.   */
 }
 
 struct breakpoint_ops base_breakpoint_ops =
@@ -12942,7 +12833,8 @@ struct breakpoint_ops base_breakpoint_ops =
   base_breakpoint_create_sals_from_address,
   base_breakpoint_create_breakpoints_sal,
   base_breakpoint_decode_linespec,
-  base_breakpoint_explains_signal
+  base_breakpoint_explains_signal,
+  base_breakpoint_after_condition_true,
 };
 
 /* Default breakpoint_ops methods.  */
@@ -12986,8 +12878,6 @@ bkpt_breakpoint_hit (const struct bp_location *bl,
 		     struct address_space *aspace, CORE_ADDR bp_addr,
 		     const struct target_waitstatus *ws)
 {
-  struct breakpoint *b = bl->owner;
-
   if (ws->kind != TARGET_WAITKIND_STOPPED
       || ws->value.sig != GDB_SIGNAL_TRAP)
     return 0;
@@ -13109,7 +12999,6 @@ bkpt_create_sals_from_address (char **arg,
 static void
 bkpt_create_breakpoints_sal (struct gdbarch *gdbarch,
 			     struct linespec_result *canonical,
-			     struct linespec_sals *lsal,
 			     char *cond_string,
 			     char *extra_string,
 			     enum bptype type_wanted,
@@ -13120,7 +13009,7 @@ bkpt_create_breakpoints_sal (struct gdbarch *gdbarch,
 			     int from_tty, int enabled,
 			     int internal, unsigned flags)
 {
-  create_breakpoints_sal_default (gdbarch, canonical, lsal,
+  create_breakpoints_sal_default (gdbarch, canonical,
 				  cond_string, extra_string,
 				  type_wanted,
 				  disposition, thread, task,
@@ -13181,7 +13070,6 @@ internal_bkpt_check_status (bpstat bs)
 static enum print_stop_action
 internal_bkpt_print_it (bpstat bs)
 {
-  struct ui_out *uiout = current_uiout;
   struct breakpoint *b;
 
   b = bs->breakpoint_at;
@@ -13239,7 +13127,7 @@ static void
 momentary_bkpt_re_set (struct breakpoint *b)
 {
   /* Keep temporary breakpoints, which can be encountered when we step
-     over a dlopen call and SOLIB_ADD is resetting the breakpoints.
+     over a dlopen call and solib_add is resetting the breakpoints.
      Otherwise these should have been blown away via the cleanup chain
      or by breakpoint_init_inferior when we rerun the executable.  */
 }
@@ -13448,7 +13336,6 @@ tracepoint_create_sals_from_address (char **arg,
 static void
 tracepoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 				   struct linespec_result *canonical,
-				   struct linespec_sals *lsal,
 				   char *cond_string,
 				   char *extra_string,
 				   enum bptype type_wanted,
@@ -13459,7 +13346,7 @@ tracepoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 				   int from_tty, int enabled,
 				   int internal, unsigned flags)
 {
-  create_breakpoints_sal_default (gdbarch, canonical, lsal,
+  create_breakpoints_sal_default (gdbarch, canonical,
 				  cond_string, extra_string,
 				  type_wanted,
 				  disposition, thread, task,
@@ -13500,6 +13387,83 @@ tracepoint_probe_decode_linespec (struct breakpoint *b, char **s,
 
 static struct breakpoint_ops tracepoint_probe_breakpoint_ops;
 
+/* Dprintf breakpoint_ops methods.  */
+
+static void
+dprintf_re_set (struct breakpoint *b)
+{
+  breakpoint_re_set_default (b);
+
+  /* This breakpoint could have been pending, and be resolved now, and
+     if so, we should now have the extra string.  If we don't, the
+     dprintf was malformed when created, but we couldn't tell because
+     we can't extract the extra string until the location is
+     resolved.  */
+  if (b->loc != NULL && b->extra_string == NULL)
+    error (_("Format string required"));
+
+  /* 1 - connect to target 1, that can run breakpoint commands.
+     2 - create a dprintf, which resolves fine.
+     3 - disconnect from target 1
+     4 - connect to target 2, that can NOT run breakpoint commands.
+
+     After steps #3/#4, you'll want the dprintf command list to
+     be updated, because target 1 and 2 may well return different
+     answers for target_can_run_breakpoint_commands().
+     Given absence of finer grained resetting, we get to do
+     it all the time.  */
+  if (b->extra_string != NULL)
+    update_dprintf_command_list (b);
+}
+
+/* Implement the "print_recreate" breakpoint_ops method for dprintf.  */
+
+static void
+dprintf_print_recreate (struct breakpoint *tp, struct ui_file *fp)
+{
+  fprintf_unfiltered (fp, "dprintf %s%s", tp->addr_string,
+		      tp->extra_string);
+  print_recreate_thread (tp, fp);
+}
+
+/* Implement the "after_condition_true" breakpoint_ops method for
+   dprintf.
+
+   dprintf's are implemented with regular commands in their command
+   list, but we run the commands here instead of before presenting the
+   stop to the user, as dprintf's don't actually cause a stop.  This
+   also makes it so that the commands of multiple dprintfs at the same
+   address are all handled.  */
+
+static void
+dprintf_after_condition_true (struct bpstats *bs)
+{
+  struct cleanup *old_chain;
+  struct bpstats tmp_bs = { NULL };
+  struct bpstats *tmp_bs_p = &tmp_bs;
+
+  /* dprintf's never cause a stop.  This wasn't set in the
+     check_status hook instead because that would make the dprintf's
+     condition not be evaluated.  */
+  bs->stop = 0;
+
+  /* Run the command list here.  Take ownership of it instead of
+     copying.  We never want these commands to run later in
+     bpstat_do_actions, if a breakpoint that causes a stop happens to
+     be set at same address as this dprintf, or even if running the
+     commands here throws.  */
+  tmp_bs.commands = bs->commands;
+  bs->commands = NULL;
+  old_chain = make_cleanup_decref_counted_command_line (&tmp_bs.commands);
+
+  bpstat_do_actions_1 (&tmp_bs_p);
+
+  /* 'tmp_bs.commands' will usually be NULL by now, but
+     bpstat_do_actions_1 may return early without processing the whole
+     list.  */
+  do_cleanups (old_chain);
+}
+
 /* The breakpoint_ops structure to be used on static tracepoints with
    markers (`-m').  */
 
@@ -13523,7 +13487,6 @@ strace_marker_create_sals_from_address (char **arg,
 static void
 strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 				      struct linespec_result *canonical,
-				      struct linespec_sals *lsal,
 				      char *cond_string,
 				      char *extra_string,
 				      enum bptype type_wanted,
@@ -13535,6 +13498,8 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 				      int internal, unsigned flags)
 {
   int i;
+  struct linespec_sals *lsal = VEC_index (linespec_sals,
+					  canonical->sals, 0);
 
   /* If the user is creating a static tracepoint by marker id
      (strace -m MARKER_ID), then store the sals index, so that
@@ -14256,7 +14221,6 @@ create_sals_from_address_default (char **arg,
 static void
 create_breakpoints_sal_default (struct gdbarch *gdbarch,
 				struct linespec_result *canonical,
-				struct linespec_sals *lsal,
 				char *cond_string,
 				char *extra_string,
 				enum bptype type_wanted,
@@ -14613,25 +14577,35 @@ disable_command (char *args, int from_tty)
 	if (user_breakpoint_p (bpt))
 	  disable_breakpoint (bpt);
     }
-  else if (strchr (args, '.'))
-    {
-      struct bp_location *loc = find_location_by_number (args);
-      if (loc)
-	{
-	  if (loc->enabled)
-	    {
-	      loc->enabled = 0;
-	      mark_breakpoint_location_modified (loc);
-	    }
-	  if (target_supports_enable_disable_tracepoint ()
-	      && current_trace_status ()->running && loc->owner
-	      && is_tracepoint (loc->owner))
-	    target_disable_tracepoint (loc);
-	}
-      update_global_location_list (0);
-    }
   else
-    map_breakpoint_numbers (args, do_map_disable_breakpoint, NULL);
+    {
+      char *num = extract_arg (&args);
+
+      while (num)
+	{
+	  if (strchr (num, '.'))
+	    {
+	      struct bp_location *loc = find_location_by_number (num);
+
+	      if (loc)
+		{
+		  if (loc->enabled)
+		    {
+		      loc->enabled = 0;
+		      mark_breakpoint_location_modified (loc);
+		    }
+		  if (target_supports_enable_disable_tracepoint ()
+		      && current_trace_status ()->running && loc->owner
+		      && is_tracepoint (loc->owner))
+		    target_disable_tracepoint (loc);
+		}
+	      update_global_location_list (0);
+	    }
+	  else
+	    map_breakpoint_numbers (num, do_map_disable_breakpoint, NULL);
+	  num = extract_arg (&args);
+	}
+    }
 }
 
 static void
@@ -14737,25 +14711,35 @@ enable_command (char *args, int from_tty)
 	if (user_breakpoint_p (bpt))
 	  enable_breakpoint (bpt);
     }
-  else if (strchr (args, '.'))
-    {
-      struct bp_location *loc = find_location_by_number (args);
-      if (loc)
-	{
-	  if (!loc->enabled)
-	    {
-	      loc->enabled = 1;
-	      mark_breakpoint_location_modified (loc);
-	    }
-	  if (target_supports_enable_disable_tracepoint ()
-	      && current_trace_status ()->running && loc->owner
-	      && is_tracepoint (loc->owner))
-	    target_enable_tracepoint (loc);
-	}
-      update_global_location_list (1);
-    }
   else
-    map_breakpoint_numbers (args, do_map_enable_breakpoint, NULL);
+    {
+      char *num = extract_arg (&args);
+
+      while (num)
+	{
+	  if (strchr (num, '.'))
+	    {
+	      struct bp_location *loc = find_location_by_number (num);
+
+	      if (loc)
+		{
+		  if (!loc->enabled)
+		    {
+		      loc->enabled = 1;
+		      mark_breakpoint_location_modified (loc);
+		    }
+		  if (target_supports_enable_disable_tracepoint ()
+		      && current_trace_status ()->running && loc->owner
+		      && is_tracepoint (loc->owner))
+		    target_enable_tracepoint (loc);
+		}
+	      update_global_location_list (1);
+	    }
+	  else
+	    map_breakpoint_numbers (num, do_map_enable_breakpoint, NULL);
+	  num = extract_arg (&args);
+	}
+    }
 }
 
 /* This struct packages up disposition data for application to multiple
@@ -15084,7 +15068,7 @@ catching_syscall_number (int syscall_number)
 /* Complete syscall names.  Used by "catch syscall".  */
 static VEC (char_ptr) *
 catch_syscall_completer (struct cmd_list_element *cmd,
-                         char *text, char *word)
+                         const char *text, const char *word)
 {
   const char **list = get_syscall_names ();
   VEC (char_ptr) *retlist
@@ -15520,7 +15504,6 @@ save_breakpoints (char *filename, int from_tty,
 {
   struct breakpoint *tp;
   int any = 0;
-  char *pathname;
   struct cleanup *cleanup;
   struct ui_file *fp;
   int extra_trace_bits = 0;
@@ -15556,9 +15539,9 @@ save_breakpoints (char *filename, int from_tty,
       return;
     }
 
-  pathname = tilde_expand (filename);
-  cleanup = make_cleanup (xfree, pathname);
-  fp = gdb_fopen (pathname, "w");
+  filename = tilde_expand (filename);
+  cleanup = make_cleanup (xfree, filename);
+  fp = gdb_fopen (filename, "w");
   if (!fp)
     error (_("Unable to open file '%s' for saving (%s)"),
 	   filename, safe_strerror (errno));
@@ -15589,7 +15572,7 @@ save_breakpoints (char *filename, int from_tty,
     if (tp->ignore_count)
       fprintf_unfiltered (fp, "  ignore $bpnum %d\n", tp->ignore_count);
 
-    if (tp->commands)
+    if (tp->type != bp_dprintf && tp->commands)
       {
 	volatile struct gdb_exception ex;	
 
@@ -15628,9 +15611,9 @@ save_breakpoints (char *filename, int from_tty,
   if (extra_trace_bits && *default_collect)
     fprintf_unfiltered (fp, "set default-collect %s\n", default_collect);
 
-  do_cleanups (cleanup);
   if (from_tty)
     printf_filtered (_("Saved to file '%s'.\n"), filename);
+  do_cleanups (cleanup);
 }
 
 /* The `save breakpoints' command.  */
@@ -15878,14 +15861,6 @@ initialize_breakpoint_ops (void)
   ops->create_sals_from_address = bkpt_probe_create_sals_from_address;
   ops->decode_linespec = bkpt_probe_decode_linespec;
 
-  /* GNU v3 exception catchpoints.  */
-  ops = &gnu_v3_exception_catchpoint_ops;
-  *ops = bkpt_breakpoint_ops;
-  ops->print_it = print_it_exception_catchpoint;
-  ops->print_one = print_one_exception_catchpoint;
-  ops->print_mention = print_mention_exception_catchpoint;
-  ops->print_recreate = print_recreate_exception_catchpoint;
-
   /* Watchpoints.  */
   ops = &watchpoint_breakpoint_ops;
   *ops = base_breakpoint_ops;
@@ -15900,6 +15875,7 @@ initialize_breakpoint_ops (void)
   ops->print_it = print_it_watchpoint;
   ops->print_mention = print_mention_watchpoint;
   ops->print_recreate = print_recreate_watchpoint;
+  ops->explains_signal = explains_signal_watchpoint;
 
   /* Masked watchpoints.  */
   ops = &masked_watchpoint_breakpoint_ops;
@@ -15999,11 +15975,12 @@ initialize_breakpoint_ops (void)
 
   ops = &dprintf_breakpoint_ops;
   *ops = bkpt_base_breakpoint_ops;
-  ops->re_set = bkpt_re_set;
+  ops->re_set = dprintf_re_set;
   ops->resources_needed = bkpt_resources_needed;
   ops->print_it = bkpt_print_it;
   ops->print_mention = bkpt_print_mention;
-  ops->print_recreate = bkpt_print_recreate;
+  ops->print_recreate = dprintf_print_recreate;
+  ops->after_condition_true = dprintf_after_condition_true;
 }
 
 /* Chain containing all defined "enable breakpoint" subcommands.  */
@@ -16301,19 +16278,6 @@ Set temporary catchpoints to catch events."),
 		  &tcatch_cmdlist, "tcatch ",
 		  0/*allow-unknown*/, &cmdlist);
 
-  /* Add catch and tcatch sub-commands.  */
-  add_catch_command ("catch", _("\
-Catch an exception, when caught."),
-		     catch_catch_command,
-                     NULL,
-		     CATCH_PERMANENT,
-		     CATCH_TEMPORARY);
-  add_catch_command ("throw", _("\
-Catch an exception, when thrown."),
-		     catch_throw_command,
-                     NULL,
-		     CATCH_PERMANENT,
-		     CATCH_TEMPORARY);
   add_catch_command ("fork", _("Catch calls to fork."),
 		     catch_fork_command_1,
                      NULL,
@@ -16598,8 +16562,7 @@ Set a dynamic printf at specified line or function.\n\
 dprintf location,format string,arg1,arg2,...\n\
 location may be a line number, function name, or \"*\" and an address.\n\
 If a line number is specified, break at start of code for that line.\n\
-If a function is specified, break at start of code for that function.\n\
-"));
+If a function is specified, break at start of code for that function."));
   set_cmd_completer (c, location_completer);
 
   add_setshow_enum_cmd ("dprintf-style", class_support,
@@ -16648,4 +16611,5 @@ agent-printf \"printf format string\", arg1, arg2, arg3, ..., argn\n\
   automatic_hardware_breakpoints = 1;
 
   observer_attach_about_to_proceed (breakpoint_about_to_proceed);
+  observer_attach_thread_exit (remove_threaded_breakpoints);
 }

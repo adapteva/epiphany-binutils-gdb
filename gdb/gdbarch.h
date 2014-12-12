@@ -342,8 +342,6 @@ typedef struct type * (gdbarch_register_type_ftype) (struct gdbarch *gdbarch, in
 extern struct type * gdbarch_register_type (struct gdbarch *gdbarch, int reg_nr);
 extern void set_gdbarch_register_type (struct gdbarch *gdbarch, gdbarch_register_type_ftype *register_type);
 
-/* See gdbint.texinfo, and PUSH_DUMMY_CALL. */
-
 extern int gdbarch_dummy_id_p (struct gdbarch *gdbarch);
 
 typedef struct frame_id (gdbarch_dummy_id_ftype) (struct gdbarch *gdbarch, struct frame_info *this_frame);
@@ -355,8 +353,6 @@ extern void set_gdbarch_dummy_id (struct gdbarch *gdbarch, gdbarch_dummy_id_ftyp
 
 extern int gdbarch_deprecated_fp_regnum (struct gdbarch *gdbarch);
 extern void set_gdbarch_deprecated_fp_regnum (struct gdbarch *gdbarch, int deprecated_fp_regnum);
-
-/* See gdbint.texinfo.  See infcall.c. */
 
 extern int gdbarch_push_dummy_call_p (struct gdbarch *gdbarch);
 
@@ -766,6 +762,15 @@ typedef LONGEST (gdbarch_core_xfer_shared_libraries_ftype) (struct gdbarch *gdba
 extern LONGEST gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, LONGEST len);
 extern void set_gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdbarch_core_xfer_shared_libraries_ftype *core_xfer_shared_libraries);
 
+/* Read offset OFFSET of TARGET_OBJECT_LIBRARIES_AIX formatted shared
+   libraries list from core file into buffer READBUF with length LEN. */
+
+extern int gdbarch_core_xfer_shared_libraries_aix_p (struct gdbarch *gdbarch);
+
+typedef LONGEST (gdbarch_core_xfer_shared_libraries_aix_ftype) (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, LONGEST len);
+extern LONGEST gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, LONGEST len);
+extern void set_gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, gdbarch_core_xfer_shared_libraries_aix_ftype *core_xfer_shared_libraries_aix);
+
 /* How the core target converts a PTID from a core file to a string. */
 
 extern int gdbarch_core_pid_to_str_p (struct gdbarch *gdbarch);
@@ -983,6 +988,20 @@ extern int gdbarch_gdb_signal_from_target_p (struct gdbarch *gdbarch);
 typedef enum gdb_signal (gdbarch_gdb_signal_from_target_ftype) (struct gdbarch *gdbarch, int signo);
 extern enum gdb_signal gdbarch_gdb_signal_from_target (struct gdbarch *gdbarch, int signo);
 extern void set_gdbarch_gdb_signal_from_target (struct gdbarch *gdbarch, gdbarch_gdb_signal_from_target_ftype *gdb_signal_from_target);
+
+/* Signal translation: translate the GDB's internal signal number into
+   the inferior's signal (target's) representation.  The implementation
+   of this method must be host independent.  IOW, don't rely on symbols
+   of the NAT_FILE header (the nm-*.h files), the host <signal.h>
+   header, or similar headers.
+   Return the target signal number if found, or -1 if the GDB internal
+   signal number is invalid. */
+
+extern int gdbarch_gdb_signal_to_target_p (struct gdbarch *gdbarch);
+
+typedef int (gdbarch_gdb_signal_to_target_ftype) (struct gdbarch *gdbarch, enum gdb_signal signal);
+extern int gdbarch_gdb_signal_to_target (struct gdbarch *gdbarch, enum gdb_signal signal);
+extern void set_gdbarch_gdb_signal_to_target (struct gdbarch *gdbarch, gdbarch_gdb_signal_to_target_ftype *gdb_signal_to_target);
 
 /* Extra signal info inspection.
   

@@ -27,6 +27,7 @@
 #include "frame.h"
 #include "value.h"
 #include "gdb_assert.h"
+#include "filestuff.h"
 
 #include <sys/types.h>
 #include "gdb_string.h"
@@ -43,9 +44,6 @@
 #include "completer.h"
 #include "ui-out.h"
 #include "readline/readline.h"
-
-#include "psymtab.h"
-
 
 #define OPEN_MODE (O_RDONLY | O_BINARY)
 #define FDOPEN_MODE FOPEN_RB
@@ -676,9 +674,10 @@ is_regular_file (const char *name)
 
    If OPF_TRY_CWD_FIRST, try to open ./STRING before searching PATH.
    (ie pretend the first element of PATH is ".").  This also indicates
-   that a slash in STRING disables searching of the path (this is
-   so that "exec-file ./foo" or "symbol-file ./foo" insures that you
-   get that particular version of foo or an error message).
+   that, unless OPF_SEARCH_IN_PATH is also specified, a slash in STRING
+   disables searching of the path (this is so that "exec-file ./foo" or
+   "symbol-file ./foo" insures that you get that particular version of
+   foo or an error message).
 
    If OPTS has OPF_SEARCH_IN_PATH set, absolute names will also be
    searched in path (we usually want this for source files but not for
@@ -689,6 +688,11 @@ is_regular_file (const char *name)
    have to take special pains to avoid doubling the "/" between the directory
    and the file, sigh!  Emacs gets confuzzed by this when we print the
    source file name!!! 
+
+   If OPTS has OPF_RETURN_REALPATH set return FILENAME_OPENED resolved by
+   gdb_realpath.  Even without OPF_RETURN_REALPATH this function still returns
+   filename starting with "/".  If FILENAME_OPENED is NULL this option has no
+   effect.
 
    If a file is found, return the descriptor.
    Otherwise, return -1, with errno set for the last name we tried to open.  */
@@ -737,7 +741,7 @@ openp (const char *path, int opts, const char *string,
 	{
 	  filename = alloca (strlen (string) + 1);
 	  strcpy (filename, string);
-	  fd = open (filename, mode);
+	  fd = gdb_open_cloexec (filename, mode, 0);
 	  if (fd >= 0)
 	    goto done;
 	}
@@ -835,7 +839,7 @@ openp (const char *path, int opts, const char *string,
 
       if (is_regular_file (filename))
 	{
-	  fd = open (filename, mode);
+	  fd = gdb_open_cloexec (filename, mode, 0);
 	  if (fd >= 0)
 	    break;
 	}
@@ -849,19 +853,27 @@ done:
       /* If a file was opened, canonicalize its filename.  */
       if (fd < 0)
 	*filename_opened = NULL;
-      else if (IS_ABSOLUTE_PATH (filename))
-	*filename_opened = gdb_realpath (filename);
       else
 	{
-	  /* Beware the // my son, the Emacs barfs, the botch that catch...  */
+	  char *(*realpath_fptr) (const char *);
 
-	  char *f = concat (current_directory,
-			    IS_DIR_SEPARATOR (current_directory[strlen (current_directory) - 1])
-			    ? "" : SLASH_STRING,
-			    filename, (char *)NULL);
+	  realpath_fptr = ((opts & OPF_RETURN_REALPATH) != 0
+			   ? gdb_realpath : xstrdup);
 
-	  *filename_opened = gdb_realpath (f);
-	  xfree (f);
+	  if (IS_ABSOLUTE_PATH (filename))
+	    *filename_opened = realpath_fptr (filename);
+	  else
+	    {
+	      /* Beware the // my son, the Emacs barfs, the botch that catch...  */
+
+	      char *f = concat (current_directory,
+				IS_DIR_SEPARATOR (current_directory[strlen (current_directory) - 1])
+				? "" : SLASH_STRING,
+				filename, (char *)NULL);
+
+	      *filename_opened = realpath_fptr (f);
+	      xfree (f);
+	    }
 	}
     }
 
@@ -885,8 +897,9 @@ source_full_path_of (const char *filename, char **full_pathname)
 {
   int fd;
 
-  fd = openp (source_path, OPF_TRY_CWD_FIRST | OPF_SEARCH_IN_PATH, filename,
-	      O_RDONLY, full_pathname);
+  fd = openp (source_path,
+	      OPF_TRY_CWD_FIRST | OPF_SEARCH_IN_PATH | OPF_RETURN_REALPATH,
+	      filename, O_RDONLY, full_pathname);
   if (fd < 0)
     {
       *full_pathname = NULL;
@@ -984,6 +997,7 @@ find_and_open_source (const char *filename,
   char *path = source_path;
   const char *p;
   int result;
+  struct cleanup *cleanup;
 
   /* Quick way out if we already know its full name.  */
 
@@ -1000,7 +1014,7 @@ find_and_open_source (const char *filename,
           *fullname = rewritten_fullname;
         }
 
-      result = open (*fullname, OPEN_MODE);
+      result = gdb_open_cloexec (*fullname, OPEN_MODE, 0);
       if (result >= 0)
 	{
 	  char *lpath = gdb_realpath (*fullname);
@@ -1014,6 +1028,8 @@ find_and_open_source (const char *filename,
       xfree (*fullname);
       *fullname = NULL;
     }
+
+  cleanup = make_cleanup (null_cleanup, NULL);
 
   if (dirname != NULL)
     {
@@ -1062,15 +1078,18 @@ find_and_open_source (const char *filename,
         }
     }
 
-  result = openp (path, OPF_SEARCH_IN_PATH, filename, OPEN_MODE, fullname);
+  result = openp (path, OPF_SEARCH_IN_PATH | OPF_RETURN_REALPATH, filename,
+		  OPEN_MODE, fullname);
   if (result < 0)
     {
       /* Didn't work.  Try using just the basename.  */
       p = lbasename (filename);
       if (p != filename)
-	result = openp (path, OPF_SEARCH_IN_PATH, p, OPEN_MODE, fullname);
+	result = openp (path, OPF_SEARCH_IN_PATH | OPF_RETURN_REALPATH, p,
+			OPEN_MODE, fullname);
     }
 
+  do_cleanups (cleanup);
   return result;
 }
 
@@ -1344,18 +1363,30 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
 	{
 	  ui_out_field_int (uiout, "line", line);
 	  ui_out_text (uiout, "\tin ");
-	  ui_out_field_string (uiout, "file",
-			       symtab_to_filename_for_display (s));
 
-	  /* TUI expects the "fullname" field.  While it is
-	     !ui_out_is_mi_like_p compared to CLI it is !ui_source_list.  */
+	  /* CLI expects only the "file" field.  TUI expects only the
+	     "fullname" field (and TUI does break if "file" is printed).
+	     MI expects both fields.  ui_source_list is set only for CLI,
+	     not for TUI.  */
+	  if (ui_out_is_mi_like_p (uiout)
+	      || ui_out_test_flags (uiout, ui_source_list))
+	    ui_out_field_string (uiout, "file",
+				 symtab_to_filename_for_display (s));
 	  if (ui_out_is_mi_like_p (uiout)
 	      || !ui_out_test_flags (uiout, ui_source_list))
-	    {
-	      const char *fullname = symtab_to_fullname (s);
+ 	    {
+	      const char *s_fullname = symtab_to_fullname (s);
+	      char *local_fullname;
 
-	      ui_out_field_string (uiout, "fullname", fullname);
-	    }
+	      /* ui_out_field_string may free S_FULLNAME by calling
+		 open_source_file for it again.  See e.g.,
+		 tui_field_string->tui_show_source.  */
+	      local_fullname = alloca (strlen (s_fullname) + 1);
+	      strcpy (local_fullname, s_fullname);
+
+	      ui_out_field_string (uiout, "fullname", local_fullname);
+ 	    }
+
 	  ui_out_text (uiout, "\n");
 	}
 
@@ -1600,7 +1631,7 @@ forward_search_command (char *regex, int from_tty)
       buf = xmalloc (cursize);
       p = buf;
 
-      c = getc (stream);
+      c = fgetc (stream);
       if (c == EOF)
 	break;
       do
@@ -1614,7 +1645,7 @@ forward_search_command (char *regex, int from_tty)
 	      cursize = newsize;
 	    }
 	}
-      while (c != '\n' && (c = getc (stream)) >= 0);
+      while (c != '\n' && (c = fgetc (stream)) >= 0);
 
       /* Remove the \r, if any, at the end of the line, otherwise
          regular expressions that end with $ or \n won't work.  */
@@ -1685,14 +1716,14 @@ reverse_search_command (char *regex, int from_tty)
       char buf[4096];		/* Should be reasonable???  */
       char *p = buf;
 
-      c = getc (stream);
+      c = fgetc (stream);
       if (c == EOF)
 	break;
       do
 	{
 	  *p++ = c;
 	}
-      while (c != '\n' && (c = getc (stream)) >= 0);
+      while (c != '\n' && (c = fgetc (stream)) >= 0);
 
       /* Remove the \r, if any, at the end of the line, otherwise
          regular expressions that end with $ or \n won't work.  */
@@ -1827,9 +1858,10 @@ show_substitute_path_command (char *args, int from_tty)
   struct substitute_path_rule *rule = substitute_path_rules;
   char **argv;
   char *from = NULL;
+  struct cleanup *cleanup;
   
   argv = gdb_buildargv (args);
-  make_cleanup_freeargv (argv);
+  cleanup = make_cleanup_freeargv (argv);
 
   /* We expect zero or one argument.  */
 
@@ -1853,6 +1885,8 @@ show_substitute_path_command (char *args, int from_tty)
         printf_filtered ("  `%s' -> `%s'.\n", rule->from, rule->to);
       rule = rule->next;
     }
+
+  do_cleanups (cleanup);
 }
 
 /* Implement the "unset substitute-path" command.  */
@@ -1864,10 +1898,11 @@ unset_substitute_path_command (char *args, int from_tty)
   char **argv = gdb_buildargv (args);
   char *from = NULL;
   int rule_found = 0;
+  struct cleanup *cleanup;
 
   /* This function takes either 0 or 1 argument.  */
 
-  make_cleanup_freeargv (argv);
+  cleanup = make_cleanup_freeargv (argv);
   if (argv != NULL && argv[0] != NULL && argv[1] != NULL)
     error (_("Incorrect usage, too many arguments in command"));
 
@@ -1905,6 +1940,8 @@ unset_substitute_path_command (char *args, int from_tty)
     error (_("No substitution rule defined for `%s'"), from);
 
   forget_cached_source_info ();
+
+  do_cleanups (cleanup);
 }
 
 /* Add a new source path substitution rule.  */
@@ -1914,9 +1951,10 @@ set_substitute_path_command (char *args, int from_tty)
 {
   char **argv;
   struct substitute_path_rule *rule;
+  struct cleanup *cleanup;
   
   argv = gdb_buildargv (args);
-  make_cleanup_freeargv (argv);
+  cleanup = make_cleanup_freeargv (argv);
 
   if (argv == NULL || argv[0] == NULL || argv [1] == NULL)
     error (_("Incorrect usage, too few arguments in command"));
@@ -1943,6 +1981,8 @@ set_substitute_path_command (char *args, int from_tty)
 
   add_substitute_path_rule (argv[0], argv[1]);
   forget_cached_source_info ();
+
+  do_cleanups (cleanup);
 }
 
 
@@ -2032,12 +2072,15 @@ The matching line number is also stored as the value of \"$_\"."));
       add_com_alias ("?", "reverse-search", class_files, 0);
     }
 
-  add_setshow_zuinteger_unlimited_cmd ("listsize", class_support,
-				       &lines_to_list, _("\
+  add_setshow_integer_cmd ("listsize", class_support, &lines_to_list, _("\
 Set number of source lines gdb will list by default."), _("\
-Show number of source lines gdb will list by default."), NULL,
-				       NULL, show_lines_to_list,
-				       &setlist, &showlist);
+Show number of source lines gdb will list by default."), _("\
+Use this to choose how many source lines the \"list\" displays (unless\n\
+the \"list\" argument explicitly specifies some other number).\n\
+A value of \"unlimited\", or zero, means there's no limit."),
+			    NULL,
+			    show_lines_to_list,
+			    &setlist, &showlist);
 
   add_cmd ("substitute-path", class_files, set_substitute_path_command,
            _("\

@@ -689,11 +689,8 @@ setup_user_args (char *p)
       int bsquote = 0;
 
       if (arg_count >= MAXUSERARGS)
-	{
-	  error (_("user defined function may only have %d arguments."),
-		 MAXUSERARGS);
-	  return old_chain;
-	}
+	error (_("user defined function may only have %d arguments."),
+	       MAXUSERARGS);
 
       /* Strip whitespace.  */
       while (*p == ' ' || *p == '\t')
@@ -1249,13 +1246,12 @@ read_command_lines_1 (char * (*read_next_line_func) (void), int parse_commands,
 		      void (*validator)(char *, void *), void *closure)
 {
   struct command_line *head, *tail, *next;
-  struct cleanup *old_chain;
+  struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
   enum command_control_type ret;
   enum misc_command_type val;
 
   control_level = 0;
   head = tail = NULL;
-  old_chain = NULL;
 
   while (1)
     {
@@ -1301,22 +1297,17 @@ read_command_lines_1 (char * (*read_next_line_func) (void), int parse_commands,
       else
 	{
 	  head = next;
-	  old_chain = make_cleanup_free_command_lines (&head);
+	  make_cleanup_free_command_lines (&head);
 	}
       tail = next;
     }
 
   dont_repeat ();
 
-  if (head)
-    {
-      if (ret != invalid_control)
-	{
-	  discard_cleanups (old_chain);
-	}
-      else
-	do_cleanups (old_chain);
-    }
+  if (ret != invalid_control)
+    discard_cleanups (old_chain);
+  else
+    do_cleanups (old_chain);
 
   return head;
 }
@@ -1416,7 +1407,8 @@ validate_comname (char **comname)
   if (last_word != *comname)
     {
       struct cmd_list_element *c;
-      char saved_char, *tem = *comname;
+      char saved_char;
+      const char *tem = *comname;
 
       /* Separate the prefix and the command.  */
       saved_char = last_word[-1];
@@ -1461,6 +1453,7 @@ define_command (char *comname, int from_tty)
   struct command_line *cmds;
   struct cmd_list_element *c, *newc, *hookc = 0, **list;
   char *tem, *comfull;
+  const char *tem_c;
   char tmpbuf[MAX_TMPBUF];
   int  hook_type      = CMD_NO_HOOK;
   int  hook_name_size = 0;
@@ -1474,8 +1467,8 @@ define_command (char *comname, int from_tty)
   list = validate_comname (&comname);
 
   /* Look it up, and verify that we got an exact match.  */
-  tem = comname;
-  c = lookup_cmd (&tem, *list, "", -1, 1);
+  tem_c = comname;
+  c = lookup_cmd (&tem_c, *list, "", -1, 1);
   if (c && strcmp (comname, c->name) != 0)
     c = 0;
 
@@ -1509,8 +1502,8 @@ define_command (char *comname, int from_tty)
   if (hook_type != CMD_NO_HOOK)
     {
       /* Look up cmd it hooks, and verify that we got an exact match.  */
-      tem = comname + hook_name_size;
-      hookc = lookup_cmd (&tem, *list, "", -1, 0);
+      tem_c = comname + hook_name_size;
+      hookc = lookup_cmd (&tem_c, *list, "", -1, 0);
       if (hookc && strcmp (comname + hook_name_size, hookc->name) != 0)
 	hookc = 0;
       if (!hookc)
@@ -1570,7 +1563,8 @@ document_command (char *comname, int from_tty)
 {
   struct command_line *doclines;
   struct cmd_list_element *c, **list;
-  char *tem, *comfull;
+  const char *tem;
+  char *comfull;
   char tmpbuf[128];
 
   comfull = comname;
@@ -1642,9 +1636,6 @@ script_from_file (FILE *stream, const char *file)
   old_cleanups = make_cleanup (source_cleanup_lines, &old_lines);
   source_line_number = 0;
   source_file_name = file;
-  /* This will get set every time we read a line.  So it won't stay ""
-     for long.  */
-  error_pre_print = "";
 
   {
     volatile struct gdb_exception e;
@@ -1676,7 +1667,7 @@ script_from_file (FILE *stream, const char *file)
    (recursively).  PREFIX and NAME combined are the name of the
    current command.  */
 void
-show_user_1 (struct cmd_list_element *c, char *prefix, char *name,
+show_user_1 (struct cmd_list_element *c, const char *prefix, const char *name,
 	     struct ui_file *stream)
 {
   struct command_line *cmdlines;

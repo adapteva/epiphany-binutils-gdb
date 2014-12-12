@@ -1,7 +1,5 @@
 /* Mach-O support for BFD.
-   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright 1999-2013 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -195,6 +193,9 @@ static const mach_o_section_name_xlat dwarf_section_names_xlat[] =
 	SEC_DEBUGGING,			BFD_MACH_O_S_REGULAR,
 	BFD_MACH_O_S_ATTR_DEBUG,	0},
     {	".debug_macro",			"__debug_macro",
+	SEC_DEBUGGING,			BFD_MACH_O_S_REGULAR,
+	BFD_MACH_O_S_ATTR_DEBUG,	0},
+    {	".debug_gdb_scripts",		"__debug_gdb_scri",
 	SEC_DEBUGGING,			BFD_MACH_O_S_REGULAR,
 	BFD_MACH_O_S_ATTR_DEBUG,	0},
     { NULL, NULL, 0, 0, 0, 0}
@@ -2693,7 +2694,7 @@ bfd_mach_o_new_section_hook (bfd *abfd, asection *sec)
 	  s->flags = xlat->macho_sectype | xlat->macho_secattr;
 	  s->align = xlat->sectalign > bfdalign ? xlat->sectalign
 						: bfdalign;
-	  bfd_set_section_alignment (abfd, sec, s->align);
+	  (void) bfd_set_section_alignment (abfd, sec, s->align);
 	  bfd_flags = bfd_get_section_flags (abfd, sec);
 	  if (bfd_flags == SEC_NO_FLAGS)
 	    bfd_set_section_flags (abfd, sec, xlat->bfd_flags);

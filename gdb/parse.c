@@ -120,9 +120,12 @@ static void free_funcalls (void *ignore);
 static int prefixify_subexp (struct expression *, struct expression *, int,
 			     int);
 
-static struct expression *parse_exp_in_context (char **, CORE_ADDR,
+static struct expression *parse_exp_in_context (const char **, CORE_ADDR,
 						const struct block *, int, 
 						int, int *);
+static struct expression *parse_exp_in_context_1 (char **, CORE_ADDR,
+						  const struct block *, int,
+						  int, int *);
 
 void _initialize_parse (void);
 
@@ -493,13 +496,14 @@ write_exp_bitstring (struct stoken str)
    the expression.  */
 
 void
-write_exp_msymbol (struct minimal_symbol *msymbol)
+write_exp_msymbol (struct bound_minimal_symbol bound_msym)
 {
-  struct objfile *objfile = msymbol_objfile (msymbol);
+  struct minimal_symbol *msymbol = bound_msym.minsym;
+  struct objfile *objfile = bound_msym.objfile;
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
 
   CORE_ADDR addr = SYMBOL_VALUE_ADDRESS (msymbol);
-  struct obj_section *section = SYMBOL_OBJ_SECTION (msymbol);
+  struct obj_section *section = SYMBOL_OBJ_SECTION (objfile, msymbol);
   enum minimal_symbol_type type = MSYMBOL_TYPE (msymbol);
   CORE_ADDR pc;
 
@@ -508,13 +512,14 @@ write_exp_msymbol (struct minimal_symbol *msymbol)
   pc = gdbarch_convert_from_func_ptr_addr (gdbarch, addr, &current_target);
   if (pc != addr)
     {
-      struct minimal_symbol *ifunc_msym = lookup_minimal_symbol_by_pc (pc);
+      struct bound_minimal_symbol ifunc_msym = lookup_minimal_symbol_by_pc (pc);
 
       /* In this case, assume we have a code symbol instead of
 	 a data symbol.  */
 
-      if (ifunc_msym != NULL && MSYMBOL_TYPE (ifunc_msym) == mst_text_gnu_ifunc
-	  && SYMBOL_VALUE_ADDRESS (ifunc_msym) == pc)
+      if (ifunc_msym.minsym != NULL
+	  && MSYMBOL_TYPE (ifunc_msym.minsym) == mst_text_gnu_ifunc
+	  && SYMBOL_VALUE_ADDRESS (ifunc_msym.minsym) == pc)
 	{
 	  /* A function descriptor has been resolved but PC is still in the
 	     STT_GNU_IFUNC resolver body (such as because inferior does not
@@ -636,7 +641,7 @@ void
 write_dollar_variable (struct stoken str)
 {
   struct symbol *sym = NULL;
-  struct minimal_symbol *msym = NULL;
+  struct bound_minimal_symbol msym;
   struct internalvar *isym = NULL;
 
   /* Handle the tokens $digits; also $ (short for $0) and $$ (short for $$1)
@@ -700,8 +705,8 @@ write_dollar_variable (struct stoken str)
       write_exp_elt_opcode (OP_VAR_VALUE);
       return;
     }
-  msym = lookup_minimal_symbol (copy_name (str), NULL, NULL);
-  if (msym)
+  msym = lookup_bound_minimal_symbol (copy_name (str));
+  if (msym.minsym)
     {
       write_exp_msymbol (msym);
       return;
@@ -968,6 +973,7 @@ operator_length_standard (const struct expression *expr, int endpos,
     case UNOP_TRUNC:
     case OP_TYPEOF:
     case OP_DECLTYPE:
+    case OP_TYPEID:
       oplen = 1;
       args = 1;
       break;
@@ -1128,12 +1134,21 @@ struct expression *
 parse_exp_1 (const char **stringptr, CORE_ADDR pc, const struct block *block,
 	     int comma)
 {
+  return parse_exp_in_context (stringptr, pc, block, comma, 0, NULL);
+}
+
+static struct expression *
+parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
+		      const struct block *block,
+		      int comma, int void_context_p, int *out_subexp)
+{
   struct expression *expr;
   char *const_hack = *stringptr ? xstrdup (*stringptr) : NULL;
   char *orig = const_hack;
   struct cleanup *back_to = make_cleanup (xfree, const_hack);
 
-  expr = parse_exp_in_context (&const_hack, pc, block, comma, 0, NULL);
+  expr = parse_exp_in_context_1 (&const_hack, pc, block, comma,
+				 void_context_p, out_subexp);
   (*stringptr) += const_hack - orig;
   do_cleanups (back_to);
   return expr;
@@ -1147,8 +1162,9 @@ parse_exp_1 (const char **stringptr, CORE_ADDR pc, const struct block *block,
    is left untouched.  */
 
 static struct expression *
-parse_exp_in_context (char **stringptr, CORE_ADDR pc, const struct block *block,
-		      int comma, int void_context_p, int *out_subexp)
+parse_exp_in_context_1 (char **stringptr, CORE_ADDR pc,
+			const struct block *block,
+			int comma, int void_context_p, int *out_subexp)
 {
   volatile struct gdb_exception except;
   struct cleanup *old_chain, *inner_chain;
@@ -1291,7 +1307,7 @@ parse_expression (const char *string)
    *NAME must be freed by the caller.  */
 
 struct type *
-parse_expression_for_completion (char *string, char **name,
+parse_expression_for_completion (const char *string, char **name,
 				 enum type_code *code)
 {
   struct expression *exp = NULL;

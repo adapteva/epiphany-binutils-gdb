@@ -45,7 +45,9 @@ struct partial_symbol
 
   ENUM_BITFIELD(domain_enum_tag) domain : 6;
 
-  /* Address class (for info_symbols).  */
+  /* Address class (for info_symbols).  Note that we don't allow
+     synthetic "aclass" values here at present, simply because there's
+     no need.  */
 
   ENUM_BITFIELD(address_class) aclass : 6;
 
@@ -96,7 +98,9 @@ struct partial_symtab
 
   const char *dirname;
 
-  /* Set of relocation offsets to apply to each section.  */
+  /* Set of relocation offsets to apply to each section.
+     This is typically objfile->section_offsets, but in some cases
+     it's different.  See, e.g., elfstab_offset_sections.  */
 
   struct section_offsets *section_offsets;
 

@@ -1035,15 +1035,13 @@ Cannot perform conditional operation on vectors with different sizes"));
 	  }
 	else
 	  {
+	    struct value *v = value_struct_elt (&arg1, NULL,
+						&exp->elts[pc + 2].string, NULL,
+						"structure");
+
 	    if (noside == EVAL_AVOID_SIDE_EFFECTS)
-	      return
-		  value_zero (lookup_struct_elt_type
-			      (value_type (arg1),&exp->elts[pc + 2].string, 0),
-			      lval_memory);
-	    else
-	      return value_struct_elt (&arg1, NULL,
-				       &exp->elts[pc + 2].string, NULL,
-				       "structure");
+	      v = value_zero (value_type (v), not_lval);
+	    return v;
 	  }
       }
     default:

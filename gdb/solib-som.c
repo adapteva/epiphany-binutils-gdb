@@ -588,7 +588,7 @@ som_current_sos (void)
       struct cleanup *old_chain;
       int errcode;
       struct dld_list dbuf;
-      char tsdbuf[4];
+      gdb_byte tsdbuf[4];
 
       new = (struct so_list *) xmalloc (sizeof (struct so_list));
       old_chain = make_cleanup (xfree, new);
@@ -698,6 +698,7 @@ som_open_symbol_file_object (void *from_ttyp)
   int errcode;
   int from_tty = *(int *)from_ttyp;
   gdb_byte buf[4];
+  struct cleanup *cleanup;
 
   if (symfile_objfile)
     if (!query (_("Attempt to reload symbols from process? ")))
@@ -727,10 +728,11 @@ som_open_symbol_file_object (void *from_ttyp)
       return 0;
     }
 
-  make_cleanup (xfree, filename);
+  cleanup = make_cleanup (xfree, filename);
   /* Have a pathname: read the symbol file.  */
   symbol_file_add_main (filename, from_tty);
 
+  do_cleanups (cleanup);
   return 1;
 }
 
@@ -840,13 +842,12 @@ som_solib_section_offsets (struct objfile *objfile,
       if (strstr (objfile->name, so_list->so_name))
 	{
 	  asection *private_section;
+	  struct obj_section *sect;
 
 	  /* The text offset is easy.  */
 	  offsets->offsets[SECT_OFF_TEXT (objfile)]
 	    = (so_list->lm_info->text_addr
 	       - so_list->lm_info->text_link_addr);
-	  offsets->offsets[SECT_OFF_RODATA (objfile)]
-	    = ANOFFSET (offsets, SECT_OFF_TEXT (objfile));
 
 	  /* We should look at presumed_dp in the SOM header, but
 	     that's not easily available.  This should be OK though.  */
@@ -859,10 +860,28 @@ som_solib_section_offsets (struct objfile *objfile,
 	      offsets->offsets[SECT_OFF_BSS (objfile)] = 0;
 	      return 1;
 	    }
-	  offsets->offsets[SECT_OFF_DATA (objfile)]
-	    = (so_list->lm_info->data_start - private_section->vma);
-	  offsets->offsets[SECT_OFF_BSS (objfile)]
-	    = ANOFFSET (offsets, SECT_OFF_DATA (objfile));
+	  if (objfile->sect_index_data != -1)
+	    {
+	      offsets->offsets[SECT_OFF_DATA (objfile)]
+		= (so_list->lm_info->data_start - private_section->vma);
+	      if (objfile->sect_index_bss != -1)
+		offsets->offsets[SECT_OFF_BSS (objfile)]
+		  = ANOFFSET (offsets, SECT_OFF_DATA (objfile));
+	    }
+
+	  ALL_OBJFILE_OSECTIONS (objfile, sect)
+	    {
+	      flagword flags = bfd_get_section_flags (objfile->obfd,
+						      sect->the_bfd_section);
+
+	      if ((flags & SEC_CODE) != 0)
+		offsets->offsets[sect->the_bfd_section->index]
+		  = offsets->offsets[SECT_OFF_TEXT (objfile)];
+	      else
+		offsets->offsets[sect->the_bfd_section->index]
+		  = offsets->offsets[SECT_OFF_DATA (objfile)];
+	    }
+
 	  return 1;
 	}
       so_list = so_list->next;

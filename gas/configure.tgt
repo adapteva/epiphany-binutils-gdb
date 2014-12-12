@@ -121,7 +121,7 @@ case ${generic_target} in
 
   alpha-*-*vms*)			fmt=evax ;;
   alpha-*-osf*)				fmt=ecoff ;;
-  alpha-*-linuxecoff*)			fmt=ecoff ;;
+  alpha-*-linux*ecoff*)			fmt=ecoff ;;
   alpha-*-linux-*)			fmt=elf em=linux ;;
   alpha-*-netbsd*)			fmt=elf em=nbsd ;;
   alpha-*-openbsd*)			fmt=elf em=obsd ;;
@@ -254,7 +254,11 @@ case ${generic_target} in
   i386-*-msdos*)			fmt=aout ;;
   i386-*-moss*)				fmt=elf ;;
   i386-*-pe)				fmt=coff em=pe ;;
-  i386-*-cygwin*)			fmt=coff em=pe ;;
+  i386-*-cygwin*)
+   case ${cpu} in
+     x86_64*)				fmt=coff em=pep ;;
+     i*)				fmt=coff em=pe ;;
+   esac ;;
   i386-*-interix*)			fmt=coff em=interix ;;
   i386-*-mingw*)
     case ${cpu} in
@@ -314,23 +318,13 @@ case ${generic_target} in
 
   microblaze-*-*)			fmt=elf ;;
 
-  # don't change em like *-*-bsd does
-  mips-sony-bsd*)			fmt=ecoff ;;
-  mips-*-ultrix*)			fmt=ecoff endian=little ;;
-  mips-*-osf*)				fmt=ecoff endian=little ;;
-  mips-*-ecoff*)			fmt=ecoff ;;
-  mips-*-pe*)				fmt=coff endian=little em=pe ;;
   mips-*-irix6*)			fmt=elf em=irix ;;
   mips-*-irix5*)			fmt=elf em=irix ;;
-  mips-*-irix*)				fmt=ecoff em=irix ;;
-  mips-*-lnews*)			fmt=ecoff em=lnews ;;
-  mips-*-riscos*)			fmt=ecoff ;;
   mips*-*-linux*)			fmt=elf em=tmips ;;
   mips*-*-freebsd* | mips*-*-kfreebsd*-gnu)
 					fmt=elf em=freebsd ;;
   mips-*-sysv4*MP* | mips-*-gnu*)	fmt=elf em=tmips ;;
   mips*-sde-elf* | mips*-mti-elf*)	fmt=elf em=tmips ;;
-  mips-*-sysv*)				fmt=ecoff ;;
   mips-*-elf* | mips-*-rtems*)		fmt=elf ;;
   mips-*-netbsd*)			fmt=elf em=tmips ;;
   mips-*-openbsd*)			fmt=elf em=tmips ;;

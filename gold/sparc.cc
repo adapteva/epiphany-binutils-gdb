@@ -1,6 +1,6 @@
 // sparc.cc -- sparc target support for gold.
 
-// Copyright 2008, 2009, 2010, 2011, 2012 Free Software Foundation, Inc.
+// Copyright 2008, 2009, 2010, 2011, 2012, 2013 Free Software Foundation, Inc.
 // Written by David S. Miller <davem@davemloft.net>.
 
 // This file is part of gold.
@@ -483,7 +483,8 @@ Target::Target_info Target_sparc<32, true>::sparc_info =
   0,			// small_common_section_flags
   0,			// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 template<>
@@ -509,7 +510,8 @@ Target::Target_info Target_sparc<64, true>::sparc_info =
   0,			// small_common_section_flags
   0,			// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 // We have to take care here, even when operating in little-endian
@@ -3189,6 +3191,10 @@ Target_sparc<size, big_endian>::Relocate::relocate(
 	  return false;
 	}
     }
+
+  if (view == NULL)
+    return true;
+
   if (this->reloc_adjust_addr_ == view)
     view -= 4;
 

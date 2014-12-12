@@ -73,6 +73,12 @@ struct probe_ops
 
     unsigned (*get_probe_argument_count) (struct probe *probe);
 
+    /* Return 1 if the probe interface can evaluate the arguments of probe
+       PROBE, zero otherwise.  See the comments on
+       sym_probe_fns:can_evaluate_probe_arguments for more details.  */
+
+    int (*can_evaluate_probe_arguments) (struct probe *probe);
+
     /* Evaluate the Nth argument from the PROBE, returning a value
        corresponding to it.  The argument number is represented N.  */
 
@@ -213,6 +219,22 @@ extern void info_probes_for_ops (char *arg, int from_tty,
    associated with `info probes', without having it registered yet.  */
 
 extern struct cmd_list_element **info_probes_cmdlist_get (void);
+
+/* Return the argument count of the specified probe.  */
+
+extern unsigned get_probe_argument_count (struct probe *probe);
+
+/* Return 1 if the probe interface associated with PROBE can evaluate
+   arguments, zero otherwise.  See the comments on the definition of
+   sym_probe_fns:can_evaluate_probe_arguments for more details.  */
+
+extern int can_evaluate_probe_arguments (struct probe *probe);
+
+/* Evaluate argument N of the specified probe.  N must be between 0
+   inclusive and get_probe_argument_count exclusive.  */
+
+extern struct value *evaluate_probe_argument (struct probe *probe,
+					      unsigned n);
 
 /* A convenience function that finds a probe at the PC in FRAME and
    evaluates argument N, with 0 <= N < number_of_args.  If there is no

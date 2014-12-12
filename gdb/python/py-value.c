@@ -334,18 +334,11 @@ valpy_get_dynamic_type (PyObject *self, void *closure)
   GDB_PY_HANDLE_EXCEPTION (except);
 
   if (type == NULL)
-    {
-      /* Ensure that the TYPE field is ready.  */
-      if (!valpy_get_type (self, NULL))
-	return NULL;
-      /* We don't need to incref here, because valpy_get_type already
-	 did it for us.  */
-      obj->dynamic_type = obj->type;
-    }
+    obj->dynamic_type = valpy_get_type (self, NULL);
   else
     obj->dynamic_type = type_to_type_object (type);
 
-  Py_INCREF (obj->dynamic_type);
+  Py_XINCREF (obj->dynamic_type);
   return obj->dynamic_type;
 }
 
@@ -421,7 +414,8 @@ valpy_string (PyObject *self, PyObject *args, PyObject *kw)
   GDB_PY_HANDLE_EXCEPTION (except);
 
   encoding = (user_encoding && *user_encoding) ? user_encoding : la_encoding;
-  unicode = PyUnicode_Decode (buffer, length * TYPE_LENGTH (char_type),
+  unicode = PyUnicode_Decode ((const char *) buffer,
+			      length * TYPE_LENGTH (char_type),
 			      encoding, errors);
   xfree (buffer);
 
@@ -775,11 +769,17 @@ valpy_binop (enum valpy_opcode opcode, PyObject *self, PyObject *other)
 	 a gdb.Value object and need to convert it from python as well.  */
       arg1 = convert_value_from_python (self);
       if (arg1 == NULL)
-	break;
+	{
+	  do_cleanups (cleanup);
+	  break;
+	}
 
       arg2 = convert_value_from_python (other);
       if (arg2 == NULL)
-	break;
+	{
+	  do_cleanups (cleanup);
+	  break;
+	}
 
       switch (opcode)
 	{
@@ -1385,16 +1385,14 @@ gdbpy_is_value_object (PyObject *obj)
   return PyObject_TypeCheck (obj, &value_object_type);
 }
 
-void
+int
 gdbpy_initialize_values (void)
 {
   if (PyType_Ready (&value_object_type) < 0)
-    return;
+    return -1;
 
-  Py_INCREF (&value_object_type);
-  PyModule_AddObject (gdb_module, "Value", (PyObject *) &value_object_type);
-
-  values_in_python = NULL;
+  return gdb_pymodule_addobject (gdb_module, "Value",
+				 (PyObject *) &value_object_type);
 }
 
 

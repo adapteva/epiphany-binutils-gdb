@@ -432,11 +432,7 @@ post_create_inferior (struct target_ops *target, int from_tty)
 
       /* Create the hooks to handle shared library load and unload
 	 events.  */
-#ifdef SOLIB_CREATE_INFERIOR_HOOK
-      SOLIB_CREATE_INFERIOR_HOOK (PIDGET (inferior_ptid));
-#else
       solib_create_inferior_hook (from_tty);
-#endif
 
       if (current_program_space->solib_add_generation == solib_add_generation)
 	{
@@ -452,13 +448,7 @@ post_create_inferior (struct target_ops *target, int from_tty)
 	  /* If the solist is global across processes, there's no need to
 	     refetch it here.  */
 	  if (!gdbarch_has_global_solist (target_gdbarch ()))
-	    {
-#ifdef SOLIB_ADD
-	      SOLIB_ADD (NULL, 0, target, auto_solib_add);
-#else
-	      solib_add (NULL, 0, target, auto_solib_add);
-#endif
-	    }
+	    solib_add (NULL, 0, target, auto_solib_add);
 	}
     }
 
@@ -1056,9 +1046,14 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 				 &tp->control.step_range_start,
 				 &tp->control.step_range_end);
 
+	  tp->control.may_range_step = 1;
+
 	  /* If we have no line info, switch to stepi mode.  */
 	  if (tp->control.step_range_end == 0 && step_stop_if_no_debug)
-	    tp->control.step_range_start = tp->control.step_range_end = 1;
+	    {
+	      tp->control.step_range_start = tp->control.step_range_end = 1;
+	      tp->control.may_range_step = 0;
+	    }
 	  else if (tp->control.step_range_end == 0)
 	    {
 	      const char *name;
@@ -1170,8 +1165,8 @@ jump_command (char *arg, int from_tty)
   if (sfn != NULL)
     {
       fixup_symbol_section (sfn, 0);
-      if (section_is_overlay (SYMBOL_OBJ_SECTION (sfn)) &&
-	  !section_is_mapped (SYMBOL_OBJ_SECTION (sfn)))
+      if (section_is_overlay (SYMBOL_OBJ_SECTION (SYMBOL_OBJFILE (sfn), sfn)) &&
+	  !section_is_mapped (SYMBOL_OBJ_SECTION (SYMBOL_OBJFILE (sfn), sfn)))
 	{
 	  if (!query (_("WARNING!!!  Destination is in "
 			"unmapped overlay!  Jump anyway? ")))
@@ -1332,12 +1327,12 @@ until_next_command (int from_tty)
 
   if (!func)
     {
-      struct minimal_symbol *msymbol = lookup_minimal_symbol_by_pc (pc);
+      struct bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (pc);
 
-      if (msymbol == NULL)
+      if (msymbol.minsym == NULL)
 	error (_("Execution is not within a known function."));
 
-      tp->control.step_range_start = SYMBOL_VALUE_ADDRESS (msymbol);
+      tp->control.step_range_start = SYMBOL_VALUE_ADDRESS (msymbol.minsym);
       tp->control.step_range_end = pc;
     }
   else
@@ -1347,6 +1342,7 @@ until_next_command (int from_tty)
       tp->control.step_range_start = BLOCK_START (SYMBOL_BLOCK_VALUE (func));
       tp->control.step_range_end = sal.end;
     }
+  tp->control.may_range_step = 1;
 
   tp->control.step_over_calls = STEP_OVER_ALL;
 
@@ -1452,7 +1448,7 @@ get_return_value (struct value *function, struct type *value_type)
   if (!stop_regs)
     {
       stop_regs = regcache_dup (get_current_regcache ());
-      cleanup = make_cleanup_regcache_xfree (stop_regs);
+      make_cleanup_regcache_xfree (stop_regs);
     }
 
   gdbarch = get_regcache_arch (stop_regs);
@@ -1510,7 +1506,7 @@ print_return_value (struct value *function, struct type *value_type)
       ui_out_field_fmt (uiout, "gdb-result-var", "$%d",
 			record_latest_value (value));
       ui_out_text (uiout, " = ");
-      get_raw_print_options (&opts);
+      get_no_prettyformat_print_options (&opts);
       value_print (value, stb, &opts);
       ui_out_field_stream (uiout, "return-value", stb);
       ui_out_text (uiout, "\n");
@@ -1769,7 +1765,7 @@ finish_command (char *arg, int from_tty)
       if (from_tty)
 	{
 	  printf_filtered (_("Run till exit from "));
-	  print_stack_frame (get_selected_frame (NULL), 1, LOCATION);
+	  print_stack_frame (get_selected_frame (NULL), 1, LOCATION, 0);
 	}
 
       proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT, 1);
@@ -1794,7 +1790,7 @@ finish_command (char *arg, int from_tty)
       else
 	printf_filtered (_("Run till exit from "));
 
-      print_stack_frame (get_selected_frame (NULL), 1, LOCATION);
+      print_stack_frame (get_selected_frame (NULL), 1, LOCATION, 0);
     }
 
   if (execution_direction == EXEC_REVERSE)
@@ -2056,17 +2052,8 @@ default_print_one_register_info (struct ui_file *file,
 		 value_embedded_offset (val), 0,
 		 file, 0, val, &opts, current_language);
 
-      fprintf_filtered (file, "\t(raw 0x");
-      for (j = 0; j < TYPE_LENGTH (regtype); j++)
-	{
-	  int idx;
-
-	  if (byte_order == BFD_ENDIAN_BIG)
-	    idx = j;
-	  else
-	    idx = TYPE_LENGTH (regtype) - 1 - j;
-	  fprintf_filtered (file, "%02x", (unsigned char) valaddr[idx]);
-	}
+      fprintf_filtered (file, "\t(raw ");
+      print_hex_chars (file, valaddr, TYPE_LENGTH (regtype), byte_order);
       fprintf_filtered (file, ")");
     }
   else
@@ -2347,7 +2334,7 @@ kill_command (char *arg, int from_tty)
       if (target_has_stack)
 	{
 	  printf_filtered (_("In %s,\n"), target_longname);
-	  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC);
+	  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
 	}
     }
   bfd_cache_close_all ();
@@ -2721,7 +2708,9 @@ detach_command (char *args, int from_tty)
   if (ptid_equal (inferior_ptid, null_ptid))
     error (_("The program is not being run."));
 
-  disconnect_tracing (from_tty);
+  query_if_trace_running (from_tty);
+
+  disconnect_tracing ();
 
   target_detach (args, from_tty);
 
@@ -2751,7 +2740,8 @@ static void
 disconnect_command (char *args, int from_tty)
 {
   dont_repeat ();		/* Not for the faint of heart.  */
-  disconnect_tracing (from_tty);
+  query_if_trace_running (from_tty);
+  disconnect_tracing ();
   target_disconnect (args, from_tty);
   no_shared_libraries (NULL, from_tty);
   init_thread_list ();
@@ -2938,7 +2928,7 @@ _initialize_infcmd (void)
 {
   static struct cmd_list_element *info_proc_cmdlist;
   struct cmd_list_element *c = NULL;
-  char *cmd_name;
+  const char *cmd_name;
 
   /* Add the filename of the terminal connected to inferior I/O.  */
   add_setshow_filename_cmd ("inferior-tty", class_run,

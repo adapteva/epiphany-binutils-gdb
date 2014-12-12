@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "server.h"
+#include "tracepoint.h"
 
 struct target_ops *the_target;
 
@@ -136,48 +137,6 @@ target_pid_to_str (ptid_t ptid)
   else
     xsnprintf (buf, sizeof (buf), "Process %d",
 	       ptid_get_pid (ptid));
-
-  return buf;
-}
-
-/* Return a pretty printed form of target_waitstatus.  */
-
-const char *
-target_waitstatus_to_string (const struct target_waitstatus *ws)
-{
-  static char buf[200];
-  const char *kind_str = "status->kind = ";
-
-  switch (ws->kind)
-    {
-    case TARGET_WAITKIND_EXITED:
-      sprintf (buf, "%sexited, status = %d",
-	       kind_str, ws->value.integer);
-      break;
-    case TARGET_WAITKIND_STOPPED:
-      sprintf (buf, "%sstopped, signal = %s",
-	       kind_str, gdb_signal_to_name (ws->value.sig));
-      break;
-    case TARGET_WAITKIND_SIGNALLED:
-      sprintf (buf, "%ssignalled, signal = %s",
-	       kind_str, gdb_signal_to_name (ws->value.sig));
-      break;
-    case TARGET_WAITKIND_LOADED:
-      sprintf (buf, "%sloaded", kind_str);
-      break;
-    case TARGET_WAITKIND_EXECD:
-      sprintf (buf, "%sexecd", kind_str);
-      break;
-    case TARGET_WAITKIND_SPURIOUS:
-      sprintf (buf, "%sspurious", kind_str);
-      break;
-    case TARGET_WAITKIND_IGNORE:
-      sprintf (buf, "%signore", kind_str);
-      break;
-    default:
-      sprintf (buf, "%sunknown???", kind_str);
-      break;
-    }
 
   return buf;
 }

@@ -83,7 +83,7 @@ pascal_val_print (struct type *type, const gdb_byte *valaddr,
 	  len = high_bound - low_bound + 1;
 	  elttype = check_typedef (TYPE_TARGET_TYPE (type));
 	  eltlen = TYPE_LENGTH (elttype);
-	  if (options->prettyprint_arrays)
+	  if (options->prettyformat_arrays)
 	    {
 	      print_spaces_filtered (2 + 2 * recurse, stream);
 	    }
@@ -221,18 +221,18 @@ pascal_val_print (struct type *type, const gdb_byte *valaddr,
 	  /* Print vtbl's nicely.  */
 	  CORE_ADDR vt_address = unpack_pointer (type,
 						 valaddr + embedded_offset);
-	  struct minimal_symbol *msymbol =
+	  struct bound_minimal_symbol msymbol =
 	    lookup_minimal_symbol_by_pc (vt_address);
 
 	  /* If 'symbol_print' is set, we did the work above.  */
 	  if (!options->symbol_print
-	      && (msymbol != NULL)
-	      && (vt_address == SYMBOL_VALUE_ADDRESS (msymbol)))
+	      && (msymbol.minsym != NULL)
+	      && (vt_address == SYMBOL_VALUE_ADDRESS (msymbol.minsym)))
 	    {
 	      if (want_space)
 		fputs_filtered (" ", stream);
 	      fputs_filtered ("<", stream);
-	      fputs_filtered (SYMBOL_PRINT_NAME (msymbol), stream);
+	      fputs_filtered (SYMBOL_PRINT_NAME (msymbol.minsym), stream);
 	      fputs_filtered (">", stream);
 	      want_space = 1;
 	    }
@@ -247,8 +247,9 @@ pascal_val_print (struct type *type, const gdb_byte *valaddr,
 	      if (want_space)
 		fputs_filtered (" ", stream);
 
-	      if (msymbol != NULL)
-		wsym = lookup_symbol (SYMBOL_LINKAGE_NAME (msymbol), block,
+	      if (msymbol.minsym != NULL)
+		wsym = lookup_symbol (SYMBOL_LINKAGE_NAME (msymbol.minsym),
+				      block,
 				      VAR_DOMAIN, &is_this_fld);
 
 	      if (wsym)
@@ -262,7 +263,7 @@ pascal_val_print (struct type *type, const gdb_byte *valaddr,
 	      vt_val = value_at (wtype, vt_address);
 	      common_val_print (vt_val, stream, recurse + 1, options,
 				current_language);
-	      if (options->pretty)
+	      if (options->prettyformat)
 		{
 		  fprintf_filtered (stream, "\n");
 		  print_spaces_filtered (2 + 2 * recurse, stream);
@@ -574,7 +575,7 @@ pascal_object_print_value_fields (struct type *type, const gdb_byte *valaddr,
 	    fprintf_filtered (stream, ", ");
 	  else if (n_baseclasses > 0)
 	    {
-	      if (options->pretty)
+	      if (options->prettyformat)
 		{
 		  fprintf_filtered (stream, "\n");
 		  print_spaces_filtered (2 + 2 * recurse, stream);
@@ -585,7 +586,7 @@ pascal_object_print_value_fields (struct type *type, const gdb_byte *valaddr,
 	    }
 	  fields_seen = 1;
 
-	  if (options->pretty)
+	  if (options->prettyformat)
 	    {
 	      fprintf_filtered (stream, "\n");
 	      print_spaces_filtered (2 + 2 * recurse, stream);
@@ -687,7 +688,7 @@ pascal_object_print_value_fields (struct type *type, const gdb_byte *valaddr,
 	  dont_print_statmem_obstack = tmp_obstack;
 	}
 
-      if (options->pretty)
+      if (options->prettyformat)
 	{
 	  fprintf_filtered (stream, "\n");
 	  print_spaces_filtered (2 * recurse, stream);
@@ -786,7 +787,7 @@ pascal_object_print_value (struct type *type, const gdb_byte *valaddr,
 	    base_valaddr = valaddr;
 	}
 
-      if (options->pretty)
+      if (options->prettyformat)
 	{
 	  fprintf_filtered (stream, "\n");
 	  print_spaces_filtered (2 * recurse, stream);

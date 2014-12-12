@@ -1687,15 +1687,15 @@ i386_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
  	{
 	  /* Make sure address is computed correctly as a 32bit
 	     integer even if CORE_ADDR is 64 bit wide.  */
- 	  struct minimal_symbol *s;
+ 	  struct bound_minimal_symbol s;
  	  CORE_ADDR call_dest;
 
 	  call_dest = pc + 5 + extract_signed_integer (buf, 4, byte_order);
 	  call_dest = call_dest & 0xffffffffU;
  	  s = lookup_minimal_symbol_by_pc (call_dest);
- 	  if (s != NULL
- 	      && SYMBOL_LINKAGE_NAME (s) != NULL
- 	      && strcmp (SYMBOL_LINKAGE_NAME (s), "__main") == 0)
+ 	  if (s.minsym != NULL
+ 	      && SYMBOL_LINKAGE_NAME (s.minsym) != NULL
+ 	      && strcmp (SYMBOL_LINKAGE_NAME (s.minsym), "__main") == 0)
  	    pc += 5;
  	}
     }
@@ -2094,7 +2094,7 @@ struct i386_insn i386_tramp_chain_on_stack_insns[] =
 /* Return whether PC points inside a stack trampoline.   */
 
 static int
-i386_in_stack_tramp_p (struct gdbarch *gdbarch, CORE_ADDR pc)
+i386_in_stack_tramp_p (CORE_ADDR pc)
 {
   gdb_byte insn;
   const char *name;
@@ -2123,8 +2123,7 @@ i386_stack_tramp_frame_sniffer (const struct frame_unwind *self,
 				void **this_cache)
 {
   if (frame_relative_level (this_frame) == 0)
-    return i386_in_stack_tramp_p (get_frame_arch (this_frame),
-				  get_frame_pc (this_frame));
+    return i386_in_stack_tramp_p (get_frame_pc (this_frame));
   else
     return 0;
 }
@@ -3352,7 +3351,7 @@ i386_pe_skip_trampoline_code (struct frame_info *frame,
       unsigned long indirect =
 	read_memory_unsigned_integer (pc + 2, 4, byte_order);
       struct minimal_symbol *indsym =
-	indirect ? lookup_minimal_symbol_by_pc (indirect) : 0;
+	indirect ? lookup_minimal_symbol_by_pc (indirect).minsym : 0;
       const char *symname = indsym ? SYMBOL_LINKAGE_NAME (indsym) : 0;
 
       if (symname)
@@ -3494,6 +3493,7 @@ i386_stap_parse_special_token (struct gdbarch *gdbarch,
 		  char *regname;
 		  int len;
 		  struct stoken str;
+		  char *endp;
 
 		  got_minus[0] = 0;
 		  if (*s == '+')
@@ -3504,7 +3504,8 @@ i386_stap_parse_special_token (struct gdbarch *gdbarch,
 		      got_minus[0] = 1;
 		    }
 
-		  displacements[0] = strtol (s, (char **) &s, 10);
+		  displacements[0] = strtol (s, &endp, 10);
+		  s = endp;
 
 		  if (*s != '+' && *s != '-')
 		    {
@@ -3521,7 +3522,8 @@ i386_stap_parse_special_token (struct gdbarch *gdbarch,
 		      got_minus[1] = 1;
 		    }
 
-		  displacements[1] = strtol (s, (char **) &s, 10);
+		  displacements[1] = strtol (s, &endp, 10);
+		  s = endp;
 
 		  if (*s != '+' && *s != '-')
 		    {
@@ -3538,7 +3540,8 @@ i386_stap_parse_special_token (struct gdbarch *gdbarch,
 		      got_minus[2] = 1;
 		    }
 
-		  displacements[2] = strtol (s, (char **) &s, 10);
+		  displacements[2] = strtol (s, &endp, 10);
+		  s = endp;
 
 		  if (*s != '(' || s[1] != '%')
 		    break;
@@ -3628,7 +3631,12 @@ i386_stap_parse_special_token (struct gdbarch *gdbarch,
 		    break;
 
 		  if (isdigit (*s))
-		    offset = strtol (s, (char **) &s, 10);
+		    {
+		      char *endp;
+
+		      offset = strtol (s, &endp, 10);
+		      s = endp;
+		    }
 
 		  if (*s != '(' || s[1] != '%')
 		    break;
@@ -3675,6 +3683,8 @@ i386_stap_parse_special_token (struct gdbarch *gdbarch,
 
 		  if (*s == ',')
 		    {
+		      char *endp;
+
 		      ++s;
 		      if (*s == '+')
 			++s;
@@ -3684,7 +3694,8 @@ i386_stap_parse_special_token (struct gdbarch *gdbarch,
 			  size_minus = 1;
 			}
 
-		      size = strtol (s, (char **) &s, 10);
+		      size = strtol (s, &endp, 10);
+		      s = endp;
 
 		      if (*s != ')')
 			break;

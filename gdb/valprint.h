@@ -24,14 +24,14 @@
    functions.  */
 struct value_print_options
 {
-  /* Pretty-printing control.  */
-  enum val_prettyprint pretty;
+  /* Pretty-formatting control.  */
+  enum val_prettyformat prettyformat;
 
-  /* Controls pretty printing of arrays.  */
-  int prettyprint_arrays;
+  /* Controls pretty formatting of arrays.  */
+  int prettyformat_arrays;
 
-  /* Controls pretty printing of structures.  */
-  int prettyprint_structs;
+  /* Controls pretty formatting of structures.  */
+  int prettyformat_structs;
 
   /* Controls printing of virtual tables.  */
   int vtblprint;
@@ -81,10 +81,12 @@ struct value_print_options
      share one flag, why not Pascal too?  */
   int pascal_static_field_print;
 
-  /* Controls Python pretty-printing.  */
+  /* If non-zero don't do Python pretty-printing.  */
   int raw;
 
-  /* If nonzero, print the value in "summary" form.  */
+  /* If nonzero, print the value in "summary" form.
+     If raw and summary are both non-zero, don't print non-scalar values
+     ("..." is printed instead).  */
   int summary;
 
   /* If nonzero, when printing a pointer, print the symbol to which it
@@ -101,8 +103,8 @@ extern struct value_print_options user_print_options;
 extern void get_user_print_options (struct value_print_options *opts);
 
 /* Initialize *OPTS to be a copy of the user print options, but with
-   pretty-printing disabled.  */
-extern void get_raw_print_options (struct value_print_options *opts);
+   pretty-formatting disabled.  */
+extern void get_no_prettyformat_print_options (struct value_print_options *);
 
 /* Initialize *OPTS to be a copy of the user print options, but using
    FORMAT as the formatting option.  */
@@ -203,6 +205,12 @@ extern void generic_printstr (struct ui_file *stream, struct type *type,
 			      int quote_char, int c_style_terminator,
 			      const struct value_print_options *options);
 
-extern void output_command (char *exp, int from_tty);
+/* Run the "output" command.  ARGS and FROM_TTY are the usual
+   arguments passed to all command implementations, except ARGS is
+   const.  */
+
+extern void output_command_const (const char *args, int from_tty);
+
+extern int val_print_scalar_type_p (struct type *type);
 
 #endif

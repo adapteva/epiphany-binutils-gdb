@@ -1,6 +1,6 @@
 /* Renesas / SuperH SH specific support for 32-bit ELF
    Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012
+   2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
    Free Software Foundation, Inc.
    Contributed by Ian Lance Taylor, Cygnus Support.
 
@@ -4425,6 +4425,12 @@ sh_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 
 	      check_segment[0] = check_segment[1] = -1;
 	    }
+	    /* We don't want warnings for non-NULL tests on undefined weak
+	       symbols.  */
+	    else if (r_type == R_SH_REL32
+		     && h
+		     && h->root.type == bfd_link_hash_undefweak) 
+	      check_segment[0] = check_segment[1] = -1;
 	  goto final_link_relocate;
 
 	case R_SH_GOTPLT32:
@@ -6025,6 +6031,10 @@ sh_elf_check_relocs (bfd *abfd, struct bfd_link_info *info, asection *sec,
 #endif
 	      h = (struct elf_link_hash_entry *) h->root.u.i.link;
 	    }
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       r_type = sh_elf_optimized_tls_reloc (info, r_type, h == NULL);
@@ -7261,7 +7271,9 @@ sh_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info)
 }
 
 static enum elf_reloc_type_class
-sh_elf_reloc_type_class (const Elf_Internal_Rela *rela)
+sh_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			 const asection *rel_sec ATTRIBUTE_UNUSED,
+			 const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {

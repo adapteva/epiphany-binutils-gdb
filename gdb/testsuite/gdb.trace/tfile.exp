@@ -20,7 +20,7 @@
 # ability to generate synthetic trace files directly, and the tfile
 # target is available to all GDB configs.
 
-load_lib "trace-support.exp";
+load_lib "trace-support.exp"
 
 gdb_exit
 gdb_start
@@ -33,21 +33,22 @@ if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 gdb_reinitialize_dir $srcdir/$subdir
 
 # Make sure we are starting fresh.
-remote_file host delete basic.tf
-remote_file host delete error.tf
-remote_file target delete basic.tf
-remote_file target delete error.tf
+remote_file host delete tfile-basic.tf
+remote_file host delete tfile-error.tf
+remote_file target delete tfile-basic.tf
+remote_file target delete tfile-error.tf
 
 remote_exec target "$binfile"
 # Copy tracefile from target to host through build.
-remote_download host [remote_upload target basic.tf] basic.tf
-remote_download host [remote_upload target error.tf] error.tf
+remote_download host [remote_upload target tfile-basic.tf] tfile-basic.tf
+remote_download host [remote_upload target tfile-error.tf] tfile-error.tf
 
 gdb_load $binfile
 
 # Program has presumably exited, now target a trace file it created.
 
-gdb_test "target tfile basic.tf" "Created tracepoint.*" "target tfile"
+gdb_test "target tfile tfile-basic.tf" "Created tracepoint.*" \
+    "target tfile"
 
 gdb_test "info trace" ".*tracepoint.*in write_basic_trace_file.*" \
     "info tracepoints on trace file"
@@ -64,7 +65,22 @@ gdb_test "print testglob" " = 31415" "print testglob on trace file"
 
 gdb_test "print testglob2" " = 271828" "print testglob2 on trace file"
 
+# This global is not covered by the trace frame, but since it's const,
+# we should be able to read it from the executable.
+
 gdb_test "print constglob" " = 10000" "print constglob on trace file"
+
+# Similarly, disassembly should find the read-only pieces in the executable.
+gdb_test "disassemble main" \
+    "Dump of assembler code for function main:.*   $hex <\\+0\\>:.*End of assembler dump\."
+
+# This global is also not covered by the trace frame, and since it's
+# non-const, we should _not_ read it from the executable, as that
+# would show the variable's initial value, not the current at time the
+# trace frame was created.
+
+gdb_test "print nonconstglob" \
+    " = <unavailable>" "print nonconstglob on trace file"
 
 gdb_test "tfind" "Target failed to find requested trace frame." \
     "tfind does not find a second frame in trace file"
@@ -92,7 +108,8 @@ gdb_start
 
 gdb_load $binfile
 
-gdb_test "target tfile error.tf" "Created tracepoint.*" "target tfile"
+gdb_test "target tfile tfile-error.tf" "Created tracepoint.*" \
+    "target tfile"
 
 gdb_test "tstatus" \
     "Using a trace file.*
@@ -102,11 +119,19 @@ Trace buffer has 256 bytes of 4096 bytes free \\(93% full\\).*
 Not looking at any trace frame.*" \
     "tstatus on error trace file"
 
+gdb_test "info threads" "No threads\..*"
+gdb_test "info inferiors" "\\* 1    <null>\[ \t\]+${binfile}.*"
+
 # Make sure we can reopen without error.
 gdb_test \
-    "interpreter-exec mi \"-target-select tfile basic.tf\"" \
+    "interpreter-exec mi \"-target-select tfile tfile-basic.tf\"" \
     "\\^connected.*"
 
 gdb_test "interpreter-exec mi \"-trace-status\"" \
-    "\\^done,supported=\"file\",trace-file=\".*basic.tf\",running=\"0\",stop-reason=\"request\",frames=\"${decimal}\",frames-created=\"${decimal}\",buffer-size=\"${decimal}\",buffer-free=\"${decimal}\",disconnected=\".*\",circular=\".*\",user-name=\"\",notes=\"\",start-time=\".*\",stop-time=\".*\"" \
+    "\\^done,supported=\"file\",trace-file=\".*tfile-basic.tf\",running=\"0\",stop-reason=\"request\",frames=\"${decimal}\",frames-created=\"${decimal}\",buffer-size=\"${decimal}\",buffer-free=\"${decimal}\",disconnected=\".*\",circular=\".*\",user-name=\"\",notes=\"\",start-time=\".*\",stop-time=\".*\"" \
     "-trace-status"
+
+# Test completion works well.
+
+gdb_test "target tfile tfile-basic\t" "Assuming tracepoint.*" \
+    "complete-command 'target tfile'"

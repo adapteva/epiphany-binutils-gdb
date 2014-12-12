@@ -33,6 +33,7 @@
 #include "tramp-frame.h"
 #include "breakpoint.h"
 #include "auxv.h"
+#include "xml-syscall.h"
 
 #include "arm-tdep.h"
 #include "arm-linux-tdep.h"
@@ -48,11 +49,8 @@
 #include "parser-defs.h"
 #include "user-regs.h"
 #include <ctype.h>
-
+#include "elf/common.h"
 #include "gdb_string.h"
-
-/* This is defined in <elf.h> on ARM GNU/Linux systems.  */
-#define AT_HWCAP        16
 
 extern int arm_apcs_32;
 
@@ -62,9 +60,9 @@ extern int arm_apcs_32;
    of the software interrupt the kernel stops the inferior with a
    SIGTRAP, and wakes the debugger.  */
 
-static const char arm_linux_arm_le_breakpoint[] = { 0x01, 0x00, 0x9f, 0xef };
+static const gdb_byte arm_linux_arm_le_breakpoint[] = { 0x01, 0x00, 0x9f, 0xef };
 
-static const char arm_linux_arm_be_breakpoint[] = { 0xef, 0x9f, 0x00, 0x01 };
+static const gdb_byte arm_linux_arm_be_breakpoint[] = { 0xef, 0x9f, 0x00, 0x01 };
 
 /* However, the EABI syscall interface (new in Nov. 2005) does not look at
    the operand of the swi if old-ABI compatibility is disabled.  Therefore,
@@ -72,24 +70,24 @@ static const char arm_linux_arm_be_breakpoint[] = { 0xef, 0x9f, 0x00, 0x01 };
    version 2.5.70 (May 2003), so should be a safe assumption for EABI
    binaries.  */
 
-static const char eabi_linux_arm_le_breakpoint[] = { 0xf0, 0x01, 0xf0, 0xe7 };
+static const gdb_byte eabi_linux_arm_le_breakpoint[] = { 0xf0, 0x01, 0xf0, 0xe7 };
 
-static const char eabi_linux_arm_be_breakpoint[] = { 0xe7, 0xf0, 0x01, 0xf0 };
+static const gdb_byte eabi_linux_arm_be_breakpoint[] = { 0xe7, 0xf0, 0x01, 0xf0 };
 
 /* All the kernels which support Thumb support using a specific undefined
    instruction for the Thumb breakpoint.  */
 
-static const char arm_linux_thumb_be_breakpoint[] = {0xde, 0x01};
+static const gdb_byte arm_linux_thumb_be_breakpoint[] = {0xde, 0x01};
 
-static const char arm_linux_thumb_le_breakpoint[] = {0x01, 0xde};
+static const gdb_byte arm_linux_thumb_le_breakpoint[] = {0x01, 0xde};
 
 /* Because the 16-bit Thumb breakpoint is affected by Thumb-2 IT blocks,
    we must use a length-appropriate breakpoint for 32-bit Thumb
    instructions.  See also thumb_get_next_pc.  */
 
-static const char arm_linux_thumb2_be_breakpoint[] = { 0xf7, 0xf0, 0xa0, 0x00 };
+static const gdb_byte arm_linux_thumb2_be_breakpoint[] = { 0xf7, 0xf0, 0xa0, 0x00 };
 
-static const char arm_linux_thumb2_le_breakpoint[] = { 0xf0, 0xf7, 0x00, 0xa0 };
+static const gdb_byte arm_linux_thumb2_le_breakpoint[] = { 0xf0, 0xf7, 0x00, 0xa0 };
 
 /* Description of the longjmp buffer.  The buffer is treated as an array of 
    elements of size ARM_LINUX_JB_ELEMENT_SIZE.
@@ -794,6 +792,59 @@ arm_linux_sigreturn_return_addr (struct frame_info *frame,
   return 0;
 }
 
+/* At a ptrace syscall-stop, return the syscall number.  This either
+   comes from the SWI instruction (OABI) or from r7 (EABI).
+
+   When the function fails, it should return -1.  */
+
+static LONGEST
+arm_linux_get_syscall_number (struct gdbarch *gdbarch,
+			      ptid_t ptid)
+{
+  struct regcache *regs = get_thread_regcache (ptid);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  ULONGEST pc;
+  ULONGEST cpsr;
+  ULONGEST t_bit = arm_psr_thumb_bit (gdbarch);
+  int is_thumb;
+  ULONGEST svc_number = -1;
+
+  regcache_cooked_read_unsigned (regs, ARM_PC_REGNUM, &pc);
+  regcache_cooked_read_unsigned (regs, ARM_PS_REGNUM, &cpsr);
+  is_thumb = (cpsr & t_bit) != 0;
+
+  if (is_thumb)
+    {
+      regcache_cooked_read_unsigned (regs, 7, &svc_number);
+    }
+  else
+    {
+      enum bfd_endian byte_order_for_code = 
+	gdbarch_byte_order_for_code (gdbarch);
+
+      /* PC gets incremented before the syscall-stop, so read the
+	 previous instruction.  */
+      unsigned long this_instr = 
+	read_memory_unsigned_integer (pc - 4, 4, byte_order_for_code);
+
+      unsigned long svc_operand = (0x00ffffff & this_instr);
+
+      if (svc_operand)
+	{
+          /* OABI */
+	  svc_number = svc_operand - 0x900000;
+	}
+      else
+	{
+          /* EABI */
+	  regcache_cooked_read_unsigned (regs, 7, &svc_number);
+	}
+    }
+
+  return svc_number;
+}
+
 /* When FRAME is at a syscall instruction, return the PC of the next
    instruction to be executed.  */
 
@@ -1088,6 +1139,7 @@ arm_stap_parse_special_token (struct gdbarch *gdbarch,
     {
       /* Temporary holder for lookahead.  */
       const char *tmp = p->arg;
+      char *endp;
       /* Used to save the register name.  */
       const char *start;
       char *regname;
@@ -1140,7 +1192,8 @@ arm_stap_parse_special_token (struct gdbarch *gdbarch,
 	  got_minus = 1;
 	}
 
-      displacement = strtol (tmp, (char **) &tmp, 10);
+      displacement = strtol (tmp, &endp, 10);
+      tmp = endp;
 
       /* Skipping last `]'.  */
       if (*tmp++ != ']')
@@ -1291,6 +1344,10 @@ arm_linux_init_abi (struct gdbarch_info info,
 					arm_stap_parse_special_token);
 
   tdep->syscall_next_pc = arm_linux_syscall_next_pc;
+
+  /* `catch syscall' */
+  set_xml_syscall_file_name ("syscalls/arm-linux.xml");
+  set_gdbarch_get_syscall_number (gdbarch, arm_linux_get_syscall_number);
 
   /* Syscall record.  */
   tdep->arm_swi_record = NULL;

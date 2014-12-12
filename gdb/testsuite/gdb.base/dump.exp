@@ -17,10 +17,8 @@
 # This is a test for the gdb command "dump".
 
 
-set testfile "dump"
+standard_testfile
 
-set srcfile  ${testfile}.c
-set binfile  ${objdir}/${subdir}/${testfile}
 set options  {debug}
 
 set is64bitonly "no"
@@ -30,10 +28,6 @@ if [istarget "alpha*-*-*"] then {
     # SREC etc cannot handle 64-bit addresses.  Force the test
     # program into the low 31 bits of the address space.
     lappend options "additional_flags=-Wl,-taso"
-}
-
-if {[istarget "ia64*-*-*"] || [istarget "hppa64-*-*"]} then {
-    set is64bitonly "yes"
 }
 
 if {[istarget "spu*-*-*"]} then {
@@ -57,6 +51,15 @@ gdb_test "dump mem /dev/null 0x10 0x20" "Cannot access memory at address 0x10" \
 	 "inaccessible memory is reported"
 
 gdb_load ${binfile}
+
+# Check the address of a variable.  If it is bigger than 32-bit,
+# assume our target has 64-bit addresses that are not supported by SREC,
+# IHEX and TEKHEX.  We skip those tests then.
+set max_32bit_address "0xffffffff"
+set data_address [get_hexadecimal_valueof "&intarray" 0x100000000]
+if {${data_address} > ${max_32bit_address}} then {
+    set is64bitonly "yes"
+}
 
 # Clean up any stale output files from previous test runs
 
@@ -129,8 +132,9 @@ proc capture_value { expression args } {
 
     set output_string ""
     if {[llength $args] > 0} {
-	# Convert $args into a simple string.
-	set test "[join $args]; capture $expression"
+	# Convert $args into a simple string and don't use EXPRESSION
+	# in the test name.
+	set test "[join $args]; capture"
     } {
 	set test "capture $expression"
     }
@@ -440,14 +444,14 @@ gdb_test_multiple "set endian $endian" "set endianness" {
 # Reload saved values one by one, and compare.
 
 if { ![string compare $array_val \
-	   [capture_value "intarray" "file binfile"]] } then {
+	   [capture_value "intarray" "file binfile; intarray"]] } then {
     fail "start with intarray un-initialized"
 } else {
     pass "start with intarray un-initialized"
 }
 
 if { ![string compare $struct_val \
-	   [capture_value "intstruct" "file binfile"]] } then {
+	   [capture_value "intstruct" "file binfile; intstruct"]] } then {
     fail "start with intstruct un-initialized"
 } else {
     pass "start with intstruct un-initialized"
