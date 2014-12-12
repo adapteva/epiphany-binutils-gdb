@@ -482,6 +482,43 @@ target_load (char *arg, int from_tty)
   (*current_target.to_load) (&current_target, arg, from_tty);
 }
 
+/* Possible terminal states.  */
+
+enum terminal_state
+  {
+    /* The inferior's terminal settings are in effect.  */
+    terminal_is_inferior = 0,
+
+    /* Some of our terminal settings are in effect, enough to get
+       proper output.  */
+    terminal_is_ours_for_output = 1,
+
+    /* Our terminal settings are in effect, for output and input.  */
+    terminal_is_ours = 2
+  };
+
+static enum terminal_state terminal_state;
+
+/* See target.h.  */
+
+void
+target_terminal_init (void)
+{
+  (*current_target.to_terminal_init) (&current_target);
+
+  terminal_state = terminal_is_ours;
+}
+
+/* See target.h.  */
+
+int
+target_terminal_is_inferior (void)
+{
+  return (terminal_state == terminal_is_inferior);
+}
+
+/* See target.h.  */
+
 void
 target_terminal_inferior (void)
 {
@@ -492,9 +529,36 @@ target_terminal_inferior (void)
   if (target_can_async_p () && !sync_execution)
     return;
 
+  if (terminal_state == terminal_is_inferior)
+    return;
+
   /* If GDB is resuming the inferior in the foreground, install
      inferior's terminal modes.  */
   (*current_target.to_terminal_inferior) (&current_target);
+  terminal_state = terminal_is_inferior;
+}
+
+/* See target.h.  */
+
+void
+target_terminal_ours (void)
+{
+  if (terminal_state == terminal_is_ours)
+    return;
+
+  (*current_target.to_terminal_ours) (&current_target);
+  terminal_state = terminal_is_ours;
+}
+
+/* See target.h.  */
+
+void
+target_terminal_ours_for_output (void)
+{
+  if (terminal_state != terminal_is_inferior)
+    return;
+  (*current_target.to_terminal_ours_for_output) (&current_target);
+  terminal_state = terminal_is_ours_for_output;
 }
 
 static void
@@ -2423,10 +2487,11 @@ target_require_runnable (void)
       if (t->to_create_inferior != NULL)
 	return;
 
-      /* Do not worry about thread_stratum targets that can not
+      /* Do not worry about targets at certain strata that can not
 	 create inferiors.  Assume they will be pushed again if
 	 necessary, and continue to the process_stratum.  */
       if (t->to_stratum == thread_stratum
+	  || t->to_stratum == record_stratum
 	  || t->to_stratum == arch_stratum)
 	continue;
 

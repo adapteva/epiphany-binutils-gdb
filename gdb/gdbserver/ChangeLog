@@ -1,3 +1,24 @@
+2014-10-15  Joel Brobecker  <brobecker@adacore.com>
+
+	PR server/17487
+	* win32-i386-low.c (i386_get_thread_context): Do not set
+	dr->dr_control_mirror.
+
+2014-07-11  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (kill_wait_lwp): New function, based on
+	kill_one_lwp_callback, but use my_waitpid directly.
+	(kill_one_lwp_callback, linux_kill): Use it.
+
+2014-06-23  Pedro Alves  <palves@redhat.com>
+
+	* linux-x86-low.c (x86_linux_prepare_to_resume): Clear DR_CONTROL
+	before setting DR0..DR3.
+	* i386-low.c (i386_remove_aligned_watchpoint): Clear all bits of
+	DR_CONTROL related to the debug register slot being disabled.  If
+	all slots are vacant, clear local slowdown as well, and assert
+	DR_CONTROL is 0.
+
 2014-06-05  Joel Brobecker  <brobecker@adacore.com>
 
 	* development.sh: Delete.

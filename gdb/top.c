@@ -68,6 +68,7 @@
 #include "ui-out.h"
 #include "cli-out.h"
 #include "tracepoint.h"
+#include "inf-loop.h"
 
 extern void initialize_all_files (void);
 
@@ -374,6 +375,23 @@ check_frame_language_change (void)
     }
 }
 
+/* See top.h.  */
+
+void
+maybe_wait_sync_command_done (int was_sync)
+{
+  /* If the interpreter is in sync mode (we're running a user
+     command's list, running command hooks or similars), and we
+     just ran a synchronous command that started the target, wait
+     for that command to end.  */
+  if (!interpreter_async && !was_sync && sync_execution)
+    {
+      while (gdb_do_one_event () >= 0)
+	if (!sync_execution)
+	  break;
+    }
+}
+
 /* Execute the line P as a command, in the current user context.
    Pass FROM_TTY as second argument to the defining function.  */
 
@@ -460,16 +478,7 @@ execute_command (char *p, int from_tty)
       else
 	cmd_func (c, arg, from_tty);
 
-      /* If the interpreter is in sync mode (we're running a user
-	 command's list, running command hooks or similars), and we
-	 just ran a synchronous command that started the target, wait
-	 for that command to end.  */
-      if (!interpreter_async && !was_sync && sync_execution)
-	{
-	  while (gdb_do_one_event () >= 0)
-	    if (!sync_execution)
-	      break;
-	}
+      maybe_wait_sync_command_done (was_sync);
 
       /* If this command has been post-hooked, run the hook last.  */
       execute_cmd_post_hook (c);
@@ -756,15 +765,24 @@ gdb_readline_wrapper_line (char *line)
   after_char_processing_hook = NULL;
 
   /* Prevent parts of the prompt from being redisplayed if annotations
-     are enabled, and readline's state getting out of sync.  */
+     are enabled, and readline's state getting out of sync.  We'll
+     reinstall the callback handler, which puts the terminal in raw
+     mode (or in readline lingo, in prepped state), when we're next
+     ready to process user input, either in display_gdb_prompt, or if
+     we're handling an asynchronous target event and running in the
+     background, just before returning to the event loop to process
+     further input (or more target events).  */
   if (async_command_editing_p)
-    rl_callback_handler_remove ();
+    gdb_rl_callback_handler_remove ();
 }
 
 struct gdb_readline_wrapper_cleanup
   {
     void (*handler_orig) (char *);
     int already_prompted_orig;
+
+    /* Whether the target was async.  */
+    int target_is_async_orig;
   };
 
 static void
@@ -776,11 +794,22 @@ gdb_readline_wrapper_cleanup (void *arg)
 
   gdb_assert (input_handler == gdb_readline_wrapper_line);
   input_handler = cleanup->handler_orig;
+
+  /* Don't restore our input handler in readline yet.  That would make
+     readline prep the terminal (putting it in raw mode), while the
+     line we just read may trigger execution of a command that expects
+     the terminal in the default cooked/canonical mode, such as e.g.,
+     running Python's interactive online help utility.  See
+     gdb_readline_wrapper_line for when we'll reinstall it.  */
+
   gdb_readline_wrapper_result = NULL;
   gdb_readline_wrapper_done = 0;
 
   after_char_processing_hook = saved_after_char_processing_hook;
   saved_after_char_processing_hook = NULL;
+
+  if (cleanup->target_is_async_orig)
+    target_async (inferior_event_handler, 0);
 
   xfree (cleanup);
 }
@@ -798,7 +827,12 @@ gdb_readline_wrapper (char *prompt)
 
   cleanup->already_prompted_orig = rl_already_prompted;
 
+  cleanup->target_is_async_orig = target_is_async_p ();
+
   back_to = make_cleanup (gdb_readline_wrapper_cleanup, cleanup);
+
+  if (cleanup->target_is_async_orig)
+    target_async (NULL, NULL);
 
   /* Display our prompt and prevent double prompt display.  */
   display_gdb_prompt (prompt);
@@ -1187,6 +1221,15 @@ This GDB was configured as follows:\n\
   fprintf_filtered (stream, _("\
              --with-python=%s%s\n\
 "), WITH_PYTHON_PATH, PYTHON_PATH_RELOCATABLE ? " (relocatable)" : "");
+#endif
+#if HAVE_GUILE
+  fprintf_filtered (stream, _("\
+             --with-guile\n\
+"));
+#else
+  fprintf_filtered (stream, _("\
+             --without-guile\n\
+"));
 #endif
 #ifdef RELOC_SRCDIR
   fprintf_filtered (stream, _("\

@@ -1053,6 +1053,7 @@ fi
 AC_SUBST(PYTHON_CFLAGS)
 AC_SUBST(PYTHON_CPPFLAGS)
 AC_SUBST(PYTHON_LIBS)
+AM_CONDITIONAL(HAVE_PYTHON, test "${have_libpython}" != no)
 
 # -------------------- #
 # Check for libguile.  #
@@ -1142,8 +1143,9 @@ dnl        It could be a shell script.  It is invoked as:
 dnl        pkg-config --exists $version
 dnl        pkg-config --cflags $version
 dnl        pkg-config --libs $version
-dnl        $version will be the default guile version (currently guile-2.0),
-dnl        but the program is free to ignore this.
+dnl        pkg-config --variable guild $version
+dnl        The script will be called with $version having each value in
+dnl        $try_guile_versions until --exists indicates success.
 
 AC_ARG_WITH(guile,
   AS_HELP_STRING([--with-guile@<:@=GUILE@:>@], [include guile support (auto/yes/no/<guile-version>/<pkg-config-program>)]),
@@ -1194,6 +1196,26 @@ yes)
 esac
 
 if test "${have_libguile}" != no; then
+  dnl Get the name of the 'guild' program.
+  case "${with_guile}" in
+  [[\\/]]* | ?:[[\\/]]*)
+    GDB_GUILE_PROGRAM_NAMES(["${with_guile}"], ["${guile_version}"])
+    ;;
+  *)
+    GDB_GUILE_PROGRAM_NAMES(["${pkg_config_prog_path}"], ["${guile_version}"])
+    ;;
+  esac
+
+  dnl Make sure guild can handle this host.
+  GDB_TRY_GUILD([$srcdir/guile/lib/gdb/support.scm])
+  dnl If not, disable guile support.
+  if test "$ac_cv_guild_ok" = no; then
+    have_libguile=no
+    AC_MSG_WARN(disabling guile support, $GUILD fails compiling for $host)
+  fi
+fi
+
+if test "${have_libguile}" != no; then
   AC_DEFINE(HAVE_GUILE, 1, [Define if Guile interpreter is being linked in.])
   CONFIG_OBS="$CONFIG_OBS \$(SUBDIR_GUILE_OBS)"
   CONFIG_DEPS="$CONFIG_DEPS \$(SUBDIR_GUILE_DEPS)"
@@ -1217,6 +1239,7 @@ else
 fi
 AC_SUBST(GUILE_CPPFLAGS)
 AC_SUBST(GUILE_LIBS)
+AM_CONDITIONAL(HAVE_GUILE, test "${have_libguile}" != no)
 
 # --------------------- #
 # Check for libmcheck.  #
@@ -2417,6 +2440,7 @@ else
 			struct bt_ctf_event *event = NULL;
 			const struct bt_definition *scope;
 
+			bt_iter_set_pos (bt_ctf_get_iter (NULL), pos);
 			scope = bt_ctf_get_top_level_scope (event,
 			      				   BT_STREAM_EVENT_HEADER);
 		        bt_ctf_get_uint64 (bt_ctf_get_field (event, scope, "id"));

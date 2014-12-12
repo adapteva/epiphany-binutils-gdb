@@ -4649,7 +4649,7 @@ append_pending_thread_resumptions (char *p, char *endp, ptid_t ptid)
 {
   struct thread_info *thread;
 
-  ALL_THREADS (thread)
+  ALL_NON_EXITED_THREADS (thread)
     if (ptid_match (thread->ptid, ptid)
 	&& !ptid_equal (inferior_ptid, thread->ptid)
 	&& thread->suspend.stop_signal != GDB_SIGNAL_0
@@ -4841,7 +4841,9 @@ static void
 async_handle_remote_sigint (int sig)
 {
   signal (sig, async_handle_remote_sigint_twice);
-  mark_async_signal_handler (async_sigint_remote_token);
+  /* Note we need to go through gdb_call_async_signal_handler in order
+     to wake up the event loop on Windows.  */
+  gdb_call_async_signal_handler (async_sigint_remote_token, 0);
 }
 
 /* Signal handler for SIGINT, installed after SIGINT has already been
@@ -4851,7 +4853,8 @@ static void
 async_handle_remote_sigint_twice (int sig)
 {
   signal (sig, async_handle_remote_sigint);
-  mark_async_signal_handler (async_sigint_remote_twice_token);
+  /* See note in async_handle_remote_sigint.  */
+  gdb_call_async_signal_handler (async_sigint_remote_twice_token, 0);
 }
 
 /* Perform the real interruption of the target execution, in response
@@ -7155,7 +7158,11 @@ putpkt_binary (char *buf, int cnt)
      running.  This is not a problem in non-stop mode, because in that
      case, the stub is always ready to process serial input.  */
   if (!non_stop && target_can_async_p () && rs->waiting_for_stop_reply)
-    error (_("Cannot execute this command while the target is running."));
+    {
+      error (_("Cannot execute this command while the target is running.\n"
+	       "Use the \"interrupt\" command to stop the target\n"
+	       "and then try again."));
+    }
 
   /* We're sending out a new packet.  Make sure we don't look at a
      stale cached response.  */

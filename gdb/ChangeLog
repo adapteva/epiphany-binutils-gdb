@@ -1,3 +1,514 @@
+2014-10-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.8.1.DATE-cvs.
+
+2014-10-29  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.8.1 released.
+
+2014-10-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.8.1.
+
+2014-10-29  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17408
+	* infrun.c (switch_back_to_stepped_thread): Use currently_stepping
+	instead of assuming a thread with a stepping range is always
+	stepping.
+
+2014-10-29  Pedro Alves  <palves@redhat.com>
+
+	PR python/17372
+	* event-top.c (change_line_handler): Call
+	gdb_rl_callback_handler_remove instead of
+	rl_callback_handler_remove.
+	(callback_handler_installed): New global.
+	(gdb_rl_callback_handler_remove, gdb_rl_callback_handler_install)
+	(gdb_rl_callback_handler_reinstall): New functions.
+	(display_gdb_prompt): Call gdb_rl_callback_handler_remove and
+	gdb_rl_callback_handler_install instead of
+	rl_callback_handler_remove and rl_callback_handler_install.
+	(gdb_disable_readline): Call gdb_rl_callback_handler_remove
+	instead of rl_callback_handler_remove.
+	* event-top.h (gdb_rl_callback_handler_remove)
+	(gdb_rl_callback_handler_install)
+	(gdb_rl_callback_handler_reinstall): New declarations.
+	* infrun.c (reinstall_readline_callback_handler_cleanup): New
+	cleanup function.
+	(fetch_inferior_event): Install it.
+	* top.c (gdb_readline_wrapper_line) Call
+	gdb_rl_callback_handler_remove instead of
+	rl_callback_handler_remove.
+	(gdb_readline_wrapper_cleanup): Don't call
+	rl_callback_handler_install.
+
+2014-10-17  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17471
+	* infcmd.c (strip_bg_char): Change prototype and rewrite.  Now
+	returns a copy of the input.
+	(run_command_1, continue_command, step_1, jump_command)
+	(signal_command, until_command, advance_command, finish_command)
+	(attach_command): Adjust and install a cleanup to free the
+	stripped args.
+
+2014-10-17  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17300
+	* infcmd.c (continue_1): If continuing all threads in the
+	foreground, make sure the inferior's terminal settings are put in
+	effect.
+
+2014-10-17  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17472
+	* annotate.c (annotate_breakpoints_invalid): Use
+	target_terminal_our_for_output instead of target_terminal_ours.
+	Give back the terminal to the target.
+	(annotate_frames_invalid): Likewise.
+
+2014-10-17  Pedro Alves  <palves@redhat.com>
+
+	* target.c (enum terminal_state): New enum.
+	(terminal_state): New global.
+	(target_terminal_init): New function.
+	(target_terminal_inferior): Skip if inferior already owns the
+	terminal.
+	(target_terminal_ours, target_terminal_ours_for_output): New
+	functions.
+	* target.h (target_terminal_init): Convert to function prototype.
+	(target_terminal_ours_for_output): Convert to function prototype
+	and tweak comment.
+	(target_terminal_ours): Convert to function prototype and tweak
+	comment.
+	* windows-nat.c (do_initial_windows_stuff): Call
+	target_terminal_init instead of child_terminal_init_with_pgrp.
+
+2014-10-15  Doug Evans  <dje@google.com>
+	    Walfred Tedeschi  <walfred.tedeschi@intel.com>
+
+	PR python/17364
+	* python/lib/gdb/__init__.py (packages): Add "printer".
+	* python/lib/gdb/command/bound_registers.py: Moved to ...
+	* python/lib/gdb/printer/bound_registers.py: ... here.
+	Add printer to global set of builtin printers.  Rename printer from
+	"bound" to "mpx_bound128".
+	* python/lib/gdb/printing.py (_builtin_pretty_printers): New global,
+	registered as global "builtin" printer.
+	(add_builtin_pretty_printer): New function.
+	* data-directory/Makefile.in (PYTHON_FILE_LIST): Update, and add
+	gdb/printer/__init__.py.
+
+2014-10-01  Pedro Alves  <palves@redhat.com>
+
+	* features/aarch64-core.xml (cpsr): Change back to 32-bit.
+	* features/aarch64.c: Regenerate.
+
+2014-09-11  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17347
+	* main.c: Include "infrun.h".
+	(catch_command_errors, catch_command_errors_const): Wait for the
+	foreground command to complete.
+	* top.c (maybe_wait_sync_command_done): New function, factored out
+	from ...
+	(maybe_wait_sync_command_done): ... here.
+	* top.h (maybe_wait_sync_command_done): New declaration.
+
+2014-09-09  Doug Evans  <xdje42@gmail.com>
+
+	PR guile/17367
+	* acinclude.m4 (GDB_GUILE_PROGRAM_NAMES): Pass guile version as
+	last parameter to pkg-config, not first.
+	* configure.ac: Pass --with-guile provided pkg-config path to
+	GDB_GUILE_PROGRAM_NAMES.
+	* configure: Regenerate.
+
+2014-09-09  Doug Evans  <xdje42@gmail.com>
+
+	PR 17247
+	* guile.c: #include <signal.h>.
+	(_initialize_guile): Block SIGCHLD while initializing Guile.
+
+	Replaces the following, which is reverted.
+
+	2014-07-26  Doug Evans  <xdje42@gmail.com>
+
+	PR 17185
+	* configure.ac: Add check for header gc/gc.h.
+	Add check for function setenv.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* guile/guile.c (_initialize_guile): Add workaround for libgc 7.4.0.
+
+2014-09-07  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR python/17355
+	* python/py-framefilter.c (py_print_single_arg): Handle NULL FA->VAL.
+	Fix goto out of TRY_CATCH.
+
+2014-08-30  Siva Chandra Reddy  <sivachandra@google.com>
+
+	* python/lib/gdb/command/xmethods.py (set_xm_status1): Use the
+	'items'	methods instead of 'iteritems' method on dictionaries.
+
+2014-08-27  Yao Qi  <yao@codesourcery.com>
+
+	* ctf.c (CTF_FILE_MIN_SIZE): Remove.
+	(ctf_end): Remove code.
+
+2014-08-21  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* linux-tdep.c (linux_corefile_thread_callback): Ignore THREAD_EXITED.
+	(linux_make_corefile_notes): call update_thread_list, protected against
+	exceptions.
+
+2014-08-15  Eli Zaretskii  <eliz@gnu.org>
+
+	* dcache.h: Include target.h, to avoid compile time warnings.
+
+2014-08-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbarch.sh: #include "frame.h" in gdbarch.h.  Delete "struct
+	frame_info" partial declaration.
+	* gdbarch.h: Regenerate.
+
+2014-08-13  Yao Qi  <yao@codesourcery.com>
+
+	PR build/17104
+	* configure.ac: Use local variable 'pos'.
+	* configure: Regenerated.
+
+2014-08-04  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* NEWS (Changes in GDB-4.0): Move Intel MPX and Intel AVX-512 items ...
+	(Changes in GDB 7.8): ... here.
+
+2014-07-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.8.0.DATE-cvs.
+
+2014-07-29  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.8 released.
+
+2014-07-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.8.
+
+2014-07-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Change "Changes since GDB 7.7" into "Changes in GDB 7.8".
+
+2014-07-29  Yao Qi  <yao@codesourcery.com>
+
+	PR gdb/17206
+	* infcmd.c (until_next_command): Set step_range_end to PC + 1.
+
+2014-07-28  Doug Evans  <xdje42@gmail.com>
+
+	PR guile/17203
+	* guile/scm-param.c (pascm_parameter_defined_p): New function.
+	(gdbscm_register_parameter_x): Call it.  Raise error for pre-existing
+	parameters.
+
+2014-07-28  Edjunior Barbosa Machado  <emachado@linux.vnet.ibm.com>
+
+	* ppc-linux-nat.c (ppc_linux_can_use_hw_breakpoint): Report no hardware
+	breakpoint support correctly.
+
+2014-07-26  Ludovic Courtès  <ludo@gnu.org>
+	    Doug Evans  <xdje42@gmail.com>
+
+	PR guile/17146
+	* acinclude.m4 (GDB_GUILE_PROGRAM_NAMES): New macro.
+	(GDB_GUILD_TARGET_FLAG, GDB_TRY_GUILD): New macros.
+	* configure.ac: Try to use guild to compile an scm file, if it fails
+	then disable guile support.
+	* configure: Regenerate.
+	* data-directory/Makefile.in (GUILE_SOURCE_FILES): Renamed from
+	GUILE_FILE_LIST.
+	(GUILE_COMPILED_FILES): New variable.
+	(GUILE_FILES) Update.
+	(GUILD, GUILD_TARGET_FLAG, GUILD_COMPILE_FLAGS): New variables.
+	(stamp-guile): Compile scm files.
+	* guile/guile.c (boot_guile_support): New function.
+	(standard_throw_args_p): New function.
+	(print_standard_throw_error, print_throw_error): New functions.
+	(handle_boot_error): New function.
+	(initialize_scheme_side): Rewrite to call boot_guile_support.
+	* guile/lib/gdb/boot.scm: Update %load-compiled-path.  Load gdb.go.
+	* guile/lib/gdb/init.scm (%silence-compiler-warnings%): New function.
+
+2014-07-26  Ludovic Courtès  <ludo@gnu.org>
+	    Doug Evans  <xdje42@gmail.com>
+
+	PR guile/17146
+	* data-directory/Makefile.in (GUILE_FILES): Add support.scm.
+	* guile/lib/gdb/support.scm: New file.
+	* guile/guile.c (gdbscm_init_module_name): Change to "gdb".
+	* guile/lib/gdb.scm: Load gdb/init.scm as an include file.
+	All uses updated.
+	* guile/lib/gdb/init.scm (SCM_ARG1, SCM_ARG2): Moved to support.scm.
+	All uses updated.
+	(%assert-type): Ditto, and renamed to assert-type.
+	(%exception-print-style): Delete.
+
+2014-07-26  Doug Evans  <xdje42@gmail.com>
+
+	PR build/17105
+	* configure.ac: Add AM_CONDITIONALs for HAVE_PYTHON, HAVE_GUILE.
+	* configure: Regenerate.
+	* data-directory/Makefile.in (PYTHON_FILE_LIST): Renamed from
+	PYTHON_FILES.
+	(PYTHON_FILES): New variable.
+	(GUILE_FILE_LIST): Renamed from GUILE_FILES.
+	(GUILE_FILES): New variable.
+	(stamp-python, install-python, uninstall-python): Handle empty
+	file list.
+	(stamp-guile, install-guile, uninstall-guile): Ditto.
+
+2014-07-26  Doug Evans  <xdje42@gmail.com>
+
+	PR guile/17177
+	* guile/lib/gdb.scm (pretty-printers): Export.
+	(set-pretty-printers!): Export.
+	* guile/lib/gdb/printing.scm (gdb module): Update.
+	(prepend-pretty-printer!, append-pretty-printer!): Update.
+	* guile/scm-pretty-print.c (pretty_printer_list_name): Delete.
+	(pretty_printer_list_var): Delete.
+	(pretty_printer_list): New static global.
+	(gdbscm_pretty_printers): New function.
+	(gdbscm_set_pretty_printers_x): New function.
+	(ppscm_find_pretty_printer_from_gdb): Update.
+	(pretty_printer_functions): Add pretty-printers, set-pretty-printers!.
+	(gdbscm_initialize_pretty_printers): Update.
+
+2014-07-26  Doug Evans  <xdje42@gmail.com>
+
+	PR 17185
+	* configure.ac: Add check for header gc/gc.h.
+	Add check for function setenv.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* guile/guile.c (_initialize_guile): Add workaround for libgc 7.4.0.
+
+2014-07-24  Pedro Alves  <palves@redhat.com>
+
+	* tui/tui-io.c (tui_prep_terminal): Handle NULL rl_prompt.
+
+2014-07-22  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* stack.c (read_frame_arg): Verify value_optimized_out before calling
+	value_available_contents_eq.
+
+2014-07-22  Pedro Alves  <palves@redhat.com>
+
+	* value.c (allocate_optimized_out_value): Don't mark value as
+	non-lazy.
+
+2014-07-20  Doug Evans  <dje@google.com>
+
+	PR server/17147
+	* remote.c (putpkt_binary): Add text to error message.
+
+2014-07-18  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.7.91.DATE-cvs.
+
+2014-07-18  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.7.91 released.
+
+2014-07-18  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.7.91.
+
+2014-07-17  Doug Evans  <dje@google.com>
+
+	PR gdb/17170
+	* maint.c (count_symtabs_and_blocks): Handle NULL
+	current_program_space.
+	(report_command_stats): Check global enabled flag in addition to
+	recorded enabled flag.
+	(make_command_stats_cleanup): Handle msg_type == 0, startup.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	* utils.c (prompt_for_continue): Call target_terminal_ours.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	* inf-loop.c (inferior_event_handler): Use TRY_CATCH instead of
+	catch_errors.  Don't re-enable stdin or notify observers where,
+	and rethrow error.
+	(fetch_inferior_event_wrapper): Delete.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17072
+	* top.c: Include "inf-loop.h".
+	(struct gdb_readline_wrapper_cleanup) <target_is_async_orig>: New
+	field.
+	(gdb_readline_wrapper_cleanup): Make the target async again, if it
+	was async before.
+	(gdb_readline_wrapper): Store whether the target is async, and
+	make it sync.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17072
+	* top.c (gdb_readline_wrapper_line): Tweak comment.
+	(gdb_readline_wrapper_cleanup): If readline is enabled, reinstall
+	the input handler callback.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17072
+	* main.c: Include event-top.h.
+	(handle_command_errors): New function.
+	(catch_command_errors, catch_command_errors_const): Use it.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	* exceptions.c (catch_command_errors, catch_command_errors_const):
+	Moved to main.c.
+	* exceptions.h (catch_command_errors_ftype)
+	(catch_command_errors_const_ftype): Moved to main.c.
+	(catch_command_errors, catch_command_errors_const): Delete
+	declarations.
+	* main.c (catch_command_errors_ftype)
+	(catch_command_errors_const_ftype): Moved here from exceptions.h.
+	(catch_command_errors, catch_command_errors_const)): Moved here
+	from exceptions.c and make static.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	* exceptions.c (print_any_exception): Delete.
+	(catch_exceptions_with_msg): Use exception_print instead of
+	print_any_exception.
+	(catch_errors): Use exception_fprintf instead of
+	print_any_exception.
+	(catch_command_errors, catch_command_errors_const): Use
+	exception_print instead of print_any_exception.
+
+2014-07-14  Pedro Alves  <palves@redhat.com>
+
+	* infcall.c (run_inferior_call): Set 'sync_execution' while
+	running the inferior call.
+
+2014-07-14  Tom Tromey  <tromey@redhat.com>
+
+	PR exp/17106:
+	* gdbtypes.c (is_dynamic_type_internal): New function, from
+	is_dynamic_type.
+	(is_dynamic_type): Rewrite.
+	(resolve_dynamic_union): Use resolve_dynamic_type_internal.
+	(resolve_dynamic_struct): Likewise.
+	(resolve_dynamic_type_internal): New function, from
+	resolve_dynamic_type.
+	(resolve_dynamic_type): Rewrite.
+
+2014-07-14  Tom Tromey  <tromey@redhat.com>
+
+	* target.c (target_require_runnable): Also check record_stratum.
+	Update comment.
+
+2014-07-09  Pedro Alves  <palves@redhat.com>
+
+	* infcmd.c (attach_command_post_wait): Don't call
+	target_terminal_inferior here.
+	(attach_command): Call it here instead.
+
+2014-07-07  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/17096
+	* remote.c (async_handle_remote_sigint)
+	(async_handle_remote_sigint_twice): Call
+	gdb_call_async_signal_handler instead of
+	mark_async_signal_handler.
+
+2014-06-26  Tom Tromey  <tromey@redhat.com>
+
+	PR symtab/16902:
+	* dwarf2read.c (fixup_go_packaging, dwarf2_compute_name)
+	(dwarf2_physname, read_partial_die)
+	(guess_partial_die_structure_name, fixup_partial_die)
+	(guess_full_die_structure_name, anonymous_struct_prefix)
+	(dwarf2_name): Use per-BFD obstack.
+
+2014-06-23  Siva Chandra Reddy  <sivachandra@google.com>
+
+	* python/lib/gdb/command/xmethods.py
+	(get_method_matchers_in_loci):  Lookup xmethod matchers in the
+	current progspace only if the string "progspace" matches LOCUS_RE.
+
+2014-06-23  Pedro Alves  <palves@redhat.com>
+
+	* amd64-linux-nat.c (amd64_linux_prepare_to_resume): Clear
+	DR_CONTROL before setting DR0..DR3.
+	* i386-linux-nat.c (i386_linux_prepare_to_resume): Likewise.
+	* i386-nat.c (i386_remove_aligned_watchpoint): Clear all bits of
+	DR_CONTROL related to the debug register slot being disabled.  If
+	all slots are vacant, clear local slowdown as well, and assert
+	DR_CONTROL is 0.
+
+2014-06-19  Pedro Alves  <palves@redhat.com>
+
+	* gdbthread.h (ALL_THREADS): Delete.
+	(ALL_NON_EXITED_THREADS): New macro.
+	* btrace.c (btrace_free_objfile): Use ALL_NON_EXITED_THREADS
+	instead of ALL_THREADS.
+	* infrun.c (find_thread_needs_step_over)
+	(switch_back_to_stepped_thread): Use ALL_NON_EXITED_THREADS
+	instead of ALL_THREADS.
+	* record-btrace.c (record_btrace_open)
+	(record_btrace_stop_recording, record_btrace_close)
+	(record_btrace_is_replaying, record_btrace_resume)
+	(record_btrace_find_thread_to_move, record_btrace_wait): Likewise.
+	* remote.c (append_pending_thread_resumptions): Likewise.
+	* thread.c (thread_apply_all_command): Likewise.
+
+2014-06-16  Pedro Alves  <palves@redhat.com>
+
+	* breakpoint.c (insert_bp_location, remove_breakpoint_1): Adjust.
+	(disable_breakpoints_in_freed_objfile): Skip objfiles that don't
+	have OBJF_SHARED set.
+	* objfiles.c (userloaded_objfile_contains_address_p): Rename to...
+	(shared_objfile_contains_address_p): ... this.  Check OBJF_SHARED
+	instead of OBJF_USERLOADED.
+	* objfiles.h (OBJF_SHARED): Update comment.
+	(userloaded_objfile_contains_address_p): Rename to ...
+	(shared_objfile_contains_address_p): ... this, and update
+	comments.
+	* symfile.c (add_symbol_file_command): Also set OBJF_SHARED in the
+	new objfile.
+	(remove_symbol_file_command): Skip objfiles that don't have
+	OBJF_SHARED set.
+
+2014-06-14  Eli Zaretskii  <eliz@gnu.org>
+
+	* top.c (print_gdb_configuration) [HAVE_GUILE]: Print --with-guile
+	or --without-guile, according to how GDB was built.
+
+2014-06-11  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.7.90.DATE-cvs.
+
+2014-06-11  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.7.90 released.
+
+2014-06-11  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.7.90.
+
+2014-06-11  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.8 branch created (173373c6f6388171d1d62a217fae90a052395be2):
+	* version.in: Bump version to 7.7.90.DATE-cvs.
+
 2014-06-11  Pedro Alves  <palves@redhat.com>
 
 	PR remote/17028
@@ -23,6 +534,13 @@
 2014-06-10  Joel Brobecker  <brobecker@adacore.com>
 
 	* gdbtypes (resolve_dynamic_range): Add function description.
+
+2014-06-09  Pedro Alves  <palves@redhat.com>
+
+	* linux-nat.c (linux_child_follow_fork): Initialize status with
+	W_STOPCODE (0) instead of 0.  Remove shodowing 'status' local from
+	inner block.  Only pass the signal to PTRACE_DETACH if in pass
+	state.
 
 2014-06-09  Gary Benson  <gbenson@redhat.com>
 
