@@ -1,3 +1,169 @@
+2014-10-24  Tejas Belagod  <tejas.belagod@arm.com>
+
+	* emultempl/aarch64elf.em: Add command-line option for erratum
+	835769.
+
+2014-06-18  Alan Modra  <amodra@gmail.com>
+
+	PR 17047
+	* ldlang.c (lang_finish): Don't free linker hash table.
+
+2014-06-17  Alan Modra  <amodra@gmail.com>
+
+	* scripttempl/elf.sc: Edit out __rela_iplt symbol assignments from
+	.rel sections, and __rel_iplt from .rela sections.
+
+2014-06-12  Alan Modra  <amodra@gmail.com>
+
+	Backport mainline patches
+	2014-06-07  Alan Modra  <amodra@gmail.com>
+	* ldexp.c (exp_fold_tree_1 <etree_provide>): Make PROVIDEd
+	linker script symbol value override a built-in linker symbol.
+
+	2014-02-19  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc64elf.em (params): Init new field.
+	(ppc_create_output_section_statements): Set params.save_restore_funcs
+	default.
+	(PARSE_AND_LIST_*): Add support for --save-restore-funcs and
+	--no-save-restore-funcs.
+
+	2014-02-17  Alan Modra  <amodra@gmail.com>
+	* emultemps/ppc64elf.em (params): New static struct replacing
+	various other static vars.  Adjust code throughout file.
+
+2014-05-11  Chung-Lin Tang  <cltang@codesourcery.com>
+
+	Backport from master
+
+	2014-05-11  Chung-Lin Tang  <cltang@codesourcery.com>
+	* emulparams/nios2linux.sh (OTHER_GOT_SYMBOLS): Wrap _gp in HIDDEN(),
+	and gp in PROVIDE_HIDDEN.
+
+2014-04-16  Alan Modra  <amodra@gmail.com>
+
+	Apply mainline patches for ppc476 workaround
+	2014-04-09  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (no_zero_padding, ppc_finish): New functions.
+	(LDEMUL_FINISH): Define.
+
+	2014-02-27  Alan Modra  <amodra@gmail.com>
+	* emulparams/elf32ppcvxworks.sh: Source plt_unwind.sh and
+	use ppc32elf.em.
+	* emultempl/ppc32elf.em (ppc_after_open): Don't compile for
+	vxworks.
+	(LDEMUL_AFTER_OPEN): Don't set for vxworks.
+	(PARSE_AND_LIST_LONGOPTS, PARSE_AND_LIST_OPTIONS): Exclude
+	-secure-plt, -bss-plt and -sdata-got when vxworks.
+
+	2014-02-17  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (ppc_after_open_output): Really enable
+	ppc476 workaround for ld -r.
+
+	2014-02-12  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (pagesize): New static var.
+	(ppc_after_open_output): Set params.pagesize_p2 from pagesize.
+	(PARSE_AND_LIST_ARGS_CASES): Adjust to use pagesize.
+
+	2014-02-03  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (no_tls_get_addr_opt, emit_stub_syms)
+	plt_style): Delete.  Adjust all refs to instead use..
+	(params): ..this.  New variable.
+	(ppc_after_open_output): New function.  Tweak params and pass to
+	ppc_elf_link_params.
+	(ppc_after_open): Adjust ppc_elf_select_plt_layout call.
+	(ppc_before_allocation): Adjust ppc_elf_tls_setup call.  Enable
+	relaxation for ppc476 workaround.
+	(PARSE_AND_LIST_*): Add --{no-,}ppc476-workaround support.
+	(LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS): Define.
+
+2013-12-10  Roland McGrath  <mcgrathr@google.com>
+
+	* Makefile.am (install-exec-local): Prefix libtool invocation with
+	$(INSTALL_PROGRAM_ENV).
+	* Makefile.in: Regenerate.
+
+2013-11-25  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	Backport from master
+
+	2013-11-21  Andrew Pinski  <apinski@cavium.com>
+
+	* Makefile.am (ALL_64_EMULATION_SOURCES): Add eaarch64linux32.c
+	and eaarch64linux32b.c
+	(eaarch64linux32.c): New target.
+	(eaarch64linux32b.c): Likewise.
+	* Makefile.in: Regenerate.
+	* configure.tgt (aarch64_be-*-linux*): Add
+	aarch64linux32 and aarch64linux32b to targ_extra_libpath.
+	(aarch64-*-linux*): Likewise.
+	* emulparams/aarch64elf32.sh (SEPARATE_GOTPLT): Change to 12 (3 words).
+	* emulparams/aarch64linux32.sh: New file.
+	* emulparams/aarch64linux32b.sh: New file.
+
+2013-11-25  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	Backport from master
+
+	2013-11-21  Andrew Pinski  <apinski@cavium.com>
+
+	* configure.tgt (aarch64_be-*-linux*): Split out the linux targets
+	into targ_extra_libpath.
+	(aarch64-*-linux*): Likewise.
+
+2013-11-22  Cory Fields  <cory@coryfields.com>
+
+	* libcoff-in.h: Add insert_timestamp flag to the pe_data struct.
+	* libcoff.h: Regenerate.
+	* peXXigen.c (_bfd_XXi_only_swap_filehdr_out): Only use a real
+	timestamp if --insert-timestamp was used.
+
+2013-11-19  Roland McGrath  <mcgrathr@google.com>
+	    Alan Modra  <amodra@gmail.com>
+
+	* emultempl/elf32.em (gld${EMULATION_NAME}_before_allocation):
+	Don't use bfd_elf_record_link_assignment to mark __ehdr_start
+	hidden.  Instead, just do it directly here, and only if it was
+	referenced but not defined.
+
+2013-11-18  Chung-Lin Tang  <cltang@codesourcery.com>
+
+	Backport from master
+	2013-11-18  Chung-Lin Tang  <cltang@codesourcery.com>
+	* emulparams/nios2linux.sh: New emulation file.
+	* configure.tgt: Add nios2*-*-linux* emulation case.
+	* Makefile.am (enios2elf.c): Change tdir_nios2 to tdir_nios2elf.
+	(enios2linux.c): New emulation entry.
+	* Makefile.in: Regenerate.
+
+2013-11-15  Alan Modra  <amodra@gmail.com>
+
+	Apply mainline changes to 2.24
+	2013-09-24  Alan Modra  <amodra@gmail.com>
+	* emulparams/elf32ppccommon.sh (LIBPATH_SUFFIX): Provide 32-bit
+	and cross-endian values.
+	* emulparams/elf64ppc.sh: Source elf32ppccomon.sh.  Delete duplicate,
+	and unset unwanted variables.
+
+2013-10-10  Roland McGrath  <mcgrathr@google.com>
+
+	* ldmisc.c (vfinfo): Use Boolean ? "" : ":" in place of ":" + Boolean.
+	It silences some compilers' warnings and is much less bizarre to read.
+
+2013-10-09  Roland McGrath  <mcgrathr@google.com>
+
+	* emultempl/elf32.em (id_note_section_size): Use ATTRIBUTE_UNUSED
+	rather than a dummy assignment for unused parameter.
+	* plugin.c (get_input_file, release_input_file): Likewise.
+
+2013-10-04  Will Newton  <will.newton@linaro.org>
+
+	* emulparams/aarch64elf.sh: Add IREL_IN_PLT.
+	* emulparams/aarch64elf32.sh: Likewise.
+
+2013-09-20  Alan Modra  <amodra@gmail.com>
+
+	* configure: Regenerate.
+
 2013-09-18  Tristan Gingold  <gingold@adacore.com>
 
 	* NEWS: Add marker for 2.24.

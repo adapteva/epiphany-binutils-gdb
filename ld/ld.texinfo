@@ -2657,6 +2657,11 @@ The driver uses the MS Windows Driver Model.
 @item --tsaware
 The image is Terminal Server aware.
 
+@kindex --insert-timestamp
+@item --insert-timestamp
+Insert a real timestamp into the image, rather than the default value
+of zero.  This will result in a slightly different results with each
+invocation, which could be helpful for distributing unique images.
 @end table
 
 @c man end
@@ -6242,6 +6247,13 @@ not itself call any subroutines).
 The @samp{--fix-cortex-a8} switch enables a link-time workaround for an erratum in certain Cortex-A8 processors.  The workaround is enabled by default if you are targeting the ARM v7-A architecture profile.  It can be enabled otherwise by specifying @samp{--fix-cortex-a8}, or disabled unconditionally by specifying @samp{--no-fix-cortex-a8}.
 
 The erratum only affects Thumb-2 code.  Please contact ARM for further details.
+
+@cindex Cortex-A53 erratum 835769 workaround
+@kindex --fix-cortex-a53-835769
+@kindex --no-fix-cortex-a53-835769
+The @samp{--fix-cortex-a53-835769} switch enables a link-time workaround for erratum 835769 present on certain early revisions of Cortex-A53 processors.  The workaround is disabled by default.  It can be enabled by specifying @samp{--fix-cortex-a53-835769}, or disabled unconditionally by specifying @samp{--no-fix-cortex-a53-835769}.
+
+Please contact ARM for further details.
 
 @kindex --merge-exidx-entries
 @kindex --no-merge-exidx-entries

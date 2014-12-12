@@ -1,3 +1,64 @@
+2013-12-10  Roland McGrath  <mcgrathr@google.com>
+
+	* Makefile.am (install-exec-local): Prefix libtool invocation with
+	$(INSTALL_PROGRAM_ENV).
+	* Makefile.in: Regenerate.
+
+2013-11-22  Cory Fields  <cory@coryfields.com>
+
+	* windres.c (define_resource): Use zero for timestamp, making
+	output deterministic. time.h include is no longer needed.
+	* resres.c (res_append_resource): Likewise.
+
+2013-11-15  Alan Modra  <amodra@gmail.com>
+
+	Apply changes from mainline to 2.24
+	2013-10-30  Alan Modra  <amodra@gmail.com>
+	* readelf.c (get_ppc_dynamic_type): Replace PPC_TLSOPT with PPC_OPT.
+	(get_ppc64_dynamic_type): Replace PPC64_TLSOPT with PPC64_OPT.
+
+	2013-10-30  Ulrich Weigand  <uweigand@de.ibm.com>
+	* readelf.c (get_ppc64_symbol_other): New function.
+	(get_symbol_other): Use it for EM_PPC64.
+
+	2013-10-30  Alan Modra  <amodra@gmail.com>
+	* readelf.c (get_machine_flags): Display ABI version for EM_PPC64.
+
+2013-11-07  Roland McGrath  <mcgrathr@google.com>
+
+	* objdump.c (dump_dwarf): Grok bfd_mach_x86_64_nacl and
+	bfd_mach_x64_32_nacl as equivalent to bfd_mach_x86_64.
+
+2013-10-31  Nick Clifton  <nickc@redhat.com>
+
+	* nm.c (display_rel_file): Treat bfd_error_no_symbols as
+	non-fatal.
+
+2013-10-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* dwarf.c (display_debug_frames): Pass offset_size to
+	print_dwarf_vma for cie_id.
+
+2013-10-11  Roland McGrath  <mcgrathr@google.com>
+
+	* winduni.c (languages): Use \345 (octal syntax) rather than
+	literal non-ASCII/non-UTF8 character in string literal.
+
+2013-10-11  Roland McGrath  <mcgrathr@google.com>
+
+	* readelf.c (print_dynamic_symbol): Use array subscript syntax
+	rather than addition syntax with string literal.
+
+2013-10-09  Nick Clifton  <nickc@redhat.com>
+
+	* dwarf.c (add64): New function.
+	(read_and_display_attr_value): Add CU offset in to the value
+	displayed for a DW_AT_ref8 attribute.
+
+2013-09-20  Alan Modra  <amodra@gmail.com>
+
+	* configure: Regenerate.
+
 2013-09-18  Tristan Gingold  <gingold@adacore.com>
 
 	* NEWS: Add marker for 2.24.

@@ -77,11 +77,18 @@ public:
 		 const typename elfcpp::Ehdr<size, big_endian>& ehdr)
     : Sized_relobj_file<size, big_endian>(name, input_file, offset, ehdr),
       special_(0), has_small_toc_reloc_(false), opd_valid_(false),
-      opd_ent_(), access_from_map_(), has14_(), stub_table_()
-  { }
+      opd_ent_(), access_from_map_(), has14_(), stub_table_(),
+      e_flags_(ehdr.get_e_flags()), st_other_()
+  {
+    this->set_abiversion(0);
+  }
 
   ~Powerpc_relobj()
   { }
+
+  // Read the symbols then set up st_other vector.
+  void
+  do_read_symbols(Read_symbols_data*);
 
   // The .got2 section shndx.
   unsigned int
@@ -268,6 +275,22 @@ public:
     return NULL;
   }
 
+  int
+  abiversion() const
+  { return this->e_flags_ & elfcpp::EF_PPC64_ABI; }
+
+  // Set ABI version for input and output
+  void
+  set_abiversion(int ver);
+
+  unsigned int
+  ppc64_local_entry_offset(const Symbol* sym) const
+  { return elfcpp::ppc64_decode_local_entry(sym->nonvis() >> 3); }
+
+  unsigned int
+  ppc64_local_entry_offset(unsigned int symndx) const
+  { return elfcpp::ppc64_decode_local_entry(this->st_other_[symndx] >> 5); }
+
 private:
   struct Opd_ent
   {
@@ -321,6 +344,12 @@ private:
 
   // The stub table to use for a given input section.
   std::vector<Stub_table<size, big_endian>*> stub_table_;
+
+  // Header e_flags
+  elfcpp::Elf_Word e_flags_;
+
+  // ELF st_other field for local symbols.
+  std::vector<unsigned char> st_other_;
 };
 
 template<int size, bool big_endian>
@@ -332,8 +361,10 @@ public:
   Powerpc_dynobj(const std::string& name, Input_file* input_file, off_t offset,
 		 const typename elfcpp::Ehdr<size, big_endian>& ehdr)
     : Sized_dynobj<size, big_endian>(name, input_file, offset, ehdr),
-      opd_shndx_(0), opd_ent_()
-  { }
+      opd_shndx_(0), opd_ent_(), e_flags_(ehdr.get_e_flags())
+  {
+    this->set_abiversion(0);
+  }
 
   ~Powerpc_dynobj()
   { }
@@ -387,6 +418,14 @@ public:
     this->opd_ent_[ndx].off = value;
   }
 
+  int
+  abiversion() const
+  { return this->e_flags_ & elfcpp::EF_PPC64_ABI; }
+
+  // Set ABI version for input and output.
+  void
+  set_abiversion(int ver);
+
 private:
   // Used to specify extent of executable sections.
   struct Sec_info
@@ -424,6 +463,9 @@ private:
   // corresponding to the address.  Note that in dynamic objects,
   // offset is *not* relative to the section.
   std::vector<Opd_ent> opd_ent_;
+
+  // Header e_flags
+  elfcpp::Elf_Word e_flags_;
 };
 
 template<int size, bool big_endian>
@@ -443,7 +485,7 @@ class Target_powerpc : public Sized_target<size, big_endian>
     : Sized_target<size, big_endian>(&powerpc_info),
       got_(NULL), plt_(NULL), iplt_(NULL), brlt_section_(NULL),
       glink_(NULL), rela_dyn_(NULL), copy_relocs_(elfcpp::R_POWERPC_COPY),
-      dynbss_(NULL), tlsld_got_offset_(-1U),
+      tlsld_got_offset_(-1U),
       stub_tables_(), branch_lookup_table_(), branch_info_(),
       plt_thread_safe_(false)
   {
@@ -645,6 +687,13 @@ class Target_powerpc : public Sized_target<size, big_endian>
     return this->glink_;
   }
 
+  Output_data_glink<size, big_endian>*
+  glink_section()
+  {
+    gold_assert(this->glink_ != NULL);
+    return this->glink_;
+  }
+
   bool has_glink() const
   { return this->glink_ != NULL; }
 
@@ -679,11 +728,25 @@ class Target_powerpc : public Sized_target<size, big_endian>
 
   // Return the offset of the first non-reserved PLT entry.
   unsigned int
-  first_plt_entry_offset() const;
+  first_plt_entry_offset() const
+  {
+    if (size == 32)
+      return 0;
+    if (this->abiversion() >= 2)
+      return 16;
+    return 24;
+  }
 
   // Return the size of each PLT entry.
   unsigned int
-  plt_entry_size() const;
+  plt_entry_size() const
+  {
+    if (size == 32)
+      return 4;
+    if (this->abiversion() >= 2)
+      return 8;
+    return 24;
+  }
 
   // Add any special sections for this symbol to the gc work list.
   // For powerpc64, this adds the code section of a function
@@ -742,6 +805,24 @@ class Target_powerpc : public Sized_target<size, big_endian>
   bool
   plt_thread_safe() const
   { return this->plt_thread_safe_; }
+
+  int
+  abiversion () const
+  { return this->processor_specific_flags() & elfcpp::EF_PPC64_ABI; }
+
+  void
+  set_abiversion (int ver)
+  {
+    elfcpp::Elf_Word flags = this->processor_specific_flags();
+    flags &= ~elfcpp::EF_PPC64_ABI;
+    flags |= ver & elfcpp::EF_PPC64_ABI;
+    this->set_processor_specific_flags(flags);
+  }
+
+  // Offset to to save stack slot
+  int
+  stk_toc () const
+  { return this->abiversion() < 2 ? 40 : 24; }
 
  private:
 
@@ -844,7 +925,7 @@ class Target_powerpc : public Sized_target<size, big_endian>
     { }
 
     static inline int
-    get_reference_flags(unsigned int r_type);
+    get_reference_flags(unsigned int r_type, const Target_powerpc* target);
 
     inline void
     local(Symbol_table* symtab, Layout* layout, Target_powerpc* target,
@@ -866,7 +947,7 @@ class Target_powerpc : public Sized_target<size, big_endian>
     inline bool
     local_reloc_may_be_function_pointer(Symbol_table* , Layout* ,
 					Target_powerpc* ,
-					Sized_relobj_file<size, big_endian>* ,
+					Sized_relobj_file<size, big_endian>* relobj,
 					unsigned int ,
 					Output_section* ,
 					const elfcpp::Rela<size, big_endian>& ,
@@ -877,8 +958,13 @@ class Target_powerpc : public Sized_target<size, big_endian>
       // may be folded and we'll still keep function addresses distinct.
       // That means no reloc is of concern here.
       if (size == 64)
-	return false;
-      // For 32-bit, conservatively assume anything but calls to
+	{
+	  Powerpc_relobj<size, big_endian>* ppcobj = static_cast
+	    <Powerpc_relobj<size, big_endian>*>(relobj);
+	  if (ppcobj->abiversion() == 1)
+	    return false;
+	}
+      // For 32-bit and ELFv2, conservatively assume anything but calls to
       // function code might be taking the address of the function.
       return !is_branch_reloc(r_type);
     }
@@ -886,7 +972,7 @@ class Target_powerpc : public Sized_target<size, big_endian>
     inline bool
     global_reloc_may_be_function_pointer(Symbol_table* , Layout* ,
 					 Target_powerpc* ,
-					 Sized_relobj_file<size, big_endian>* ,
+					 Sized_relobj_file<size, big_endian>* relobj,
 					 unsigned int ,
 					 Output_section* ,
 					 const elfcpp::Rela<size, big_endian>& ,
@@ -895,12 +981,18 @@ class Target_powerpc : public Sized_target<size, big_endian>
     {
       // As above.
       if (size == 64)
-	return false;
+	{
+	  Powerpc_relobj<size, big_endian>* ppcobj = static_cast
+	    <Powerpc_relobj<size, big_endian>*>(relobj);
+	  if (ppcobj->abiversion() == 1)
+	    return false;
+	}
       return !is_branch_reloc(r_type);
     }
 
     static bool
-    reloc_needs_plt_for_ifunc(Sized_relobj_file<size, big_endian>* object,
+    reloc_needs_plt_for_ifunc(Target_powerpc<size, big_endian>* target,
+			      Sized_relobj_file<size, big_endian>* object,
 			      unsigned int r_type, bool report_err);
 
   private:
@@ -1181,8 +1273,6 @@ class Target_powerpc : public Sized_target<size, big_endian>
   Reloc_section* rela_dyn_;
   // Relocs saved to avoid a COPY reloc.
   Copy_relocs<elfcpp::SHT_RELA, size, big_endian> copy_relocs_;
-  // Space for variables copied with a COPY reloc.
-  Output_data_space* dynbss_;
   // Offset of the GOT entry for local dynamic __tls_get_addr calls.
   unsigned int tlsld_got_offset_;
 
@@ -1357,102 +1447,6 @@ at_tls_transform(uint32_t insn, unsigned int reg)
   return insn;
 }
 
-// Modified version of symtab.h class Symbol member
-// Given a direct absolute or pc-relative static relocation against
-// the global symbol, this function returns whether a dynamic relocation
-// is needed.
-
-template<int size>
-bool
-needs_dynamic_reloc(const Symbol* gsym, int flags)
-{
-  // No dynamic relocations in a static link!
-  if (parameters->doing_static_link())
-    return false;
-
-  // A reference to an undefined symbol from an executable should be
-  // statically resolved to 0, and does not need a dynamic relocation.
-  // This matches gnu ld behavior.
-  if (gsym->is_undefined() && !parameters->options().shared())
-    return false;
-
-  // A reference to an absolute symbol does not need a dynamic relocation.
-  if (gsym->is_absolute())
-    return false;
-
-  // An absolute reference within a position-independent output file
-  // will need a dynamic relocation.
-  if ((flags & Symbol::ABSOLUTE_REF)
-      && parameters->options().output_is_position_independent())
-    return true;
-
-  // A function call that can branch to a local PLT entry does not need
-  // a dynamic relocation.
-  if ((flags & Symbol::FUNCTION_CALL) && gsym->has_plt_offset())
-    return false;
-
-  // A reference to any PLT entry in a non-position-independent executable
-  // does not need a dynamic relocation.
-  // Except due to having function descriptors on powerpc64 we don't define
-  // functions to their plt code in an executable, so this doesn't apply.
-  if (size == 32
-      && !parameters->options().output_is_position_independent()
-      && gsym->has_plt_offset())
-    return false;
-
-  // A reference to a symbol defined in a dynamic object or to a
-  // symbol that is preemptible will need a dynamic relocation.
-  if (gsym->is_from_dynobj()
-      || gsym->is_undefined()
-      || gsym->is_preemptible())
-    return true;
-
-  // For all other cases, return FALSE.
-  return false;
-}
-
-// Modified version of symtab.h class Symbol member
-// Whether we should use the PLT offset associated with a symbol for
-// a relocation.  FLAGS is a set of Reference_flags.
-
-template<int size>
-bool
-use_plt_offset(const Symbol* gsym, int flags)
-{
-  // If the symbol doesn't have a PLT offset, then naturally we
-  // don't want to use it.
-  if (!gsym->has_plt_offset())
-    return false;
-
-  // For a STT_GNU_IFUNC symbol we always have to use the PLT entry.
-  if (gsym->type() == elfcpp::STT_GNU_IFUNC)
-    return true;
-
-  // If we are going to generate a dynamic relocation, then we will
-  // wind up using that, so no need to use the PLT entry.
-  if (needs_dynamic_reloc<size>(gsym, flags))
-    return false;
-
-  // If the symbol is from a dynamic object, we need to use the PLT
-  // entry.
-  if (gsym->is_from_dynobj())
-    return true;
-
-  // If we are generating a shared object, and this symbol is
-  // undefined or preemptible, we need to use the PLT entry.
-  if (parameters->options().shared()
-      && (gsym->is_undefined() || gsym->is_preemptible()))
-    return true;
-
-  // If this is a call to a weak undefined symbol, we need to use
-  // the PLT entry; the symbol may be defined by a library loaded
-  // at runtime.
-  if ((flags & Symbol::FUNCTION_CALL) && gsym->is_weak_undefined())
-    return true;
-
-  // Otherwise we can use the regular definition.
-  return false;
-}
 
 template<int size, bool big_endian>
 class Powerpc_relocate_functions
@@ -1462,7 +1456,10 @@ public:
   {
     CHECK_NONE,
     CHECK_SIGNED,
-    CHECK_BITFIELD
+    CHECK_UNSIGNED,
+    CHECK_BITFIELD,
+    CHECK_LOW_INSN,
+    CHECK_HIGH_INSN
   };
 
   enum Status
@@ -1488,12 +1485,20 @@ private:
 
   template<int valsize>
   static inline bool
-  has_overflow_bitfield(Address value)
+  has_overflow_unsigned(Address value)
   {
     Address limit = static_cast<Address>(1) << ((valsize - 1) >> 1);
     limit <<= ((valsize - 1) >> 1);
     limit <<= ((valsize - 1) - 2 * ((valsize - 1) >> 1));
-    return value > (limit << 1) - 1 && value + limit > (limit << 1) - 1;
+    return value > (limit << 1) - 1;
+  }
+
+  template<int valsize>
+  static inline bool
+  has_overflow_bitfield(Address value)
+  {
+    return (has_overflow_unsigned<valsize>(value)
+	    && has_overflow_signed<valsize>(value));
   }
 
   template<int valsize>
@@ -1503,6 +1508,11 @@ private:
     if (overflow == CHECK_SIGNED)
       {
 	if (has_overflow_signed<valsize>(value))
+	  return STATUS_OVERFLOW;
+      }
+    else if (overflow == CHECK_UNSIGNED)
+      {
+	if (has_overflow_unsigned<valsize>(value))
 	  return STATUS_OVERFLOW;
       }
     else if (overflow == CHECK_BITFIELD)
@@ -1661,6 +1671,29 @@ public:
   }
 };
 
+// Set ABI version for input and output.
+
+template<int size, bool big_endian>
+void
+Powerpc_relobj<size, big_endian>::set_abiversion(int ver)
+{
+  this->e_flags_ |= ver;
+  if (this->abiversion() != 0)
+    {
+      Target_powerpc<size, big_endian>* target =
+	static_cast<Target_powerpc<size, big_endian>*>(
+	   parameters->sized_target<size, big_endian>());
+      if (target->abiversion() == 0)
+	target->set_abiversion(this->abiversion());
+      else if (target->abiversion() != this->abiversion())
+	gold_error(_("%s: ABI version %d is not compatible "
+		     "with ABI version %d output"),
+		   this->name().c_str(),
+		   this->abiversion(), target->abiversion());
+
+    }
+}
+
 // Stash away the index of .got2 or .opd in a relocatable object, if
 // such a section exists.
 
@@ -1682,6 +1715,14 @@ Powerpc_relobj<size, big_endian>::do_find_special_sections(
     {
       unsigned int ndx = (s - pshdrs) / elfcpp::Elf_sizes<size>::shdr_size;
       this->special_ = ndx;
+      if (size == 64)
+	{
+	  if (this->abiversion() == 0)
+	    this->set_abiversion(1);
+	  else if (this->abiversion() > 1)
+	    gold_error(_("%s: .opd invalid in abiv%d"),
+		       this->name().c_str(), this->abiversion());
+	}
     }
   return Sized_relobj_file<size, big_endian>::do_find_special_sections(sd);
 }
@@ -1792,6 +1833,69 @@ Powerpc_relobj<size, big_endian>::do_read_relocs(Read_relocs_data* rd)
     }
 }
 
+// Read the symbols then set up st_other vector.
+
+template<int size, bool big_endian>
+void
+Powerpc_relobj<size, big_endian>::do_read_symbols(Read_symbols_data* sd)
+{
+  Sized_relobj_file<size, big_endian>::do_read_symbols(sd);
+  if (size == 64)
+    {
+      const int shdr_size = elfcpp::Elf_sizes<size>::shdr_size;
+      const unsigned char* const pshdrs = sd->section_headers->data();
+      const unsigned int loccount = this->do_local_symbol_count();
+      if (loccount != 0)
+	{
+	  this->st_other_.resize(loccount);
+	  const int sym_size = elfcpp::Elf_sizes<size>::sym_size;
+	  off_t locsize = loccount * sym_size;
+	  const unsigned int symtab_shndx = this->symtab_shndx();
+	  const unsigned char *psymtab = pshdrs + symtab_shndx * shdr_size;
+	  typename elfcpp::Shdr<size, big_endian> shdr(psymtab);
+	  const unsigned char* psyms = this->get_view(shdr.get_sh_offset(),
+						      locsize, true, false);
+	  psyms += sym_size;
+	  for (unsigned int i = 1; i < loccount; ++i, psyms += sym_size)
+	    {
+	      elfcpp::Sym<size, big_endian> sym(psyms);
+	      unsigned char st_other = sym.get_st_other();
+	      this->st_other_[i] = st_other;
+	      if ((st_other & elfcpp::STO_PPC64_LOCAL_MASK) != 0)
+		{
+		  if (this->abiversion() == 0)
+		    this->set_abiversion(2);
+		  else if (this->abiversion() < 2)
+		    gold_error(_("%s: local symbol %d has invalid st_other"
+				 " for ABI version 1"),
+			       this->name().c_str(), i);
+		}
+	    }
+	}
+    }
+}
+
+template<int size, bool big_endian>
+void
+Powerpc_dynobj<size, big_endian>::set_abiversion(int ver)
+{
+  this->e_flags_ |= ver;
+  if (this->abiversion() != 0)
+    {
+      Target_powerpc<size, big_endian>* target =
+	static_cast<Target_powerpc<size, big_endian>*>(
+	  parameters->sized_target<size, big_endian>());
+      if (target->abiversion() == 0)
+	target->set_abiversion(this->abiversion());
+      else if (target->abiversion() != this->abiversion())
+	gold_error(_("%s: ABI version %d is not compatible "
+		     "with ABI version %d output"),
+		   this->name().c_str(),
+		   this->abiversion(), target->abiversion());
+
+    }
+}
+
 // Call Sized_dynobj::do_read_symbols to read the symbols then
 // read .opd from a dynamic object, filling in opd_ent_ vector,
 
@@ -1823,6 +1927,12 @@ Powerpc_dynobj<size, big_endian>::do_read_symbols(Read_symbols_data* sd)
 	  if (shdr.get_sh_type() == elfcpp::SHT_PROGBITS
 	      && (shdr.get_sh_flags() & elfcpp::SHF_ALLOC) != 0)
 	    {
+	      if (this->abiversion() == 0)
+		this->set_abiversion(1);
+	      else if (this->abiversion() > 1)
+		gold_error(_("%s: .opd invalid in abiv%d"),
+			   this->name().c_str(), this->abiversion());
+
 	      this->opd_shndx_ = (s - pshdrs) / shdr_size;
 	      this->opd_address_ = shdr.get_sh_addr();
 	      opd_size = convert_to_section_size_type(shdr.get_sh_size());
@@ -1939,6 +2049,26 @@ Target_powerpc<size, big_endian>::do_define_standard_symbols(
 					0, false, false);
 	}
     }
+  else
+    {
+      // Define .TOC. as for 32-bit _GLOBAL_OFFSET_TABLE_
+      Symbol *gotsym = symtab->lookup(".TOC.", NULL);
+      if (gotsym != NULL && gotsym->is_undefined())
+	{
+	  Target_powerpc<size, big_endian>* target =
+	    static_cast<Target_powerpc<size, big_endian>*>(
+		parameters->sized_target<size, big_endian>());
+	  Output_data_got_powerpc<size, big_endian>* got
+	    = target->got_section(symtab, layout);
+	  symtab->define_in_output_data(".TOC.", NULL,
+					Symbol_table::PREDEFINED,
+					got, 0x8000, 0,
+					elfcpp::STT_OBJECT,
+					elfcpp::STB_LOCAL,
+					elfcpp::STV_HIDDEN, 0,
+					false, false);
+	}
+    }
 }
 
 // Set up PowerPC target specific relobj.
@@ -1989,32 +2119,88 @@ public:
       header_index_(size == 32 ? 0x2000 : 0)
   { }
 
-  class Got_entry;
-
-  // Create a new GOT entry and return its offset.
-  unsigned int
-  add_got_entry(Got_entry got_entry)
+  // Override all the Output_data_got methods we use so as to first call
+  // reserve_ent().
+  bool
+  add_global(Symbol* gsym, unsigned int got_type)
   {
     this->reserve_ent();
-    return Output_data_got<size, big_endian>::add_got_entry(got_entry);
+    return Output_data_got<size, big_endian>::add_global(gsym, got_type);
   }
 
-  // Create a pair of new GOT entries and return the offset of the first.
-  unsigned int
-  add_got_entry_pair(Got_entry got_entry_1, Got_entry got_entry_2)
+  bool
+  add_global_plt(Symbol* gsym, unsigned int got_type)
+  {
+    this->reserve_ent();
+    return Output_data_got<size, big_endian>::add_global_plt(gsym, got_type);
+  }
+
+  bool
+  add_global_tls(Symbol* gsym, unsigned int got_type)
+  { return this->add_global_plt(gsym, got_type); }
+
+  void
+  add_global_with_rel(Symbol* gsym, unsigned int got_type,
+		      Output_data_reloc_generic* rel_dyn, unsigned int r_type)
+  {
+    this->reserve_ent();
+    Output_data_got<size, big_endian>::
+      add_global_with_rel(gsym, got_type, rel_dyn, r_type);
+  }
+
+  void
+  add_global_pair_with_rel(Symbol* gsym, unsigned int got_type,
+			   Output_data_reloc_generic* rel_dyn,
+			   unsigned int r_type_1, unsigned int r_type_2)
   {
     this->reserve_ent(2);
-    return Output_data_got<size, big_endian>::add_got_entry_pair(got_entry_1,
-								 got_entry_2);
+    Output_data_got<size, big_endian>::
+      add_global_pair_with_rel(gsym, got_type, rel_dyn, r_type_1, r_type_2);
+  }
+
+  bool
+  add_local(Relobj* object, unsigned int sym_index, unsigned int got_type)
+  {
+    this->reserve_ent();
+    return Output_data_got<size, big_endian>::add_local(object, sym_index,
+							got_type);
+  }
+
+  bool
+  add_local_plt(Relobj* object, unsigned int sym_index, unsigned int got_type)
+  {
+    this->reserve_ent();
+    return Output_data_got<size, big_endian>::add_local_plt(object, sym_index,
+							    got_type);
+  }
+
+  bool
+  add_local_tls(Relobj* object, unsigned int sym_index, unsigned int got_type)
+  { return this->add_local_plt(object, sym_index, got_type); }
+
+  void
+  add_local_tls_pair(Relobj* object, unsigned int sym_index,
+		     unsigned int got_type,
+		     Output_data_reloc_generic* rel_dyn,
+		     unsigned int r_type)
+  {
+    this->reserve_ent(2);
+    Output_data_got<size, big_endian>::
+      add_local_tls_pair(object, sym_index, got_type, rel_dyn, r_type);
+  }
+
+  unsigned int
+  add_constant(Valtype constant)
+  {
+    this->reserve_ent();
+    return Output_data_got<size, big_endian>::add_constant(constant);
   }
 
   unsigned int
   add_constant_pair(Valtype c1, Valtype c2)
   {
     this->reserve_ent(2);
-    unsigned int got_offset = this->add_constant(c1);
-    this->add_constant(c2);
-    return got_offset;
+    return Output_data_got<size, big_endian>::add_constant_pair(c1, c2);
   }
 
   // Offset of _GLOBAL_OFFSET_TABLE_.
@@ -2371,28 +2557,40 @@ Target_powerpc<size, big_endian>::Branch_info::make_stub(
   if (sym != NULL && sym->is_forwarder())
     sym = symtab->resolve_forwards(sym);
   const Sized_symbol<size>* gsym = static_cast<const Sized_symbol<size>*>(sym);
+  Target_powerpc<size, big_endian>* target =
+    static_cast<Target_powerpc<size, big_endian>*>(
+      parameters->sized_target<size, big_endian>());
   if (gsym != NULL
-      ? use_plt_offset<size>(gsym, Scan::get_reference_flags(this->r_type_))
+      ? gsym->use_plt_offset(Scan::get_reference_flags(this->r_type_, target))
       : this->object_->local_has_plt_offset(this->r_sym_))
     {
-      if (stub_table == NULL)
-	stub_table = this->object_->stub_table(this->shndx_);
-      if (stub_table == NULL)
-	{
-	  // This is a ref from a data section to an ifunc symbol.
-	  stub_table = ifunc_stub_table;
-	}
-      gold_assert(stub_table != NULL);
-      if (gsym != NULL)
-	stub_table->add_plt_call_entry(this->object_, gsym,
-				       this->r_type_, this->addend_);
+      if (size == 64
+	  && gsym != NULL
+	  && target->abiversion() >= 2
+	  && !parameters->options().output_is_position_independent()
+	  && !is_branch_reloc(this->r_type_))
+	target->glink_section()->add_global_entry(gsym);
       else
-	stub_table->add_plt_call_entry(this->object_, this->r_sym_,
-				       this->r_type_, this->addend_);
+	{
+	  if (stub_table == NULL)
+	    stub_table = this->object_->stub_table(this->shndx_);
+	  if (stub_table == NULL)
+	    {
+	      // This is a ref from a data section to an ifunc symbol.
+	      stub_table = ifunc_stub_table;
+	    }
+	  gold_assert(stub_table != NULL);
+	  if (gsym != NULL)
+	    stub_table->add_plt_call_entry(this->object_, gsym,
+					   this->r_type_, this->addend_);
+	  else
+	    stub_table->add_plt_call_entry(this->object_, this->r_sym_,
+					   this->r_type_, this->addend_);
+	}
     }
   else
     {
-      unsigned int max_branch_offset;
+      unsigned long max_branch_offset;
       if (this->r_type_ == elfcpp::R_POWERPC_REL14
 	  || this->r_type_ == elfcpp::R_POWERPC_REL14_BRTAKEN
 	  || this->r_type_ == elfcpp::R_POWERPC_REL14_BRNTAKEN)
@@ -2435,6 +2633,8 @@ Target_powerpc<size, big_endian>::Branch_info::make_stub(
 	  to = symtab->compute_final_value<size>(gsym, &status);
 	  if (status != Symbol_table::CFVS_OK)
 	    return;
+	  if (size == 64)
+	    to += this->object_->ppc64_local_entry_offset(gsym);
 	}
       else
 	{
@@ -2449,16 +2649,15 @@ Target_powerpc<size, big_endian>::Branch_info::make_stub(
 	      || !symval.has_output_value())
 	    return;
 	  to = symval.value(this->object_, 0);
+	  if (size == 64)
+	    to += this->object_->ppc64_local_entry_offset(this->r_sym_);
 	}
       to += this->addend_;
       if (stub_table == NULL)
 	stub_table = this->object_->stub_table(this->shndx_);
-      if (size == 64 && is_branch_reloc(this->r_type_))
+      if (size == 64 && target->abiversion() < 2)
 	{
 	  unsigned int dest_shndx;
-	  Target_powerpc<size, big_endian>* target =
-	    static_cast<Target_powerpc<size, big_endian>*>(
-		parameters->sized_target<size, big_endian>());
 	  to = target->symval_for_branch(symtab, to, gsym,
 					 this->object_, &dest_shndx);
 	}
@@ -2491,8 +2690,12 @@ Target_powerpc<size, big_endian>::do_relax(int pass,
   unsigned int prev_brlt_size = 0;
   if (pass == 1)
     {
-      bool thread_safe = parameters->options().plt_thread_safe();
-      if (size == 64 && !parameters->options().user_set_plt_thread_safe())
+      bool thread_safe
+	= this->abiversion() < 2 && parameters->options().plt_thread_safe();
+      if (size == 64
+	  && this->abiversion() < 2
+	  && !thread_safe
+	  && !parameters->options().user_set_plt_thread_safe())
 	{
 	  static const char* const thread_starter[] =
 	    {
@@ -2510,7 +2713,7 @@ Target_powerpc<size, big_endian>::do_relax(int pass,
 	      "GOMP_parallel_loop_dynamic_start",
 	      "GOMP_parallel_loop_guided_start",
 	      "GOMP_parallel_loop_runtime_start",
-	      "GOMP_parallel_sections_start", 
+	      "GOMP_parallel_sections_start",
 	    };
 
 	  if (parameters->options().shared())
@@ -2658,7 +2861,21 @@ Target_powerpc<size, big_endian>::do_plt_fde_location(const Output_data* plt,
   if (plt == this->glink_)
     {
       // See Output_data_glink::do_write() for glink contents.
-      if (size == 64)
+      if (len == 0)
+	{
+	  gold_assert(parameters->doing_static_link());
+	  // Static linking may need stubs, to support ifunc and long
+	  // branches.  We need to create an output section for
+	  // .eh_frame early in the link process, to have a place to
+	  // attach stub .eh_frame info.  We also need to have
+	  // registered a CIE that matches the stub CIE.  Both of
+	  // these requirements are satisfied by creating an FDE and
+	  // CIE for .glink, even though static linking will leave
+	  // .glink zero length.
+	  // ??? Hopefully generating an FDE with a zero address range
+	  // won't confuse anything that consumes .eh_frame info.
+	}
+      else if (size == 64)
 	{
 	  // There is one word before __glink_PLTresolve
 	  address += 8;
@@ -2670,7 +2887,7 @@ Target_powerpc<size, big_endian>::do_plt_fde_location(const Output_data* plt,
 	  // The first covers the branch table, the second
 	  // __glink_PLTresolve at the end of glink.
 	  off_t resolve_size = this->glink_->pltresolve_size;
-	  if (oview[9] == 0)
+	  if (oview[9] == elfcpp::DW_CFA_nop)
 	    len -= resolve_size;
 	  else
 	    {
@@ -2704,12 +2921,10 @@ class Output_data_plt_powerpc : public Output_section_data_build
 
   Output_data_plt_powerpc(Target_powerpc<size, big_endian>* targ,
 			  Reloc_section* plt_rel,
-			  unsigned int reserved_size,
 			  const char* name)
     : Output_section_data_build(size == 32 ? 4 : 8),
       rel_(plt_rel),
       targ_(targ),
-      initial_plt_entry_size_(reserved_size),
       name_(name)
   { }
 
@@ -2736,19 +2951,9 @@ class Output_data_plt_powerpc : public Output_section_data_build
   {
     if (this->current_data_size() == 0)
       return 0;
-    return ((this->current_data_size() - this->initial_plt_entry_size_)
-	    / plt_entry_size);
+    return ((this->current_data_size() - this->first_plt_entry_offset())
+	    / this->plt_entry_size());
   }
-
-  // Return the offset of the first non-reserved PLT entry.
-  unsigned int
-  first_plt_entry_offset()
-  { return this->initial_plt_entry_size_; }
-
-  // Return the size of a PLT entry.
-  static unsigned int
-  get_plt_entry_size()
-  { return plt_entry_size; }
 
  protected:
   void
@@ -2763,8 +2968,22 @@ class Output_data_plt_powerpc : public Output_section_data_build
   { mapfile->print_output_data(this, this->name_); }
 
  private:
-  // The size of an entry in the PLT.
-  static const int plt_entry_size = size == 32 ? 4 : 24;
+  // Return the offset of the first non-reserved PLT entry.
+  unsigned int
+  first_plt_entry_offset() const
+  {
+    // IPLT has no reserved entry.
+    if (this->name_[3] == 'I')
+      return 0;
+    return this->targ_->first_plt_entry_offset();
+  }
+
+  // Return the size of each PLT entry.
+  unsigned int
+  plt_entry_size() const
+  {
+    return this->targ_->plt_entry_size();
+  }
 
   // Write out the PLT data.
   void
@@ -2774,8 +2993,6 @@ class Output_data_plt_powerpc : public Output_section_data_build
   Reloc_section* rel_;
   // Allows access to .glink for do_write.
   Target_powerpc<size, big_endian>* targ_;
-  // The size of the first reserved entry.
-  int initial_plt_entry_size_;
   // What to report in map file.
   const char *name_;
 };
@@ -2795,7 +3012,7 @@ Output_data_plt_powerpc<size, big_endian>::add_entry(Symbol* gsym)
       gsym->set_needs_dynsym_entry();
       unsigned int dynrel = elfcpp::R_POWERPC_JMP_SLOT;
       this->rel_->add_global(gsym, dynrel, this, off, 0);
-      off += plt_entry_size;
+      off += this->plt_entry_size();
       this->set_current_data_size(off);
     }
 }
@@ -2811,10 +3028,10 @@ Output_data_plt_powerpc<size, big_endian>::add_ifunc_entry(Symbol* gsym)
       section_size_type off = this->current_data_size();
       gsym->set_plt_offset(off);
       unsigned int dynrel = elfcpp::R_POWERPC_IRELATIVE;
-      if (size == 64)
+      if (size == 64 && this->targ_->abiversion() < 2)
 	dynrel = elfcpp::R_PPC64_JMP_IREL;
       this->rel_->add_symbolless_global_addend(gsym, dynrel, this, off, 0);
-      off += plt_entry_size;
+      off += this->plt_entry_size();
       this->set_current_data_size(off);
     }
 }
@@ -2832,11 +3049,11 @@ Output_data_plt_powerpc<size, big_endian>::add_local_ifunc_entry(
       section_size_type off = this->current_data_size();
       relobj->set_local_plt_offset(local_sym_index, off);
       unsigned int dynrel = elfcpp::R_POWERPC_IRELATIVE;
-      if (size == 64)
+      if (size == 64 && this->targ_->abiversion() < 2)
 	dynrel = elfcpp::R_PPC64_JMP_IREL;
       this->rel_->add_symbolless_local_addend(relobj, local_sym_index, dynrel,
 					      this, off, 0);
-      off += plt_entry_size;
+      off += this->plt_entry_size();
       this->set_current_data_size(off);
     }
 }
@@ -2846,50 +3063,52 @@ static const uint32_t add_2_2_11	= 0x7c425a14;
 static const uint32_t add_3_3_2		= 0x7c631214;
 static const uint32_t add_3_3_13	= 0x7c636a14;
 static const uint32_t add_11_0_11	= 0x7d605a14;
-static const uint32_t add_12_2_11	= 0x7d825a14;
-static const uint32_t add_12_12_11	= 0x7d8c5a14;
+static const uint32_t add_11_2_11	= 0x7d625a14;
+static const uint32_t add_11_11_2	= 0x7d6b1214;
+static const uint32_t addi_0_12		= 0x380c0000;
+static const uint32_t addi_2_2		= 0x38420000;
+static const uint32_t addi_3_3		= 0x38630000;
 static const uint32_t addi_11_11	= 0x396b0000;
 static const uint32_t addi_12_12	= 0x398c0000;
-static const uint32_t addi_2_2		= 0x38420000;
-static const uint32_t addi_3_2		= 0x38620000;
-static const uint32_t addi_3_3		= 0x38630000;
 static const uint32_t addis_0_2		= 0x3c020000;
 static const uint32_t addis_0_13	= 0x3c0d0000;
-static const uint32_t addis_11_11	= 0x3d6b0000;
-static const uint32_t addis_11_30	= 0x3d7e0000;
-static const uint32_t addis_12_12	= 0x3d8c0000;
-static const uint32_t addis_12_2	= 0x3d820000;
 static const uint32_t addis_3_2		= 0x3c620000;
 static const uint32_t addis_3_13	= 0x3c6d0000;
+static const uint32_t addis_11_2	= 0x3d620000;
+static const uint32_t addis_11_11	= 0x3d6b0000;
+static const uint32_t addis_11_30	= 0x3d7e0000;
+static const uint32_t addis_12_2	= 0x3d820000;
+static const uint32_t addis_12_12	= 0x3d8c0000;
 static const uint32_t b			= 0x48000000;
 static const uint32_t bcl_20_31		= 0x429f0005;
 static const uint32_t bctr		= 0x4e800420;
 static const uint32_t blr		= 0x4e800020;
-static const uint32_t blrl		= 0x4e800021;
 static const uint32_t bnectr_p4		= 0x4ce20420;
 static const uint32_t cmpldi_2_0	= 0x28220000;
 static const uint32_t cror_15_15_15	= 0x4def7b82;
 static const uint32_t cror_31_31_31	= 0x4ffffb82;
 static const uint32_t ld_0_1		= 0xe8010000;
 static const uint32_t ld_0_12		= 0xe80c0000;
-static const uint32_t ld_11_12		= 0xe96c0000;
-static const uint32_t ld_11_2		= 0xe9620000;
 static const uint32_t ld_2_1		= 0xe8410000;
-static const uint32_t ld_2_11		= 0xe84b0000;
-static const uint32_t ld_2_12		= 0xe84c0000;
 static const uint32_t ld_2_2		= 0xe8420000;
+static const uint32_t ld_2_11		= 0xe84b0000;
+static const uint32_t ld_11_2		= 0xe9620000;
+static const uint32_t ld_11_11		= 0xe96b0000;
+static const uint32_t ld_12_2		= 0xe9820000;
+static const uint32_t ld_12_11		= 0xe98b0000;
+static const uint32_t ld_12_12		= 0xe98c0000;
 static const uint32_t lfd_0_1		= 0xc8010000;
 static const uint32_t li_0_0		= 0x38000000;
 static const uint32_t li_12_0		= 0x39800000;
 static const uint32_t lis_0_0		= 0x3c000000;
 static const uint32_t lis_11		= 0x3d600000;
 static const uint32_t lis_12		= 0x3d800000;
+static const uint32_t lvx_0_12_0	= 0x7c0c00ce;
 static const uint32_t lwz_0_12		= 0x800c0000;
 static const uint32_t lwz_11_11		= 0x816b0000;
 static const uint32_t lwz_11_30		= 0x817e0000;
 static const uint32_t lwz_12_12		= 0x818c0000;
 static const uint32_t lwzu_0_12		= 0x840c0000;
-static const uint32_t lvx_0_12_0	= 0x7c0c00ce;
 static const uint32_t mflr_0		= 0x7c0802a6;
 static const uint32_t mflr_11		= 0x7d6802a6;
 static const uint32_t mflr_12		= 0x7d8802a6;
@@ -2900,13 +3119,16 @@ static const uint32_t mtlr_0		= 0x7c0803a6;
 static const uint32_t mtlr_12		= 0x7d8803a6;
 static const uint32_t nop		= 0x60000000;
 static const uint32_t ori_0_0_0		= 0x60000000;
+static const uint32_t srdi_0_0_2	= 0x7800f082;
 static const uint32_t std_0_1		= 0xf8010000;
 static const uint32_t std_0_12		= 0xf80c0000;
 static const uint32_t std_2_1		= 0xf8410000;
 static const uint32_t stfd_0_1		= 0xd8010000;
 static const uint32_t stvx_0_12_0	= 0x7c0c01ce;
 static const uint32_t sub_11_11_12	= 0x7d6c5850;
-static const uint32_t xor_11_11_11	= 0x7d6b5a78;
+static const uint32_t sub_12_12_11	= 0x7d8b6050;
+static const uint32_t xor_2_12_12	= 0x7d826278;
+static const uint32_t xor_11_12_12	= 0x7d8b6278;
 
 // Write out the PLT.
 
@@ -2965,7 +3187,6 @@ Target_powerpc<size, big_endian>::make_plt_section(Symbol_table* symtab,
 				      ORDER_DYNAMIC_PLT_RELOCS, false);
       this->plt_
 	= new Output_data_plt_powerpc<size, big_endian>(this, plt_rel,
-							size == 32 ? 0 : 24,
 							"** PLT");
       layout->add_output_section_data(".plt",
 				      (size == 32
@@ -2995,7 +3216,7 @@ Target_powerpc<size, big_endian>::make_iplt_section(Symbol_table* symtab,
       this->rela_dyn_->output_section()->add_output_section_data(iplt_rel);
       this->iplt_
 	= new Output_data_plt_powerpc<size, big_endian>(this, iplt_rel,
-							0, "** IPLT");
+							"** IPLT");
       this->plt_->output_section()->add_output_section_data(this->iplt_);
     }
 }
@@ -3171,14 +3392,26 @@ const unsigned char Eh_cie<size>::eh_frame_cie[] =
   elfcpp::DW_CFA_def_cfa, 1, 0		// def_cfa: r1 offset 0.
 };
 
-// Describe __glink_PLTresolve use of LR, 64-bit version.
-static const unsigned char glink_eh_frame_fde_64[] =
+// Describe __glink_PLTresolve use of LR, 64-bit version ABIv1.
+static const unsigned char glink_eh_frame_fde_64v1[] =
 {
   0, 0, 0, 0,				// Replaced with offset to .glink.
   0, 0, 0, 0,				// Replaced with size of .glink.
   0,					// Augmentation size.
   elfcpp::DW_CFA_advance_loc + 1,
   elfcpp::DW_CFA_register, 65, 12,
+  elfcpp::DW_CFA_advance_loc + 4,
+  elfcpp::DW_CFA_restore_extended, 65
+};
+
+// Describe __glink_PLTresolve use of LR, 64-bit version ABIv2.
+static const unsigned char glink_eh_frame_fde_64v2[] =
+{
+  0, 0, 0, 0,				// Replaced with offset to .glink.
+  0, 0, 0, 0,				// Replaced with size of .glink.
+  0,					// Augmentation size.
+  elfcpp::DW_CFA_advance_loc + 1,
+  elfcpp::DW_CFA_register, 65, 0,
   elfcpp::DW_CFA_advance_loc + 4,
   elfcpp::DW_CFA_restore_extended, 65
 };
@@ -3439,13 +3672,16 @@ class Stub_table : public Output_relaxed_input_section
       <const Powerpc_relobj<size, big_endian>*>(p->first.object_);
     got_addr += ppcobj->toc_base_offset();
     Address off = plt_addr - got_addr;
-    bool static_chain = parameters->options().plt_static_chain();
-    bool thread_safe = this->targ_->plt_thread_safe();
-    unsigned int bytes = (4 * 5
-			  + 4 * static_chain
-			  + 8 * thread_safe
-			  + 4 * (ha(off) != 0)
-			  + 4 * (ha(off + 8 + 8 * static_chain) != ha(off)));
+    unsigned int bytes = 4 * 4 + 4 * (ha(off) != 0);
+    if (this->targ_->abiversion() < 2)
+      {
+	bool static_chain = parameters->options().plt_static_chain();
+	bool thread_safe = this->targ_->plt_thread_safe();
+	bytes += (4
+		  + 4 * static_chain
+		  + 8 * thread_safe
+		  + 4 * (ha(off + 8 + 8 * static_chain) != ha(off)));
+      }
     unsigned int align = 1 << parameters->options().plt_align();
     if (align > 1)
       bytes = (bytes + align - 1) & -align;
@@ -3627,7 +3863,7 @@ Stub_table<size, big_endian>::add_plt_call_entry(
     Address addend)
 {
   Plt_stub_ent ent(object, gsym, r_type, addend);
-  Address off = this->plt_size_;
+  unsigned int off = this->plt_size_;
   std::pair<typename Plt_stub_entries::iterator, bool> p
     = this->plt_call_stubs_.insert(std::make_pair(ent, off));
   if (p.second)
@@ -3643,7 +3879,7 @@ Stub_table<size, big_endian>::add_plt_call_entry(
     Address addend)
 {
   Plt_stub_ent ent(object, locsym_index, r_type, addend);
-  Address off = this->plt_size_;
+  unsigned int off = this->plt_size_;
   std::pair<typename Plt_stub_entries::iterator, bool> p
     = this->plt_call_stubs_.insert(std::make_pair(ent, off));
   if (p.second)
@@ -3738,41 +3974,30 @@ template<int size, bool big_endian>
 class Output_data_glink : public Output_section_data
 {
  public:
+  typedef typename elfcpp::Elf_types<size>::Elf_Addr Address;
+  static const Address invalid_address = static_cast<Address>(0) - 1;
   static const int pltresolve_size = 16*4;
 
   Output_data_glink(Target_powerpc<size, big_endian>* targ)
-    : Output_section_data(16), targ_(targ)
+    : Output_section_data(16), targ_(targ), global_entry_stubs_(),
+      end_branch_table_(), ge_size_(0)
   { }
 
   void
-  add_eh_frame(Layout* layout)
-  {
-    if (!parameters->options().ld_generated_unwind_info())
-      return;
+  add_eh_frame(Layout* layout);
 
-    if (size == 64)
-      layout->add_eh_frame_for_plt(this,
-				   Eh_cie<64>::eh_frame_cie,
-				   sizeof (Eh_cie<64>::eh_frame_cie),
-				   glink_eh_frame_fde_64,
-				   sizeof (glink_eh_frame_fde_64));
-    else
-      {
-	// 32-bit .glink can use the default since the CIE return
-	// address reg, LR, is valid.
-	layout->add_eh_frame_for_plt(this,
-				     Eh_cie<32>::eh_frame_cie,
-				     sizeof (Eh_cie<32>::eh_frame_cie),
-				     default_fde,
-				     sizeof (default_fde));
-	// Except where LR is used in a PIC __glink_PLTresolve.
-	if (parameters->options().output_is_position_independent())
-	  layout->add_eh_frame_for_plt(this,
-				       Eh_cie<32>::eh_frame_cie,
-				       sizeof (Eh_cie<32>::eh_frame_cie),
-				       glink_eh_frame_fde_32,
-				       sizeof (glink_eh_frame_fde_32));
-      }
+  void
+  add_global_entry(const Symbol*);
+
+  Address
+  find_global_entry(const Symbol*) const;
+
+  Address
+  global_entry_address() const
+  {
+    gold_assert(this->is_data_size_valid());
+    unsigned int global_entry_off = (this->end_branch_table_ + 15) & -16;
+    return this->address() + global_entry_off;
   }
 
  protected:
@@ -3791,7 +4016,73 @@ class Output_data_glink : public Output_section_data
 
   // Allows access to .got and .plt for do_write.
   Target_powerpc<size, big_endian>* targ_;
+
+  // Map sym to stub offset.
+  typedef Unordered_map<const Symbol*, unsigned int> Global_entry_stub_entries;
+  Global_entry_stub_entries global_entry_stubs_;
+
+  unsigned int end_branch_table_, ge_size_;
 };
+
+template<int size, bool big_endian>
+void
+Output_data_glink<size, big_endian>::add_eh_frame(Layout* layout)
+{
+  if (!parameters->options().ld_generated_unwind_info())
+    return;
+
+  if (size == 64)
+    {
+      if (this->targ_->abiversion() < 2)
+	layout->add_eh_frame_for_plt(this,
+				     Eh_cie<64>::eh_frame_cie,
+				     sizeof (Eh_cie<64>::eh_frame_cie),
+				     glink_eh_frame_fde_64v1,
+				     sizeof (glink_eh_frame_fde_64v1));
+      else
+	layout->add_eh_frame_for_plt(this,
+				     Eh_cie<64>::eh_frame_cie,
+				     sizeof (Eh_cie<64>::eh_frame_cie),
+				     glink_eh_frame_fde_64v2,
+				     sizeof (glink_eh_frame_fde_64v2));
+    }
+  else
+    {
+      // 32-bit .glink can use the default since the CIE return
+      // address reg, LR, is valid.
+      layout->add_eh_frame_for_plt(this,
+				   Eh_cie<32>::eh_frame_cie,
+				   sizeof (Eh_cie<32>::eh_frame_cie),
+				   default_fde,
+				   sizeof (default_fde));
+      // Except where LR is used in a PIC __glink_PLTresolve.
+      if (parameters->options().output_is_position_independent())
+	layout->add_eh_frame_for_plt(this,
+				     Eh_cie<32>::eh_frame_cie,
+				     sizeof (Eh_cie<32>::eh_frame_cie),
+				     glink_eh_frame_fde_32,
+				     sizeof (glink_eh_frame_fde_32));
+    }
+}
+
+template<int size, bool big_endian>
+void
+Output_data_glink<size, big_endian>::add_global_entry(const Symbol* gsym)
+{
+  std::pair<typename Global_entry_stub_entries::iterator, bool> p
+    = this->global_entry_stubs_.insert(std::make_pair(gsym, this->ge_size_));
+  if (p.second)
+    this->ge_size_ += 16;
+}
+
+template<int size, bool big_endian>
+typename Output_data_glink<size, big_endian>::Address
+Output_data_glink<size, big_endian>::find_global_entry(const Symbol* gsym) const
+{
+  typename Global_entry_stub_entries::const_iterator p
+    = this->global_entry_stubs_.find(gsym);
+  return p == this->global_entry_stubs_.end() ? invalid_address : p->second;
+}
 
 template<int size, bool big_endian>
 void
@@ -3815,11 +4106,18 @@ Output_data_glink<size, big_endian>::set_final_data_size()
 	  total += this->pltresolve_size;
 
 	  // space for branch table
-	  total += 8 * count;
-	  if (count > 0x8000)
-	    total += 4 * (count - 0x8000);
+	  total += 4 * count;
+	  if (this->targ_->abiversion() < 2)
+	    {
+	      total += 4 * count;
+	      if (count > 0x8000)
+		total += 4 * (count - 0x8000);
+	    }
 	}
     }
+  this->end_branch_table_ = total;
+  total = (total + 15) & -16;
+  total += this->ge_size_;
 
   this->set_data_size(total);
 }
@@ -3880,8 +4178,11 @@ Stub_table<size, big_endian>::do_write(Output_file* of)
 			   cs->first.object_->name().c_str(),
 			   cs->first.sym_->demangled_name().c_str());
 
-	      bool static_chain = parameters->options().plt_static_chain();
-	      bool thread_safe = this->targ_->plt_thread_safe();
+	      bool plt_load_toc = this->targ_->abiversion() < 2;
+	      bool static_chain
+		= plt_load_toc && parameters->options().plt_static_chain();
+	      bool thread_safe
+		= plt_load_toc && this->targ_->plt_thread_safe();
 	      bool use_fake_dep = false;
 	      Address cmp_branch_off = 0;
 	      if (thread_safe)
@@ -3908,47 +4209,88 @@ Stub_table<size, big_endian>::do_write(Output_file* of)
 	      p = oview + cs->second;
 	      if (ha(off) != 0)
 		{
-		  write_insn<big_endian>(p, std_2_1 + 40),		p += 4;
-		  write_insn<big_endian>(p, addis_12_2 + ha(off)),	p += 4;
-		  write_insn<big_endian>(p, ld_11_12 + l(off)),		p += 4;
-		  if (ha(off + 8 + 8 * static_chain) != ha(off))
+		  write_insn<big_endian>(p, std_2_1 + this->targ_->stk_toc());
+		  p += 4;
+		  if (plt_load_toc)
 		    {
-		      write_insn<big_endian>(p, addi_12_12 + l(off)),	p += 4;
+		      write_insn<big_endian>(p, addis_11_2 + ha(off));
+		      p += 4;
+		      write_insn<big_endian>(p, ld_12_11 + l(off));
+		      p += 4;
+		    }
+		  else
+		    {
+		      write_insn<big_endian>(p, addis_12_2 + ha(off));
+		      p += 4;
+		      write_insn<big_endian>(p, ld_12_12 + l(off));
+		      p += 4;
+		    }
+		  if (plt_load_toc
+		      && ha(off + 8 + 8 * static_chain) != ha(off))
+		    {
+		      write_insn<big_endian>(p, addi_11_11 + l(off));
+		      p += 4;
 		      off = 0;
 		    }
-		  write_insn<big_endian>(p, mtctr_11),			p += 4;
-		  if (use_fake_dep)
+		  write_insn<big_endian>(p, mtctr_12);
+		  p += 4;
+		  if (plt_load_toc)
 		    {
-		      write_insn<big_endian>(p, xor_11_11_11),		p += 4;
-		      write_insn<big_endian>(p, add_12_12_11),		p += 4;
+		      if (use_fake_dep)
+			{
+			  write_insn<big_endian>(p, xor_2_12_12);
+			  p += 4;
+			  write_insn<big_endian>(p, add_11_11_2);
+			  p += 4;
+			}
+		      write_insn<big_endian>(p, ld_2_11 + l(off + 8));
+		      p += 4;
+		      if (static_chain)
+			{
+			  write_insn<big_endian>(p, ld_11_11 + l(off + 16));
+			  p += 4;
+			}
 		    }
-		  write_insn<big_endian>(p, ld_2_12 + l(off + 8)),	p += 4;
-		  if (static_chain)
-		    write_insn<big_endian>(p, ld_11_12 + l(off + 16)),	p += 4;
 		}
 	      else
 		{
-		  write_insn<big_endian>(p, std_2_1 + 40),		p += 4;
-		  write_insn<big_endian>(p, ld_11_2 + l(off)),		p += 4;
-		  if (ha(off + 8 + 8 * static_chain) != ha(off))
+		  write_insn<big_endian>(p, std_2_1 + this->targ_->stk_toc());
+		  p += 4;
+		  write_insn<big_endian>(p, ld_12_2 + l(off));
+		  p += 4;
+		  if (plt_load_toc
+		      && ha(off + 8 + 8 * static_chain) != ha(off))
 		    {
-		      write_insn<big_endian>(p, addi_2_2 + l(off)),	p += 4;
+		      write_insn<big_endian>(p, addi_2_2 + l(off));
+		      p += 4;
 		      off = 0;
 		    }
-		  write_insn<big_endian>(p, mtctr_11),			p += 4;
-		  if (use_fake_dep)
+		  write_insn<big_endian>(p, mtctr_12);
+		  p += 4;
+		  if (plt_load_toc)
 		    {
-		      write_insn<big_endian>(p, xor_11_11_11),		p += 4;
-		      write_insn<big_endian>(p, add_2_2_11),		p += 4;
+		      if (use_fake_dep)
+			{
+			  write_insn<big_endian>(p, xor_11_12_12);
+			  p += 4;
+			  write_insn<big_endian>(p, add_2_2_11);
+			  p += 4;
+			}
+		      if (static_chain)
+			{
+			  write_insn<big_endian>(p, ld_11_2 + l(off + 16));
+			  p += 4;
+			}
+		      write_insn<big_endian>(p, ld_2_2 + l(off + 8));
+		      p += 4;
 		    }
-		  if (static_chain)
-		    write_insn<big_endian>(p, ld_11_2 + l(off + 16)),	p += 4;
-		  write_insn<big_endian>(p, ld_2_2 + l(off + 8)),	p += 4;
 		}
 	      if (thread_safe && !use_fake_dep)
 		{
-		  write_insn<big_endian>(p, cmpldi_2_0),		p += 4;
-		  write_insn<big_endian>(p, bnectr_p4),			p += 4;
+		  write_insn<big_endian>(p, cmpldi_2_0);
+		  p += 4;
+		  write_insn<big_endian>(p, bnectr_p4);
+		  p += 4;
 		  write_insn<big_endian>(p, b | (cmp_branch_off & 0x3fffffc));
 		}
 	      else
@@ -3977,14 +4319,14 @@ Stub_table<size, big_endian>::do_write(Output_file* of)
 	      Address brltoff = brlt_addr - got_addr;
 	      if (ha(brltoff) == 0)
 		{
-		  write_insn<big_endian>(p, ld_11_2 + l(brltoff)),	p += 4;
+		  write_insn<big_endian>(p, ld_12_2 + l(brltoff)),	p += 4;
 		}
 	      else
 		{
 		  write_insn<big_endian>(p, addis_12_2 + ha(brltoff)),	p += 4;
-		  write_insn<big_endian>(p, ld_11_12 + l(brltoff)),	p += 4;
+		  write_insn<big_endian>(p, ld_12_12 + l(brltoff)),	p += 4;
 		}
-	      write_insn<big_endian>(p, mtctr_11),			p += 4;
+	      write_insn<big_endian>(p, mtctr_12),			p += 4;
 	      write_insn<big_endian>(p, bctr);
 	    }
 	}
@@ -4119,43 +4461,101 @@ Output_data_glink<size, big_endian>::do_write(Output_file* of)
 
   if (size == 64)
     {
-      // Write pltresolve stub.
-      p = oview;
-      Address after_bcl = this->address() + 16;
-      Address pltoff = plt_base - after_bcl;
-
-      elfcpp::Swap<64, big_endian>::writeval(p, pltoff),	p += 8;
-
-      write_insn<big_endian>(p, mflr_12),			p += 4;
-      write_insn<big_endian>(p, bcl_20_31),			p += 4;
-      write_insn<big_endian>(p, mflr_11),			p += 4;
-      write_insn<big_endian>(p, ld_2_11 + l(-16)),		p += 4;
-      write_insn<big_endian>(p, mtlr_12),			p += 4;
-      write_insn<big_endian>(p, add_12_2_11),			p += 4;
-      write_insn<big_endian>(p, ld_11_12 + 0),			p += 4;
-      write_insn<big_endian>(p, ld_2_12 + 8),			p += 4;
-      write_insn<big_endian>(p, mtctr_11),			p += 4;
-      write_insn<big_endian>(p, ld_11_12 + 16),			p += 4;
-      write_insn<big_endian>(p, bctr),				p += 4;
-      while (p < oview + this->pltresolve_size)
-	write_insn<big_endian>(p, nop), p += 4;
-
-      // Write lazy link call stubs.
-      uint32_t indx = 0;
-      while (p < oview + oview_size)
+      if (this->end_branch_table_ != 0)
 	{
-	  if (indx < 0x8000)
+	  // Write pltresolve stub.
+	  p = oview;
+	  Address after_bcl = this->address() + 16;
+	  Address pltoff = plt_base - after_bcl;
+
+	  elfcpp::Swap<64, big_endian>::writeval(p, pltoff),	p += 8;
+
+	  if (this->targ_->abiversion() < 2)
 	    {
-	      write_insn<big_endian>(p, li_0_0 + indx),			p += 4;
+	      write_insn<big_endian>(p, mflr_12),		p += 4;
+	      write_insn<big_endian>(p, bcl_20_31),		p += 4;
+	      write_insn<big_endian>(p, mflr_11),		p += 4;
+	      write_insn<big_endian>(p, ld_2_11 + l(-16)),	p += 4;
+	      write_insn<big_endian>(p, mtlr_12),		p += 4;
+	      write_insn<big_endian>(p, add_11_2_11),		p += 4;
+	      write_insn<big_endian>(p, ld_12_11 + 0),		p += 4;
+	      write_insn<big_endian>(p, ld_2_11 + 8),		p += 4;
+	      write_insn<big_endian>(p, mtctr_12),		p += 4;
+	      write_insn<big_endian>(p, ld_11_11 + 16),		p += 4;
 	    }
 	  else
 	    {
-	      write_insn<big_endian>(p, lis_0_0 + hi(indx)),		p += 4;
-	      write_insn<big_endian>(p, ori_0_0_0 + l(indx)),		p += 4;
+	      write_insn<big_endian>(p, mflr_0),		p += 4;
+	      write_insn<big_endian>(p, bcl_20_31),		p += 4;
+	      write_insn<big_endian>(p, mflr_11),		p += 4;
+	      write_insn<big_endian>(p, ld_2_11 + l(-16)),	p += 4;
+	      write_insn<big_endian>(p, mtlr_0),		p += 4;
+	      write_insn<big_endian>(p, sub_12_12_11),		p += 4;
+	      write_insn<big_endian>(p, add_11_2_11),		p += 4;
+	      write_insn<big_endian>(p, addi_0_12 + l(-48)),	p += 4;
+	      write_insn<big_endian>(p, ld_12_11 + 0),		p += 4;
+	      write_insn<big_endian>(p, srdi_0_0_2),		p += 4;
+	      write_insn<big_endian>(p, mtctr_12),		p += 4;
+	      write_insn<big_endian>(p, ld_11_11 + 8),		p += 4;
 	    }
-	  uint32_t branch_off = 8 - (p - oview);
-	  write_insn<big_endian>(p, b + (branch_off & 0x3fffffc)),	p += 4;
-	  indx++;
+	  write_insn<big_endian>(p, bctr),			p += 4;
+	  while (p < oview + this->pltresolve_size)
+	    write_insn<big_endian>(p, nop), p += 4;
+
+	  // Write lazy link call stubs.
+	  uint32_t indx = 0;
+	  while (p < oview + this->end_branch_table_)
+	    {
+	      if (this->targ_->abiversion() < 2)
+		{
+		  if (indx < 0x8000)
+		    {
+		      write_insn<big_endian>(p, li_0_0 + indx),		p += 4;
+		    }
+		  else
+		    {
+		      write_insn<big_endian>(p, lis_0_0 + hi(indx)),	p += 4;
+		      write_insn<big_endian>(p, ori_0_0_0 + l(indx)),	p += 4;
+		    }
+		}
+	      uint32_t branch_off = 8 - (p - oview);
+	      write_insn<big_endian>(p, b + (branch_off & 0x3fffffc)),	p += 4;
+	      indx++;
+	    }
+	}
+
+      Address plt_base = this->targ_->plt_section()->address();
+      Address iplt_base = invalid_address;
+      unsigned int global_entry_off = (this->end_branch_table_ + 15) & -16;
+      Address global_entry_base = this->address() + global_entry_off;
+      typename Global_entry_stub_entries::const_iterator ge;
+      for (ge = this->global_entry_stubs_.begin();
+	   ge != this->global_entry_stubs_.end();
+	   ++ge)
+	{
+	  p = oview + global_entry_off + ge->second;
+	  Address plt_addr = ge->first->plt_offset();
+	  if (ge->first->type() == elfcpp::STT_GNU_IFUNC
+	      && ge->first->can_use_relative_reloc(false))
+	    {
+	      if (iplt_base == invalid_address)
+		iplt_base = this->targ_->iplt_section()->address();
+	      plt_addr += iplt_base;
+	    }
+	  else
+	    plt_addr += plt_base;
+	  Address my_addr = global_entry_base + ge->second;
+	  Address off = plt_addr - my_addr;
+
+	  if (off + 0x80008000 > 0xffffffff || (off & 3) != 0)
+	    gold_error(_("%s: linkage table error against `%s'"),
+		       ge->first->object()->name().c_str(),
+		       ge->first->demangled_name().c_str());
+
+	  write_insn<big_endian>(p, addis_12_12 + ha(off)),	p += 4;
+	  write_insn<big_endian>(p, ld_12_12 + l(off)),		p += 4;
+	  write_insn<big_endian>(p, mtctr_12),			p += 4;
+	  write_insn<big_endian>(p, bctr);
 	}
     }
   else
@@ -4636,24 +5036,6 @@ Target_powerpc<size, big_endian>::plt_entry_count() const
   return this->plt_->entry_count();
 }
 
-// Return the offset of the first non-reserved PLT entry.
-
-template<int size, bool big_endian>
-unsigned int
-Target_powerpc<size, big_endian>::first_plt_entry_offset() const
-{
-  return this->plt_->first_plt_entry_offset();
-}
-
-// Return the size of each PLT entry.
-
-template<int size, bool big_endian>
-unsigned int
-Target_powerpc<size, big_endian>::plt_entry_size() const
-{
-  return Output_data_plt_powerpc<size, big_endian>::get_plt_entry_size();
-}
-
 // Create a GOT entry for local dynamic __tls_get_addr calls.
 
 template<int size, bool big_endian>
@@ -4681,8 +5063,12 @@ Target_powerpc<size, big_endian>::tlsld_got_offset(
 
 template<int size, bool big_endian>
 int
-Target_powerpc<size, big_endian>::Scan::get_reference_flags(unsigned int r_type)
+Target_powerpc<size, big_endian>::Scan::get_reference_flags(
+    unsigned int r_type,
+    const Target_powerpc* target)
 {
+  int ref = 0;
+
   switch (r_type)
     {
     case elfcpp::R_POWERPC_NONE:
@@ -4690,7 +5076,7 @@ Target_powerpc<size, big_endian>::Scan::get_reference_flags(unsigned int r_type)
     case elfcpp::R_POWERPC_GNU_VTENTRY:
     case elfcpp::R_PPC64_TOC:
       // No symbol reference.
-      return 0;
+      break;
 
     case elfcpp::R_PPC64_ADDR64:
     case elfcpp::R_PPC64_UADDR64:
@@ -4701,13 +5087,15 @@ Target_powerpc<size, big_endian>::Scan::get_reference_flags(unsigned int r_type)
     case elfcpp::R_POWERPC_ADDR16_LO:
     case elfcpp::R_POWERPC_ADDR16_HI:
     case elfcpp::R_POWERPC_ADDR16_HA:
-      return Symbol::ABSOLUTE_REF;
+      ref = Symbol::ABSOLUTE_REF;
+      break;
 
     case elfcpp::R_POWERPC_ADDR24:
     case elfcpp::R_POWERPC_ADDR14:
     case elfcpp::R_POWERPC_ADDR14_BRTAKEN:
     case elfcpp::R_POWERPC_ADDR14_BRNTAKEN:
-      return Symbol::FUNCTION_CALL | Symbol::ABSOLUTE_REF;
+      ref = Symbol::FUNCTION_CALL | Symbol::ABSOLUTE_REF;
+      break;
 
     case elfcpp::R_PPC64_REL64:
     case elfcpp::R_POWERPC_REL32:
@@ -4716,14 +5104,16 @@ Target_powerpc<size, big_endian>::Scan::get_reference_flags(unsigned int r_type)
     case elfcpp::R_POWERPC_REL16_LO:
     case elfcpp::R_POWERPC_REL16_HI:
     case elfcpp::R_POWERPC_REL16_HA:
-      return Symbol::RELATIVE_REF;
+      ref = Symbol::RELATIVE_REF;
+      break;
 
     case elfcpp::R_POWERPC_REL24:
     case elfcpp::R_PPC_PLTREL24:
     case elfcpp::R_POWERPC_REL14:
     case elfcpp::R_POWERPC_REL14_BRTAKEN:
     case elfcpp::R_POWERPC_REL14_BRNTAKEN:
-      return Symbol::FUNCTION_CALL | Symbol::RELATIVE_REF;
+      ref = Symbol::FUNCTION_CALL | Symbol::RELATIVE_REF;
+      break;
 
     case elfcpp::R_POWERPC_GOT16:
     case elfcpp::R_POWERPC_GOT16_LO:
@@ -4738,11 +5128,13 @@ Target_powerpc<size, big_endian>::Scan::get_reference_flags(unsigned int r_type)
     case elfcpp::R_PPC64_TOC16_DS:
     case elfcpp::R_PPC64_TOC16_LO_DS:
       // Absolute in GOT.
-      return Symbol::ABSOLUTE_REF;
+      ref = Symbol::ABSOLUTE_REF;
+      break;
 
     case elfcpp::R_POWERPC_GOT_TPREL16:
     case elfcpp::R_POWERPC_TLS:
-      return Symbol::TLS_REF;
+      ref = Symbol::TLS_REF;
+      break;
 
     case elfcpp::R_POWERPC_COPY:
     case elfcpp::R_POWERPC_GLOB_DAT:
@@ -4751,8 +5143,12 @@ Target_powerpc<size, big_endian>::Scan::get_reference_flags(unsigned int r_type)
     case elfcpp::R_POWERPC_DTPMOD:
     default:
       // Not expected.  We will give an error later.
-      return 0;
+      break;
     }
+
+  if (size == 64 && target->abiversion() < 2)
+    ref |= Symbol::FUNC_DESC_ABI;
+  return ref;
 }
 
 // Report an unsupported relocation against a local symbol.
@@ -4823,6 +5219,8 @@ Target_powerpc<size, big_endian>::Scan::check_non_pic(Relobj* object,
 	case elfcpp::R_PPC64_JMP_IREL:
 	case elfcpp::R_PPC64_ADDR16_DS:
 	case elfcpp::R_PPC64_ADDR16_LO_DS:
+	case elfcpp::R_PPC64_ADDR16_HIGH:
+	case elfcpp::R_PPC64_ADDR16_HIGHA:
 	case elfcpp::R_PPC64_ADDR16_HIGHER:
 	case elfcpp::R_PPC64_ADDR16_HIGHEST:
 	case elfcpp::R_PPC64_ADDR16_HIGHERA:
@@ -4831,6 +5229,8 @@ Target_powerpc<size, big_endian>::Scan::check_non_pic(Relobj* object,
 	case elfcpp::R_POWERPC_ADDR30:
 	case elfcpp::R_PPC64_TPREL16_DS:
 	case elfcpp::R_PPC64_TPREL16_LO_DS:
+	case elfcpp::R_PPC64_TPREL16_HIGH:
+	case elfcpp::R_PPC64_TPREL16_HIGHA:
 	case elfcpp::R_PPC64_TPREL16_HIGHER:
 	case elfcpp::R_PPC64_TPREL16_HIGHEST:
 	case elfcpp::R_PPC64_TPREL16_HIGHERA:
@@ -4876,13 +5276,15 @@ Target_powerpc<size, big_endian>::Scan::check_non_pic(Relobj* object,
 template<int size, bool big_endian>
 bool
 Target_powerpc<size, big_endian>::Scan::reloc_needs_plt_for_ifunc(
+     Target_powerpc<size, big_endian>* target,
      Sized_relobj_file<size, big_endian>* object,
      unsigned int r_type,
      bool report_err)
 {
   // In non-pic code any reference will resolve to the plt call stub
   // for the ifunc symbol.
-  if (size == 32 && !parameters->options().output_is_position_independent())
+  if ((size == 32 || target->abiversion() >= 2)
+      && !parameters->options().output_is_position_independent())
     return true;
 
   switch (r_type)
@@ -4989,7 +5391,7 @@ Target_powerpc<size, big_endian>::Scan::local(
 
   // A local STT_GNU_IFUNC symbol may require a PLT entry.
   bool is_ifunc = lsym.get_st_type() == elfcpp::STT_GNU_IFUNC;
-  if (is_ifunc && this->reloc_needs_plt_for_ifunc(object, r_type, true))
+  if (is_ifunc && this->reloc_needs_plt_for_ifunc(target, object, r_type, true))
     {
       unsigned int r_sym = elfcpp::elf_r_sym<size>(reloc.get_r_info());
       target->push_branch(ppc_object, data_shndx, reloc.get_r_offset(),
@@ -5003,7 +5405,6 @@ Target_powerpc<size, big_endian>::Scan::local(
     case elfcpp::R_POWERPC_GNU_VTINHERIT:
     case elfcpp::R_POWERPC_GNU_VTENTRY:
     case elfcpp::R_PPC64_TOCSAVE:
-    case elfcpp::R_PPC_EMB_MRKREF:
     case elfcpp::R_POWERPC_TLS:
       break;
 
@@ -5015,6 +5416,7 @@ Target_powerpc<size, big_endian>::Scan::local(
 	  {
 	    Address off = reloc.get_r_offset();
 	    if (size == 64
+		&& target->abiversion() < 2
 		&& data_shndx == ppc_object->opd_shndx()
 		&& ppc_object->get_opd_discard(off - 8))
 	      break;
@@ -5040,6 +5442,8 @@ Target_powerpc<size, big_endian>::Scan::local(
     case elfcpp::R_POWERPC_ADDR16_HI:
     case elfcpp::R_POWERPC_ADDR16_HA:
     case elfcpp::R_POWERPC_UADDR16:
+    case elfcpp::R_PPC64_ADDR16_HIGH:
+    case elfcpp::R_PPC64_ADDR16_HIGHA:
     case elfcpp::R_PPC64_ADDR16_HIGHER:
     case elfcpp::R_PPC64_ADDR16_HIGHERA:
     case elfcpp::R_PPC64_ADDR16_HIGHEST:
@@ -5053,7 +5457,7 @@ Target_powerpc<size, big_endian>::Scan::local(
       // executable), we need to create a dynamic relocation for
       // this location.
       if (parameters->options().output_is_position_independent()
-	  || (size == 64 && is_ifunc))
+	  || (size == 64 && is_ifunc && target->abiversion() < 2))
 	{
 	  Reloc_section* rela_dyn = target->rela_dyn_section(symtab, layout,
 							     is_ifunc);
@@ -5098,31 +5502,35 @@ Target_powerpc<size, big_endian>::Scan::local(
     case elfcpp::R_POWERPC_REL16_HI:
     case elfcpp::R_POWERPC_REL16_HA:
     case elfcpp::R_POWERPC_SECTOFF:
-    case elfcpp::R_POWERPC_TPREL16:
-    case elfcpp::R_POWERPC_DTPREL16:
     case elfcpp::R_POWERPC_SECTOFF_LO:
-    case elfcpp::R_POWERPC_TPREL16_LO:
-    case elfcpp::R_POWERPC_DTPREL16_LO:
     case elfcpp::R_POWERPC_SECTOFF_HI:
-    case elfcpp::R_POWERPC_TPREL16_HI:
-    case elfcpp::R_POWERPC_DTPREL16_HI:
     case elfcpp::R_POWERPC_SECTOFF_HA:
-    case elfcpp::R_POWERPC_TPREL16_HA:
-    case elfcpp::R_POWERPC_DTPREL16_HA:
-    case elfcpp::R_PPC64_DTPREL16_HIGHER:
-    case elfcpp::R_PPC64_TPREL16_HIGHER:
-    case elfcpp::R_PPC64_DTPREL16_HIGHERA:
-    case elfcpp::R_PPC64_TPREL16_HIGHERA:
-    case elfcpp::R_PPC64_DTPREL16_HIGHEST:
-    case elfcpp::R_PPC64_TPREL16_HIGHEST:
-    case elfcpp::R_PPC64_DTPREL16_HIGHESTA:
-    case elfcpp::R_PPC64_TPREL16_HIGHESTA:
-    case elfcpp::R_PPC64_TPREL16_DS:
-    case elfcpp::R_PPC64_TPREL16_LO_DS:
-    case elfcpp::R_PPC64_DTPREL16_DS:
-    case elfcpp::R_PPC64_DTPREL16_LO_DS:
     case elfcpp::R_PPC64_SECTOFF_DS:
     case elfcpp::R_PPC64_SECTOFF_LO_DS:
+    case elfcpp::R_POWERPC_TPREL16:
+    case elfcpp::R_POWERPC_TPREL16_LO:
+    case elfcpp::R_POWERPC_TPREL16_HI:
+    case elfcpp::R_POWERPC_TPREL16_HA:
+    case elfcpp::R_PPC64_TPREL16_DS:
+    case elfcpp::R_PPC64_TPREL16_LO_DS:
+    case elfcpp::R_PPC64_TPREL16_HIGH:
+    case elfcpp::R_PPC64_TPREL16_HIGHA:
+    case elfcpp::R_PPC64_TPREL16_HIGHER:
+    case elfcpp::R_PPC64_TPREL16_HIGHERA:
+    case elfcpp::R_PPC64_TPREL16_HIGHEST:
+    case elfcpp::R_PPC64_TPREL16_HIGHESTA:
+    case elfcpp::R_POWERPC_DTPREL16:
+    case elfcpp::R_POWERPC_DTPREL16_LO:
+    case elfcpp::R_POWERPC_DTPREL16_HI:
+    case elfcpp::R_POWERPC_DTPREL16_HA:
+    case elfcpp::R_PPC64_DTPREL16_DS:
+    case elfcpp::R_PPC64_DTPREL16_LO_DS:
+    case elfcpp::R_PPC64_DTPREL16_HIGH:
+    case elfcpp::R_PPC64_DTPREL16_HIGHA:
+    case elfcpp::R_PPC64_DTPREL16_HIGHER:
+    case elfcpp::R_PPC64_DTPREL16_HIGHERA:
+    case elfcpp::R_PPC64_DTPREL16_HIGHEST:
+    case elfcpp::R_PPC64_DTPREL16_HIGHESTA:
     case elfcpp::R_PPC64_TLSGD:
     case elfcpp::R_PPC64_TLSLD:
       break;
@@ -5141,7 +5549,8 @@ Target_powerpc<size, big_endian>::Scan::local(
 
 	if (!parameters->options().output_is_position_independent())
 	  {
-	    if (size == 32 && is_ifunc)
+	    if ((size == 32 && is_ifunc)
+		|| (size == 64 && target->abiversion() >= 2))
 	      got->add_local_plt(object, r_sym, GOT_TYPE_STANDARD);
 	    else
 	      got->add_local(object, r_sym, GOT_TYPE_STANDARD);
@@ -5339,12 +5748,14 @@ Target_powerpc<size, big_endian>::Scan::global(
 
   // A STT_GNU_IFUNC symbol may require a PLT entry.
   bool is_ifunc = gsym->type() == elfcpp::STT_GNU_IFUNC;
-  if (is_ifunc && this->reloc_needs_plt_for_ifunc(object, r_type, true))
+  bool pushed_ifunc = false;
+  if (is_ifunc && this->reloc_needs_plt_for_ifunc(target, object, r_type, true))
     {
       target->push_branch(ppc_object, data_shndx, reloc.get_r_offset(),
 			  r_type, elfcpp::elf_r_sym<size>(reloc.get_r_info()),
 			  reloc.get_r_addend());
       target->make_plt_entry(symtab, layout, gsym);
+      pushed_ifunc = true;
     }
 
   switch (r_type)
@@ -5353,7 +5764,6 @@ Target_powerpc<size, big_endian>::Scan::global(
     case elfcpp::R_POWERPC_GNU_VTINHERIT:
     case elfcpp::R_POWERPC_GNU_VTENTRY:
     case elfcpp::R_PPC_LOCAL24PC:
-    case elfcpp::R_PPC_EMB_MRKREF:
     case elfcpp::R_POWERPC_TLS:
       break;
 
@@ -5385,6 +5795,7 @@ Target_powerpc<size, big_endian>::Scan::global(
 
     case elfcpp::R_PPC64_ADDR64:
       if (size == 64
+	  && target->abiversion() < 2
 	  && data_shndx == ppc_object->opd_shndx()
 	  && (gsym->is_defined_in_discarded_section()
 	      || gsym->object() != object))
@@ -5402,6 +5813,8 @@ Target_powerpc<size, big_endian>::Scan::global(
     case elfcpp::R_POWERPC_ADDR16_HI:
     case elfcpp::R_POWERPC_ADDR16_HA:
     case elfcpp::R_POWERPC_UADDR16:
+    case elfcpp::R_PPC64_ADDR16_HIGH:
+    case elfcpp::R_PPC64_ADDR16_HIGHA:
     case elfcpp::R_PPC64_ADDR16_HIGHER:
     case elfcpp::R_PPC64_ADDR16_HIGHERA:
     case elfcpp::R_PPC64_ADDR16_HIGHEST:
@@ -5415,7 +5828,19 @@ Target_powerpc<size, big_endian>::Scan::global(
 	// Make a PLT entry if necessary.
 	if (gsym->needs_plt_entry())
 	  {
-	    if (!is_ifunc)
+	    // Since this is not a PC-relative relocation, we may be
+	    // taking the address of a function. In that case we need to
+	    // set the entry in the dynamic symbol table to the address of
+	    // the PLT call stub.
+	    bool need_ifunc_plt = false;
+	    if ((size == 32 || target->abiversion() >= 2)
+		&& gsym->is_from_dynobj()
+		&& !parameters->options().output_is_position_independent())
+	      {
+		gsym->set_needs_dynsym_value();
+		need_ifunc_plt = true;
+	      }
+	    if (!is_ifunc || (!pushed_ifunc && need_ifunc_plt))
 	      {
 		target->push_branch(ppc_object, data_shndx,
 				    reloc.get_r_offset(), r_type,
@@ -5423,31 +5848,27 @@ Target_powerpc<size, big_endian>::Scan::global(
 				    reloc.get_r_addend());
 		target->make_plt_entry(symtab, layout, gsym);
 	      }
-	    // Since this is not a PC-relative relocation, we may be
-	    // taking the address of a function. In that case we need to
-	    // set the entry in the dynamic symbol table to the address of
-	    // the PLT call stub.
-	    if (size == 32
-		&& gsym->is_from_dynobj()
-		&& !parameters->options().output_is_position_independent())
-	      gsym->set_needs_dynsym_value();
 	  }
 	// Make a dynamic relocation if necessary.
-	if (needs_dynamic_reloc<size>(gsym, Scan::get_reference_flags(r_type))
-	    || (size == 64 && is_ifunc))
+	if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type, target))
+	    || (size == 64 && is_ifunc && target->abiversion() < 2))
 	  {
 	    if (gsym->may_need_copy_reloc())
 	      {
 		target->copy_reloc(symtab, layout, object,
 				   data_shndx, output_section, gsym, reloc);
 	      }
-	    else if ((size == 32
-		      && r_type == elfcpp::R_POWERPC_ADDR32
+	    else if ((((size == 32
+			&& r_type == elfcpp::R_POWERPC_ADDR32)
+		       || (size == 64
+			   && r_type == elfcpp::R_PPC64_ADDR64
+			   && target->abiversion() >= 2))
 		      && gsym->can_use_relative_reloc(false)
 		      && !(gsym->visibility() == elfcpp::STV_PROTECTED
 			   && parameters->options().shared()))
 		     || (size == 64
 			 && r_type == elfcpp::R_PPC64_ADDR64
+			 && target->abiversion() < 2
 			 && (gsym->can_use_relative_reloc(false)
 			     || data_shndx == ppc_object->opd_shndx())))
 	      {
@@ -5493,7 +5914,7 @@ Target_powerpc<size, big_endian>::Scan::global(
     case elfcpp::R_PPC64_REL64:
     case elfcpp::R_POWERPC_REL32:
       // Make a dynamic relocation if necessary.
-      if (needs_dynamic_reloc<size>(gsym, Scan::get_reference_flags(r_type)))
+      if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type, target)))
 	{
 	  if (gsym->may_need_copy_reloc())
 	    {
@@ -5527,31 +5948,35 @@ Target_powerpc<size, big_endian>::Scan::global(
     case elfcpp::R_POWERPC_REL16_HI:
     case elfcpp::R_POWERPC_REL16_HA:
     case elfcpp::R_POWERPC_SECTOFF:
-    case elfcpp::R_POWERPC_TPREL16:
-    case elfcpp::R_POWERPC_DTPREL16:
     case elfcpp::R_POWERPC_SECTOFF_LO:
-    case elfcpp::R_POWERPC_TPREL16_LO:
-    case elfcpp::R_POWERPC_DTPREL16_LO:
     case elfcpp::R_POWERPC_SECTOFF_HI:
-    case elfcpp::R_POWERPC_TPREL16_HI:
-    case elfcpp::R_POWERPC_DTPREL16_HI:
     case elfcpp::R_POWERPC_SECTOFF_HA:
-    case elfcpp::R_POWERPC_TPREL16_HA:
-    case elfcpp::R_POWERPC_DTPREL16_HA:
-    case elfcpp::R_PPC64_DTPREL16_HIGHER:
-    case elfcpp::R_PPC64_TPREL16_HIGHER:
-    case elfcpp::R_PPC64_DTPREL16_HIGHERA:
-    case elfcpp::R_PPC64_TPREL16_HIGHERA:
-    case elfcpp::R_PPC64_DTPREL16_HIGHEST:
-    case elfcpp::R_PPC64_TPREL16_HIGHEST:
-    case elfcpp::R_PPC64_DTPREL16_HIGHESTA:
-    case elfcpp::R_PPC64_TPREL16_HIGHESTA:
-    case elfcpp::R_PPC64_TPREL16_DS:
-    case elfcpp::R_PPC64_TPREL16_LO_DS:
-    case elfcpp::R_PPC64_DTPREL16_DS:
-    case elfcpp::R_PPC64_DTPREL16_LO_DS:
     case elfcpp::R_PPC64_SECTOFF_DS:
     case elfcpp::R_PPC64_SECTOFF_LO_DS:
+    case elfcpp::R_POWERPC_TPREL16:
+    case elfcpp::R_POWERPC_TPREL16_LO:
+    case elfcpp::R_POWERPC_TPREL16_HI:
+    case elfcpp::R_POWERPC_TPREL16_HA:
+    case elfcpp::R_PPC64_TPREL16_DS:
+    case elfcpp::R_PPC64_TPREL16_LO_DS:
+    case elfcpp::R_PPC64_TPREL16_HIGH:
+    case elfcpp::R_PPC64_TPREL16_HIGHA:
+    case elfcpp::R_PPC64_TPREL16_HIGHER:
+    case elfcpp::R_PPC64_TPREL16_HIGHERA:
+    case elfcpp::R_PPC64_TPREL16_HIGHEST:
+    case elfcpp::R_PPC64_TPREL16_HIGHESTA:
+    case elfcpp::R_POWERPC_DTPREL16:
+    case elfcpp::R_POWERPC_DTPREL16_LO:
+    case elfcpp::R_POWERPC_DTPREL16_HI:
+    case elfcpp::R_POWERPC_DTPREL16_HA:
+    case elfcpp::R_PPC64_DTPREL16_DS:
+    case elfcpp::R_PPC64_DTPREL16_LO_DS:
+    case elfcpp::R_PPC64_DTPREL16_HIGH:
+    case elfcpp::R_PPC64_DTPREL16_HIGHA:
+    case elfcpp::R_PPC64_DTPREL16_HIGHER:
+    case elfcpp::R_PPC64_DTPREL16_HIGHERA:
+    case elfcpp::R_PPC64_DTPREL16_HIGHEST:
+    case elfcpp::R_PPC64_DTPREL16_HIGHESTA:
     case elfcpp::R_PPC64_TLSGD:
     case elfcpp::R_PPC64_TLSLD:
       break;
@@ -5569,7 +5994,8 @@ Target_powerpc<size, big_endian>::Scan::global(
 	got = target->got_section(symtab, layout);
 	if (gsym->final_value_is_known())
 	  {
-	    if (size == 32 && is_ifunc)
+	    if ((size == 32 && is_ifunc)
+		|| (size == 64 && target->abiversion() >= 2))
 	      got->add_global_plt(gsym, GOT_TYPE_STANDARD);
 	    else
 	      got->add_global(gsym, GOT_TYPE_STANDARD);
@@ -5585,7 +6011,8 @@ Target_powerpc<size, big_endian>::Scan::global(
 	      = target->rela_dyn_section(symtab, layout, is_ifunc);
 
 	    if (gsym->can_use_relative_reloc(false)
-		&& !(size == 32
+		&& !((size == 32
+		      || target->abiversion() >= 2)
 		     && gsym->visibility() == elfcpp::STV_PROTECTED
 		     && parameters->options().shared()))
 	      {
@@ -6185,9 +6612,9 @@ Target_powerpc<size, big_endian>::symval_for_branch(
     Powerpc_relobj<size, big_endian>* object,
     unsigned int *dest_shndx)
 {
+  if (size == 32 || this->abiversion() >= 2)
+    gold_unreachable();
   *dest_shndx = 0;
-  if (size == 32)
-    return value;
 
   // If the symbol is defined in an opd section, ie. is a function
   // descriptor, use the function descriptor code entry address
@@ -6266,29 +6693,42 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
   bool has_plt_value = false;
   unsigned int r_sym = elfcpp::elf_r_sym<size>(rela.get_r_info());
   if ((gsym != NULL
-       ? use_plt_offset<size>(gsym, Scan::get_reference_flags(r_type))
+       ? gsym->use_plt_offset(Scan::get_reference_flags(r_type, target))
        : object->local_has_plt_offset(r_sym))
       && (!psymval->is_ifunc_symbol()
-	  || Scan::reloc_needs_plt_for_ifunc(object, r_type, false)))
+	  || Scan::reloc_needs_plt_for_ifunc(target, object, r_type, false)))
     {
-      Stub_table<size, big_endian>* stub_table
-	= object->stub_table(relinfo->data_shndx);
-      if (stub_table == NULL)
+      if (size == 64
+	  && gsym != NULL
+	  && target->abiversion() >= 2
+	  && !parameters->options().output_is_position_independent()
+	  && !is_branch_reloc(r_type))
 	{
-	  // This is a ref from a data section to an ifunc symbol.
-	  if (target->stub_tables().size() != 0)
-	    stub_table = target->stub_tables()[0];
+	  unsigned int off = target->glink_section()->find_global_entry(gsym);
+	  gold_assert(off != (unsigned int)-1);
+	  value = target->glink_section()->global_entry_address() + off;
 	}
-      gold_assert(stub_table != NULL);
-      Address off;
-      if (gsym != NULL)
-	off = stub_table->find_plt_call_entry(object, gsym, r_type,
-					      rela.get_r_addend());
       else
-	off = stub_table->find_plt_call_entry(object, r_sym, r_type,
-					      rela.get_r_addend());
-      gold_assert(off != invalid_address);
-      value = stub_table->stub_address() + off;
+	{
+	  Stub_table<size, big_endian>* stub_table
+	    = object->stub_table(relinfo->data_shndx);
+	  if (stub_table == NULL)
+	    {
+	      // This is a ref from a data section to an ifunc symbol.
+	      if (target->stub_tables().size() != 0)
+		stub_table = target->stub_tables()[0];
+	    }
+	  gold_assert(stub_table != NULL);
+	  Address off;
+	  if (gsym != NULL)
+	    off = stub_table->find_plt_call_entry(object, gsym, r_type,
+						  rela.get_r_addend());
+	  else
+	    off = stub_table->find_plt_call_entry(object, r_sym, r_type,
+						  rela.get_r_addend());
+	  gold_assert(off != invalid_address);
+	  value = stub_table->stub_address() + off;
+	}
       has_plt_value = true;
     }
 
@@ -6335,7 +6775,8 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 		  && (insn2 == nop
 		      || insn2 == cror_15_15_15 || insn2 == cror_31_31_31))
 		{
-		  elfcpp::Swap<32, big_endian>::writeval(wv + 1, ld_2_1 + 40);
+		  elfcpp::Swap<32, big_endian>::
+		    writeval(wv + 1, ld_2_1 + target->stk_toc());
 		  can_plt_call = true;
 		}
 	    }
@@ -6362,11 +6803,15 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 	      if (gsym->source() == Symbol::FROM_OBJECT
 		  && gsym->object() == object)
 		{
-		  Address addend = rela.get_r_addend();
-		  unsigned int dest_shndx;
-		  Address opdent = psymval->value(object, addend);
-		  code = target->symval_for_branch(relinfo->symtab, opdent,
-						   gsym, object, &dest_shndx);
+		  unsigned int dest_shndx = 0;
+		  if (target->abiversion() < 2)
+		    {
+		      Address addend = rela.get_r_addend();
+		      Address opdent = psymval->value(object, addend);
+		      code = target->symval_for_branch(relinfo->symtab,
+						       opdent, gsym, object,
+						       &dest_shndx);
+		    }
 		  bool is_ordinary;
 		  if (dest_shndx == 0)
 		    dest_shndx = gsym->shndx(&is_ordinary);
@@ -6628,8 +7073,18 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 	addend = rela.get_r_addend();
       value = psymval->value(object, addend);
       if (size == 64 && is_branch_reloc(r_type))
-	value = target->symval_for_branch(relinfo->symtab, value,
-					  gsym, object, &dest_shndx);
+	{
+	  if (target->abiversion() >= 2)
+	    {
+	      if (gsym != NULL)
+		value += object->ppc64_local_entry_offset(gsym);
+	      else
+		value += object->ppc64_local_entry_offset(r_sym);
+	    }
+	  else
+	    value = target->symval_for_branch(relinfo->symtab, value,
+					      gsym, object, &dest_shndx);
+	}
       unsigned int max_branch_offset = 0;
       if (r_type == elfcpp::R_POWERPC_REL24
 	  || r_type == elfcpp::R_PPC_PLTREL24
@@ -6694,8 +7149,10 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 
     case elfcpp::R_PPC64_TPREL16_DS:
     case elfcpp::R_PPC64_TPREL16_LO_DS:
+    case elfcpp::R_PPC64_TPREL16_HIGH:
+    case elfcpp::R_PPC64_TPREL16_HIGHA:
       if (size != 64)
-	// R_PPC_TLSGD and R_PPC_TLSLD
+	// R_PPC_TLSGD, R_PPC_TLSLD, R_PPC_EMB_RELST_LO, R_PPC_EMB_RELST_HI
 	break;
     case elfcpp::R_POWERPC_TPREL16:
     case elfcpp::R_POWERPC_TPREL16_LO:
@@ -6725,6 +7182,8 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
     case elfcpp::R_POWERPC_DTPREL16_HI:
     case elfcpp::R_POWERPC_DTPREL16_HA:
     case elfcpp::R_POWERPC_DTPREL:
+    case elfcpp::R_PPC64_DTPREL16_HIGH:
+    case elfcpp::R_PPC64_DTPREL16_HIGHA:
       // tls symbol values are relative to tls_segment()->vaddr()
       value -= dtp_offset;
       break;
@@ -6842,6 +7301,7 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
     }
 
   typename Reloc::Overflow_check overflow = Reloc::CHECK_NONE;
+  elfcpp::Shdr<size, big_endian> shdr(relinfo->data_shdr);
   switch (r_type)
     {
     case elfcpp::R_POWERPC_ADDR32:
@@ -6855,25 +7315,70 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 	overflow = Reloc::CHECK_SIGNED;
       break;
 
-    case elfcpp::R_POWERPC_ADDR24:
-    case elfcpp::R_POWERPC_ADDR16:
     case elfcpp::R_POWERPC_UADDR16:
-    case elfcpp::R_PPC64_ADDR16_DS:
-    case elfcpp::R_POWERPC_ADDR14:
-    case elfcpp::R_POWERPC_ADDR14_BRTAKEN:
-    case elfcpp::R_POWERPC_ADDR14_BRNTAKEN:
       overflow = Reloc::CHECK_BITFIELD;
       break;
 
-    case elfcpp::R_POWERPC_REL24:
-    case elfcpp::R_PPC_PLTREL24:
-    case elfcpp::R_PPC_LOCAL24PC:
+    case elfcpp::R_POWERPC_ADDR16:
+      // We really should have three separate relocations,
+      // one for 16-bit data, one for insns with 16-bit signed fields,
+      // and one for insns with 16-bit unsigned fields.
+      overflow = Reloc::CHECK_BITFIELD;
+      if ((shdr.get_sh_flags() & elfcpp::SHF_EXECINSTR) != 0)
+	overflow = Reloc::CHECK_LOW_INSN;
+      break;
+
+    case elfcpp::R_POWERPC_ADDR16_HI:
+    case elfcpp::R_POWERPC_ADDR16_HA:
+    case elfcpp::R_POWERPC_GOT16_HI:
+    case elfcpp::R_POWERPC_GOT16_HA:
+    case elfcpp::R_POWERPC_PLT16_HI:
+    case elfcpp::R_POWERPC_PLT16_HA:
+    case elfcpp::R_POWERPC_SECTOFF_HI:
+    case elfcpp::R_POWERPC_SECTOFF_HA:
+    case elfcpp::R_PPC64_TOC16_HI:
+    case elfcpp::R_PPC64_TOC16_HA:
+    case elfcpp::R_PPC64_PLTGOT16_HI:
+    case elfcpp::R_PPC64_PLTGOT16_HA:
+    case elfcpp::R_POWERPC_TPREL16_HI:
+    case elfcpp::R_POWERPC_TPREL16_HA:
+    case elfcpp::R_POWERPC_DTPREL16_HI:
+    case elfcpp::R_POWERPC_DTPREL16_HA:
+    case elfcpp::R_POWERPC_GOT_TLSGD16_HI:
+    case elfcpp::R_POWERPC_GOT_TLSGD16_HA:
+    case elfcpp::R_POWERPC_GOT_TLSLD16_HI:
+    case elfcpp::R_POWERPC_GOT_TLSLD16_HA:
+    case elfcpp::R_POWERPC_GOT_TPREL16_HI:
+    case elfcpp::R_POWERPC_GOT_TPREL16_HA:
+    case elfcpp::R_POWERPC_GOT_DTPREL16_HI:
+    case elfcpp::R_POWERPC_GOT_DTPREL16_HA:
+    case elfcpp::R_POWERPC_REL16_HI:
+    case elfcpp::R_POWERPC_REL16_HA:
+      if (size != 32)
+	overflow = Reloc::CHECK_HIGH_INSN;
+      break;
+
     case elfcpp::R_POWERPC_REL16:
     case elfcpp::R_PPC64_TOC16:
     case elfcpp::R_POWERPC_GOT16:
     case elfcpp::R_POWERPC_SECTOFF:
     case elfcpp::R_POWERPC_TPREL16:
     case elfcpp::R_POWERPC_DTPREL16:
+    case elfcpp::R_POWERPC_GOT_TLSGD16:
+    case elfcpp::R_POWERPC_GOT_TLSLD16:
+    case elfcpp::R_POWERPC_GOT_TPREL16:
+    case elfcpp::R_POWERPC_GOT_DTPREL16:
+      overflow = Reloc::CHECK_LOW_INSN;
+      break;
+
+    case elfcpp::R_POWERPC_ADDR24:
+    case elfcpp::R_POWERPC_ADDR14:
+    case elfcpp::R_POWERPC_ADDR14_BRTAKEN:
+    case elfcpp::R_POWERPC_ADDR14_BRNTAKEN:
+    case elfcpp::R_PPC64_ADDR16_DS:
+    case elfcpp::R_POWERPC_REL24:
+    case elfcpp::R_PPC_PLTREL24:
+    case elfcpp::R_PPC_LOCAL24PC:
     case elfcpp::R_PPC64_TPREL16_DS:
     case elfcpp::R_PPC64_DTPREL16_DS:
     case elfcpp::R_PPC64_TOC16_DS:
@@ -6882,12 +7387,27 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
     case elfcpp::R_POWERPC_REL14:
     case elfcpp::R_POWERPC_REL14_BRTAKEN:
     case elfcpp::R_POWERPC_REL14_BRNTAKEN:
-    case elfcpp::R_POWERPC_GOT_TLSGD16:
-    case elfcpp::R_POWERPC_GOT_TLSLD16:
-    case elfcpp::R_POWERPC_GOT_TPREL16:
-    case elfcpp::R_POWERPC_GOT_DTPREL16:
       overflow = Reloc::CHECK_SIGNED;
       break;
+    }
+
+  if (overflow == Reloc::CHECK_LOW_INSN
+      || overflow == Reloc::CHECK_HIGH_INSN)
+    {
+      Insn* iview = reinterpret_cast<Insn*>(view - 2 * big_endian);
+      Insn insn = elfcpp::Swap<32, big_endian>::readval(iview);
+
+      overflow = Reloc::CHECK_SIGNED;
+      if ((insn & (0x3f << 26)) == 10u << 26 /* cmpli */)
+	overflow = Reloc::CHECK_BITFIELD;
+      else if (overflow == Reloc::CHECK_LOW_INSN
+	       ? ((insn & (0x3f << 26)) == 28u << 26 /* andi */
+		  || (insn & (0x3f << 26)) == 24u << 26 /* ori */
+		  || (insn & (0x3f << 26)) == 26u << 26 /* xori */)
+	       : ((insn & (0x3f << 26)) == 29u << 26 /* andis */
+		  || (insn & (0x3f << 26)) == 25u << 26 /* oris */
+		  || (insn & (0x3f << 26)) == 27u << 26 /* xoris */))
+	overflow = Reloc::CHECK_UNSIGNED;
     }
 
   typename Powerpc_relocate_functions<size, big_endian>::Status status
@@ -6898,7 +7418,6 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
     case elfcpp::R_POWERPC_TLS:
     case elfcpp::R_POWERPC_GNU_VTINHERIT:
     case elfcpp::R_POWERPC_GNU_VTENTRY:
-    case elfcpp::R_PPC_EMB_MRKREF:
       break;
 
     case elfcpp::R_PPC64_ADDR64:
@@ -6969,6 +7488,12 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
       status = Reloc::addr16_u(view, value, overflow);
       break;
 
+    case elfcpp::R_PPC64_ADDR16_HIGH:
+    case elfcpp::R_PPC64_TPREL16_HIGH:
+    case elfcpp::R_PPC64_DTPREL16_HIGH:
+      if (size == 32)
+	// R_PPC_EMB_MRKREF, R_PPC_EMB_RELST_LO, R_PPC_EMB_RELST_HA
+	goto unsupp;
     case elfcpp::R_POWERPC_ADDR16_HI:
     case elfcpp::R_POWERPC_REL16_HI:
     case elfcpp::R_PPC64_TOC16_HI:
@@ -6983,6 +7508,12 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
       Reloc::addr16_hi(view, value);
       break;
 
+    case elfcpp::R_PPC64_ADDR16_HIGHA:
+    case elfcpp::R_PPC64_TPREL16_HIGHA:
+    case elfcpp::R_PPC64_DTPREL16_HIGHA:
+      if (size == 32)
+	// R_PPC_EMB_RELSEC16, R_PPC_EMB_RELST_HI, R_PPC_EMB_BIT_FLD
+	goto unsupp;
     case elfcpp::R_POWERPC_ADDR16_HA:
     case elfcpp::R_POWERPC_REL16_HA:
     case elfcpp::R_PPC64_TOC16_HA:
@@ -7107,11 +7638,6 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
     case elfcpp::R_PPC64_PLT16_LO_DS:
     case elfcpp::R_PPC64_PLTGOT16_DS:
     case elfcpp::R_PPC64_PLTGOT16_LO_DS:
-    case elfcpp::R_PPC_EMB_RELSEC16:
-    case elfcpp::R_PPC_EMB_RELST_LO:
-    case elfcpp::R_PPC_EMB_RELST_HI:
-    case elfcpp::R_PPC_EMB_RELST_HA:
-    case elfcpp::R_PPC_EMB_BIT_FLD:
     case elfcpp::R_PPC_EMB_RELSDA:
     case elfcpp::R_PPC_TOC16:
     default:
@@ -7550,6 +8076,12 @@ Target_powerpc<size, big_endian>::do_dynsym_value(const Symbol* gsym) const
 	    return (*p)->stub_address() + off;
 	}
     }
+  else if (this->abiversion() >= 2)
+    {
+      unsigned int off = this->glink_section()->find_global_entry(gsym);
+      if (off != (unsigned int)-1)
+	return this->glink_section()->global_entry_address() + off;
+    }
   gold_unreachable();
 }
 
@@ -7593,6 +8125,12 @@ Target_powerpc<size, big_endian>::do_plt_address_for_global(
 	  if (off != invalid_address)
 	    return (*p)->stub_address() + off;
 	}
+    }
+  else if (this->abiversion() >= 2)
+    {
+      unsigned int off = this->glink_section()->find_global_entry(gsym);
+      if (off != (unsigned int)-1)
+	return this->glink_section()->global_entry_address() + off;
     }
   gold_unreachable();
 }
@@ -7690,6 +8228,9 @@ Target_selector_powerpc<64, false> target_selector_ppc64le;
 // Instantiate these constants for -O0
 template<int size, bool big_endian>
 const int Output_data_glink<size, big_endian>::pltresolve_size;
+template<int size, bool big_endian>
+const typename Output_data_glink<size, big_endian>::Address
+  Output_data_glink<size, big_endian>::invalid_address;
 template<int size, bool big_endian>
 const typename Stub_table<size, big_endian>::Address
   Stub_table<size, big_endian>::invalid_address;

@@ -1,3 +1,255 @@
+2014-07-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	Backport mainline patches
+	2014-07-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/x86-64-equ.d: New.
+	* gas/i386/x86-64-equ.s: New.
+	* gas/i386/i386.exp: Run x86-64-equ.
+
+2014-07-08  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/evex-lig256-intel.d: Updated.
+	* gas/i386/evex-lig256.d: Updated.
+	* gas/i386/evex-lig512-intel.d: Updated.
+	* gas/i386/evex-lig512-intel.d: Updated.
+	* gas/i386/x86-64-evex-lig256-intel.d: Updated.
+	* gas/i386/x86-64-evex-lig256.d: Updated.
+	* gas/i386/x86-64-evex-lig512-intel.d: Updated.
+	* gas/i386/x86-64-evex-lig512-intel.d: Updated.
+
+2014-03-20  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/avx512pf-intel.d: Change memory size for vgatherpf0qps,
+	vgatherpf1qps, vscatterpf0qps, vscatterpf1qps.
+	* gas/i386/avx512pf.s: Ditto.
+	* gas/i386/x86-64-avx512pf-intel.d: Ditto.
+	* gas/i386/x86-64-avx512pf.s: Ditto.
+	* gas/i386/avx512f-intel.d: Change memory size for vgatherqps,
+	vpgatherqd, vpscatterqd, vscatterqps.
+	* gas/i386/avx512f.s: Ditto.
+	* gas/i386/x86-64-avx512f-intel.d: Ditto.
+	* gas/i386/x86-64-avx512f.s: Ditto.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-21  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/avx512pf-intel.d: Remove prefetchwt1.
+	* gas/i386/avx512pf.s: Ditto.
+	* gas/i386/avx512pf.d: Ditto.
+	* gas/i386/x86-64-avx512pf-intel.d: Ditto.
+	* gas/i386/x86-64-avx512pf.s: Ditto.
+	* gas/i386/x86-64-avx512pf.d: Ditto.
+	* gas/i386/prefetchwt1-intel.d: New file.
+	* gas/i386/prefetchwt1.s: Ditto.
+	* gas/i386/prefetchwt1.d: Ditto.
+	* gas/i386/x86-64-prefetchwt1-intel.d: Ditto.
+	* gas/i386/x86-64-prefetchwt1.s: Ditto.
+	* gas/i386/x86-64-prefetchwt1.d: Ditto.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-20  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/avx512cd-intel.d: Remove vptestnmq, vptestnmd.
+	* gas/i386/avx512cd.s: Ditto.
+	* gas/i386/avx512cd.d: Ditto.
+	* gas/i386/x86-64-avx512cd-intel.d: Ditto.
+	* gas/i386/x86-64-avx512cd.s: Ditto.
+	* gas/i386/x86-64-avx512cd.d: Ditto.
+	* gas/i386/avx512f-intel.d: Add vptestnmq, vptestnmd.
+	* gas/i386/avx512f.s: Ditto.
+	* gas/i386/avx512f.d: Ditto.
+	* gas/i386/x86-64-avx512f-intel.d: Ditto.
+	* gas/i386/x86-64-avx512f.s: Ditto.
+	* gas/i386/x86-64-avx512f.d: Ditto.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-12  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/clflushopt-intel.d: New.
+	* gas/i386/clflushopt.d: Ditto.
+	* gas/i386/clflushopt.s: Ditto.
+	* gas/i386/i386.exp: Run new tests.
+	* gas/i386/x86-64-clflushopt-intel.d: New.
+	* gas/i386/x86-64-clflushopt.d: Ditto.
+	* gas/i386/x86-64-clflushopt.s: Ditto.
+	* gas/i386/x86-64-xsavec-intel.d: Ditto.
+	* gas/i386/x86-64-xsavec.d: Ditto.
+	* gas/i386/x86-64-xsavec.s: Ditto.
+	* gas/i386/x86-64-xsaves-intel.d: Ditto.
+	* gas/i386/x86-64-xsaves.d: Ditto.
+	* gas/i386/x86-64-xsaves.s: Ditto.
+	* gas/i386/xsavec-intel.d: Ditto.
+	* gas/i386/xsavec.d: Ditto.
+	* gas/i386/xsavec.s: Ditto.
+	* gas/i386/xsaves-intel.d: Ditto.
+	* gas/i386/xsaves.d: Ditto.
+	* gas/i386/xsaves.s: Ditto.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/i386.exp: Don't run x86-64-disassem for mingw targets.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2013-12-17  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	* gas/i386/disassem.s: New.
+	* gas/i386/disassem.d: Likewise.
+	* gas/i386/x86-64-disassem.s: Likewise.
+	* gas/i386/x86-64-disassem.d: Likewise.
+	* gas/i386/i386.exp: Run disassem and x86-64-disassem.
+
+2014-02-27  Jiong Wang  <jiong.wang@arm.com>
+
+	* gas/aarch64/fp-const0-parsing.s: New test.
+	* gas/aarch64/fp-const0-parsing.d: Likewise.
+
+2014-02-27  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/ldst-reg-reg-offset.s: Add tests.
+	* gas/aarch64/ldst-reg-reg-offset.d: Update.
+
+2014-01-31  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	PR gas/16488
+	* gas/i386/inval-avx512f.s: Add test for incorrect memory operand
+	for gather/scatter instructions.
+	* gas/i386/x86-64-inval-avx512f.s: Likewise.
+	* gas/i386/inval-avx512f.l: Adjust correspondingly.
+	* gas/i386/x86-64-inval-avx512f.l: Likewise.
+
+2014-01-31  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+	    Jan Beulich  <jbeulich@suse.com>
+
+	PR binutils/16490
+	* gas/i386/avx512f.d: Fix test output.
+	* gas/i386/avx512f-intel.d: Likewise.
+	* gas/i386/x86-64-avx512f.d: Likewise.
+	* gas/i386/x86-64-avx512f-intel.d: Likewise.
+
+2014-01-31  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	PR gas/16489
+	* gas/i386/vgather-check.s: Add tests for AVX512 gathers.
+	* gas/i386/x86-64-vgather-check.s: Likewise.
+	* gas/i386/vgather-check-error.l: Update correspondingly.
+	* gas/i386/vgather-check-none.d: Likewise.
+	* gas/i386/vgather-check-warn.d: Likewise.
+	* gas/i386/vgather-check-warn.e: Likewise.
+	* gas/i386/vgather-check.d: Likewise.
+	* gas/i386/x86-64-vgather-check-error.l: Likewise.
+	* gas/i386/x86-64-vgather-check-none.d: Likewise.
+	* gas/i386/x86-64-vgather-check-warn.d: Likewise.
+	* gas/i386/x86-64-vgather-check-warn.e: Likewise.
+	* gas/i386/x86-64-vgather-check.d: Likewise.
+
+2013-12-18  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/rm-simd-ext.d: New file.
+	* gas/aarch64/rm-simd-ext.l: Likewise.
+	* gas/aarch64/rm-simd-ext.s: Likewise.
+
+2013-11-20  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/msr.s: Add tests.
+	* gas/aarch64/msr.d: Update.
+
+2013-11-18  Renlin Li  <Renlin.Li@arm.com>
+
+	* gas/arm/attr-march-armv7ve.d: New test case for armv7ve.
+
+2013-11-18  Zhenqiang Chen  <zhenqiang.chen@linaro.org>
+
+	* gas/aarch64/sysreg.s: Add test.
+	* gas/aarch64/sysreg.d: Update.
+
+2013-11-18  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	Revert
+
+	2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/diagnostic.s: Add tests.
+	* gas/aarch64/diagnostic.l: Update.
+	* gas/aarch64/tracereg-illegal.d: New file.
+	* gas/aarch64/tracereg-illegal.l: Ditto.
+	* gas/aarch64/tracereg-illegal.s: Ditto.
+	* gas/aarch64/tracereg.d: Ditto.
+	* gas/aarch64/tracereg.s: Ditto.
+
+
+2013-11-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/i386.exp: Run x86-64-mpx-branch-1 and
+	x86-64-mpx-branch-2 on 64-bit ELF targets.
+	* gas/i386/x86-64-mpx-branch-1.d: New file.
+	* gas/i386/x86-64-mpx-branch-1.s: Likewise.
+	* gas/i386/x86-64-mpx-branch-2.d: Likewise.
+	* gas/i386/x86-64-mpx-branch-2.s: Likewise.
+
+2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/diagnostic.s: Add tests.
+	* gas/aarch64/diagnostic.l: Update.
+	* gas/aarch64/tracereg-illegal.d: New file.
+	* gas/aarch64/tracereg-illegal.l: Ditto.
+	* gas/aarch64/tracereg-illegal.s: Ditto.
+	* gas/aarch64/tracereg.d: Ditto.
+	* gas/aarch64/tracereg.s: Ditto.
+
+2013-11-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2013-11-15  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	* gas/i386/inval-avx512f.s: Add invalid test for gather instruction
+	with default mask.
+	* gas/i386/inval-avx512f.l: Update correspondingly.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/deprecated.d: New file.
+	* gas/aarch64/deprecated.l: New file.
+	* gas/aarch64/deprecated.s: New file.
+	* gas/aarch64/sysreg-1.s: Add tests.
+	* gas/aarch64/sysreg-1.d: Add tests.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/alias.s: Add tests.
+	* gas/aarch64/alias.d: Update.
+	* gas/aarch64/no-aliases.d: Update.
+	* gas/aarch64/diagnostic.s: Add tests.
+	* gas/aarch64/diagnostic.l: Update.
+	* gas/aarch64/illegal.s: Add tests.
+	* gas/aarch64/illegal.l: Update.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* gas/aarch64/diagnostic.s: Add tests of ldp/stp.
+	* gas/aarch64/diagnostic.l: Update.
+
+2013-11-05  Will Newton  <will.newton@linaro.org>
+
+	* gas/aarch64/advsimd-mov-bad.d: New file.
+	* gas/aarch64/advsimd-mov-bad.s: Likewise.
+
+2013-10-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/mpx.s: Remove bndcl/bndcu/bndcn tests with AX.
+	* gas/i386/x86-64-mpx.s: Likwise.
+
+	* gas/i386/mpx.d: Updated.
+	* gas/i386/x86-64-mpx.d: Likewise.
+
 2013-09-17  Richard Sandiford  <rsandifo@linux.vnet.ibm.com>
 
 	* gas/s390/zarch-z196.s, gas/s390/zarch-z196.d: Test CLIH with

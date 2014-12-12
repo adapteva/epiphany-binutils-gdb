@@ -1,3 +1,203 @@
+2014-11-18  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	Apply trunk patch:
+	* config/tc-aarch64.c (aarch64_cpus): Add CRC feature for
+	cortex-A53 and cortex-A57.
+
+2014-07-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	Backport mainline patches
+	2014-07-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* config/tc-i386.c (parse_register): Set need_vrex.
+
+2014-06-12  Alan Modra  <amodra@gmail.com>
+
+	Backport mainline patches
+	2014-06-07  Alan Modra  <amodra@gmail.com>
+	* config/tc-ppc.c (ppc_insert_operand): Handle PPC_OPERAND_SIGNOPT
+	on unsigned fields.  Comment on PPC_OPERAND_SIGNOPT signed fields
+	in 64-bit mode.
+
+2014-04-16  Alan Modra  <amodra@gmail.com>
+
+	Apply mainline patches for ppc476 workaround
+	2014-04-09  Alan Modra  <amodra@gmail.com>
+    	* config/tc-ppc.c (warn_476, last_insn, last_seg, last_subseg):
+    	New static vars.
+    	(md_longopts, md_parse_option, md_show_usage): Add --ppc476-workaround.
+    	(ppc_elf_cons_fix_check): New function.
+    	(md_assemble): Set last_insn, last_seg, last_subseg.
+    	(ppc_elf_cons, ppc_byte, md_apply_fix): Handle warn_476.
+    	* config/tc-ppc.h (TC_CONS_FIX_CHECK): Define.
+    	(ppc_elf_cons_fix_check): Declare.
+    	* read.c (cons_worker): Invoke TC_CONS_FIX_CHECK.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-21  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* config/tc-i386.c (cpu_arch): Add .prefetchwt1.
+	* doc/c-i386.texi: Document .prefetchwt1/prefetchwt1.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-12  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* config/tc-i386.c (cpu_arch): Add .clflushopt, .xsavec, .xsaves.
+	* doc/c-i386.texi: Document .xsavec/xsavec/.xsaves/xsaves/
+	clflushopt/.clfushopt.
+
+2014-01-31  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	* config/tc-i386.c (check_VecOperands): Remove regzmm from AVX2
+	gather assert.
+
+2014-01-22  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	PR gas/16489
+	* config/tc-i386.c (check_VecOperands): Add check for invalid
+	register set in AVX512 gathers.
+
+2014-01-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* as.c (parse_args): Update copyright year to 2014.
+	* config/tc-i386.c (regbnd): Removed.
+	(vec_disp8): Likewise.
+
+2013-12-18  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* config/tc-aarch64.c (md_assemble): Defer the feature checking until
+	do_encode () succeeds.
+
+2013-12-10  Roland McGrath  <mcgrathr@google.com>
+
+	* Makefile.am (install-exec-bindir): Prefix libtool invocation
+	with $(INSTALL_PROGRAM_ENV).
+	(install-exec-tooldir): Likewise.
+	* Makefile.in: Regenerate.
+
+2013-11-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (lex_got): Add a dummy "int bnd_prefix"
+	argument.
+
+2013-11-18  Renlin Li  <Renlin.Li@arm.com>
+
+	* config/tc-arm.c (arm_archs): New armv7ve architecture option.
+	(arm_cpus): Replace ARM_ARCH_V7A_IDIV_MP_SEC_VIRT with
+	ARM_ARCH_V7VE for cortex-a7, cortex-a12 and cortex-a15.
+	(cpu_arch_ver): Likewise.
+	* doc/c-arm.texi: Document armv7ve.
+
+2013-11-18  Zhenqiang Chen  <zhenqiang.chen@linaro.org>
+
+	* config/tc-aarch64.c (parse_sys_reg): Support
+	S2_<op1>_<Cn>_<Cm>_<op2>.
+
+2013-11-18  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	Revert
+
+	2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* config/tc-aarch64.c (set_other_error): New function.
+	(parse_sys_reg): Add new parameter 'sys_reg' and if non-NULL set
+	the variable to which it points with 'o'.
+	(parse_operands): Update; check for write to read-only system
+	registers or read from write-only ones.
+
+2013-11-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (reloc): Add an argument, bnd_prefix, to
+	indicate if instruction has the BND prefix.  Return
+	BFD_RELOC_X86_64_PC32_BND instead of BFD_RELOC_32_PCREL if
+	bnd_prefix isn't zero.
+	(output_branch): Pass BFD_RELOC_X86_64_PC32_BND to frag_var
+	if needed.
+	(output_jump): Update reloc call.
+	(output_interseg_jump): Likewise.
+	(output_disp): Likewise.
+	(output_imm): Likewise.
+	(x86_cons_fix_new): Likewise.
+	(lex_got): Add an argument, bnd_prefix, to indicate if
+	instruction has the BND prefix.  Use BFD_RELOC_X86_64_PLT32_BND
+	if needed.
+	(x86_cons): Update lex_got call.
+	(i386_immediate): Likewise.
+	(i386_displacement): Likewise.
+	(md_apply_fix): Handle BFD_RELOC_X86_64_PC32_BND and
+	BFD_RELOC_X86_64_PLT32_BND.
+	(tc_gen_reloc): Likewise.
+	* config/tc-i386-intel.c (i386_operator): Update lex_got call.
+
+2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* config/tc-aarch64.c (set_other_error): New function.
+	(parse_sys_reg): Add new parameter 'sys_reg' and if non-NULL set
+	the variable to which it points with 'o'.
+	(parse_operands): Update; check for write to read-only system
+	registers or read from write-only ones.
+
+2013-11-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2013-11-15  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	* config/tc-i386.c (check_VecOperands): Reorder checks.
+
+2013-11-15  Alan Modra  <amodra@gmail.com>
+
+	Apply changes from mainline to 2.24
+	2013-11-08  Jan-Benedict Glaw  <jbglaw@lug-owl.de
+	* config/tc-ppc.c (ppc_elf_localentry): Add cast.
+
+	2013-10-30  Ulrich Weigand  <uweigand@de.ibm.com>
+	* config/tc-ppc.c (md_pseudo_table): Add .localentry.
+	(ppc_elf_localentry): New function.
+	(ppc_force_relocation): Force relocs on all branches to localenty
+	symbols.
+	(ppc_fix_adjustable): Don't reduce such symbols to section+offset.
+
+	2013-10-30  Alan Modra  <amodra@gmail.com>
+	* config/tc-ppc.c: Include elf/ppc64.h.
+	(ppc_abiversion): New variable.
+	(md_pseudo_table): Add .abiversion.
+	(ppc_elf_abiversion, ppc_elf_end): New functions.
+	* config/tc-ppc.h (md_end): Define.
+
+	2013-10-30  Alan Modra  <amodra@gmail.com>
+	* config/tc-ppc.c (SEX16): Don't mask.
+	(REPORT_OVERFLOW_HI): Define as zero.
+	(ppc_elf_suffix): Support @high, @higha, @dtprel@high, @dtprel@higha,
+	@tprel@high, and @tprel@higha modifiers.
+	(md_assemble): Ignore X_unsigned when applying 16-bit insn fields.
+	Add (disabled) code to check @h and @ha reloc overflow for powerpc64.
+	Handle new relocs.
+	(md_apply_fix): Similarly.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* config/tc-aarch64.c (parse_sys_reg): Update to use aarch64_sys_reg;
+	call aarch64_sys_reg_deprecated_p and warn about the deprecated
+	system registers.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* config/tc-aarch64.c (parse_operands): Handle AARCH64_OPND_COND1.
+
+2013-11-05  Will Newton  <will.newton@linaro.org>
+
+	PR gas/16103
+	* config/tc-aarch64.c (parse_operands): Avoid trying to
+	parse a vector register as an immediate.
+
+2013-09-20  Alan Modra  <amodra@gmail.com>
+
+	* configure: Regenerate.
+
 2013-09-18  Tristan Gingold  <gingold@adacore.com>
 
 	* NEWS: Add marker for 2.24.

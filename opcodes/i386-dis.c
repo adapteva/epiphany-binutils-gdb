@@ -1,6 +1,6 @@
 /* Print i386 instructions for GDB, the GNU debugger.
    Copyright 1988, 1989, 1991, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
    Free Software Foundation, Inc.
 
    This file is part of the GNU opcodes library.
@@ -429,7 +429,9 @@ fetch_data (struct disassemble_info *info, bfd_byte *addr)
 #define MaskVex { OP_VEX, mask_mode }
 
 #define MVexVSIBDWpX { OP_M, vex_vsib_d_w_dq_mode }
+#define MVexVSIBDQWpX { OP_M, vex_vsib_d_w_d_mode }
 #define MVexVSIBQWpX { OP_M, vex_vsib_q_w_dq_mode }
+#define MVexVSIBQDWpX { OP_M, vex_vsib_q_w_d_mode }
 
 /* Used handle "rep" prefix for string instructions.  */
 #define Xbr { REP_Fixup, eSI_reg }
@@ -558,8 +560,12 @@ enum
 
   /* Similar to vex_w_dq_mode, with VSIB dword indices.  */
   vex_vsib_d_w_dq_mode,
+  /* Similar to vex_vsib_d_w_dq_mode, with smaller memory.  */
+  vex_vsib_d_w_d_mode,
   /* Similar to vex_w_dq_mode, with VSIB qword indices.  */
   vex_vsib_q_w_dq_mode,
+  /* Similar to vex_vsib_q_w_dq_mode, with smaller memory.  */
+  vex_vsib_q_w_d_mode,
 
   /* scalar, ignore vector length.  */
   scalar_mode,
@@ -715,6 +721,8 @@ enum
   MOD_8D = 0,
   MOD_C6_REG_7,
   MOD_C7_REG_7,
+  MOD_FF_REG_3,
+  MOD_FF_REG_5,
   MOD_0F01_REG_0,
   MOD_0F01_REG_1,
   MOD_0F01_REG_2,
@@ -767,6 +775,9 @@ enum
   MOD_0FB2,
   MOD_0FB4,
   MOD_0FB5,
+  MOD_0FC7_REG_3,
+  MOD_0FC7_REG_4,
+  MOD_0FC7_REG_5,
   MOD_0FC7_REG_6,
   MOD_0FC7_REG_7,
   MOD_0FD7,
@@ -882,6 +893,7 @@ enum
   PREFIX_0FAE_REG_1,
   PREFIX_0FAE_REG_2,
   PREFIX_0FAE_REG_3,
+  PREFIX_0FAE_REG_7,
   PREFIX_0FB8,
   PREFIX_0FBC,
   PREFIX_0FBD,
@@ -3229,9 +3241,9 @@ static const struct dis386 reg_table[][8] = {
     { "incQ",	{ Evh1 } },
     { "decQ",	{ Evh1 } },
     { "call{T|}", { indirEv, BND } },
-    { "Jcall{T|}", { indirEp } },
+    { MOD_TABLE (MOD_FF_REG_3) },
     { "jmp{T|}", { indirEv, BND } },
-    { "Jjmp{T|}", { indirEp } },
+    { MOD_TABLE (MOD_FF_REG_5) },
     { "pushU",	{ stackEv } },
     { Bad_Opcode },
   },
@@ -3352,9 +3364,9 @@ static const struct dis386 reg_table[][8] = {
     { Bad_Opcode },
     { "cmpxchg8b", { { CMPXCHG8B_Fixup, q_mode } } },
     { Bad_Opcode },
-    { Bad_Opcode },
-    { Bad_Opcode },
-    { Bad_Opcode },
+    { MOD_TABLE (MOD_0FC7_REG_3) },
+    { MOD_TABLE (MOD_0FC7_REG_4) },
+    { MOD_TABLE (MOD_0FC7_REG_5) },
     { MOD_TABLE (MOD_0FC7_REG_6) },
     { MOD_TABLE (MOD_0FC7_REG_7) },
   },
@@ -3755,6 +3767,13 @@ static const struct dis386 prefix_table[][4] = {
   {
     { Bad_Opcode },
     { "wrgsbase", { Ev } },
+  },
+
+  /* PREFIX_0FAE_REG_7 */
+  {
+    { "clflush",	{ Mb } },
+    { Bad_Opcode },
+    { "clflushopt",	{ Mb } },
   },
 
   /* PREFIX_0FB8 */
@@ -11050,6 +11069,14 @@ static const struct dis386 mod_table[][2] = {
     { RM_TABLE (RM_C7_REG_7) },
   },
   {
+    /* MOD_FF_REG_3 */
+    { "Jcall{T|}", { indirEp } },
+  },
+  {
+    /* MOD_FF_REG_5 */
+    { "Jjmp{T|}", { indirEp } },
+  },
+  {
     /* MOD_0F01_REG_0 */
     { X86_64_TABLE (X86_64_0F01_REG_0) },
     { RM_TABLE (RM_0F01_REG_0) },
@@ -11276,7 +11303,7 @@ static const struct dis386 mod_table[][2] = {
   },
   {
     /* MOD_0FAE_REG_7 */
-    { "clflush",	{ Mb } },
+    { PREFIX_TABLE (PREFIX_0FAE_REG_7) },
     { RM_TABLE (RM_0FAE_REG_7) },
   },
   {
@@ -11290,6 +11317,18 @@ static const struct dis386 mod_table[][2] = {
   {
     /* MOD_0FB5 */
     { "lgsS",		{ Gv, Mp } },
+  },
+  {
+    /* MOD_0FC7_REG_3 */
+    { "xrstors",		{ FXSAVE } },
+  },
+  {
+    /* MOD_0FC7_REG_4 */
+    { "xsavec",		{ FXSAVE } },
+  },
+  {
+    /* MOD_0FC7_REG_5 */
+    { "xsaves",		{ FXSAVE } },
   },
   {
     /* MOD_0FC7_REG_6 */
@@ -12635,7 +12674,7 @@ print_insn (bfd_vma pc, disassemble_info *info)
     }
 
   /* Check if the REX prefix is used.  */
-  if (rex_ignored == 0 && (rex ^ rex_used) == 0)
+  if (rex_ignored == 0 && (rex ^ rex_used) == 0 && last_rex_prefix >= 0)
     all_prefixes[last_rex_prefix] = 0;
 
   /* Check if the SEG prefix is used.  */
@@ -13095,17 +13134,25 @@ dofloat (int sizeflag)
     }
 }
 
+/* Like oappend (below), but S is a string starting with '%'.
+   In Intel syntax, the '%' is elided.  */
+static void
+oappend_maybe_intel (const char *s)
+{
+  oappend (s + intel_syntax);
+}
+
 static void
 OP_ST (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
-  oappend ("%st" + intel_syntax);
+  oappend_maybe_intel ("%st");
 }
 
 static void
 OP_STi (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
   sprintf (scratchbuf, "%%st(%d)", modrm.rm);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 /* Capital letters in template are macros.  */
@@ -13629,32 +13676,32 @@ append_seg (void)
   if (prefixes & PREFIX_CS)
     {
       used_prefixes |= PREFIX_CS;
-      oappend ("%cs:" + intel_syntax);
+      oappend_maybe_intel ("%cs:");
     }
   if (prefixes & PREFIX_DS)
     {
       used_prefixes |= PREFIX_DS;
-      oappend ("%ds:" + intel_syntax);
+      oappend_maybe_intel ("%ds:");
     }
   if (prefixes & PREFIX_SS)
     {
       used_prefixes |= PREFIX_SS;
-      oappend ("%ss:" + intel_syntax);
+      oappend_maybe_intel ("%ss:");
     }
   if (prefixes & PREFIX_ES)
     {
       used_prefixes |= PREFIX_ES;
-      oappend ("%es:" + intel_syntax);
+      oappend_maybe_intel ("%es:");
     }
   if (prefixes & PREFIX_FS)
     {
       used_prefixes |= PREFIX_FS;
-      oappend ("%fs:" + intel_syntax);
+      oappend_maybe_intel ("%fs:");
     }
   if (prefixes & PREFIX_GS)
     {
       used_prefixes |= PREFIX_GS;
-      oappend ("%gs:" + intel_syntax);
+      oappend_maybe_intel ("%gs:");
     }
 }
 
@@ -13800,7 +13847,6 @@ intel_operand_size (int bytemode, int sizeflag)
 	}
       /* FALLTHRU */
     case v_mode:
-    case v_bnd_mode:
     case v_swap_mode:
     case dq_mode:
       USED_REX (REX_W);
@@ -14072,6 +14118,14 @@ intel_operand_size (int bytemode, int sizeflag)
 	  oappend ("ZMMWORD PTR ");
 	}
       break;
+    case vex_vsib_q_w_d_mode:
+    case vex_vsib_d_w_d_mode:
+      if (!need_vex || !vex.evex || vex.length != 512)
+	abort ();
+
+      oappend ("YMMWORD PTR ");
+
+      break;
     case mask_mode:
       if (!need_vex)
 	abort ();
@@ -14082,6 +14136,7 @@ intel_operand_size (int bytemode, int sizeflag)
 	abort ();
       oappend ("WORD PTR ");
       break;
+    case v_bnd_mode:
     default:
       break;
     }
@@ -14121,6 +14176,7 @@ OP_E_register (int bytemode, int sizeflag)
       names = names64;
       break;
     case m_mode:
+    case v_bnd_mode:
       names = address_mode == mode_64bit ? names64 : names32;
       break;
     case bnd_mode:
@@ -14135,7 +14191,6 @@ OP_E_register (int bytemode, int sizeflag)
       bytemode = v_mode;
       /* FALLTHRU */
     case v_mode:
-    case v_bnd_mode:
     case v_swap_mode:
     case dq_mode:
     case dqb_mode:
@@ -14188,12 +14243,12 @@ OP_E_memory (int bytemode, int sizeflag)
       switch (bytemode)
 	{
 	case vex_vsib_d_w_dq_mode:
+	case vex_vsib_d_w_d_mode:
+	case vex_vsib_q_w_dq_mode:
+	case vex_vsib_q_w_d_mode:
 	case evex_x_gscat_mode:
 	case xmm_mdq_mode:
 	  shift = vex.w ? 3 : 2;
-	  break;
-	case vex_vsib_q_w_dq_mode:
-	  shift = 3;
 	  break;
 	case x_mode:
 	case evex_half_bcst_xmmq_mode:
@@ -14309,7 +14364,9 @@ OP_E_memory (int bytemode, int sizeflag)
 	  switch (bytemode)
 	    {
 	    case vex_vsib_d_w_dq_mode:
+	    case vex_vsib_d_w_d_mode:
 	    case vex_vsib_q_w_dq_mode:
+	    case vex_vsib_q_w_d_mode:
 	      if (!need_vex)
 		abort ();
 	      if (vex.evex)
@@ -14325,13 +14382,17 @@ OP_E_memory (int bytemode, int sizeflag)
 		  indexes64 = indexes32 = names_xmm;
 		  break;
 		case 256:
-		  if (!vex.w || bytemode == vex_vsib_q_w_dq_mode)
+		  if (!vex.w
+		      || bytemode == vex_vsib_q_w_dq_mode
+		      || bytemode == vex_vsib_q_w_d_mode)
 		    indexes64 = indexes32 = names_ymm;
 		  else
 		    indexes64 = indexes32 = names_xmm;
 		  break;
 		case 512:
-		  if (!vex.w || bytemode == vex_vsib_q_w_dq_mode)
+		  if (!vex.w
+		      || bytemode == vex_vsib_q_w_dq_mode
+		      || bytemode == vex_vsib_q_w_d_mode)
 		    indexes64 = indexes32 = names_zmm;
 		  else
 		    indexes64 = indexes32 = names_ymm;
@@ -14904,7 +14965,7 @@ OP_I (int bytemode, int sizeflag)
   op &= mask;
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
   scratchbuf[0] = '\0';
 }
 
@@ -14958,7 +15019,7 @@ OP_I64 (int bytemode, int sizeflag)
   op &= mask;
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
   scratchbuf[0] = '\0';
 }
 
@@ -15012,7 +15073,7 @@ OP_sI (int bytemode, int sizeflag)
 
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 static void
@@ -15194,7 +15255,7 @@ OP_ESreg (int code, int sizeflag)
 	  intel_operand_size (b_mode, sizeflag);
 	}
     }
-  oappend ("%es:" + intel_syntax);
+  oappend_maybe_intel ("%es:");
   ptr_reg (code, sizeflag);
 }
 
@@ -15247,7 +15308,7 @@ OP_C (int dummy ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
   else
     add = 0;
   sprintf (scratchbuf, "%%cr%d", modrm.reg + add);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 static void
@@ -15270,7 +15331,7 @@ static void
 OP_T (int dummy ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
   sprintf (scratchbuf, "%%tr%d", modrm.reg);
-  oappend (scratchbuf + intel_syntax);
+  oappend_maybe_intel (scratchbuf);
 }
 
 static void
@@ -15329,7 +15390,9 @@ OP_XMM (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	  names = names_xmm;
 	  break;
 	case 256:
-	  if (vex.w || bytemode != vex_vsib_q_w_dq_mode)
+	  if (vex.w
+	      || (bytemode != vex_vsib_q_w_dq_mode
+		  && bytemode != vex_vsib_q_w_d_mode))
 	    names = names_ymm;
 	  else
 	    names = names_xmm;
@@ -15715,7 +15778,7 @@ CMP_Fixup (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, cmp_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }
@@ -16035,6 +16098,7 @@ OP_VEX (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	case vex_mode:
 	case vex128_mode:
 	case vex_vsib_q_w_dq_mode:
+	case vex_vsib_q_w_d_mode:
 	  names = names_xmm;
 	  break;
 	case dq_mode:
@@ -16059,6 +16123,7 @@ OP_VEX (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	  names = names_ymm;
 	  break;
 	case vex_vsib_q_w_dq_mode:
+	case vex_vsib_q_w_d_mode:
 	  names = vex.w ? names_ymm : names_xmm;
 	  break;
 	case mask_mode:
@@ -16240,7 +16305,7 @@ OP_EX_VexImmW (int bytemode, int sizeflag)
       /* Output the imm8 directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, vex_imm8 & 0xf);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
       codep++;
     }
@@ -16469,7 +16534,7 @@ VCMP_Fixup (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, cmp_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }
@@ -16516,7 +16581,7 @@ VPCMP_Fixup (int bytemode ATTRIBUTE_UNUSED,
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, cmp_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }
@@ -16564,7 +16629,7 @@ PCLMUL_Fixup (int bytemode ATTRIBUTE_UNUSED,
       /* We have a reserved extension byte.  Output it directly.  */
       scratchbuf[0] = '$';
       print_operand_value (scratchbuf + 1, 1, pclmul_type);
-      oappend (scratchbuf + intel_syntax);
+      oappend_maybe_intel (scratchbuf);
       scratchbuf[0] = '\0';
     }
 }

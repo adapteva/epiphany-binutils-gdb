@@ -1,3 +1,214 @@
+2014-07-08  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* i386-dis-evex.h (EVEX_W_0F10_P_1_M_1): Fix vmovss.
+	(EVEX_W_0F10_P_3_M_1): Fix vmovsd.
+
+2014-06-12  Alan Modra  <amodra@gmail.com>
+
+	* msp430-decode.c: Regenerate.
+
+2014-06-12  Alan Modra  <amodra@gmail.com>
+
+	Backport mainline patches
+	2014-06-07  Alan Modra  <amodra@gmail.com>
+	* ppc-opc.c (UISIGNOPT): Define and use with cmpli.
+
+2014-03-26  Jiong Wang  <jiong.wang@arm.com>
+
+	* aarch64-dis.c (aarch64_ext_ldst_elemlist): Check H/S undefined
+	instructions.
+
+2014-03-20  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* i386-opc.tbl: Change memory size for vgatherpf0qps, vgatherpf1qps,
+	vscatterpf0qps, vscatterpf1qps, vgatherqps, vpgatherqd, vpscatterqd,
+	vscatterqps.
+	* i386-tbl.h: Regenerate.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-25  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* i386-opc.tbl: Remove wrong variant of vcvtps2ph
+	* i386-tbl.h: Regenerate.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-21  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* i386-gen.c (cpu_flag_init): Add CPU_PREFETCHWT1_FLAGS/
+	(cpu_flags): Add CpuPREFETCHWT1.
+	* i386-init.h: Regenerate.
+	* i386-opc.h (CpuPREFETCHWT1): New.
+	(i386_cpu_flags): Add cpuprefetchwt1.
+	* i386-opc.tbl: Change CPU of prefetchwt1 from CpuAVX512PF to
+	CpuPREFETCHWT1.
+	* i386-tbl.h: Regenerate.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2013-10-08  Jan Beulich <jbeulich@suse.com>
+
+	* i386-opc.tbl (invlpg): Use Anysize instead of Unspecified.
+	(clflush): Use Anysize instead of Byte|Unspecified.
+	(prefetch*): Likewise.
+	* i386-tbl.h: Re-generate.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-20  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* i386-opc.tbl: Change CPU of vptestnmq, vptestnmd from CpuAVX512CD,
+	to CpuAVX512F.
+	* i386-tbl.h: Regenerate.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2014-02-12  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* i386-dis.c (MOD enum): Add MOD_0FC7_REG_3, MOD_0FC7_REG_4,
+	MOD_0FC7_REG_5.
+	(PREFIX enum): Add PREFIX_0FAE_REG_7.
+	(reg_table): Add MOD_0FC7_REG_3, MOD_0FC7_REG_4 MOD_0FC7_REG_5.
+	(prefix_table): Add clflusopt.
+	(mod_table): Add xrstors, xsavec, xsaves.
+	* i386-gen.c (cpu_flag_init): Add CPU_CLFLUSHOPT_FLAGS,
+	CPU_XSAVES_FLAGS, CPU_XSAVEC_FLAGS.
+	(cpu_flags): Add CpuClflushOpt, CpuXSAVES, CpuXSAVEC.
+	* i386-init.h: Regenerate.
+	* i386-opc.tbl: Add clflushopt, xrstors, xrstors64, xsaves,
+	xsaves64, xsavec, xsavec64.
+	* i386-tbl.h: Regenerate.
+
+2014-03-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from master
+	2013-12-17  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+
+	* i386-dis.c (MOD_FF_REG_3): New.
+	(MOD_FF_REG_5): Likewise.
+	(mod_table): Add MOD_FF_REG_3 and MOD_FF_REG_5.
+	(reg_table): Use MOD_FF_REG_3 and MOD_FF_REG_5.
+
+2014-02-27  Jiong Wang  <jiong.wang@arm.com>
+
+	* aarch64-tbl.h (aarch64_opcode_table): Replace IMM0 with
+	FPIMM0 for fcmeq, fcmgt, fcmge, fcmlt and fcmle.
+
+2014-02-27  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64-opc.c (print_register_offset_address): Call
+	get_int_reg_name to prepare the register name.
+
+2014-01-30  Michael Zolotukhin  <michael.v.zolotukhin@gmail.com>
+	    Jan Beulich  <jbeulich@suse.com>
+
+	PR binutils/16490
+	* i386-dis.c (OP_E_memory): Fix shift computation for
+	vex_vsib_q_w_dq_mode.
+
+2014-01-09  Bradley Nelson  <bradnelson@google.com>
+	    Roland McGrath  <mcgrathr@google.com>
+
+	* i386-dis.c (print_insn): Do not touch all_prefixes[-1] when
+	last_rex_prefix is -1.
+
+2013-11-20  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64-opc.c (aarch64_pstatefields): Update.
+
+2013-11-18  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	Revert
+
+	2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64-opc.c (CPENT): New define.
+	(F_READONLY, F_WRITEONLY): Likewise.
+	(aarch64_sys_regs): Add trace unit registers.
+	(aarch64_sys_reg_readonly_p): New function.
+	(aarch64_sys_reg_writeonly_p): Ditto.
+
+2013-11-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64-opc.c (CPENT): New define.
+	(F_READONLY, F_WRITEONLY): Likewise.
+	(aarch64_sys_regs): Add trace unit registers.
+	(aarch64_sys_reg_readonly_p): New function.
+	(aarch64_sys_reg_writeonly_p): Ditto.
+
+2013-11-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/16140
+	* i386-gen.c (cpu_flag_init): Remove CpuNop from CPU_K6_2_FLAGS.
+	* i386-init.h: Regenerated.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64-opc.c (F_DEPRECATED): New macro.
+	(aarch64_sys_regs): Update; flag "spsr_svc" and "spsr_hyp" with
+	F_DEPRECATED.
+	(aarch64_print_operand): Call aarch64_sys_reg_deprecated_p on
+	AARCH64_OPND_SYSREG.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64-dis.c (convert_ubfm_to_lsl): Check for cond != '111x'.
+	(convert_from_csel): Likewise.
+	* aarch64-opc.c (operand_general_constraint_met_p): Handle
+	AARCH64_OPND_CLASS_COND and AARCH64_OPND_COND1.
+	(aarch64_print_operand): Handle AARCH64_OPND_COND1.
+	* aarch64-tbl.h (aarch64_opcode_table): Use COND1 instead of
+	COND for cinc, cset, cinv, csetm and cneg.
+	(AARCH64_OPERANDS): Add entry for AARCH64_OPND_COND1.
+	* aarch64-asm-2.c: Re-generated.
+	* aarch64-dis-2.c: Ditto.
+	* aarch64-opc-2.c: Ditto.
+
+2013-11-05  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* aarch64-opc.c (set_syntax_error): New function.
+	(operand_general_constraint_met_p): Replace set_other_error
+	with set_syntax_error.
+
+2013-10-12  Jan Beulich <jbeulich@suse.com>
+
+	* i386-dis.c (intel_operand_size): Move v_bnd_mode alongside the
+	default case.
+	(OP_E_register): Move v_bnd_mode alongside m_mode.
+	* i386-opc.tbl (bndcl, bndcu, bndcn): Split 32- and 64-bit variants.
+	Drop Reg16 and Disp16. Add NoRex64.
+	(bndmk, bndmov, bndldx, bndstx): Drop Disp16.
+	* i386-tbl.h: Re-generate.
+
+2013-10-10  Roland McGrath  <mcgrathr@google.com>
+
+	* i386-dis.c (oappend_maybe_intel): New function.
+	(OP_ST, OP_STi, append_seg, OP_I, OP_I64, OP_sI, OP_ESreg): Use it.
+	(OP_C, OP_T, CMP_Fixup, OP_EX_VexImmW): Likewise.
+	(VCMP_Fixup, VPCMP_Fixup, PCLMUL_Fixup): Likewise.
+
+2013-10-10  Roland McGrath  <mcgrathr@google.com>
+
+	* cr16-opc.c (REG): Cast NAME to 'reg' enum type to suppress
+	possible compiler warnings when the union's initializer is
+	actually meant for the 'preg' enum typed member.
+	* crx-opc.c (REG): Likewise.
+
+2013-10-10  Roland McGrath  <mcgrathr@google.com>
+
+	* v850-dis.c (v850_cacheop_codes, v850_prefop_codes):
+	Remove duplicate const qualifier.
+
+2013-09-20  Alan Modra  <amodra@gmail.com>
+
+	* configure: Regenerate.
+
 2013-09-17  Richard Sandiford  <rsandifo@linux.vnet.ibm.com>
 
 	* s390-opc.txt (clih): Make the immediate unsigned.

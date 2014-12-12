@@ -1,3 +1,308 @@
+2014-06-12  Alan Modra  <amodra@gmail.com>
+
+	Backport mainline patches
+	2014-06-07  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (relocate): Treat field of cmpli insn as a bitfield.
+
+	2014-06-03  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (addis_12_2): Define.
+	(Stub_table::do_write): Support fusion on ELFv2 stubs.
+
+	2014-06-03  Alan Modra  <amodra@gmail.com>
+	* testsuite/plugin_test.c (parse_readelf_line): Skip non-visibility
+	st_other output.
+
+	2014-06-02  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (Target_powerpc::local_reloc_may_be_function_pointer):
+	Only ignore relocs on ELFv1.
+	(Target_powerpc::global_reloc_may_be_function_pointer): Likewise.
+
+	2014-05-30  Cary Coutant  <ccoutant@google.com>
+	* testsuite/Makefile.am (ehdr_start_test_4): Fix typo in -B option.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/ehdr_start_test_4.sh: Look for "U" instead of "w".
+
+	2014-05-15  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (do_plt_fde_location): Handle zero length .glink.
+	Compare FDE contents with DW_CFA_nop rather than 0.
+
+	2014-03-07  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (Powerpc_relocate_functions::Overflow_check): Add
+	CHECK_UNSIGNED, CHECK_LOW_INSN, CHECK_HIGH_INSN.
+	(Powerpc_relocate_functions::has_overflow_unsigned): New function.
+	(Powerpc_relocate_functions::has_overflow_bitfield,
+	overflowed): Use the above.
+	(Target_powerpc::Relocate::relocate): Correct overflow checking
+	for a number of relocations.  Modify overflow test for 16-bit
+	fields in instructions to signed/unsigned according to whether
+	the field takes a signed or unsigned value.
+
+2014-05-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gold/16945
+	* x86_64.cc (Target_x86_64::Relocate::relocate): Use signed int
+	for got_offset.  Properly get GOT address for R_X86_64_PLTOFF64.
+
+2014-05-06  Cary Coutant  <ccoutant@google.com>
+
+	PR gold/16900
+	* i386.cc (Output_data_got_plt_i386): New class.
+	(Output_data_plt_i386::Output_data_plt_i386): Change type of got_plt
+	parameter. Change all callers.
+	(Output_data_plt_i386::layout_): Remove.
+	(Output_data_plt_i386::got_plt_): Change type.
+	(Target_i386::got_plt_): Change type. Change all references.
+	(Target_i386::got_section): Create instance of new class.
+	(Output_data_got_plt_i386::do_write): New function.
+	* x86_64.cc (Output_data_got_plt_x86_64): New class.
+	(Output_data_plt_x86_64::Output_data_plt_x86_64): Change type of got_plt
+	parameter. Change all callers.
+	(Output_data_plt_x86_64::layout_): Remove.
+	(Output_data_plt_x86_64::got_plt_): Change type.
+	(Target_x86_64::got_plt_): Change type. Change all references.
+	(Target_x86_64::got_section): Create instance of new class.
+	(Output_data_got_plt_x86_64::do_write): New function.
+	(Output_data_plt_x86_64::do_write): Don't write reserved words in GOT.
+	(Target_x86_64<size>::init_got_plt_for_update): Create instance of new
+	class.
+
+2014-05-02  Cary Coutant  <ccoutant@google.com>
+
+    	* defstd.cc (in_segment): Define __ehdr_start here...
+    	* layout.cc (Layout::finalize): ...Instead of here.  Set the
+    	output segment when known.
+    	* resolve.cc (Symbol::override_base_with_special): Remember
+    	the original binding.
+    	* symtab.cc (Symbol::set_output_segment): New function.
+    	(Symbol::set_undefined): New function.
+    	* symtab.h (Symbol::is_weak_undefined): Check original undef
+    	binding.
+    	(Symbol::is_strong_undefined): New function.
+    	(Symbol::set_output_segment): New function.
+    	(Symbol::set_undefined): New function.
+    	* target-reloc.h (is_strong_undefined): Remove.
+    	(issue_undefined_symbol_error): Call Symbol::is_weak_undefined.
+    	Check for hidden undefs.
+    	(relocate_section): Call Symbol::is_strong_undefined.
+    
+    	* testsuite/Makefile.am (ehdr_start_test_1)
+    	(ehdr_start_test_2, ehdr_start_test_3)
+    	(ehdr_start_test_4, ehdr_start_test_5): New test cases.
+    	* testsuite/Makefile.in: Regenerate.
+    	* testsuite/ehdr_start_def.cc: New source file.
+    	* testsuite/ehdr_start_test.cc: New source file.
+    	* testsuite/ehdr_start_test.t: New linker script.
+    	* testsuite/ehdr_start_test_4.sh: New shell script.
+
+2014-04-23  Cary Coutant  <ccoutant@google.com>
+
+	PR gold/16870
+	* x86_64.cc (Target_x86_64::Relocate::relocate): Add missing break.
+
+2013-12-10  Roland McGrath  <mcgrathr@google.com>
+
+	* Makefile.am (install-exec-local): Prefix $(INSTALL_PROGRAM) uses
+	with $(INSTALL_PROGRAM_ENV).
+	* Makefile.in: Regenerate.
+
+2013-11-22  Cary Coutant  <ccoutant@google.com>
+
+	* testsuite/Makefile.am (exception_x86_64_bnd_test): Use in-tree
+	assembler.
+	* testsuite/Makefile.in: Regenerate.
+
+2013-11-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* x86_64.cc (Target_x86_64<size>::Scan::get_reference_flags):
+	Handle R_X86_64_PC32_BND and R_X86_64_PLT32_BND just like
+	R_X86_64_PC32 and R_X86_64_PLT32, respectively.
+	(Target_x86_64<size>::Scan::local): Likewise.
+	(Target_x86_64<size>::Scan::global): Likewise.
+	(Target_x86_64<size>::Relocate::relocate): Likewise.
+	(Target_x86_64<size>::Relocatable_size_for_reloc::get_size_for_reloc):
+	Likewise.
+	(Target_x86_64<size>::Scan::check_non_pic(): Handle
+	R_X86_64_PC32_BND.
+
+	* testsuite/Makefile.am (check_PROGRAMS): Add
+	exception_x86_64_bnd_test.
+	(exception_x86_64_bnd_test_SOURCES): New macro.
+	(exception_x86_64_bnd_test_DEPENDENCIES): Likewise.
+	(exception_x86_64_bnd_test_LDFLAGS): Likewise.
+	(exception_x86_64_bnd_test_LDADD): Likewise.
+	(exception_x86_64_bnd_1.o): New rule.
+	(exception_x86_64_bnd_2.o): Likewise.
+	* testsuite/Makefile.in: Regenerated.
+
+2013-11-15  Alan Modra  <amodra@gmail.com>
+
+	Apply changes from mainline to 2.24
+	2013-11-15  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (Target_powerpc::glink_section): Provide non-const
+	accessor.
+	(Target_powerpc::Branch_info::make_stub): Make global entry stubs.
+	Only call ppc64_local_entry_offset for 64-bit.  Restrict
+	symval_for_branch lookup to ELFv1.
+	(Stub_table::add_plt_call_entry): Use unsigned int off.
+	(Output_data_glink::Address, invalid_address): New.
+	(Output_data_glink::add_eh_frame): Move out of line.  Add
+	support for ELFv2.
+	(Output_data_glink::add_global_entry, find_global_entry,
+	global_entry_address): New functions.
+	(Output_data_glink::global_entry_stubs_, end_branch_table_,
+	ge_size): New variables.
+	(Output_data_glink::set_final_data_size): Add global entry
+	stub sizing.
+	(Output_data_glink::do_write): Write global entry stubs.
+	(Target_powerpc::Scan::reloc_needs_plt_for_ifunc): Add target
+	parameter.  Return true for ELFv2.  Adjust callers.
+	(Target_powerpc::Scan::local, global): Restrict opd lookup to
+	ELFv1.  Similarly for ifunc and dynamic relocation processing
+	specific to ELFv1.  Recognize that symbols are defined on
+	their plt entries for ELFv2.
+	(Target_powerpc::symval_for_branch): Assert if called for
+	ELFv2 or ppc32.
+	(Target_powerpc::Relocate::relocate): Use global entry plt
+	stub for symbol value if such exists on ELFv2.
+	(Target_powerpc::Relocate::relocate): Don't call
+	symval_for_branch when ELFv2.  Do adjust for local entry
+	offset when ELFv2.
+	(Target_powerpc::do_dynsym_value): Set symbols to global entry
+	plt stub for ELFv2.
+	(Target_powerpc::do_plt_address_for_global): Similarly.
+
+	2013-11-04  Alan Modra  <amodra@gmail.com>
+	* symtab.h (Symbol::Reference_flags): Add FUNC_DESC_ABI.
+	(Symbol::needs_dynamic_reloc): Test new flag.
+	* powerpc.cc (needs_dynamic_reloc, use_plt_offset): Delete.
+	(Target_powerpc::Scan::get_reference_flags): Add target param.
+	Return FUNC_DESC_ABI for 64-bit ELFv1.
+	(Target_powerpc::Branch_info::make_stub): Adjust get_reference_flags
+	call.
+	(Target_powerpc::Scan::global): Use Symbol::needs_dynamic_reloc.
+	(Target_powerpc::Relocate::relocate): Use Symbol::use_plt_offset.
+
+	2013-10-30  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (Powerpc_relobj::abiversion, set_abiversion,
+	ppc64_local_entry_offset, ppc64_local_entry_offset,
+	do_read_symbols): New functions.
+	(Powerpc_relobj::e_flags_, st_other_): New vars.
+	(Powerpc_relobj::Powerpc_relobj): Call set_abiversion.
+	(Powerpc_dynobj::abiversion, set_abiversion): New functions.
+	(Powerpc_relobj::e_flags_): New var.
+	(Target_powerpc::first_plt_entry_offset, plt_entry_size): Inline
+	and adjust for ELFv2.
+	(Target_powerpc::abiversion, set_abiversion, stk_toc): New functions.
+	(Powerpc_relobj::do_find_special_sections): Check no .opd in ELFv2.
+	(Powerpc_dynobj::do_find_special_sections): Likewise.
+	(Target_powerpc::do_define_standard_symbols): Define ".TOC.".
+	(Target_powerpc::Branch_info::make_stub): Adjust stub destination
+	to ELFv2 local entry.
+	(Target_powerpc::do_relax): No thread safe barriers needed for
+	ELFv2.
+	(Output_data_plt_powerpc::initial_plt_entry_size_,
+	plt_entry_size): Delete.  Replace all uses with
+	first_plt_entry_offset() and plt_entry_size().
+	(Output_data_plt_powerpc::Output_data_plt_powerpc): Remove
+	reserved_size parm.  Update callers.
+	(Output_data_plt_powerpc::entry_count): Update.
+	(Output_data_plt_powerpc::first_plt_entry_offset): Make private
+	and use Target_powerpc::first_plt_entry_offset().
+	(Output_data_plt_powerpc::get_plt_entry_size): Similarly and
+	rename to plt_entry_size.
+	(Output_data_plt_powerpc::add_ifunc_entry,
+	add_local_ifunc_entry): Adjust reloc for ELFv2.
+	(glink_eh_frame_fde_64): Rename to glink_eh_frame_fde_64v1.
+	(glink_eh_frame_fde_64v2): New.
+	(Stub_table::plt_call_size): Support ELFv2 sizing.
+	(Output_data_glink::add_eh_frame): Use the new FDE.
+	(Output_data_glink::set_final_data_size): Adjust for ELFv2 glink.
+	(Stub_table::do_write): Write ELFv2 stubs and glink.
+	(Target_powerpc::Relocate::relocate): Replaces nop after call
+	with ld 2,24(1) and adjust local offset destination for ELFv2.
+
+	2013-10-30  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (Target_powerpc::Scan::check_non_pic): Handle new relocs.
+	(Target_powerpc::Scan::global, local): Likewise.
+	(Target_powerpc::Relocate::relocate): Likewise.  Check for overflow
+	on all ppc64 @h and @ha relocs.
+
+2013-10-30  Roland McGrath  <mcgrathr@google.com>
+
+	* x86_64.cc (Output_data_plt_x86_64_nacl::first_plt_entry):
+	Correct 9-byte nop sequence to match what the assembler generates.
+
+2013-10-14  Alan Modra  <amodra@gmail.com>
+
+	* output.h (Output_data_got::add_constant): Tidy.
+	(Output_data_got::add_constant_pair): New function.
+	* powerpc.cc (Output_data_got_powerpc): Override all Output_data_got
+	methods used so as to first call reserve_ent().
+
+2013-10-11  Roland McGrath  <mcgrathr@google.com>
+
+	* powerpc.cc (Output_data_got_powerpc): Remove unused methods
+	add_got_entry and add_got_entry_pair.
+
+	* configure.ac (TLS_GNU2_DIALECT): Use -Werror in test.
+	(HAVE_PUBNAMES): Likewise.
+	* configure: Regenerate.
+
+	* testsuite/Makefile.am: Replace '-T foo' with '-Wl,-T,foo' throughout.
+	* testsuite/Makefile.in: Regenerate.
+
+	* target.h (Target::adjust_elf_header, Target::do_adjust_elf_header):
+	Remove const from declaration.
+	* target.cc (Sized_target::do_adjust_elf_header): Update definition.
+	* sparc.cc (Target_sparc::do_adjust_elf_header): Likewise.
+	* output.h (Output_file_header): Remove const from member target_
+	and corresponding constructor argument.
+	* output.cc (Output_file_header::Output_file_header): Update prototype.
+	(Output_file_header::do_sized_write): Use this->target_ in place
+	of parameters()->target().
+
+	* testsuite/undef_symbol.cc (Foo::get_a): New method.
+
+	* configure.ac (MERGE_CONSTANTS_FLAG): New check.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+	* testsuite/merge_string_literals_1.c: Renamed to have .cc suffix.
+	* testsuite/merge_string_literals_2.c: Likewise.
+	* testsuite/Makefile.am
+	(merge_string_literals_1.o, merge_string_literals_2.o): Update deps.
+	(AM_CFLAGS, AM_CXXFLAGS): Use $(MERGE_CONSTANTS_FLAG) in place of
+	literal -fmerge-constants.
+	* testsuite/Makefile.in: Regenerate.
+
+	* i386.cc (Target_i386): Remove unused member dynbss_.
+	* arm.cc (Target_arm): Likewise.
+	* powerpc.cc (Target_powerpc): Likewise.
+	* sparc.cc (Target_sparc): Likewise.
+	* tilegx.cc (Target_tilegx): Likewise.
+	* x86_64.cc (Target_x86_64): Likewise.
+	* dwarf_reader.h (Dwarf_info_reader): Remove unused members
+	type_signature_, type_offset_.
+	* plugin.h (Plugin_hook): Remove unused member layout_.
+	* readsyms.h (Add_symbols): Remove unused members dirpath_, dirindex_,
+	mapfile_.
+	(Read_member): Remove unused members input_objects_, symtab_,
+	mapfile_, layout_.
+	(Check_library): Remove unused member symtab_.
+	* archive.h (Lib_group): Remove unused member lib_.
+	* archive.cc (Lib_group::Lib_group): Update initializer.
+	* incremental.h	(Incremental_binary): Remove unused member target_.
+	(Incremental_script_entry): Removed unused member script_.
+	* layout.h (Write_symbols_task): Remove unused member input_objects_.
+	* icf.h (Icf): Remove unused member num_tracked_relocs.
+
+	* gold-threads.h (Once): Conditionalize member was_run_lock_ on
+	[ENABLE_THREADS && __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4], matching
+	its only use.
+	* gold-threads.cc (Once::Once): Likewise conditionalize initializer.
+
+	* archive.h: Use struct rather than class for forward declaration
+	of Read_symbols_data.
+
 2013-09-03  Pavel Chupin  <pavel.v.chupin@intel.com>
 
 	PR gold/15927
@@ -296,23 +601,23 @@
 
 2013-05-21  Cary Coutant  <ccoutant@google.com>
 
-    	* object.cc (Sized_relobj_file::get_symbol_location_info): Set
-    	type of enclosing symbol.
-    	(Relocate_info::location): Check symbol type when describing symbol.
-    	* object.h (Symbol_location_info): Remove unused line_number;
-    	add enclosing_symbol_type.
-    	* testsuite/debug_msg.sh: Adjust expected output.
+	* object.cc (Sized_relobj_file::get_symbol_location_info): Set
+	type of enclosing symbol.
+	(Relocate_info::location): Check symbol type when describing symbol.
+	* object.h (Symbol_location_info): Remove unused line_number;
+	add enclosing_symbol_type.
+	* testsuite/debug_msg.sh: Adjust expected output.
 
 2013-05-13  Cary Coutant  <ccoutant@google.com>
 
-    	* configure.ac: Export DEFAULT_TARGET.
-    	* configure: Regenerate.
-    	* Makefile.in: Regenerate.
-    	* testsuite/Makefile.am: Add .EXPORT_ALL_VARIABLES.
-    	* testsuite/Makefile.in: Regenerate.
-    	* testsuite/debug_msg.sh: Delete duplicate tests.
-    	Don't check undef_int error message match for powerpc where the
-    	source file and line number aren't available.
+	* configure.ac: Export DEFAULT_TARGET.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+	* testsuite/Makefile.am: Add .EXPORT_ALL_VARIABLES.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/debug_msg.sh: Delete duplicate tests.
+	Don't check undef_int error message match for powerpc where the
+	source file and line number aren't available.
 
 2013-05-10  Roland McGrath  <mcgrathr@google.com>
 
