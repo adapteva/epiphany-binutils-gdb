@@ -25,6 +25,8 @@
 #include "mem-break.h"
 #include "win32-low.h"
 #include "gdbthread.h"
+#include "dll.h"
+#include "hostio.h"
 
 #include <stdint.h>
 #include <windows.h>
@@ -32,7 +34,6 @@
 #include <imagehlp.h>
 #include <tlhelp32.h>
 #include <psapi.h>
-#include <sys/param.h>
 #include <process.h>
 
 #ifndef USE_WIN32API
@@ -87,12 +88,14 @@ static int soft_interrupt_requested = 0;
    by suspending all the threads.  */
 static int faked_breakpoint = 0;
 
+const struct target_desc *win32_tdesc;
+
 #define NUM_REGS (the_low_target.num_regs)
 
-typedef BOOL WINAPI (*winapi_DebugActiveProcessStop) (DWORD dwProcessId);
-typedef BOOL WINAPI (*winapi_DebugSetProcessKillOnExit) (BOOL KillOnExit);
-typedef BOOL WINAPI (*winapi_DebugBreakProcess) (HANDLE);
-typedef BOOL WINAPI (*winapi_GenerateConsoleCtrlEvent) (DWORD, DWORD);
+typedef BOOL (WINAPI *winapi_DebugActiveProcessStop) (DWORD dwProcessId);
+typedef BOOL (WINAPI *winapi_DebugSetProcessKillOnExit) (BOOL KillOnExit);
+typedef BOOL (WINAPI *winapi_DebugBreakProcess) (HANDLE);
+typedef BOOL (WINAPI *winapi_GenerateConsoleCtrlEvent) (DWORD, DWORD);
 
 static void win32_resume (struct thread_resume *resume_info, size_t n);
 
@@ -193,9 +196,6 @@ child_add_thread (DWORD pid, DWORD tid, HANDLE h, void *tlb)
   th->thread_local_base = (CORE_ADDR) (uintptr_t) tlb;
 
   add_thread (ptid, th);
-  set_inferior_regcache_data ((struct thread_info *)
-			      find_inferior_id (&all_threads, ptid),
-			      new_register_cache ());
 
   if (the_low_target.thread_added != NULL)
     (*the_low_target.thread_added) (th);
@@ -280,21 +280,30 @@ static int
 child_xfer_memory (CORE_ADDR memaddr, char *our, int len,
 		   int write, struct target_ops *target)
 {
-  SIZE_T done;
+  BOOL success;
+  SIZE_T done = 0;
+  DWORD lasterror = 0;
   uintptr_t addr = (uintptr_t) memaddr;
 
   if (write)
     {
-      WriteProcessMemory (current_process_handle, (LPVOID) addr,
-			  (LPCVOID) our, len, &done);
+      success = WriteProcessMemory (current_process_handle, (LPVOID) addr,
+				    (LPCVOID) our, len, &done);
+      if (!success)
+	lasterror = GetLastError ();
       FlushInstructionCache (current_process_handle, (LPCVOID) addr, len);
     }
   else
     {
-      ReadProcessMemory (current_process_handle, (LPCVOID) addr, (LPVOID) our,
-			 len, &done);
+      success = ReadProcessMemory (current_process_handle, (LPCVOID) addr,
+				   (LPVOID) our, len, &done);
+      if (!success)
+	lasterror = GetLastError ();
     }
-  return done;
+  if (!success && lasterror == ERROR_PARTIAL_COPY && done > 0)
+    return done;
+  else
+    return success ? done : -1;
 }
 
 /* Clear out any old thread list and reinitialize it to a pristine
@@ -308,6 +317,8 @@ child_init_thread_list (void)
 static void
 do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 {
+  struct process_info *proc;
+
   last_sig = GDB_SIGNAL_0;
 
   current_process_handle = proch;
@@ -319,7 +330,8 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 
   memset (&current_event, 0, sizeof (current_event));
 
-  add_process (pid, attached);
+  proc = add_process (pid, attached);
+  proc->tdesc = win32_tdesc;
   child_init_thread_list ();
 
   if (the_low_target.initial_stuff != NULL)
@@ -513,7 +525,7 @@ static int
 win32_create_inferior (char *program, char **program_args)
 {
 #ifndef USE_WIN32API
-  char real_path[MAXPATHLEN];
+  char real_path[PATH_MAX];
   char *orig_path, *new_path, *path_ptr;
 #endif
   BOOL ret;
@@ -544,8 +556,7 @@ win32_create_inferior (char *program, char **program_args)
       cygwin_conv_path_list (CCP_POSIX_TO_WIN_A, path_ptr, new_path, size);
       setenv ("PATH", new_path, 1);
      }
-  cygwin_conv_path (CCP_POSIX_TO_WIN_A, program, real_path,
-		    MAXPATHLEN);
+  cygwin_conv_path (CCP_POSIX_TO_WIN_A, program, real_path, PATH_MAX);
   program = real_path;
 #endif
 

@@ -31,8 +31,6 @@
 #include "inferior.h"
 #include "block.h"
 
-static PyTypeObject finish_breakpoint_object_type;
-
 /* Function that is called when a Python finish bp is found out of scope.  */
 static char * const outofscope_func = "out_of_scope";
 
@@ -54,6 +52,9 @@ struct finish_breakpoint_object
      not stopped at a FinishBreakpoint.  */
   PyObject *return_value;
 };
+
+static PyTypeObject finish_breakpoint_object_type
+    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("finish_breakpoint_object");
 
 /* Python function to get the 'return_value' attribute of
    FinishBreakpoint.  */
@@ -325,8 +326,12 @@ bpfinishpy_out_of_scope (struct finish_breakpoint_object *bpfinish_obj)
   if (bpfinish_obj->py_bp.bp->enable_state == bp_enabled
       && PyObject_HasAttrString (py_obj, outofscope_func))
     {
-      if (!PyObject_CallMethod (py_obj, outofscope_func, NULL))
-          gdbpy_print_stack ();
+      PyObject *meth_result;
+
+      meth_result = PyObject_CallMethod (py_obj, outofscope_func, NULL);
+      if (meth_result == NULL)
+	gdbpy_print_stack ();
+      Py_XDECREF (meth_result);
     }
 
   delete_breakpoint (bpfinish_obj->py_bp.bp);
@@ -402,18 +407,20 @@ bpfinishpy_handle_exit (struct inferior *inf)
 
 /* Initialize the Python finish breakpoint code.  */
 
-void
+int
 gdbpy_initialize_finishbreakpoints (void)
 {
   if (PyType_Ready (&finish_breakpoint_object_type) < 0)
-      return;
+    return -1;
   
-  Py_INCREF (&finish_breakpoint_object_type);
-  PyModule_AddObject (gdb_module, "FinishBreakpoint",
-                      (PyObject *) &finish_breakpoint_object_type);
+  if (gdb_pymodule_addobject (gdb_module, "FinishBreakpoint",
+			      (PyObject *) &finish_breakpoint_object_type) < 0)
+    return -1;
     
   observer_attach_normal_stop (bpfinishpy_handle_stop);
   observer_attach_inferior_exit (bpfinishpy_handle_exit);
+
+  return 0;
 }
 
 static PyGetSetDef finish_breakpoint_object_getset[] = {

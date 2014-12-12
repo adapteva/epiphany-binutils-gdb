@@ -1450,6 +1450,10 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       if (h && h->type == STT_GNU_IFUNC)
@@ -4789,9 +4793,10 @@ _bfd_sparc_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *i
 	    }
 	}
 
-      elf_section_data (splt->output_section)->this_hdr.sh_entsize
-	= (htab->is_vxworks || !ABI_64_P (output_bfd))
-	  ? 0 : htab->plt_entry_size;
+      if (elf_section_data (splt->output_section) != NULL)
+        elf_section_data (splt->output_section)->this_hdr.sh_entsize
+          = ((htab->is_vxworks || !ABI_64_P (output_bfd))
+             ? 0 : htab->plt_entry_size);
     }
 
   /* Set the first entry in the global offset table to the address of
@@ -4905,6 +4910,7 @@ _bfd_sparc_elf_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
   out_attr = &out_attrs[Tag_GNU_Sparc_HWCAPS];
 
   out_attr->i |= in_attr->i;
+  out_attr->type = 1;
 
   /* Merge Tag_compatibility attributes and any common GNU ones.  */
   _bfd_elf_merge_object_attributes (ibfd, obfd);

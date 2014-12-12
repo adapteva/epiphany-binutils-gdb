@@ -17,8 +17,7 @@
 
 # Test the memory attribute commands.
 
-set testfile "memattr"
-set srcfile  ${testfile}.c
+standard_testfile .c
 
 if { [prepare_for_testing $testfile.exp $testfile $srcfile] } {
     return -1
@@ -458,7 +457,7 @@ proc delete_memory {} {
 
     gdb_test_multiple "delete mem" "delete mem" {
        -re "Delete all memory regions.*y or n.*$" {
-           send_gdb "y\n";
+           send_gdb "y\n"
            exp_continue
        }
        -re "$gdb_prompt $" { }

@@ -19,6 +19,16 @@
 #ifndef S390_TDEP_H
 #define S390_TDEP_H
 
+/* Hardware capabilities. */
+
+#ifndef HWCAP_S390_HIGH_GPRS
+#define HWCAP_S390_HIGH_GPRS 512
+#endif
+
+#ifndef HWCAP_S390_TE
+#define HWCAP_S390_TE 1024
+#endif
+
 /* Register information.  */
 
 /* Program Status Word.  */
@@ -98,24 +108,58 @@
 #define S390_ORIG_R2_REGNUM 67
 #define S390_LAST_BREAK_REGNUM 68
 #define S390_SYSTEM_CALL_REGNUM 69
+/* Transaction diagnostic block.  */
+#define S390_TDB_DWORD0_REGNUM 70
+#define S390_TDB_ABORT_CODE_REGNUM 71
+#define S390_TDB_CONFLICT_TOKEN_REGNUM 72
+#define S390_TDB_ATIA_REGNUM 73
+#define S390_TDB_R0_REGNUM 74
+#define S390_TDB_R1_REGNUM 75
+#define S390_TDB_R2_REGNUM 76
+#define S390_TDB_R3_REGNUM 77
+#define S390_TDB_R4_REGNUM 78
+#define S390_TDB_R5_REGNUM 79
+#define S390_TDB_R6_REGNUM 80
+#define S390_TDB_R7_REGNUM 81
+#define S390_TDB_R8_REGNUM 82
+#define S390_TDB_R9_REGNUM 83
+#define S390_TDB_R10_REGNUM 84
+#define S390_TDB_R11_REGNUM 85
+#define S390_TDB_R12_REGNUM 86
+#define S390_TDB_R13_REGNUM 87
+#define S390_TDB_R14_REGNUM 88
+#define S390_TDB_R15_REGNUM 89
 /* Total.  */
-#define S390_NUM_REGS 70
+#define S390_NUM_REGS 90
 
 /* Special register usage.  */
 #define S390_SP_REGNUM S390_R15_REGNUM
 #define S390_RETADDR_REGNUM S390_R14_REGNUM
 #define S390_FRAME_REGNUM S390_R11_REGNUM
 
+#define S390_IS_GREGSET_REGNUM(i)					\
+  (((i) >= S390_PSWM_REGNUM && (i) <= S390_A15_REGNUM)			\
+   || ((i) >= S390_R0_UPPER_REGNUM && (i) <= S390_R15_UPPER_REGNUM)	\
+   || (i) == S390_ORIG_R2_REGNUM)
+
+#define S390_IS_FPREGSET_REGNUM(i)			\
+  ((i) >= S390_FPC_REGNUM && (i) <= S390_F15_REGNUM)
+
+#define S390_IS_TDBREGSET_REGNUM(i)				\
+  ((i) >= S390_TDB_DWORD0_REGNUM && (i) <= S390_TDB_R15_REGNUM)
+
 /* Core file register sets, defined in s390-tdep.c.  */
 #define s390_sizeof_gregset 0x90
-extern int s390_regmap_gregset[S390_NUM_REGS];
+extern const short s390_regmap_gregset[];
 #define s390x_sizeof_gregset 0xd8
-extern int s390x_regmap_gregset[S390_NUM_REGS];
+extern const short s390x_regmap_gregset[];
 #define s390_sizeof_fpregset 0x88
-extern int s390_regmap_fpregset[S390_NUM_REGS];
-extern int s390_regmap_last_break[S390_NUM_REGS];
-extern int s390x_regmap_last_break[S390_NUM_REGS];
-extern int s390_regmap_system_call[S390_NUM_REGS];
+extern const short s390_regmap_fpregset[];
+extern const short s390_regmap_last_break[];
+extern const short s390x_regmap_last_break[];
+extern const short s390_regmap_system_call[];
+extern const short s390_regmap_tdb[];
+#define s390_sizeof_tdbregset 0x100
 
 /* GNU/Linux target descriptions.  */
 extern struct target_desc *tdesc_s390_linux32;
@@ -124,9 +168,11 @@ extern struct target_desc *tdesc_s390_linux32v2;
 extern struct target_desc *tdesc_s390_linux64;
 extern struct target_desc *tdesc_s390_linux64v1;
 extern struct target_desc *tdesc_s390_linux64v2;
+extern struct target_desc *tdesc_s390_te_linux64;
 extern struct target_desc *tdesc_s390x_linux64;
 extern struct target_desc *tdesc_s390x_linux64v1;
 extern struct target_desc *tdesc_s390x_linux64v2;
+extern struct target_desc *tdesc_s390x_te_linux64;
 
 #endif
 

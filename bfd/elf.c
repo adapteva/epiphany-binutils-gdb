@@ -2521,7 +2521,7 @@ _bfd_elf_single_rel_hdr (asection *sec)
    USE_RELA_P is TRUE, we use RELA relocations; otherwise, we use REL
    relocations.  */
 
-bfd_boolean
+static bfd_boolean
 _bfd_elf_init_reloc_shdr (bfd *abfd,
 			  struct bfd_elf_section_reloc_data *reldata,
 			  asection *asect,
@@ -9756,7 +9756,9 @@ bfd_get_elf_phdrs (bfd *abfd, void *phdrs)
 }
 
 enum elf_reloc_type_class
-_bfd_elf_reloc_type_class (const Elf_Internal_Rela *rela ATTRIBUTE_UNUSED)
+_bfd_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			   const asection *rel_sec ATTRIBUTE_UNUSED,
+			   const Elf_Internal_Rela *rela ATTRIBUTE_UNUSED)
 {
   return reloc_class_normal;
 }

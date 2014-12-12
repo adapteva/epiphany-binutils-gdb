@@ -119,11 +119,6 @@ extern int step_stop_if_no_debug;
    are kept running freely.  */
 extern int non_stop;
 
-/* If set (default), when following a fork, GDB will detach from one
-   the fork branches, child or parent.  Exactly which branch is
-   detached depends on 'set follow-fork-mode' setting.  */
-extern int detach_fork;
-
 /* When set (default), the target should attempt to disable the operating
    system's address space randomization feature when starting an inferior.  */
 extern int disable_randomization;
@@ -175,7 +170,7 @@ extern void default_print_registers_info (struct gdbarch *gdbarch,
 					  struct frame_info *frame,
 					  int regnum, int all);
 
-extern void child_terminal_info (char *, int);
+extern void child_terminal_info (const char *, int);
 
 extern void term_info (char *, int);
 

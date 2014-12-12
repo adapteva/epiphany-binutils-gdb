@@ -725,6 +725,10 @@ cr16_elf_check_relocs (bfd *abfd, struct bfd_link_info *info, asection *sec,
           while (h->root.type == bfd_link_hash_indirect
                  || h->root.type == bfd_link_hash_warning)
             h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
         }
 
       /* Some relocs require a global offset table.  */
@@ -2916,7 +2920,9 @@ error_return:
    properly.  */
 
 static enum elf_reloc_type_class
-_bfd_cr16_elf_reloc_type_class (const Elf_Internal_Rela *rela)
+_bfd_cr16_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+				const asection *rel_sec ATTRIBUTE_UNUSED,
+				const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {

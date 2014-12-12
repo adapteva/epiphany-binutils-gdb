@@ -1,6 +1,6 @@
 /* X86-64 specific support for ELF
    Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010, 2011, 2012
+   2010, 2011, 2012, 2013
    Free Software Foundation, Inc.
    Contributed by Jan Hubicka <jh@suse.cz>.
 
@@ -628,9 +628,11 @@ struct elf_x86_64_backend_data
   unsigned int eh_frame_plt_size;
 };
 
+#define get_elf_x86_64_arch_data(bed) \
+  ((const struct elf_x86_64_backend_data *) (bed)->arch_data)
+
 #define get_elf_x86_64_backend_data(abfd) \
-  ((const struct elf_x86_64_backend_data *) \
-   get_elf_backend_data (abfd)->arch_data)
+  get_elf_x86_64_arch_data (get_elf_backend_data (abfd))
 
 #define GET_PLT_ENTRY_SIZE(abfd) \
   get_elf_x86_64_backend_data (abfd)->plt_entry_size
@@ -1087,6 +1089,7 @@ elf_x86_64_check_tls_transition (bfd *abfd,
 {
   unsigned int val;
   unsigned long r_symndx;
+  bfd_boolean largepic = FALSE;
   struct elf_link_hash_entry *h;
   bfd_vma offset;
   struct elf_x86_64_link_hash_table *htab;
@@ -1124,16 +1127,32 @@ elf_x86_64_check_tls_transition (bfd *abfd,
 	     can transit to different access model.  For 32bit, only
 		leaq foo@tlsgd(%rip), %rdi
 		.word 0x6666; rex64; call __tls_get_addr
-	     can transit to different access model.  */
+	     can transit to different access model.  For largepic
+	     we also support:
+	        leaq foo@tlsgd(%rip), %rdi
+	        movabsq $__tls_get_addr@pltoff, %rax
+	        addq $rbx, %rax
+	        call *%rax.  */
 
 	  static const unsigned char call[] = { 0x66, 0x66, 0x48, 0xe8 };
 	  static const unsigned char leaq[] = { 0x66, 0x48, 0x8d, 0x3d };
 
-	  if ((offset + 12) > sec->size
-	      || memcmp (contents + offset + 4, call, 4) != 0)
+	  if ((offset + 12) > sec->size)
 	    return FALSE;
 
-	  if (ABI_64_P (abfd))
+	  if (memcmp (contents + offset + 4, call, 4) != 0)
+	    {
+	      if (!ABI_64_P (abfd)
+		  || (offset + 19) > sec->size
+		  || offset < 3
+		  || memcmp (contents + offset - 3, leaq + 1, 3) != 0
+		  || memcmp (contents + offset + 4, "\x48\xb8", 2) != 0
+		  || memcmp (contents + offset + 14, "\x48\x01\xd8\xff\xd0", 5)
+		     != 0)
+		return FALSE;
+	      largepic = TRUE;
+	    }
+	  else if (ABI_64_P (abfd))
 	    {
 	      if (offset < 4
 		  || memcmp (contents + offset - 4, leaq, 4) != 0)
@@ -1151,16 +1170,31 @@ elf_x86_64_check_tls_transition (bfd *abfd,
 	  /* Check transition from LD access model.  Only
 		leaq foo@tlsld(%rip), %rdi;
 		call __tls_get_addr
-	     can transit to different access model.  */
+	     can transit to different access model.  For largepic
+	     we also support:
+	        leaq foo@tlsld(%rip), %rdi
+	        movabsq $__tls_get_addr@pltoff, %rax
+	        addq $rbx, %rax
+	        call *%rax.  */
 
 	  static const unsigned char lea[] = { 0x48, 0x8d, 0x3d };
 
 	  if (offset < 3 || (offset + 9) > sec->size)
 	    return FALSE;
 
-	  if (memcmp (contents + offset - 3, lea, 3) != 0
-	      || 0xe8 != *(contents + offset + 4))
+	  if (memcmp (contents + offset - 3, lea, 3) != 0)
 	    return FALSE;
+
+	  if (0xe8 != *(contents + offset + 4))
+	    {
+	      if (!ABI_64_P (abfd)
+		  || (offset + 19) > sec->size
+		  || memcmp (contents + offset + 4, "\x48\xb8", 2) != 0
+		  || memcmp (contents + offset + 14, "\x48\x01\xd8\xff\xd0", 5)
+		     != 0)
+		return FALSE;
+	      largepic = TRUE;
+	    }
 	}
 
       r_symndx = htab->r_sym (rel[1].r_info);
@@ -1172,8 +1206,10 @@ elf_x86_64_check_tls_transition (bfd *abfd,
 	 may be versioned.  */
       return (h != NULL
 	      && h->root.root.string != NULL
-	      && (ELF32_R_TYPE (rel[1].r_info) == R_X86_64_PC32
-		  || ELF32_R_TYPE (rel[1].r_info) == R_X86_64_PLT32)
+	      && (largepic
+		  ? ELF32_R_TYPE (rel[1].r_info) == R_X86_64_PLTOFF64
+		  : (ELF32_R_TYPE (rel[1].r_info) == R_X86_64_PC32
+		     || ELF32_R_TYPE (rel[1].r_info) == R_X86_64_PLT32))
 	      && (strncmp (h->root.root.string,
 			   "__tls_get_addr", 14) == 0));
 
@@ -1519,6 +1555,7 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	  /* It is referenced by a non-shared object. */
 	  h->ref_regular = 1;
+	  h->root.non_ir_ref = 1;
 	}
 
       if (! elf_x86_64_tls_transition (info, abfd, sec, NULL,
@@ -2259,6 +2296,7 @@ elf_x86_64_allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
     return _bfd_elf_allocate_ifunc_dyn_relocs (info, h,
 					       &eh->dyn_relocs,
 					       plt_entry_size,
+					       plt_entry_size,
 					       GOT_ENTRY_SIZE);
   else if (htab->elf.dynamic_sections_created
 	   && h->plt.refcount > 0)
@@ -2904,7 +2942,7 @@ elf_x86_64_size_dynamic_sections (bfd *output_bfd,
       && _bfd_elf_eh_frame_present (info))
     {
       const struct elf_x86_64_backend_data *arch_data
-	= (const struct elf_x86_64_backend_data *) bed->arch_data;
+	= get_elf_x86_64_arch_data (bed);
       htab->plt_eh_frame->size = arch_data->eh_frame_plt_size;
     }
 
@@ -2976,7 +3014,7 @@ elf_x86_64_size_dynamic_sections (bfd *output_bfd,
       && htab->plt_eh_frame->contents != NULL)
     {
       const struct elf_x86_64_backend_data *arch_data
-	= (const struct elf_x86_64_backend_data *) bed->arch_data;
+	= get_elf_x86_64_arch_data (bed);
 
       memcpy (htab->plt_eh_frame->contents,
 	      arch_data->eh_frame_plt, htab->plt_eh_frame->size);
@@ -3945,8 +3983,26 @@ direct:
 		     .word 0x6666; rex64; call __tls_get_addr
 		     into:
 		     movl %fs:0, %eax
-		     leaq foo@tpoff(%rax), %rax */
-		  if (ABI_64_P (output_bfd))
+		     leaq foo@tpoff(%rax), %rax
+		     For largepic, change:
+		     leaq foo@tlsgd(%rip), %rdi
+		     movabsq $__tls_get_addr@pltoff, %rax
+		     addq %rbx, %rax
+		     call *%rax
+		     into:
+		     movq %fs:0, %rax
+		     leaq foo@tpoff(%rax), %rax
+		     nopw 0x0(%rax,%rax,1) */
+		  int largepic = 0;
+		  if (ABI_64_P (output_bfd)
+		      && contents[roff + 5] == (bfd_byte) '\xb8')
+		    {
+		      memcpy (contents + roff - 3,
+			      "\x64\x48\x8b\x04\x25\0\0\0\0\x48\x8d\x80"
+			      "\0\0\0\0\x66\x0f\x1f\x44\0", 22);
+		      largepic = 1;
+		    }
+		  else if (ABI_64_P (output_bfd))
 		    memcpy (contents + roff - 4,
 			    "\x64\x48\x8b\x04\x25\0\0\0\0\x48\x8d\x80\0\0\0",
 			    16);
@@ -3956,8 +4012,8 @@ direct:
 			    15);
 		  bfd_put_32 (output_bfd,
 			      elf_x86_64_tpoff (info, relocation),
-			      contents + roff + 8);
-		  /* Skip R_X86_64_PC32/R_X86_64_PLT32.  */
+			      contents + roff + 8 + largepic);
+		  /* Skip R_X86_64_PC32/R_X86_64_PLT32/R_X86_64_PLTOFF64.  */
 		  rel++;
 		  continue;
 		}
@@ -4192,8 +4248,26 @@ direct:
 		     .word 0x6666; rex64; call __tls_get_addr@plt
 		     into:
 		     movl %fs:0, %eax
-		     addq foo@gottpoff(%rip), %rax */
-		  if (ABI_64_P (output_bfd))
+		     addq foo@gottpoff(%rip), %rax
+		     For largepic, change:
+		     leaq foo@tlsgd(%rip), %rdi
+		     movabsq $__tls_get_addr@pltoff, %rax
+		     addq %rbx, %rax
+		     call *%rax
+		     into:
+		     movq %fs:0, %rax
+		     addq foo@gottpoff(%rax), %rax
+		     nopw 0x0(%rax,%rax,1) */
+		  int largepic = 0;
+		  if (ABI_64_P (output_bfd)
+		      && contents[roff + 5] == (bfd_byte) '\xb8')
+		    {
+		      memcpy (contents + roff - 3,
+			      "\x64\x48\x8b\x04\x25\0\0\0\0\x48\x03\x05"
+			      "\0\0\0\0\x66\x0f\x1f\x44\0", 22);
+		      largepic = 1;
+		    }
+		  else if (ABI_64_P (output_bfd))
 		    memcpy (contents + roff - 4,
 			    "\x64\x48\x8b\x04\x25\0\0\0\0\x48\x03\x05\0\0\0",
 			    16);
@@ -4205,12 +4279,13 @@ direct:
 		  relocation = (htab->elf.sgot->output_section->vma
 				+ htab->elf.sgot->output_offset + off
 				- roff
+				- largepic
 				- input_section->output_section->vma
 				- input_section->output_offset
 				- 12);
 		  bfd_put_32 (output_bfd, relocation,
-			      contents + roff + 8);
-		  /* Skip R_X86_64_PLT32.  */
+			      contents + roff + 8 + largepic);
+		  /* Skip R_X86_64_PLT32/R_X86_64_PLTOFF64.  */
 		  rel++;
 		  continue;
 		}
@@ -4272,16 +4347,29 @@ direct:
 		 For 64bit, we change it into:
 		 .word 0x6666; .byte 0x66; movq %fs:0, %rax.
 		 For 32bit, we change it into:
-		 nopl 0x0(%rax); movl %fs:0, %eax.  */
+		 nopl 0x0(%rax); movl %fs:0, %eax.
+		 For largepic, change:
+		 leaq foo@tlsgd(%rip), %rdi
+		 movabsq $__tls_get_addr@pltoff, %rax
+		 addq %rbx, %rax
+		 call *%rax
+		 into:
+		 data32 data32 data32 nopw %cs:0x0(%rax,%rax,1)
+		 movq %fs:0, %eax */
 
 	      BFD_ASSERT (r_type == R_X86_64_TPOFF32);
-	      if (ABI_64_P (output_bfd))
+	      if (ABI_64_P (output_bfd)
+		  && contents[rel->r_offset + 5] == (bfd_byte) '\xb8')
+		memcpy (contents + rel->r_offset - 3,
+			"\x66\x66\x66\x66\x2e\x0f\x1f\x84\0\0\0\0\0"
+			"\x64\x48\x8b\x04\x25\0\0\0", 22);
+	      else if (ABI_64_P (output_bfd))
 		memcpy (contents + rel->r_offset - 3,
 			"\x66\x66\x66\x64\x48\x8b\x04\x25\0\0\0", 12);
 	      else
 		memcpy (contents + rel->r_offset - 3,
 			"\x0f\x1f\x40\x00\x64\x8b\x04\x25\0\0\0", 12);
-	      /* Skip R_X86_64_PC32/R_X86_64_PLT32.  */
+	      /* Skip R_X86_64_PC32/R_X86_64_PLT32/R_X86_64_PLTOFF64.  */
 	      rel++;
 	      continue;
 	    }
@@ -4328,6 +4416,11 @@ direct:
 	case R_X86_64_TPOFF64:
 	  BFD_ASSERT (info->executable);
 	  relocation = elf_x86_64_tpoff (info, relocation);
+	  break;
+
+	case R_X86_64_DTPOFF64:
+	  BFD_ASSERT ((input_section->flags & SEC_CODE) == 0);
+	  relocation -= elf_x86_64_dtpoff_base (info);
 	  break;
 
 	default:
@@ -4666,7 +4759,9 @@ elf_x86_64_finish_local_dynamic_symbol (void **slot, void *inf)
    dynamic linker, before writing them out.  */
 
 static enum elf_reloc_type_class
-elf_x86_64_reloc_type_class (const Elf_Internal_Rela *rela)
+elf_x86_64_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			     const asection *rel_sec ATTRIBUTE_UNUSED,
+			     const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {
@@ -5038,49 +5133,33 @@ elf_x86_64_common_section (asection *sec)
 }
 
 static bfd_boolean
-elf_x86_64_merge_symbol (struct bfd_link_info *info ATTRIBUTE_UNUSED,
-			 struct elf_link_hash_entry **sym_hash ATTRIBUTE_UNUSED,
-			 struct elf_link_hash_entry *h,
-			 Elf_Internal_Sym *sym,
+elf_x86_64_merge_symbol (struct elf_link_hash_entry *h,
+			 const Elf_Internal_Sym *sym,
 			 asection **psec,
-			 bfd_vma *pvalue ATTRIBUTE_UNUSED,
-			 unsigned int *pold_alignment ATTRIBUTE_UNUSED,
-			 bfd_boolean *skip ATTRIBUTE_UNUSED,
-			 bfd_boolean *override ATTRIBUTE_UNUSED,
-			 bfd_boolean *type_change_ok ATTRIBUTE_UNUSED,
-			 bfd_boolean *size_change_ok ATTRIBUTE_UNUSED,
-			 bfd_boolean *newdyn ATTRIBUTE_UNUSED,
-			 bfd_boolean *newdef,
-			 bfd_boolean *newdyncommon ATTRIBUTE_UNUSED,
-			 bfd_boolean *newweak ATTRIBUTE_UNUSED,
-			 bfd *abfd ATTRIBUTE_UNUSED,
-			 asection **sec,
-			 bfd_boolean *olddyn ATTRIBUTE_UNUSED,
-			 bfd_boolean *olddef,
-			 bfd_boolean *olddyncommon ATTRIBUTE_UNUSED,
-			 bfd_boolean *oldweak ATTRIBUTE_UNUSED,
+			 bfd_boolean newdef,
+			 bfd_boolean olddef,
 			 bfd *oldbfd,
-			 asection **oldsec)
+			 const asection *oldsec)
 {
   /* A normal common symbol and a large common symbol result in a
      normal common symbol.  We turn the large common symbol into a
      normal one.  */
-  if (!*olddef
+  if (!olddef
       && h->root.type == bfd_link_hash_common
-      && !*newdef
-      && bfd_is_com_section (*sec)
-      && *oldsec != *sec)
+      && !newdef
+      && bfd_is_com_section (*psec)
+      && oldsec != *psec)
     {
       if (sym->st_shndx == SHN_COMMON
-	  && (elf_section_flags (*oldsec) & SHF_X86_64_LARGE) != 0)
+	  && (elf_section_flags (oldsec) & SHF_X86_64_LARGE) != 0)
 	{
 	  h->root.u.c.p->section
 	    = bfd_make_section_old_way (oldbfd, "COMMON");
 	  h->root.u.c.p->section->flags = SEC_ALLOC;
 	}
       else if (sym->st_shndx == SHN_X86_64_LCOMMON
-	       && (elf_section_flags (*oldsec) & SHF_X86_64_LARGE) == 0)
-	*psec = *sec = bfd_com_section_ptr;
+	       && (elf_section_flags (oldsec) & SHF_X86_64_LARGE) == 0)
+	*psec = bfd_com_section_ptr;
     }
 
   return TRUE;
@@ -5404,6 +5483,8 @@ static const struct elf_x86_64_backend_data elf_x86_64_nacl_arch_bed =
 #define	elf_backend_modify_segment_map		nacl_modify_segment_map
 #undef	elf_backend_modify_program_headers
 #define	elf_backend_modify_program_headers	nacl_modify_program_headers
+#undef	elf_backend_final_write_processing
+#define elf_backend_final_write_processing	nacl_final_write_processing
 
 #include "elf64-target.h"
 
@@ -5448,6 +5529,7 @@ static const struct elf_x86_64_backend_data elf_x86_64_nacl_arch_bed =
 #undef	elf_backend_size_info
 #undef	elf_backend_modify_segment_map
 #undef	elf_backend_modify_program_headers
+#undef	elf_backend_final_write_processing
 
 /* Intel L1OM support.  */
 

@@ -1,6 +1,5 @@
 /* Renesas RL78 specific support for 32-bit ELF.
-   Copyright (C) 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright (C) 2011-2013 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -810,10 +809,13 @@ rl78_elf_relocate_section
 	  {
 	    int32_t tmp1, tmp2;
 
-	    RL78_STACK_POP (tmp2);
-	    RL78_STACK_POP (tmp1);
-	    tmp2 -= tmp1;
-	    RL78_STACK_PUSH (tmp2);
+	    /* For the expression "A - B", the assembler pushes A,
+	       then B, then OPSUB.  So the first op we pop is B, not
+	       A.  */
+	    RL78_STACK_POP (tmp2);	/* B */
+	    RL78_STACK_POP (tmp1);	/* A */
+	    tmp1 -= tmp2;		/* A - B */
+	    RL78_STACK_PUSH (tmp1);
 	  }
 	  break;
 
@@ -1018,15 +1020,34 @@ static bfd_boolean
 rl78_elf_merge_private_bfd_data (bfd * ibfd, bfd * obfd)
 {
   flagword new_flags;
+  flagword old_flags;
   bfd_boolean error = FALSE;
 
   new_flags = elf_elfheader (ibfd)->e_flags;
+  old_flags = elf_elfheader (obfd)->e_flags;
 
   if (!elf_flags_init (obfd))
     {
       /* First call, no flags set.  */
       elf_flags_init (obfd) = TRUE;
       elf_elfheader (obfd)->e_flags = new_flags;
+    }
+  else if (old_flags != new_flags)
+    {
+      flagword changed_flags = old_flags ^ new_flags;
+
+      if (changed_flags & E_FLAG_RL78_G10)
+	{
+	  (*_bfd_error_handler)
+	    (_("RL78/G10 ABI conflict: cannot link G10 and non-G10 objects together"));
+
+	  if (old_flags & E_FLAG_RL78_G10)
+	    (*_bfd_error_handler) (_("- %s is G10, %s is not"),
+				   bfd_get_filename (obfd), bfd_get_filename (ibfd));
+	  else
+	    (*_bfd_error_handler) (_("- %s is G10, %s is not"),
+				   bfd_get_filename (ibfd), bfd_get_filename (obfd));
+	}
     }
 
   return !error;
@@ -1045,6 +1066,9 @@ rl78_elf_print_private_bfd_data (bfd * abfd, void * ptr)
 
   flags = elf_elfheader (abfd)->e_flags;
   fprintf (file, _("private flags = 0x%lx:"), (long) flags);
+
+  if (flags & E_FLAG_RL78_G10)
+    fprintf (file, _(" [G10]"));
 
   fputc ('\n', file);
   return TRUE;
@@ -1198,6 +1222,10 @@ rl78_elf_check_relocs
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       switch (ELF32_R_TYPE (rel->r_info))
@@ -1266,24 +1294,28 @@ rl78_elf_finish_dynamic_sections (bfd *abfd ATTRIBUTE_UNUSED,
   bfd *dynobj;
   asection *splt;
 
+  if (!elf_hash_table (info)->dynamic_sections_created)
+    return TRUE;
+
   /* As an extra sanity check, verify that all plt entries have been
      filled in.  However, relaxing might have changed the relocs so
      that some plt entries don't get filled in, so we have to skip
      this check if we're relaxing.  Unfortunately, check_relocs is
      called before relaxation.  */
 
-  if (info->relax_trip > 0)
+  if (info->relax_trip > 0) 
+    return TRUE;
+
+  if ((dynobj = elf_hash_table (info)->dynobj) != NULL
+      && (splt = bfd_get_linker_section (dynobj, ".plt")) != NULL)
     {
-      if ((dynobj = elf_hash_table (info)->dynobj) != NULL
-	  && (splt = bfd_get_linker_section (dynobj, ".plt")) != NULL)
+      bfd_byte *contents = splt->contents;
+      unsigned int i, size = splt->size;
+
+      for (i = 0; i < size; i += 4)
 	{
-	  bfd_byte *contents = splt->contents;
-	  unsigned int i, size = splt->size;
-	  for (i = 0; i < size; i += 4)
-	    {
-	      unsigned int x = bfd_get_32 (dynobj, contents + i);
-	      BFD_ASSERT (x != 0);
-	    }
+	  unsigned int x = bfd_get_32 (dynobj, contents + i);
+	  BFD_ASSERT (x != 0);
 	}
     }
 
@@ -2189,6 +2221,7 @@ rl78_elf_relax_section
 	+ srel->r_offset;
 
 #define GET_RELOC \
+      BFD_ASSERT (nrelocs > 0);			       \
       symval = OFFSET_FOR_RELOC (srel, &srel, &scale); \
       pcrel = symval - pc + srel->r_addend; \
       nrelocs --;
@@ -2229,7 +2262,13 @@ rl78_elf_relax_section
 
       if (irel->r_addend & RL78_RELAXA_BRA)
 	{
-	  GET_RELOC;
+	  /* SKIP opcodes that skip non-branches will have a relax tag
+	     but no corresponding symbol to relax against; we just
+	     skip those.  */
+	  if (irel->r_addend & RL78_RELAXA_RNUM)
+	    {
+	      GET_RELOC;
+	    }
 
 	  switch (insn[0])
 	    {
@@ -2298,6 +2337,9 @@ rl78_elf_relax_section
 	      /* For SKIP/BR, we change the BR opcode and delete the
 		 SKIP.  That way, we don't have to find and change the
 		 relocation for the BR.  */
+	      /* Note that, for the case where we're skipping some
+		 other insn, we have no "other" reloc but that's safe
+		 here anyway. */
 	      switch (insn[1])
 		{
 		case 0xc8: /* SKC */

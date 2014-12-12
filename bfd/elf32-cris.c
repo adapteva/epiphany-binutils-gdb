@@ -3177,6 +3177,10 @@ cris_elf_check_relocs (bfd *abfd,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       r_type = ELF32_R_TYPE (rel->r_info);
@@ -4241,7 +4245,9 @@ cris_elf_copy_private_bfd_data (bfd *ibfd, bfd *obfd)
 }
 
 static enum elf_reloc_type_class
-elf_cris_reloc_type_class (const Elf_Internal_Rela *rela)
+elf_cris_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			   const asection *rel_sec ATTRIBUTE_UNUSED,
+			   const Elf_Internal_Rela *rela)
 {
   enum elf_cris_reloc_type r_type = ELF32_R_TYPE (rela->r_info);
   switch (r_type)

@@ -1,7 +1,162 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 7.5
+*** Changes since GDB 7.6
+
+* New convenience function "$_isvoid", to check whether an expression
+  is void.  A void expression is an expression where the type of the
+  result is "void".  For example, some convenience variables may be
+  "void" when evaluated (e.g., "$_exitcode" before the execution of
+  the program being debugged; or an undefined convenience variable).
+  Another example, when calling a function whose return type is
+  "void".
+
+* The "maintenance print objfiles" command now takes an optional regexp.
+
+* The "catch syscall" command now works on arm*-linux* targets.
+
+* Python scripting
+
+  ** Frame filters and frame decorators have been added.
+
+* New targets
+
+Nios II ELF 			nios2*-*-elf
+Nios II GNU/Linux		nios2*-*-linux
+Texas Instruments MSP430	msp430*-*-elf
+
+* New commands:
+catch rethrow
+  Like "catch throw", but catches a re-thrown exception.
+maint check-psymtabs
+  Renamed from old "maint check-symtabs".
+maint check-symtabs
+  Perform consistency checks on symtabs.
+maint expand-symtabs
+  Expand symtabs matching an optional regexp.
+
+show configuration
+  Display the details of GDB configure-time options.
+
+maint set|show per-command
+maint set|show per-command space
+maint set|show per-command time
+maint set|show per-command symtab
+  Enable display of per-command gdb resource usage.
+
+* New options
+
+set print raw frame-arguments
+show print raw frame-arguments
+  Set/show whether to print frame arguments in raw mode,
+  disregarding any defined pretty-printers.
+
+set remote trace-status-packet
+show remote trace-status-packet
+  Set/show the use of remote protocol qTStatus packet.
+
+set debug nios2
+show debug nios2
+  Control display of debugging messages related to Nios II targets.
+
+set range-stepping
+show range-stepping
+  Control whether target-assisted range stepping is enabled.
+
+* You can now use a literal value 'unlimited' for options that
+  interpret 0 or -1 as meaning "unlimited".  E.g., "set
+  trace-buffer-size unlimited" is now an alias for "set
+  trace-buffer-size -1" and "set height unlimited" is now an alias for
+  "set height 0".
+
+* New command-line options
+--configuration
+  Display the details of GDB configure-time options.
+
+* The command 'tsave' can now support new option '-ctf' to save trace
+  buffer in Common Trace Format.
+
+* Newly installed $prefix/bin/gcore acts as a shell interface for the
+  GDB command gcore.
+
+* GDB now implements the the C++ 'typeid' operator.
+
+* The new convenience variable $_exception holds the exception being
+  thrown or caught at an exception-related catchpoint.
+
+* The exception-related catchpoints, like "catch throw", now accept a
+  regular expression which can be used to filter exceptions by type.
+
+* MI changes
+
+  ** The -trace-save MI command can optionally save trace buffer in Common
+     Trace Format now.
+
+  ** The new command -dprintf-insert sets a dynamic printf breakpoint.
+
+  ** The command -data-list-register-values now accepts an optional
+     "--skip-unavailable" option.  When used, only the available registers
+     are displayed.
+
+  ** The new command -trace-frame-collected dumps collected variables,
+     computed expressions, tvars, memory and registers in a traceframe.
+
+  ** The commands -stack-list-locals, -stack-list-arguments and
+     -stack-list-variables now accept an option "--skip-unavailable".
+     When used, only the available locals or arguments are displayed.
+
+* New system-wide configuration scripts
+  A GDB installation now provides scripts suitable for use as system-wide
+  configuration scripts for the following systems:
+    ** ElinOS
+    ** Wind River Linux
+
+* GDB now supports target-assigned range stepping with remote targets.
+  This improves the performance of stepping source lines by reducing
+  the number of control packets from/to GDB.  See "New remote packets"
+  below.
+
+* GDB now understands the element 'tvar' in the XML traceframe info.
+  It has the id of the collected trace state variables.
+
+* On S/390 targets that provide the transactional-execution feature,
+  the program interruption transaction diagnostic block (TDB) is now
+  represented as a number of additional "registers" in GDB.
+
+* New remote packets
+
+vCont;r
+
+  The vCont packet supports a new 'r' action, that tells the remote
+  stub to step through an address range itself, without GDB
+  involvemement at each single-step.
+
+qXfer:libraries-svr4:read's annex
+  The previously unused annex of the qXfer:libraries-svr4:read packet
+  is now used to support passing an argument list.  The remote stub
+  reports support for this argument list to GDB's qSupported query.
+  The defined arguments are "start" and "prev", used to reduce work
+  necessary for library list updating, resulting in significant
+  speedup.
+
+* New features in the GDB remote stub, GDBserver
+
+  ** GDBserver now supports target-assisted range stepping.  Currently
+     enabled on x86/x86_64 GNU/Linux targets.
+
+  ** GDBserver now adds element 'tvar' in the XML in the reply to
+     'qXfer:traceframe-info:read'.  It has the id of the collected
+     trace state variables.
+
+  ** GDBserver now supports hardware watchpoints on the MIPS GNU/Linux
+     target.
+
+* New 'z' formatter for printing and examining memory, this displays the
+  value as hexadecimal zero padded on the left to the size of the type.
+
+* GDB can now use Windows x64 unwinding data.
+
+*** Changes in GDB 7.6
 
 * Target record has been renamed to record-full.
   Record/replay is now enabled with the "record full" command.
@@ -37,6 +192,8 @@ record function-call-history    prints the execution history at
 
 ARM AArch64 GNU/Linux		aarch64*-*-linux-gnu
 FreeBSD/powerpc			powerpc*-*-freebsd
+x86_64/Cygwin			x86_64-*-cygwin*
+Tilera TILE-Gx GNU/Linux	tilegx*-*-linux-gnu
 
 * New targets
 
@@ -44,6 +201,7 @@ ARM AArch64			aarch64*-*-elf
 ARM AArch64 GNU/Linux		aarch64*-*-linux
 Lynx 178 PowerPC		powerpc-*-lynx*178
 x86_64/Cygwin			x86_64-*-cygwin*
+Tilera TILE-Gx GNU/Linux	tilegx*-*-linux
 
 * If the configured location of system.gdbinit file (as given by the
   --with-system-gdbinit option at configure time) is in the
@@ -109,6 +267,9 @@ x86_64/Cygwin			x86_64-*-cygwin*
   Release versions, on the other hand, are built without -lmcheck
   by default.  The --enable-libmcheck/--disable-libmcheck configure
   options allow the user to override that default.
+--with-babeltrace/--with-babeltrace-include/--with-babeltrace-lib
+  This configure option allows the user to build GDB with
+  libbabeltrace using which GDB can read Common Trace Format data.
 
 * New commands (for set/show, see "New options" below)
 
@@ -130,14 +291,6 @@ py [command]
 enable type-printer [name]...
 disable type-printer [name]...
   Enable or disable type printers.
-
-set debug notification
-show debug notification
-  Control display of debugging info for async remote notification.
-
-set trace-buffer-size
-show trace-buffer-size
-  Request target to change the size of trace buffer.
 
 * Removed commands
 
@@ -162,6 +315,33 @@ show filename-display
   Control the way in which filenames is displayed.
   The default is "relative", which preserves previous behavior.
 
+set trace-buffer-size
+show trace-buffer-size
+  Request target to change the size of trace buffer.
+
+set remote trace-buffer-size-packet auto|on|off
+show remote trace-buffer-size-packet
+  Control the use of the remote protocol `QTBuffer:size' packet.
+
+set debug aarch64
+show debug aarch64
+  Control display of debugging messages related to ARM AArch64.
+  The default is off.
+
+set debug coff-pe-read
+show debug coff-pe-read
+  Control display of debugging messages related to reading of COFF/PE
+  exported symbols.
+
+set debug mach-o
+show debug mach-o
+  Control display of debugging messages related to Mach-O symbols
+  processing.
+
+set debug notification
+show debug notification
+  Control display of debugging info for async remote notification.
+
 * MI changes
 
   ** Command parameter changes are now notified using new async record
@@ -176,8 +356,7 @@ show filename-display
   ** Memory changes are now notified using new async record
      "=memory-changed".
   ** The data-disassemble command response will include a "fullname" field
-     containing the absolute file name when GDB can determine it and source
-     has been requested.
+     containing the absolute file name when source has been requested.
   ** New optional parameter COUNT added to the "-data-write-memory-bytes" 
      command, to allow pattern filling of memory areas.
   ** New commands "-catch-load"/"-catch-unload" added for intercepting
@@ -188,6 +367,8 @@ show filename-display
   ** Output of the "-trace-status" command includes a "trace-file" field 
      containing the name of the trace file being examined.  This field is
      optional, and only present when examining a trace file.
+  ** The "fullname" field is now always present along with the "file" field,
+     even if the file cannot be found by GDB.
 
 * GDB now supports the "mini debuginfo" section, .gnu_debugdata.
   You must have the LZMA library available when configuring GDB for this
@@ -199,6 +380,19 @@ show filename-display
 QTBuffer:size
    Set the size of trace buffer.  The remote stub reports support for this
    packet to gdb's qSupported query.
+
+Qbtrace:bts
+  Enable Branch Trace Store (BTS)-based branch tracing for the current
+  thread.  The remote stub reports support for this packet to gdb's
+  qSupported query.
+
+Qbtrace:off
+  Disable branch tracing for the current thread.  The remote stub reports
+  support for this packet to gdb's qSupported query.
+
+qXfer:btrace:read
+  Read the traced branches for the current thread.  The remote stub
+  reports support for this packet to gdb's qSupported query.
 
 *** Changes in GDB 7.5
 

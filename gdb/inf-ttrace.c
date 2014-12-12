@@ -38,6 +38,7 @@
 
 #include "inf-child.h"
 #include "inf-ttrace.h"
+#include "common/filestuff.h"
 
 
 
@@ -408,7 +409,8 @@ inf_ttrace_stopped_by_watchpoint (void)
 static pid_t inf_ttrace_vfork_ppid = -1;
 
 static int
-inf_ttrace_follow_fork (struct target_ops *ops, int follow_child)
+inf_ttrace_follow_fork (struct target_ops *ops, int follow_child,
+			int detach_fork)
 {
   pid_t pid, fpid;
   lwpid_t lwpid, flwpid;
@@ -558,6 +560,11 @@ do_cleanup_pfds (void *dummy)
   close (inf_ttrace_pfd1[1]);
   close (inf_ttrace_pfd2[0]);
   close (inf_ttrace_pfd2[1]);
+
+  unmark_fd_no_cloexec (inf_ttrace_pfd1[0]);
+  unmark_fd_no_cloexec (inf_ttrace_pfd1[1]);
+  unmark_fd_no_cloexec (inf_ttrace_pfd2[0]);
+  unmark_fd_no_cloexec (inf_ttrace_pfd2[1]);
 }
 
 static void
@@ -572,6 +579,11 @@ inf_ttrace_prepare (void)
       close (inf_ttrace_pfd2[0]);
       perror_with_name (("pipe"));
     }
+
+  mark_fd_no_cloexec (inf_ttrace_pfd1[0]);
+  mark_fd_no_cloexec (inf_ttrace_pfd1[1]);
+  mark_fd_no_cloexec (inf_ttrace_pfd2[0]);
+  mark_fd_no_cloexec (inf_ttrace_pfd2[1]);
 }
 
 /* Prepare to be traced.  */

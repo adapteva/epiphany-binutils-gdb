@@ -70,6 +70,12 @@ void gdb_bfd_mark_parent (bfd *child, bfd *parent);
 
 const gdb_byte *gdb_bfd_map_section (asection *section, bfd_size_type *size);
 
+/* Compute the CRC for ABFD.  The CRC is used to find and verify
+   separate debug files.  When successful, this fills in *CRC_OUT and
+   returns 1.  Otherwise, this issues a warning and returns 0.  */
+
+int gdb_bfd_crc (struct bfd *abfd, unsigned long *crc_out);
+
 
 
 /* A wrapper for bfd_fopen that initializes the gdb-specific reference
@@ -114,5 +120,19 @@ bfd *gdb_bfd_openr_next_archived_file (bfd *archive, bfd *previous);
    reference count and calls gdb_bfd_stash_filename.  */
 
 bfd *gdb_bfd_fdopenr (const char *filename, const char *target, int fd);
+
+
+
+/* Return the index of the BFD section SECTION.  Ordinarily this is
+   just the section's index, but for some special sections, like
+   bfd_com_section_ptr, it will be a synthesized value.  */
+
+int gdb_bfd_section_index (bfd *abfd, asection *section);
+
+
+/* Like bfd_count_sections, but include any possible global sections,
+   like bfd_com_section_ptr.  */
+
+int gdb_bfd_count_sections (bfd *abfd);
 
 #endif /* GDB_BFD_H */

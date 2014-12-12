@@ -1,6 +1,6 @@
 // tilegx.cc -- tilegx target support for gold.
 
-// Copyright 2012 Free Software Foundation, Inc.
+// Copyright 2012, 2013 Free Software Foundation, Inc.
 // Written by Jiong Wang (jiwang@tilera.com)
 
 // This file is part of gold.
@@ -681,7 +681,8 @@ const Target::Target_info Target_tilegx<64, false>::tilegx_info =
   0,                    // small_common_section_flags
   0,                    // large_common_section_flags
   NULL,                 // attributes_section
-  NULL                  // attributes_vendor
+  NULL,                 // attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 template<>
@@ -707,7 +708,8 @@ const Target::Target_info Target_tilegx<32, false>::tilegx_info =
   0,                    // small_common_section_flags
   0,                    // large_common_section_flags
   NULL,                 // attributes_section
-  NULL                  // attributes_vendor
+  NULL,                 // attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 template<>
@@ -733,7 +735,8 @@ const Target::Target_info Target_tilegx<64, true>::tilegx_info =
   0,                    // small_common_section_flags
   0,                    // large_common_section_flags
   NULL,                 // attributes_section
-  NULL                  // attributes_vendor
+  NULL,                 // attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 template<>
@@ -759,7 +762,8 @@ const Target::Target_info Target_tilegx<32, true>::tilegx_info =
   0,                    // small_common_section_flags
   0,                    // large_common_section_flags
   NULL,                 // attributes_section
-  NULL                  // attributes_vendor
+  NULL,                  // attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 // tilegx relocation handlers
@@ -4327,6 +4331,9 @@ Target_tilegx<size, big_endian>::Relocate::relocate(
     typename elfcpp::Elf_types<size>::Elf_Addr address,
     section_size_type)
 {
+  if (view == NULL)
+    return true;
+
   typedef Tilegx_relocate_functions<size, big_endian> TilegxReloc;
   typename TilegxReloc::Tilegx_howto r_howto;
 

@@ -12908,7 +12908,7 @@ fi
 
 done
 
-for ac_header in fcntl.h sys/file.h sys/time.h sys/stat.h
+for ac_header in fcntl.h sys/file.h sys/time.h sys/stat.h sys/resource.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -13583,12 +13583,14 @@ _ACEOF
 fi
 done
 
-for ac_func in strtoull
+for ac_func in strtoull getrlimit
 do :
-  ac_fn_c_check_func "$LINENO" "strtoull" "ac_cv_func_strtoull"
-if test "x$ac_cv_func_strtoull" = x""yes; then :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+eval as_val=\$$as_ac_var
+   if test "x$as_val" = x""yes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_STRTOULL 1
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -15292,6 +15294,7 @@ do
     bfd_elf32_mn10300_vec)	tb="$tb elf-m10300.lo elf32.lo $elf" ;;
     bfd_elf32_mt_vec)           tb="$tb elf32-mt.lo elf32.lo $elf" ;;
     bfd_elf32_msp430_vec)	tb="$tb elf32-msp430.lo elf32.lo $elf" ;;
+    bfd_elf32_msp430_ti_vec)	tb="$tb elf32-msp430.lo elf32.lo $elf" ;;
     bfd_elf32_nbigmips_vec)	tb="$tb elfn32-mips.lo elfxx-mips.lo elf-vxworks.lo elf32.lo $elf ecofflink.lo"; target_size=64 ;;
     bfd_elf32_nlittlemips_vec)	tb="$tb elfn32-mips.lo elfxx-mips.lo elf-vxworks.lo elf32.lo $elf ecofflink.lo"; target_size=64 ;;
     bfd_elf32_ntradbigmips_vec | bfd_elf32_ntradbigmips_freebsd_vec)
@@ -15361,7 +15364,8 @@ do
     bfd_elf32_xtensa_be_vec)	tb="$tb xtensa-isa.lo xtensa-modules.lo elf32-xtensa.lo elf32.lo $elf" ;;
     bfd_elf64_alpha_freebsd_vec) tb="$tb elf64-alpha.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_alpha_vec)	tb="$tb elf64-alpha.lo elf64.lo $elf"; target_size=64 ;;
-    bfd_elf64_bigaarch64_vec)	tb="$tb elf64-aarch64.lo elf64.lo $elf"; target_size=64 ;;
+    bfd_elf64_bigaarch64_vec)	tb="$tb elf64-aarch64.lo elfxx-aarch64.lo elf64.lo $elf"; target_size=64 ;;
+    bfd_elf32_bigaarch64_vec)	tb="$tb elf32-aarch64.lo elfxx-aarch64.lo elf32.lo $elf"; target_size=64 ;;
     bfd_elf64_big_generic_vec) 	tb="$tb elf64-gen.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_bigmips_vec) 	tb="$tb elf64-mips.lo elf64.lo elfxx-mips.lo elf-vxworks.lo elf32.lo $elf ecofflink.lo"; target_size=64 ;;
     bfd_elf64_hppa_linux_vec)	tb="$tb elf64-hppa.lo elf64.lo $elf"; target_size=64 ;;
@@ -15370,7 +15374,8 @@ do
     bfd_elf64_ia64_hpux_big_vec) tb="$tb elf64-ia64.lo elfxx-ia64.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_ia64_little_vec)	tb="$tb elf64-ia64.lo elfxx-ia64.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_ia64_vms_vec)	tb="$tb elf64-ia64-vms.lo elf64-ia64.lo elfxx-ia64.lo elf64.lo vms-lib.lo vms-misc.lo $elf"; target_size=64 ;;
-    bfd_elf64_littleaarch64_vec)tb="$tb elf64-aarch64.lo elf64.lo $elf"; target_size=64 ;;
+    bfd_elf64_littleaarch64_vec)tb="$tb elf64-aarch64.lo elfxx-aarch64.lo elf64.lo $elf"; target_size=64 ;;
+    bfd_elf32_littleaarch64_vec)tb="$tb elf32-aarch64.lo elfxx-aarch64.lo elf32.lo $elf"; target_size=64 ;;
     bfd_elf64_little_generic_vec) tb="$tb elf64-gen.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_littlemips_vec) 	tb="$tb elf64-mips.lo elf64.lo elfxx-mips.lo elf-vxworks.lo elf32.lo $elf ecofflink.lo"; target_size=64 ;;
     bfd_elf64_mmix_vec) 	tb="$tb elf64-mmix.lo elf64.lo $elf" target_size=64 ;;

@@ -381,7 +381,7 @@ arm_find_mapping_symbol (CORE_ADDR memaddr, CORE_ADDR *start)
 int
 arm_pc_is_thumb (struct gdbarch *gdbarch, CORE_ADDR memaddr)
 {
-  struct minimal_symbol *sym;
+  struct bound_minimal_symbol sym;
   char type;
   struct displaced_step_closure* dsc
     = get_displaced_step_closure_by_addr(memaddr);
@@ -423,8 +423,8 @@ arm_pc_is_thumb (struct gdbarch *gdbarch, CORE_ADDR memaddr)
 
   /* Thumb functions have a "special" bit set in minimal symbols.  */
   sym = lookup_minimal_symbol_by_pc (memaddr);
-  if (sym)
-    return (MSYMBOL_IS_SPECIAL (sym));
+  if (sym.minsym)
+    return (MSYMBOL_IS_SPECIAL (sym.minsym));
 
   /* If the user wants to override the fallback mode, let them.  */
   if (strcmp (arm_fallback_mode_string, "arm") == 0)
@@ -468,14 +468,14 @@ static int
 skip_prologue_function (struct gdbarch *gdbarch, CORE_ADDR pc, int is_thumb)
 {
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
-  struct minimal_symbol *msym;
+  struct bound_minimal_symbol msym;
 
   msym = lookup_minimal_symbol_by_pc (pc);
-  if (msym != NULL
-      && SYMBOL_VALUE_ADDRESS (msym) == pc
-      && SYMBOL_LINKAGE_NAME (msym) != NULL)
+  if (msym.minsym != NULL
+      && SYMBOL_VALUE_ADDRESS (msym.minsym) == pc
+      && SYMBOL_LINKAGE_NAME (msym.minsym) != NULL)
     {
-      const char *name = SYMBOL_LINKAGE_NAME (msym);
+      const char *name = SYMBOL_LINKAGE_NAME (msym.minsym);
 
       /* The GNU linker's Thumb call stub to foo is named
 	 __foo_from_thumb.  */
@@ -521,7 +521,7 @@ skip_prologue_function (struct gdbarch *gdbarch, CORE_ADDR pc, int is_thumb)
 #define sbits(obj,st,fn) \
   ((long) (bits(obj,st,fn) | ((long) bit(obj,fn) * ~ submask (fn - st))))
 #define BranchDest(addr,instr) \
-  ((CORE_ADDR) (((long) (addr)) + 8 + (sbits (instr, 0, 23) << 2)))
+  ((CORE_ADDR) (((unsigned long) (addr)) + 8 + (sbits (instr, 0, 23) << 2)))
 
 /* Extract the immediate from instruction movw/movt of encoding T.  INSN1 is
    the first 16-bit of instruction, and INSN2 is the second 16-bit of
@@ -1284,7 +1284,7 @@ arm_skip_stack_protector(CORE_ADDR pc, struct gdbarch *gdbarch)
 {
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   unsigned int basereg;
-  struct minimal_symbol *stack_chk_guard;
+  struct bound_minimal_symbol stack_chk_guard;
   int offset;
   int is_thumb = arm_pc_is_thumb (gdbarch, pc);
   CORE_ADDR addr;
@@ -1299,8 +1299,9 @@ arm_skip_stack_protector(CORE_ADDR pc, struct gdbarch *gdbarch)
   /* If name of symbol doesn't start with '__stack_chk_guard', this
      instruction sequence is not for stack protector.  If symbol is
      removed, we conservatively think this sequence is for stack protector.  */
-  if (stack_chk_guard
-      && strncmp (SYMBOL_LINKAGE_NAME (stack_chk_guard), "__stack_chk_guard",
+  if (stack_chk_guard.minsym
+      && strncmp (SYMBOL_LINKAGE_NAME (stack_chk_guard.minsym),
+		  "__stack_chk_guard",
 		  strlen ("__stack_chk_guard")) != 0)
    return pc;
 
@@ -2903,10 +2904,10 @@ arm_stub_unwind_sniffer (const struct frame_unwind *self,
 			 void **this_prologue_cache)
 {
   CORE_ADDR addr_in_block;
-  char dummy[4];
+  gdb_byte dummy[4];
 
   addr_in_block = get_frame_address_in_block (this_frame);
-  if (in_plt_section (addr_in_block, NULL)
+  if (in_plt_section (addr_in_block)
       /* We also use the stub winder if the target memory is unreadable
 	 to avoid having the prologue unwinder trying to read it.  */
       || target_read_memory (get_frame_pc (this_frame), dummy, 4) != 0)
@@ -8615,7 +8616,7 @@ arm_displaced_init_closure (struct gdbarch *gdbarch, CORE_ADDR from,
   unsigned int i, len, offset;
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   int size = dsc->is_thumb? 2 : 4;
-  const unsigned char *bkp_insn;
+  const gdb_byte *bkp_insn;
 
   offset = 0;
   /* Poke modified instruction(s).  */
@@ -8774,10 +8775,10 @@ gdb_print_insn_arm (bfd_vma memaddr, disassemble_info *info)
 #define THUMB_LE_BREAKPOINT {0xbe,0xbe}
 #define THUMB_BE_BREAKPOINT {0xbe,0xbe}
 
-static const char arm_default_arm_le_breakpoint[] = ARM_LE_BREAKPOINT;
-static const char arm_default_arm_be_breakpoint[] = ARM_BE_BREAKPOINT;
-static const char arm_default_thumb_le_breakpoint[] = THUMB_LE_BREAKPOINT;
-static const char arm_default_thumb_be_breakpoint[] = THUMB_BE_BREAKPOINT;
+static const gdb_byte arm_default_arm_le_breakpoint[] = ARM_LE_BREAKPOINT;
+static const gdb_byte arm_default_arm_be_breakpoint[] = ARM_BE_BREAKPOINT;
+static const gdb_byte arm_default_thumb_le_breakpoint[] = THUMB_LE_BREAKPOINT;
+static const gdb_byte arm_default_thumb_be_breakpoint[] = THUMB_BE_BREAKPOINT;
 
 /* Determine the type and size of breakpoint to insert at PCPTR.  Uses
    the program counter value to determine whether a 16-bit or 32-bit

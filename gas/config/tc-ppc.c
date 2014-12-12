@@ -64,39 +64,13 @@ static int set_target_endian = 0;
 /* #lo(value) denotes the least significant 16 bits of the indicated.  */
 #define PPC_LO(v) ((v) & 0xffff)
 
-/* Split the indicated value with the msbs in bits 11-15
-   and the lsbs in bits 21-31.  */
-#define PPC_VLE_SPLIT16A(v) ((v & 0xf800) << 11) | (v & 0x7ff)
-
-/* Split the indicated value with the msbs in bits 6-10
-   and the lsbs in bits 21-31.  */
-#define PPC_VLE_SPLIT16D(v) ((v & 0xf800) << 5) | (v & 0x7ff)
-
-/* #lo(value) denotes the lsb 16 bits in split16a format.  */
-#define PPC_VLE_LO16A(v) PPC_VLE_SPLIT16A(PPC_LO(v))
-
-/* #lo(value) denotes the lsb 16 bits in split16d format.  */
-#define PPC_VLE_LO16D(v) PPC_VLE_SPLIT16D(PPC_LO(v))
-
 /* #hi(value) denotes bits 16 through 31 of the indicated value.  */
 #define PPC_HI(v) (((v) >> 16) & 0xffff)
-
-/* #lo(value) denotes the msb 16 bits in split16a format.  */
-#define PPC_VLE_HI16A(v) PPC_VLE_SPLIT16A(PPC_HI(v))
-
-/* #lo(value) denotes the msb 16 bits in split16d format.  */
-#define PPC_VLE_HI16D(v) PPC_VLE_SPLIT16D(PPC_HI(v))
 
 /* #ha(value) denotes the high adjusted value: bits 16 through 31 of
   the indicated value, compensating for #lo() being treated as a
   signed number.  */
 #define PPC_HA(v) PPC_HI ((v) + 0x8000)
-
-/* #ha(value) denotes the high adjusted value in split16a format.  */
-#define PPC_VLE_HA16A(v) PPC_VLE_SPLIT16A(PPC_HA(v))
-
-/* #ha(value) denotes the high adjusted value in split16d format.  */
-#define PPC_VLE_HA16D(v) PPC_VLE_SPLIT16D(PPC_HA(v))
 
 /* #higher(value) denotes bits 32 through 47 of the indicated value.  */
 #define PPC_HIGHER(v) (((v) >> 16 >> 16) & 0xffff)
@@ -1552,10 +1526,10 @@ ppc_setup_opcodes (void)
 	      int new_opcode = PPC_OP (op[0].opcode);
 
 #ifdef PRINT_OPCODE_TABLE
-	      printf ("%-14s\t#%04d\tmajor op: 0x%x\top: 0x%x\tmask: 0x%x\tflags: 0x%llx\n",
-		      op->name, op - powerpc_opcodes, (unsigned int) new_opcode,
-		      (unsigned int) op->opcode, (unsigned int) op->mask,
-		      (unsigned long long) op->flags);
+	      printf ("%-14s\t#%04u\tmajor op: 0x%x\top: 0x%x\tmask: 0x%x\tflags: 0x%llx\n",
+		      op->name, (unsigned int) (op - powerpc_opcodes),
+		      (unsigned int) new_opcode, (unsigned int) op->opcode,
+		      (unsigned int) op->mask, (unsigned long long) op->flags);
 #endif
 
 	      /* The major opcodes had better be sorted.  Code in the
@@ -1605,10 +1579,10 @@ ppc_setup_opcodes (void)
 	      new_seg = VLE_OP_TO_SEG (new_seg);
 
 #ifdef PRINT_OPCODE_TABLE
-	      printf ("%-14s\t#%04d\tmajor op: 0x%x\top: 0x%x\tmask: 0x%x\tflags: 0x%llx\n",
-		      op->name, op - powerpc_opcodes, (unsigned int) new_opcode,
-		      (unsigned int) op->opcode, (unsigned int) op->mask,
-		      (unsigned long long) op->flags);
+	      printf ("%-14s\t#%04u\tmajor op: 0x%x\top: 0x%x\tmask: 0x%x\tflags: 0x%llx\n",
+		      op->name, (unsigned int) (op - powerpc_opcodes),
+		      (unsigned int) new_seg, (unsigned int) op->opcode,
+		      (unsigned int) op->mask, (unsigned long long) op->flags);
 #endif
 	      /* The major opcodes had better be sorted.  Code in the
 		 disassembler assumes the insns are sorted according to
@@ -2076,8 +2050,7 @@ ppc_elf_cons (int nbytes /* 1=.byte, 2=.word, 4=.long, 8=.llong */)
   do
     {
       expression (&exp);
-      if (exp.X_op == O_symbol
-	  && *input_line_pointer == '@'
+      if (*input_line_pointer == '@'
 	  && (reloc = ppc_elf_suffix (&input_line_pointer,
 				      &exp)) != BFD_RELOC_UNUSED)
 	{
@@ -2222,7 +2195,7 @@ ppc_elf_lcomm (int xxx ATTRIBUTE_UNUSED)
     align2 = 0;
 
   record_alignment (bss_section, align2);
-  subseg_set (bss_section, 0);
+  subseg_set (bss_section, 1);
   if (align2)
     frag_align (align2, 0, 0);
   if (S_GET_SEGMENT (symbolP) == bss_section)
@@ -2344,8 +2317,6 @@ ppc_elf_adjust_symtab (void)
 	  asymbol *bsym = symbol_get_bfdsym (symp);
 	  if ((bsym->flags & BSF_KEEP) == 0)
 	    symbol_remove (symp, &symbol_rootP, &symbol_lastP);
-	  else
-	    S_SET_WEAK (symp);
 	}
     }
 }
@@ -2454,7 +2425,8 @@ static int
 ppc_is_toc_sym (symbolS *sym)
 {
 #ifdef OBJ_XCOFF
-  return symbol_get_tc (sym)->symbol_class == XMC_TC;
+  return (symbol_get_tc (sym)->symbol_class == XMC_TC
+	  || symbol_get_tc (sym)->symbol_class == XMC_TC0);
 #endif
 #ifdef OBJ_ELF
   const char *sname = segment_name (S_GET_SEGMENT (sym));
@@ -3174,6 +3146,7 @@ md_assemble (char *str)
 		   && (operand->bitm & 0xfff0) == 0xfff0
 		   && operand->shift == 0)
 	    {
+	      /* Note: the symbol may be not yet defined.  */
 	      if (ppc_is_toc_sym (ex.X_add_symbol))
 		{
 		  reloc = BFD_RELOC_PPC_TOC16;
@@ -3553,11 +3526,6 @@ ppc_comm (int lcomm)
       char *lcomm_name;
       char lcomm_endc;
 
-      if (size <= 4)
-	align = 2;
-      else
-	align = 3;
-
       /* The third argument to .lcomm appears to be the real local
 	 common symbol to create.  References to the symbol named in
 	 the first argument are turned into references to the third
@@ -3576,6 +3544,25 @@ ppc_comm (int lcomm)
       lcomm_sym = symbol_find_or_make (lcomm_name);
 
       *input_line_pointer = lcomm_endc;
+
+      /* The fourth argument to .lcomm is the alignment.  */
+      if (*input_line_pointer != ',')
+	{
+	  if (size <= 4)
+	    align = 2;
+	  else
+	    align = 3;
+	}
+      else
+	{
+	  ++input_line_pointer;
+	  align = get_absolute_expression ();
+	  if (align <= 0)
+	    {
+	      as_warn (_("ignoring bad alignment"));
+	      align = 2;
+	    }
+	}
     }
 
   *end_name = '\0';
@@ -6312,6 +6299,8 @@ void
 md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 {
   valueT value = * valP;
+  offsetT fieldval;
+  const struct powerpc_operand *operand;
 
 #ifdef OBJ_ELF
   if (fixP->fx_addsy != NULL)
@@ -6350,16 +6339,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       as_bad_where (fixP->fx_file, fixP->fx_line, _("expression too complex"));
     }
 
+  operand = NULL;
   if (fixP->fx_pcrel_adjust != 0)
     {
-      /* Handle relocs in an insn.  */
-
+      /* This is a fixup on an instruction.  */
       int opindex = fixP->fx_pcrel_adjust & 0xff;
-      const struct powerpc_operand *operand = &powerpc_operands[opindex];
-      char *where;
-      unsigned long insn;
-      offsetT fieldval;
 
+      operand = &powerpc_operands[opindex];
 #ifdef OBJ_XCOFF
       /* An instruction like `lwz 9,sym(30)' when `sym' is not a TOC symbol
 	 does not generate a reloc.  It uses the offset of `sym' within its
@@ -6378,65 +6364,85 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  value = fixP->fx_offset;
 	  fixP->fx_done = 1;
 	}
+
+       /* During parsing of instructions, a TOC16 reloc is generated for
+          instructions such as 'lwz RT,SYM(RB)' if SYM is a symbol defined
+          in the toc.  But at parse time, SYM may be not yet defined, so
+          check again here.  */
+       if (fixP->fx_r_type == BFD_RELOC_16
+           && fixP->fx_addsy != NULL
+           && ppc_is_toc_sym (fixP->fx_addsy))
+         fixP->fx_r_type = BFD_RELOC_PPC_TOC16;
 #endif
-      fieldval = value;
+    }
+
+  /* Calculate value to be stored in field.  */
+  fieldval = value;
+  switch (fixP->fx_r_type)
+    {
+#ifdef OBJ_ELF
+    case BFD_RELOC_PPC64_ADDR16_LO_DS:
+    case BFD_RELOC_PPC_VLE_LO16A:
+    case BFD_RELOC_PPC_VLE_LO16D:
+#endif
+    case BFD_RELOC_LO16:
+    case BFD_RELOC_LO16_PCREL:
+      fieldval = value & 0xffff;
+    sign_extend_16:
+      if (operand != NULL && (operand->flags & PPC_OPERAND_SIGNED) != 0)
+	fieldval = (fieldval ^ 0x8000) - 0x8000;
+      fixP->fx_no_overflow = 1;
+      break;
+
+#ifdef OBJ_ELF
+    case BFD_RELOC_PPC_VLE_HI16A:
+    case BFD_RELOC_PPC_VLE_HI16D:
+#endif
+    case BFD_RELOC_HI16:
+    case BFD_RELOC_HI16_PCREL:
+      fieldval = PPC_HI (value);
+      goto sign_extend_16;
+
+#ifdef OBJ_ELF
+    case BFD_RELOC_PPC_VLE_HA16A:
+    case BFD_RELOC_PPC_VLE_HA16D:
+#endif
+    case BFD_RELOC_HI16_S:
+    case BFD_RELOC_HI16_S_PCREL:
+      fieldval = PPC_HA (value);
+      goto sign_extend_16;
+
+#ifdef OBJ_ELF
+    case BFD_RELOC_PPC64_HIGHER:
+      fieldval = PPC_HIGHER (value);
+      goto sign_extend_16;
+
+    case BFD_RELOC_PPC64_HIGHER_S:
+      fieldval = PPC_HIGHERA (value);
+      goto sign_extend_16;
+
+    case BFD_RELOC_PPC64_HIGHEST:
+      fieldval = PPC_HIGHEST (value);
+      goto sign_extend_16;
+
+    case BFD_RELOC_PPC64_HIGHEST_S:
+      fieldval = PPC_HIGHESTA (value);
+      goto sign_extend_16;
+#endif
+
+    default:
+      break;
+    }
+
+  if (operand != NULL)
+    {
+      /* Handle relocs in an insn.  */
+      char *where;
+      unsigned long insn;
+
       switch (fixP->fx_r_type)
 	{
 #ifdef OBJ_ELF
-	case BFD_RELOC_PPC64_ADDR16_LO_DS:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  /* fall through */
-#endif
-	case BFD_RELOC_LO16:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_LO16_PCREL;
-	  /* fall through */
-	case BFD_RELOC_LO16_PCREL:
-	  fieldval = SEX16 (value);
-	  break;
-
-	case BFD_RELOC_HI16:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_HI16_PCREL;
-	  /* fall through */
-	case BFD_RELOC_HI16_PCREL:
-	  fieldval = SEX16 (PPC_HI (value));
-	  break;
-
-	case BFD_RELOC_HI16_S:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_HI16_S_PCREL;
-	  /* fall through */
-	case BFD_RELOC_HI16_S_PCREL:
-	  fieldval = SEX16 (PPC_HA (value));
-	  break;
-
-#ifdef OBJ_ELF
-	case BFD_RELOC_PPC64_HIGHER:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  fieldval = SEX16 (PPC_HIGHER (value));
-	  break;
-
-	case BFD_RELOC_PPC64_HIGHER_S:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  fieldval = SEX16 (PPC_HIGHERA (value));
-	  break;
-
-	case BFD_RELOC_PPC64_HIGHEST:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  fieldval = SEX16 (PPC_HIGHEST (value));
-	  break;
-
-	case BFD_RELOC_PPC64_HIGHEST_S:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  fieldval = SEX16 (PPC_HIGHESTA (value));
-	  break;
-
 	  /* The following relocs can't be calculated by the assembler.
 	     Leave the field zero.  */
 	case BFD_RELOC_PPC_TPREL16:
@@ -6478,8 +6484,6 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  gas_assert (fixP->fx_addsy != NULL);
 	  S_SET_THREAD_LOCAL (fixP->fx_addsy);
 	  fieldval = 0;
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
 	  break;
 
 	  /* These also should leave the field zero for the same
@@ -6546,8 +6550,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	case BFD_RELOC_PPC_TLSGD:
 	case BFD_RELOC_PPC_TLSLD:
 	  fieldval = 0;
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
+	  break;
+#endif
+
+#ifdef OBJ_XCOFF
+	case BFD_RELOC_PPC_B16:
+	  /* Adjust the offset to the instruction boundary.  */
+	  fieldval += 2;
 	  break;
 #endif
 
@@ -6625,79 +6634,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     }
   else
     {
-      int size = 0;
-      offsetT fieldval = value;
-
       /* Handle relocs in data.  */
       switch (fixP->fx_r_type)
 	{
-	case BFD_RELOC_CTOR:
-	  if (ppc_obj64)
-	    goto ctor64;
-	  /* fall through */
-
-	case BFD_RELOC_32:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_32_PCREL;
-	  /* fall through */
-
-	case BFD_RELOC_32_PCREL:
-	case BFD_RELOC_RVA:
-	  size = 4;
-	  break;
-
-	case BFD_RELOC_64:
-	ctor64:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_64_PCREL;
-	  /* fall through */
-
-	case BFD_RELOC_64_PCREL:
-	  size = 8;
-	  break;
-
-	case BFD_RELOC_16:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_16_PCREL;
-	  /* fall through */
-
-	case BFD_RELOC_16_PCREL:
-	  size = 2;
-	  break;
-
-	case BFD_RELOC_8:
-	  if (fixP->fx_pcrel)
-	    {
-#ifdef OBJ_ELF
-	    bad_pcrel:
-#endif
-	      if (fixP->fx_addsy)
-		{
-		  char *sfile;
-		  unsigned int sline;
-
-		  /* Use expr_symbol_where to see if this is an
-		     expression symbol.  */
-		  if (expr_symbol_where (fixP->fx_addsy, &sfile, &sline))
-		    as_bad_where (fixP->fx_file, fixP->fx_line,
-				  _("unresolved expression that must"
-				    " be resolved"));
-		  else
-		    as_bad_where (fixP->fx_file, fixP->fx_line,
-				  _("cannot emit PC relative %s relocation"
-				    " against %s"),
-				  bfd_get_reloc_code_name (fixP->fx_r_type),
-				  S_GET_NAME (fixP->fx_addsy));
-		}
-	      else
-		as_bad_where (fixP->fx_file, fixP->fx_line,
-			      _("unable to resolve expression"));
-	      fixP->fx_done = 1;
-	    }
-	  else
-	    size = 1;
-	  break;
-
 	case BFD_RELOC_VTABLE_INHERIT:
 	  if (fixP->fx_addsy
 	      && !S_IS_DEFINED (fixP->fx_addsy)
@@ -6712,54 +6651,15 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 #ifdef OBJ_ELF
 	  /* These can appear with @l etc. in data.  */
 	case BFD_RELOC_LO16:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_LO16_PCREL;
 	case BFD_RELOC_LO16_PCREL:
-	  size = 2;
-	  break;
-
 	case BFD_RELOC_HI16:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_HI16_PCREL;
 	case BFD_RELOC_HI16_PCREL:
-	  size = 2;
-	  fieldval = PPC_HI (value);
-	  break;
-
 	case BFD_RELOC_HI16_S:
-	  if (fixP->fx_pcrel)
-	    fixP->fx_r_type = BFD_RELOC_HI16_S_PCREL;
 	case BFD_RELOC_HI16_S_PCREL:
-	  size = 2;
-	  fieldval = PPC_HA (value);
-	  break;
-
 	case BFD_RELOC_PPC64_HIGHER:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  size = 2;
-	  fieldval = PPC_HIGHER (value);
-	  break;
-
 	case BFD_RELOC_PPC64_HIGHER_S:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  size = 2;
-	  fieldval = PPC_HIGHERA (value);
-	  break;
-
 	case BFD_RELOC_PPC64_HIGHEST:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  size = 2;
-	  fieldval = PPC_HIGHEST (value);
-	  break;
-
 	case BFD_RELOC_PPC64_HIGHEST_S:
-	  if (fixP->fx_pcrel)
-	    goto bad_pcrel;
-	  size = 2;
-	  fieldval = PPC_HIGHESTA (value);
 	  break;
 
 	case BFD_RELOC_PPC_DTPMOD:
@@ -6850,8 +6750,17 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 
 #ifdef OBJ_XCOFF
 	case BFD_RELOC_NONE:
-	  break;
 #endif
+	case BFD_RELOC_CTOR:
+	case BFD_RELOC_32:
+	case BFD_RELOC_32_PCREL:
+	case BFD_RELOC_RVA:
+	case BFD_RELOC_64:
+	case BFD_RELOC_64_PCREL:
+	case BFD_RELOC_16:
+	case BFD_RELOC_16_PCREL:
+	case BFD_RELOC_8:
+	  break;
 
 	default:
 	  fprintf (stderr,
@@ -6860,9 +6769,85 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  abort ();
 	}
 
-      if (size && APPLY_RELOC)
+      if (fixP->fx_size && APPLY_RELOC)
 	md_number_to_chars (fixP->fx_frag->fr_literal + fixP->fx_where,
-			    fieldval, size);
+			    fieldval, fixP->fx_size);
+    }
+
+  /* We are only able to convert some relocs to pc-relative.  */
+  if (!fixP->fx_done && fixP->fx_pcrel)
+    {
+      switch (fixP->fx_r_type)
+	{
+	case BFD_RELOC_LO16:
+	  fixP->fx_r_type = BFD_RELOC_LO16_PCREL;
+	  break;
+
+	case BFD_RELOC_HI16:
+	  fixP->fx_r_type = BFD_RELOC_HI16_PCREL;
+	  break;
+
+	case BFD_RELOC_HI16_S:
+	  fixP->fx_r_type = BFD_RELOC_HI16_S_PCREL;
+	  break;
+
+	case BFD_RELOC_64:
+	  fixP->fx_r_type = BFD_RELOC_64_PCREL;
+	  break;
+
+	case BFD_RELOC_32:
+	  fixP->fx_r_type = BFD_RELOC_32_PCREL;
+	  break;
+
+	case BFD_RELOC_16:
+	  fixP->fx_r_type = BFD_RELOC_16_PCREL;
+	  break;
+
+	  /* Some of course are already pc-relative.  */
+	case BFD_RELOC_LO16_PCREL:
+	case BFD_RELOC_HI16_PCREL:
+	case BFD_RELOC_HI16_S_PCREL:
+	case BFD_RELOC_64_PCREL:
+	case BFD_RELOC_32_PCREL:
+	case BFD_RELOC_16_PCREL:
+	case BFD_RELOC_PPC_B16:
+	case BFD_RELOC_PPC_B16_BRTAKEN:
+	case BFD_RELOC_PPC_B16_BRNTAKEN:
+	case BFD_RELOC_PPC_B26:
+	case BFD_RELOC_PPC_LOCAL24PC:
+	case BFD_RELOC_24_PLT_PCREL:
+	case BFD_RELOC_32_PLT_PCREL:
+	case BFD_RELOC_64_PLT_PCREL:
+	case BFD_RELOC_PPC_VLE_REL8:
+	case BFD_RELOC_PPC_VLE_REL15:
+	case BFD_RELOC_PPC_VLE_REL24:
+	  break;
+
+	default:
+	  if (fixP->fx_addsy)
+	    {
+	      char *sfile;
+	      unsigned int sline;
+
+	      /* Use expr_symbol_where to see if this is an
+		 expression symbol.  */
+	      if (expr_symbol_where (fixP->fx_addsy, &sfile, &sline))
+		as_bad_where (fixP->fx_file, fixP->fx_line,
+			      _("unresolved expression that must"
+				" be resolved"));
+	      else
+		as_bad_where (fixP->fx_file, fixP->fx_line,
+			      _("cannot emit PC relative %s relocation"
+				" against %s"),
+			      bfd_get_reloc_code_name (fixP->fx_r_type),
+			      S_GET_NAME (fixP->fx_addsy));
+	    }
+	  else
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("unable to resolve expression"));
+	  fixP->fx_done = 1;
+	  break;
+	}
     }
 
 #ifdef OBJ_ELF
@@ -6898,6 +6883,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       fixP->fx_addnumber =
 	- bfd_get_section_vma (stdoutput, S_GET_SEGMENT (fixP->fx_addsy))
 	- S_GET_VALUE (ppc_toc_csect);
+      /* Set *valP to avoid errors.  */
+      *valP = value;
 #endif
     }
 #endif

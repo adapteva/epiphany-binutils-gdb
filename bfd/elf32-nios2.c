@@ -2601,6 +2601,10 @@ nios2_elf32_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       r_type = ELF32_R_TYPE (rel->r_info);
@@ -3260,9 +3264,6 @@ nios2_elf32_finish_dynamic_sections (bfd *output_bfd,
 	      nios2_elf32_install_imm16 (splt, 4, hiadj (corrected));
 	      nios2_elf32_install_imm16 (splt, 12, (corrected & 0xffff) + 4);
 	      nios2_elf32_install_imm16 (splt, 16, (corrected & 0xffff) + 8);
-
-	      elf_section_data (splt->output_section)->this_hdr.sh_entsize
-		= 24;
 	    }
 	  else
 	    {
@@ -3288,9 +3289,6 @@ nios2_elf32_finish_dynamic_sections (bfd *output_bfd,
 					 (got_address & 0xffff) + 4);
 	      nios2_elf32_install_imm16 (splt, res_size + 20,
 					 (got_address & 0xffff) + 8);
-
-	      elf_section_data (splt->output_section)->this_hdr.sh_entsize
-		= 28 + res_size;
 	    }
 	}
     }
@@ -3977,7 +3975,9 @@ nios2_elf32_link_hash_table_create (bfd *abfd)
 
 /* Implement elf_backend_reloc_type_class.  */
 static enum elf_reloc_type_class
-nios2_elf32_reloc_type_class (const Elf_Internal_Rela *rela)
+nios2_elf32_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			      const asection *rel_sec ATTRIBUTE_UNUSED,
+			      const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {

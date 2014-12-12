@@ -23,20 +23,6 @@
 
 struct arch_lwp_info;
 
-/* Ways to "resume" a thread.  */
-
-enum resume_kind
-{
-  /* Thread should continue.  */
-  resume_continue,
-
-  /* Thread should single-step.  */
-  resume_step,
-
-  /* Thread should be stopped.  */
-  resume_stop
-};
-
 /* Structure describing an LWP.  This is public only for the purposes
    of ALL_LWPS; target-specific code should generally not access it
    directly.  */
@@ -140,9 +126,6 @@ extern void lin_thread_get_thread_signals (sigset_t *mask);
 /* Find process PID's pending signal set from /proc/pid/status.  */
 void linux_proc_pending_signals (int pid, sigset_t *pending,
 				 sigset_t *blocked, sigset_t *ignored);
-
-/* linux-nat functions for handling fork events.  */
-extern void linux_enable_event_reporting (ptid_t ptid);
 
 extern int lin_lwp_attach_lwp (ptid_t ptid);
 

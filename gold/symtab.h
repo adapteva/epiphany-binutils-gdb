@@ -121,6 +121,10 @@ class Symbol
   version() const
   { return this->version_; }
 
+  void
+  clear_version()
+  { this->version_ = NULL; }
+
   // Return whether this version is the default for this symbol name
   // (eg, "foo@@V2" is a default version; "foo@V1" is not).  Only
   // meaningful for versioned symbols.
@@ -812,6 +816,11 @@ class Symbol
   bool
   is_predefined() const
   { return this->is_predefined_; }
+
+  // Return true if this is a C++ vtable symbol.
+  bool
+  is_cxx_vtable() const
+  { return is_prefix_of("_ZTV", this->name_); }
 
  protected:
   // Instances of this class should always be created at a specific

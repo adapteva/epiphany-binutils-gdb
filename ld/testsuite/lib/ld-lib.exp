@@ -1424,7 +1424,7 @@ proc run_cc_link_tests { ldtests } {
 	    if { $warnings != "" } then {
 		verbose -log "returned with: <$exec_output>, expected: <$warnings>"
 		if { [regexp $warnings $exec_output] } then {
-		    set failed 2
+		    set failed 0
 		} else {
 		    set failed 1
 		}
@@ -1565,7 +1565,7 @@ proc check_shared_lib_support { } {
 	 && ![istarget arm*-*-elf]
 	 && ![istarget avr-*-*]
 	 && ![istarget cr16-*-*]
-	 && ![istarget cris*-*-*]
+	 && ![istarget cris*-*-elf]
 	 && ![istarget crx-*-*]
 	 && ![istarget d10v-*-*]
 	 && ![istarget d30v-*-*]
@@ -1587,6 +1587,7 @@ proc check_shared_lib_support { } {
 	 && ![istarget mcore*-*-*]
 	 && ![istarget mep-*-*]
 	 && ![istarget microblaze-*-*]
+	 && ![istarget mips*-*-elf]
 	 && ![istarget mn10200-*-*]
 	 && ![istarget moxie-*-*]
 	 && ![istarget msp430-*-*]
@@ -1594,6 +1595,7 @@ proc check_shared_lib_support { } {
 	 && ![istarget openrisc-*-*]
 	 && ![istarget or32-*-*]
 	 && ![istarget pj-*-*]
+	 && ![istarget rl78-*-*]
 	 && ![istarget rx-*-*]
 	 && ![istarget spu-*-*]
 	 && ![istarget v850*-*-*]

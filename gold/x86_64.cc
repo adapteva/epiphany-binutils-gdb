@@ -1,6 +1,6 @@
 // x86_64.cc -- x86_64 target support for gold.
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
 // Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
@@ -1007,7 +1007,8 @@ const Target::Target_info Target_x86_64<64>::x86_64_info =
   0,			// small_common_section_flags
   elfcpp::SHF_X86_64_LARGE,	// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 template<>
@@ -1033,7 +1034,8 @@ const Target::Target_info Target_x86_64<32>::x86_64_info =
   0,			// small_common_section_flags
   elfcpp::SHF_X86_64_LARGE,	// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 // This is called when a new output section is created.  This is where
@@ -2740,7 +2742,8 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 						       reloc.get_r_offset(),
 						       reloc.get_r_addend());
 	      }
-	    else if (r_type == elfcpp::R_X86_64_64
+	    else if (((size == 64 && r_type == elfcpp::R_X86_64_64)
+		      || (size == 32 && r_type == elfcpp::R_X86_64_32))
 		     && gsym->can_use_relative_reloc(false))
 	      {
 		Reloc_section* rela_dyn = target->rela_dyn_section(layout);
@@ -3229,6 +3232,9 @@ Target_x86_64<size>::Relocate::relocate(
 	  return false;
 	}
     }
+
+  if (view == NULL)
+    return true;
 
   const Sized_relobj_file<size, false>* object = relinfo->object;
 
@@ -4567,6 +4573,9 @@ class Target_x86_64_nacl : public Target_x86_64<size>
 						 plt_count);
   }
 
+  virtual std::string
+  do_code_fill(section_size_type length) const;
+
  private:
   static const Target::Target_info x86_64_nacl_info;
 };
@@ -4594,7 +4603,8 @@ const Target::Target_info Target_x86_64_nacl<64>::x86_64_nacl_info =
   0,			// small_common_section_flags
   elfcpp::SHF_X86_64_LARGE,	// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 template<>
@@ -4620,7 +4630,8 @@ const Target::Target_info Target_x86_64_nacl<32>::x86_64_nacl_info =
   0,			// small_common_section_flags
   elfcpp::SHF_X86_64_LARGE,	// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 #define	NACLMASK	0xe0            // 32-byte alignment mask.
@@ -4790,6 +4801,16 @@ Output_data_plt_x86_64_nacl<size>::plt_eh_frame_fde[plt_eh_frame_fde_size] =
   elfcpp::DW_CFA_nop,			// Align to 32 bytes.
   elfcpp::DW_CFA_nop
 };
+
+// Return a string used to fill a code section with nops.
+// For NaCl, long NOPs are only valid if they do not cross
+// bundle alignment boundaries, so keep it simple with one-byte NOPs.
+template<int size>
+std::string
+Target_x86_64_nacl<size>::do_code_fill(section_size_type length) const
+{
+  return std::string(length, static_cast<char>(0x90));
+}
 
 // The selector for x86_64-nacl object files.
 

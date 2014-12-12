@@ -239,7 +239,7 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 	    fprintf_filtered (stream, ", ");
 	  else if (n_baseclasses > 0)
 	    {
-	      if (options->pretty)
+	      if (options->prettyformat)
 		{
 		  fprintf_filtered (stream, "\n");
 		  print_spaces_filtered (2 + 2 * recurse, stream);
@@ -250,7 +250,7 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 	    }
 	  fields_seen = 1;
 
-	  if (options->pretty)
+	  if (options->prettyformat)
 	    {
 	      fprintf_filtered (stream, "\n");
 	      print_spaces_filtered (2 + 2 * recurse, stream);
@@ -407,7 +407,7 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 	    }
 	}
 
-      if (options->pretty)
+      if (options->prettyformat)
 	{
 	  fprintf_filtered (stream, "\n");
 	  print_spaces_filtered (2 * recurse, stream);
@@ -568,7 +568,7 @@ cp_print_value (struct type *type, struct type *real_type,
 	}
 
       /* Now do the printing.  */
-      if (options->pretty)
+      if (options->prettyformat)
 	{
 	  fprintf_filtered (stream, "\n");
 	  print_spaces_filtered (2 * recurse, stream);
@@ -768,7 +768,7 @@ cp_print_class_member (const gdb_byte *valaddr, struct type *type,
      print it.  */
   struct type *domain = TYPE_DOMAIN_TYPE (type);
   LONGEST val;
-  unsigned int fieldno;
+  int fieldno;
 
   val = extract_signed_integer (valaddr,
 				TYPE_LENGTH (type),

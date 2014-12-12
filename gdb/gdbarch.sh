@@ -469,13 +469,11 @@ m:const char *:register_name:int regnr:regnr::0
 # use "register_type".
 M:struct type *:register_type:int reg_nr:reg_nr
 
-# See gdbint.texinfo, and PUSH_DUMMY_CALL.
 M:struct frame_id:dummy_id:struct frame_info *this_frame:this_frame
 # Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
 # deprecated_fp_regnum.
 v:int:deprecated_fp_regnum:::-1:-1::0
 
-# See gdbint.texinfo.  See infcall.c.
 M:CORE_ADDR:push_dummy_call:struct value *function, struct regcache *regcache, CORE_ADDR bp_addr, int nargs, struct value **args, CORE_ADDR sp, int struct_return, CORE_ADDR struct_addr:function, regcache, bp_addr, nargs, args, sp, struct_return, struct_addr
 v:int:call_dummy_location::::AT_ENTRY_POINT::0
 M:CORE_ADDR:push_dummy_code:CORE_ADDR sp, CORE_ADDR funaddr, struct value **args, int nargs, struct type *value_type, CORE_ADDR *real_pc, CORE_ADDR *bp_addr, struct regcache *regcache:sp, funaddr, args, nargs, value_type, real_pc, bp_addr, regcache
@@ -655,6 +653,10 @@ M:int:find_memory_regions:find_memory_region_ftype func, void *data:func, data
 # core file into buffer READBUF with length LEN.
 M:LONGEST:core_xfer_shared_libraries:gdb_byte *readbuf, ULONGEST offset, LONGEST len:readbuf, offset, len
 
+# Read offset OFFSET of TARGET_OBJECT_LIBRARIES_AIX formatted shared
+# libraries list from core file into buffer READBUF with length LEN.
+M:LONGEST:core_xfer_shared_libraries_aix:gdb_byte *readbuf, ULONGEST offset, LONGEST len:readbuf, offset, len
+
 # How the core target converts a PTID from a core file to a string.
 M:char *:core_pid_to_str:ptid_t ptid:ptid
 
@@ -794,6 +796,15 @@ M:int:process_record_signal:struct regcache *regcache, enum gdb_signal signal:re
 # "Live" targets hide the translation behind the target interface
 # (target_wait, target_resume, etc.).
 M:enum gdb_signal:gdb_signal_from_target:int signo:signo
+
+# Signal translation: translate the GDB's internal signal number into
+# the inferior's signal (target's) representation.  The implementation
+# of this method must be host independent.  IOW, don't rely on symbols
+# of the NAT_FILE header (the nm-*.h files), the host <signal.h>
+# header, or similar headers.
+# Return the target signal number if found, or -1 if the GDB internal
+# signal number is invalid.
+M:int:gdb_signal_to_target:enum gdb_signal signal:signal
 
 # Extra signal info inspection.
 #

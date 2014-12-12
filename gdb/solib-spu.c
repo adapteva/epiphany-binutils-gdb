@@ -209,7 +209,7 @@ spu_current_sos (void)
 	 yet.  Skip such entries; we'll be back for them later.  */
       xsnprintf (annex, sizeof annex, "%d/object-id", fd);
       len = target_read (&current_target, TARGET_OBJECT_SPU, annex,
-			 id, 0, sizeof id);
+			 (gdb_byte *) id, 0, sizeof id);
       if (len <= 0 || len >= sizeof id)
 	continue;
       id[len] = 0;
@@ -286,7 +286,9 @@ static int
 spu_bfd_iovec_close (bfd *nbfd, void *stream)
 {
   xfree (stream);
-  return 1;
+
+  /* Zero means success.  */
+  return 0;
 }
 
 static file_ptr

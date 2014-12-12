@@ -247,7 +247,6 @@ the native maintainer when resolving ABI issues.
 	arm		--target=arm-elf ,-Werror
 
 	avr		--target=avr ,-Werror
-			Tristan Gingold		gingold@adacore.com
 
 	cris		--target=cris-elf ,-Werror ,
 			(sim does not build with -Werror)
@@ -466,6 +465,7 @@ Thiago Jung Bauermann				bauerman@br.ibm.com
 Jon Beniston					jon@beniston.com
 Gary Benson					gbenson@redhat.com
 Jan Beulich					jbeulich@novell.com
+Anton Blanchard					anton@samba.org
 Jim Blandy					jimb@codesourcery.com
 David Blaikie					dblaikie@gmail.com
 Philip Blundell					philb@gnu.org
@@ -576,6 +576,7 @@ Masaki Muranaka					monaka@monami-software.com
 Joseph Myers					joseph@codesourcery.com
 Fernando Nasser					fnasser@redhat.com
 Adam Nemet					anemet@caviumnetworks.com
+Will Newton					will.newton@linaro.org
 Nathanael Nerode				neroden@gcc.gnu.org
 Hans-Peter Nilsson				hp@bitrange.com
 David O'Brien					obrien@freebsd.org
@@ -627,6 +628,7 @@ Petr Sorfa					petrs@caldera.com
 Andrew Stubbs					ams@codesourcery.com
 Emi Suzuki					emi-suzuki@tjsys.co.jp
 Ian Lance Taylor				ian@airs.com
+Walfred Tedeschi				walfred.tedeschi@intel.com
 Gary Thomas					gthomas@redhat.com
 Jason Thorpe					thorpej@netbsd.org
 Caroline Tice					ctice@apple.com
@@ -638,6 +640,7 @@ D Venkatasubramanian				dvenkat@noida.hcltech.com
 Corinna Vinschen				vinschen@redhat.com
 Sami Wagiaalla					swagiaal@redhat.com
 Keith Walker					keith.walker@arm.com
+Ricard Wanderlof				ricardw@axis.com
 Jiong Wang					jiwang@tilera.com
 Kris Warkentin					kewarken@qnx.com
 Philippe Waroquiers				philippe.waroquiers@skynet.be

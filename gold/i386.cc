@@ -1,6 +1,6 @@
 // i386.cc -- i386 target support for gold.
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
 // Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
@@ -857,7 +857,8 @@ const Target::Target_info Target_i386::i386_info =
   0,			// small_common_section_flags
   0,			// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 // Get the GOT section, creating it if necessary.
@@ -2661,6 +2662,9 @@ Target_i386::Relocate::relocate(const Relocate_info<32, false>* relinfo,
 	}
     }
 
+  if (view == NULL)
+    return true;
+
   const Sized_relobj_file<32, false>* object = relinfo->object;
 
   // Pick the value to use for symbols defined in shared objects.
@@ -3935,6 +3939,9 @@ class Target_i386_nacl : public Target_i386
       return new Output_data_plt_i386_nacl_exec(layout, got_plt, got_irelative);
   }
 
+  virtual std::string
+  do_code_fill(section_size_type length) const;
+
  private:
   static const Target::Target_info i386_nacl_info;
 };
@@ -3961,7 +3968,8 @@ const Target::Target_info Target_i386_nacl::i386_nacl_info =
   0,			// small_common_section_flags
   0,			// large_common_section_flags
   NULL,			// attributes_section
-  NULL			// attributes_vendor
+  NULL,			// attributes_vendor
+  "_start"		// entry_symbol_name
 };
 
 #define	NACLMASK	0xe0            // 32-byte alignment mask
@@ -4133,6 +4141,15 @@ Output_data_plt_i386_nacl::plt_eh_frame_fde[plt_eh_frame_fde_size] =
   elfcpp::DW_CFA_nop,			// Align to 32 bytes.
   elfcpp::DW_CFA_nop
 };
+
+// Return a string used to fill a code section with nops.
+// For NaCl, long NOPs are only valid if they do not cross
+// bundle alignment boundaries, so keep it simple with one-byte NOPs.
+std::string
+Target_i386_nacl::do_code_fill(section_size_type length) const
+{
+  return std::string(length, static_cast<char>(0x90));
+}
 
 // The selector for i386-nacl object files.
 

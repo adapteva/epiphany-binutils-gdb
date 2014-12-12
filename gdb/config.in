@@ -37,6 +37,9 @@
    language is requested. */
 #undef ENABLE_NLS
 
+/* The .gdbinit filename. */
+#undef GDBINIT
+
 /* look for global separate data files in this path [DATADIR/gdb] */
 #undef GDB_DATADIR
 
@@ -141,6 +144,9 @@
 /* Define to 1 if your system has the etext variable. */
 #undef HAVE_ETEXT
 
+/* Define to 1 if you have the `fdwalk' function. */
+#undef HAVE_FDWALK
+
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
@@ -179,6 +185,9 @@
 
 /* Define if your <locale.h> file defines LC_MESSAGES. */
 #undef HAVE_LC_MESSAGES
+
+/* Define if you have the babeltrace library. */
+#undef HAVE_LIBBABELTRACE
 
 /* Define to 1 if you have the `dl' library (-ldl). */
 #undef HAVE_LIBDL
@@ -267,6 +276,9 @@
 /* Define to 1 if you have the `pipe' function. */
 #undef HAVE_PIPE
 
+/* Define to 1 if you have the `pipe2' function. */
+#undef HAVE_PIPE2
+
 /* Define to 1 if you have the `poll' function. */
 #undef HAVE_POLL
 
@@ -320,6 +332,9 @@
 
 /* Define if <sys/procfs.h> has pstatus_t. */
 #undef HAVE_PSTATUS_T
+
+/* Define to 1 if you have the `ptrace64' function. */
+#undef HAVE_PTRACE64
 
 /* Define if sys/ptrace.h defines the PTRACE_GETFPXREGS request. */
 #undef HAVE_PTRACE_GETFPXREGS
@@ -643,6 +658,9 @@
 
 /* Define to the type of arg 3 for ptrace. */
 #undef PTRACE_TYPE_ARG3
+
+/* Define to the type of arg 4 for ptrace. */
+#undef PTRACE_TYPE_ARG4
 
 /* Define to the type of arg 5 for ptrace. */
 #undef PTRACE_TYPE_ARG5

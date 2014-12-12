@@ -1,7 +1,5 @@
 /* BFD back-end for HP PA-RISC ELF files.
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright 1990-2013 Free Software Foundation, Inc.
 
    Original code by
 	Center for Software Science
@@ -1169,6 +1167,10 @@ elf32_hppa_check_relocs (bfd *abfd,
 	  while (hh->eh.root.type == bfd_link_hash_indirect
 		 || hh->eh.root.type == bfd_link_hash_warning)
 	    hh = hppa_elf_hash_entry (hh->eh.root.u.i.link);
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  hh->eh.root.non_ir_ref = 1;
 	}
 
       r_type = ELF32_R_TYPE (rela->r_info);
@@ -2366,7 +2368,7 @@ elf32_hppa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	      bfd_size_type mask;
 
 	      if (gotalign > pltalign)
-		bfd_set_section_alignment (dynobj, sec, gotalign);
+		(void) bfd_set_section_alignment (dynobj, sec, gotalign);
 	      mask = ((bfd_size_type) 1 << gotalign) - 1;
 	      sec->size = (sec->size + sizeof (plt_stub) + mask) & ~mask;
 	    }
@@ -4436,7 +4438,9 @@ elf32_hppa_finish_dynamic_symbol (bfd *output_bfd,
    dynamic linker, before writing them out.  */
 
 static enum elf_reloc_type_class
-elf32_hppa_reloc_type_class (const Elf_Internal_Rela *rela)
+elf32_hppa_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			     const asection *rel_sec ATTRIBUTE_UNUSED,
+			     const Elf_Internal_Rela *rela)
 {
   /* Handle TLS relocs first; we don't want them to be marked
      relative by the "if (ELF32_R_SYM (rela->r_info) == STN_UNDEF)"

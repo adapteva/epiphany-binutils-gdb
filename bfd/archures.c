@@ -1,7 +1,5 @@
 /* BFD library support routines for architectures.
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
-   2012, 2013 Free Software Foundation, Inc.
+   Copyright 1990-2013 Free Software Foundation, Inc.
    Hacked by John Gilmore and Steve Chamberlain of Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -191,9 +189,13 @@ DESCRIPTION
 .#define bfd_mach_i386_i386		(1 << 2)
 .#define bfd_mach_x86_64		(1 << 3)
 .#define bfd_mach_x64_32		(1 << 4)
+.#define bfd_mach_i386_nacl		(1 << 5)
 .#define bfd_mach_i386_i386_intel_syntax (bfd_mach_i386_i386 | bfd_mach_i386_intel_syntax)
 .#define bfd_mach_x86_64_intel_syntax	(bfd_mach_x86_64 | bfd_mach_i386_intel_syntax)
 .#define bfd_mach_x64_32_intel_syntax	(bfd_mach_x64_32 | bfd_mach_i386_intel_syntax)
+.#define bfd_mach_i386_i386_nacl	(bfd_mach_i386_i386 | bfd_mach_i386_nacl)
+.#define bfd_mach_x86_64_nacl		(bfd_mach_x86_64 | bfd_mach_i386_nacl)
+.#define bfd_mach_x64_32_nacl		(bfd_mach_x64_32 | bfd_mach_i386_nacl)
 .  bfd_arch_l1om,   {* Intel L1OM *}
 .#define bfd_mach_l1om			(1 << 5)
 .#define bfd_mach_l1om_intel_syntax	(bfd_mach_l1om | bfd_mach_i386_intel_syntax)
@@ -437,7 +439,12 @@ DESCRIPTION
 .#define bfd_mach_msp14          14
 .#define bfd_mach_msp15          15
 .#define bfd_mach_msp16          16
+.#define bfd_mach_msp20          20
 .#define bfd_mach_msp21          21
+.#define bfd_mach_msp22          22
+.#define bfd_mach_msp23          23
+.#define bfd_mach_msp24          24
+.#define bfd_mach_msp26          26
 .#define bfd_mach_msp31          31
 .#define bfd_mach_msp32          32
 .#define bfd_mach_msp33          33
@@ -445,6 +452,10 @@ DESCRIPTION
 .#define bfd_mach_msp42          42
 .#define bfd_mach_msp43          43
 .#define bfd_mach_msp44          44
+.#define bfd_mach_msp430x        45
+.#define bfd_mach_msp46          46
+.#define bfd_mach_msp47          47
+.#define bfd_mach_msp54          54
 .  bfd_arch_xc16x,     {* Infineon's XC16X Series.               *}
 .#define bfd_mach_xc16x         1
 .#define bfd_mach_xc16xl        2
@@ -468,6 +479,7 @@ DESCRIPTION
 .#define bfd_mach_tilegx32  2
 .  bfd_arch_aarch64,   {* AArch64  *}
 .#define bfd_mach_aarch64 0
+.#define bfd_mach_aarch64_ilp32	32
 .  bfd_arch_nios2,
 .#define bfd_mach_nios2	0
 .  bfd_arch_last

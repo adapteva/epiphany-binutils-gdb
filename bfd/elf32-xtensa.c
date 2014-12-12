@@ -1007,6 +1007,10 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
       eh = elf_xtensa_hash_entry (h);
 
@@ -3585,7 +3589,9 @@ elf_xtensa_final_write_processing (bfd *abfd,
 
 
 static enum elf_reloc_type_class
-elf_xtensa_reloc_type_class (const Elf_Internal_Rela *rela)
+elf_xtensa_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			     const asection *rel_sec ATTRIBUTE_UNUSED,
+			     const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {

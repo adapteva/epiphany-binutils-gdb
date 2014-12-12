@@ -33,7 +33,6 @@
 
 #include <sys/ptrace.h>
 #include "gdb_wait.h"
-#include <sys/param.h>
 #include "gdb_dirent.h"
 #include <ctype.h>
 
@@ -269,7 +268,7 @@ fork_load_infrun_state (struct fork_info *fp)
 static void
 fork_save_infrun_state (struct fork_info *fp, int clobber_regs)
 {
-  char path[MAXPATHLEN];
+  char path[PATH_MAX];
   struct dirent *de;
   DIR *d;
 
@@ -283,7 +282,7 @@ fork_save_infrun_state (struct fork_info *fp, int clobber_regs)
     {
       /* Now save the 'state' (file position) of all open file descriptors.
 	 Unfortunately fork does not take care of that for us...  */
-      snprintf (path, MAXPATHLEN, "/proc/%ld/fd", (long) PIDGET (fp->ptid));
+      snprintf (path, PATH_MAX, "/proc/%ld/fd", (long) PIDGET (fp->ptid));
       if ((d = opendir (path)) != NULL)
 	{
 	  long tmp;
@@ -592,11 +591,11 @@ info_checkpoints_command (char *arg, int from_tty)
 	printf_filtered (_(", line %d"), sal.line);
       if (!sal.symtab && !sal.line)
 	{
-	  struct minimal_symbol *msym;
+	  struct bound_minimal_symbol msym;
 
 	  msym = lookup_minimal_symbol_by_pc (pc);
-	  if (msym)
-	    printf_filtered (", <%s>", SYMBOL_LINKAGE_NAME (msym));
+	  if (msym.minsym)
+	    printf_filtered (", <%s>", SYMBOL_LINKAGE_NAME (msym.minsym));
 	}
 
       putchar_filtered ('\n');
@@ -732,7 +731,7 @@ linux_fork_context (struct fork_info *newfp, int from_tty)
   printf_filtered (_("Switching to %s\n"),
 		   target_pid_to_str (inferior_ptid));
 
-  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC);
+  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
 }
 
 /* Switch inferior process (checkpoint) context, by checkpoint id.  */

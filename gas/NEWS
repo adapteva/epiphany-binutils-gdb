@@ -1,10 +1,19 @@
 -*- text -*-
 
+Changes in 2.24:
+
+* Add support for the Texas Instruments MSP430X processor.
+
+* Add -gdwarf-sections command line option to enable per-code-section
+  generation of DWARF .debug_line sections.
+
 * Add support for Altera Nios II.
 
 * Add support for the Imagination Technologies Meta processor.
 
 * Add support for the v850e3v5.
+
+* Remove assembler support for MIPS ECOFF targets.
 
 Changes in 2.23:
 

@@ -2141,6 +2141,10 @@ elf_metag_check_relocs (bfd *abfd,
 	  while (hh->eh.root.type == bfd_link_hash_indirect
 		 || hh->eh.root.type == bfd_link_hash_warning)
 	    hh = (struct elf_metag_link_hash_entry *) hh->eh.root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  hh->eh.root.non_ir_ref = 1;
 	}
 
       /* Some relocs require a global offset table.  */
@@ -3257,7 +3261,9 @@ elf_metag_post_process_headers (bfd * abfd, struct bfd_link_info * link_info ATT
    dynamic linker, before writing them out.  */
 
 static enum elf_reloc_type_class
-elf_metag_reloc_type_class (const Elf_Internal_Rela *rela)
+elf_metag_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			    const asection *rel_sec ATTRIBUTE_UNUSED,
+			    const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {

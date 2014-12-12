@@ -20,6 +20,8 @@
 #include "defs.h"
 #include "inferior.h"
 #include "target.h"
+#include "nat/linux-nat.h"
+#include "nat/linux-waitpid.h"
 #include "gdb_string.h"
 #include "gdb_wait.h"
 #include "gdb_assert.h"
@@ -39,7 +41,6 @@
 #include "inf-child.h"
 #include "inf-ptrace.h"
 #include "auxv.h"
-#include <sys/param.h>		/* for MAXPATHLEN */
 #include <sys/procfs.h>		/* for elf_gregset etc.  */
 #include "elf-bfd.h"		/* for elfcore_write_* */
 #include "gregset.h"		/* for gregset */
@@ -67,6 +68,7 @@
 #include "linux-ptrace.h"
 #include "buffer.h"
 #include "target-descriptions.h"
+#include "filestuff.h"
 
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
@@ -171,11 +173,6 @@ blocked.  */
 #define O_LARGEFILE 0
 #endif
 
-/* Unlike other extended result codes, WSTOPSIG (status) on
-   PTRACE_O_TRACESYSGOOD syscall events doesn't return SIGTRAP, but
-   instead SIGTRAP with bit 7 set.  */
-#define SYSCALL_SIGTRAP (SIGTRAP | 0x80)
-
 /* The single-threaded native GNU/Linux target_ops.  We save a pointer for
    the use of the multi-threaded target.  */
 static struct target_ops *linux_ops;
@@ -225,24 +222,6 @@ struct simple_pid_list
   struct simple_pid_list *next;
 };
 struct simple_pid_list *stopped_pids;
-
-/* This variable is a tri-state flag: -1 for unknown, 0 if PTRACE_O_TRACEFORK
-   can not be used, 1 if it can.  */
-
-static int linux_supports_tracefork_flag = -1;
-
-/* This variable is a tri-state flag: -1 for unknown, 0 if
-   PTRACE_O_TRACESYSGOOD can not be used, 1 if it can.  */
-
-static int linux_supports_tracesysgood_flag = -1;
-
-/* If we have PTRACE_O_TRACEFORK, this flag indicates whether we also have
-   PTRACE_O_TRACEVFORKDONE.  */
-
-static int linux_supports_tracevforkdone_flag = -1;
-
-/* Stores the current used ptrace() options.  */
-static int current_ptrace_options = 0;
 
 /* Async mode support.  */
 
@@ -349,257 +328,26 @@ pull_pid_from_list (struct simple_pid_list **listp, int pid, int *statusp)
   return 0;
 }
 
-
-/* A helper function for linux_test_for_tracefork, called after fork ().  */
+/* Initialize ptrace warnings and check for supported ptrace
+   features given PID.  */
 
 static void
-linux_tracefork_child (void)
+linux_init_ptrace (pid_t pid)
 {
-  ptrace (PTRACE_TRACEME, 0, 0, 0);
-  kill (getpid (), SIGSTOP);
-  fork ();
-  _exit (0);
-}
-
-/* Wrapper function for waitpid which handles EINTR.  */
-
-static int
-my_waitpid (int pid, int *statusp, int flags)
-{
-  int ret;
-
-  do
-    {
-      ret = waitpid (pid, statusp, flags);
-    }
-  while (ret == -1 && errno == EINTR);
-
-  return ret;
-}
-
-/* Determine if PTRACE_O_TRACEFORK can be used to follow fork events.
-
-   First, we try to enable fork tracing on ORIGINAL_PID.  If this fails,
-   we know that the feature is not available.  This may change the tracing
-   options for ORIGINAL_PID, but we'll be setting them shortly anyway.
-
-   However, if it succeeds, we don't know for sure that the feature is
-   available; old versions of PTRACE_SETOPTIONS ignored unknown options.  We
-   create a child process, attach to it, use PTRACE_SETOPTIONS to enable
-   fork tracing, and let it fork.  If the process exits, we assume that we
-   can't use TRACEFORK; if we get the fork notification, and we can extract
-   the new child's PID, then we assume that we can.  */
-
-static void
-linux_test_for_tracefork (int original_pid)
-{
-  int child_pid, ret, status;
-  long second_pid;
-  sigset_t prev_mask;
-
-  /* We don't want those ptrace calls to be interrupted.  */
-  block_child_signals (&prev_mask);
-
-  linux_supports_tracefork_flag = 0;
-  linux_supports_tracevforkdone_flag = 0;
-
-  ret = ptrace (PTRACE_SETOPTIONS, original_pid, 0, PTRACE_O_TRACEFORK);
-  if (ret != 0)
-    {
-      restore_child_signals_mask (&prev_mask);
-      return;
-    }
-
-  child_pid = fork ();
-  if (child_pid == -1)
-    perror_with_name (("fork"));
-
-  if (child_pid == 0)
-    linux_tracefork_child ();
-
-  ret = my_waitpid (child_pid, &status, 0);
-  if (ret == -1)
-    perror_with_name (("waitpid"));
-  else if (ret != child_pid)
-    error (_("linux_test_for_tracefork: waitpid: unexpected result %d."), ret);
-  if (! WIFSTOPPED (status))
-    error (_("linux_test_for_tracefork: waitpid: unexpected status %d."),
-	   status);
-
-  ret = ptrace (PTRACE_SETOPTIONS, child_pid, 0, PTRACE_O_TRACEFORK);
-  if (ret != 0)
-    {
-      ret = ptrace (PTRACE_KILL, child_pid, 0, 0);
-      if (ret != 0)
-	{
-	  warning (_("linux_test_for_tracefork: failed to kill child"));
-	  restore_child_signals_mask (&prev_mask);
-	  return;
-	}
-
-      ret = my_waitpid (child_pid, &status, 0);
-      if (ret != child_pid)
-	warning (_("linux_test_for_tracefork: failed "
-		   "to wait for killed child"));
-      else if (!WIFSIGNALED (status))
-	warning (_("linux_test_for_tracefork: unexpected "
-		   "wait status 0x%x from killed child"), status);
-
-      restore_child_signals_mask (&prev_mask);
-      return;
-    }
-
-  /* Check whether PTRACE_O_TRACEVFORKDONE is available.  */
-  ret = ptrace (PTRACE_SETOPTIONS, child_pid, 0,
-		PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORKDONE);
-  linux_supports_tracevforkdone_flag = (ret == 0);
-
-  ret = ptrace (PTRACE_CONT, child_pid, 0, 0);
-  if (ret != 0)
-    warning (_("linux_test_for_tracefork: failed to resume child"));
-
-  ret = my_waitpid (child_pid, &status, 0);
-
-  if (ret == child_pid && WIFSTOPPED (status)
-      && status >> 16 == PTRACE_EVENT_FORK)
-    {
-      second_pid = 0;
-      ret = ptrace (PTRACE_GETEVENTMSG, child_pid, 0, &second_pid);
-      if (ret == 0 && second_pid != 0)
-	{
-	  int second_status;
-
-	  linux_supports_tracefork_flag = 1;
-	  my_waitpid (second_pid, &second_status, 0);
-	  ret = ptrace (PTRACE_KILL, second_pid, 0, 0);
-	  if (ret != 0)
-	    warning (_("linux_test_for_tracefork: "
-		       "failed to kill second child"));
-	  my_waitpid (second_pid, &status, 0);
-	}
-    }
-  else
-    warning (_("linux_test_for_tracefork: unexpected result from waitpid "
-	     "(%d, status 0x%x)"), ret, status);
-
-  ret = ptrace (PTRACE_KILL, child_pid, 0, 0);
-  if (ret != 0)
-    warning (_("linux_test_for_tracefork: failed to kill child"));
-  my_waitpid (child_pid, &status, 0);
-
-  restore_child_signals_mask (&prev_mask);
-}
-
-/* Determine if PTRACE_O_TRACESYSGOOD can be used to follow syscalls.
-
-   We try to enable syscall tracing on ORIGINAL_PID.  If this fails,
-   we know that the feature is not available.  This may change the tracing
-   options for ORIGINAL_PID, but we'll be setting them shortly anyway.  */
-
-static void
-linux_test_for_tracesysgood (int original_pid)
-{
-  int ret;
-  sigset_t prev_mask;
-
-  /* We don't want those ptrace calls to be interrupted.  */
-  block_child_signals (&prev_mask);
-
-  linux_supports_tracesysgood_flag = 0;
-
-  ret = ptrace (PTRACE_SETOPTIONS, original_pid, 0, PTRACE_O_TRACESYSGOOD);
-  if (ret != 0)
-    goto out;
-
-  linux_supports_tracesysgood_flag = 1;
-out:
-  restore_child_signals_mask (&prev_mask);
-}
-
-/* Determine wether we support PTRACE_O_TRACESYSGOOD option available.
-   This function also sets linux_supports_tracesysgood_flag.  */
-
-static int
-linux_supports_tracesysgood (int pid)
-{
-  if (linux_supports_tracesysgood_flag == -1)
-    linux_test_for_tracesysgood (pid);
-  return linux_supports_tracesysgood_flag;
-}
-
-/* Return non-zero iff we have tracefork functionality available.
-   This function also sets linux_supports_tracefork_flag.  */
-
-static int
-linux_supports_tracefork (int pid)
-{
-  if (linux_supports_tracefork_flag == -1)
-    linux_test_for_tracefork (pid);
-  return linux_supports_tracefork_flag;
-}
-
-static int
-linux_supports_tracevforkdone (int pid)
-{
-  if (linux_supports_tracefork_flag == -1)
-    linux_test_for_tracefork (pid);
-  return linux_supports_tracevforkdone_flag;
-}
-
-static void
-linux_enable_tracesysgood (ptid_t ptid)
-{
-  int pid = ptid_get_lwp (ptid);
-
-  if (pid == 0)
-    pid = ptid_get_pid (ptid);
-
-  if (linux_supports_tracesysgood (pid) == 0)
-    return;
-
-  current_ptrace_options |= PTRACE_O_TRACESYSGOOD;
-
-  ptrace (PTRACE_SETOPTIONS, pid, 0, current_ptrace_options);
-}
-
-
-void
-linux_enable_event_reporting (ptid_t ptid)
-{
-  int pid = ptid_get_lwp (ptid);
-
-  if (pid == 0)
-    pid = ptid_get_pid (ptid);
-
-  if (! linux_supports_tracefork (pid))
-    return;
-
-  current_ptrace_options |= PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK
-    | PTRACE_O_TRACEEXEC | PTRACE_O_TRACECLONE;
-
-  if (linux_supports_tracevforkdone (pid))
-    current_ptrace_options |= PTRACE_O_TRACEVFORKDONE;
-
-  /* Do not enable PTRACE_O_TRACEEXIT until GDB is more prepared to support
-     read-only process state.  */
-
-  ptrace (PTRACE_SETOPTIONS, pid, 0, current_ptrace_options);
+  linux_enable_event_reporting (pid);
+  linux_ptrace_init_warnings ();
 }
 
 static void
 linux_child_post_attach (int pid)
 {
-  linux_enable_event_reporting (pid_to_ptid (pid));
-  linux_enable_tracesysgood (pid_to_ptid (pid));
-  linux_ptrace_init_warnings ();
+  linux_init_ptrace (pid);
 }
 
 static void
 linux_child_post_startup_inferior (ptid_t ptid)
 {
-  linux_enable_event_reporting (ptid);
-  linux_enable_tracesysgood (ptid);
-  linux_ptrace_init_warnings ();
+  linux_init_ptrace (ptid_get_pid (ptid));
 }
 
 /* Return the number of known LWPs in the tgid given by PID.  */
@@ -628,13 +376,11 @@ delete_lwp_cleanup (void *lp_voidp)
 }
 
 static int
-linux_child_follow_fork (struct target_ops *ops, int follow_child)
+linux_child_follow_fork (struct target_ops *ops, int follow_child,
+			 int detach_fork)
 {
-  sigset_t prev_mask;
   int has_vforked;
   int parent_pid, child_pid;
-
-  block_child_signals (&prev_mask);
 
   has_vforked = (inferior_thread ()->pending_follow.kind
 		 == TARGET_WAITKIND_VFORKED);
@@ -642,9 +388,6 @@ linux_child_follow_fork (struct target_ops *ops, int follow_child)
   if (parent_pid == 0)
     parent_pid = ptid_get_pid (inferior_ptid);
   child_pid = PIDGET (inferior_thread ()->pending_follow.value.related_pid);
-
-  if (!detach_fork)
-    linux_enable_event_reporting (pid_to_ptid (child_pid));
 
   if (has_vforked
       && !non_stop /* Non-stop always resumes both branches.  */
@@ -791,9 +534,9 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  parent_inf->pspace->breakpoints_not_allowed = detach_fork;
 
 	  parent_lp = find_lwp_pid (pid_to_ptid (parent_pid));
-	  gdb_assert (linux_supports_tracefork_flag >= 0);
+	  gdb_assert (linux_supports_tracefork () >= 0);
 
-	  if (linux_supports_tracevforkdone (0))
+	  if (linux_supports_tracevforkdone ())
 	    {
   	      if (debug_linux_nat)
   		fprintf_unfiltered (gdb_stdlog,
@@ -957,7 +700,6 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
       check_for_thread_db ();
     }
 
-  restore_child_signals_mask (&prev_mask);
   return 0;
 }
 
@@ -965,7 +707,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 static int
 linux_child_insert_fork_catchpoint (int pid)
 {
-  return !linux_supports_tracefork (pid);
+  return !linux_supports_tracefork ();
 }
 
 static int
@@ -977,7 +719,7 @@ linux_child_remove_fork_catchpoint (int pid)
 static int
 linux_child_insert_vfork_catchpoint (int pid)
 {
-  return !linux_supports_tracefork (pid);
+  return !linux_supports_tracefork ();
 }
 
 static int
@@ -989,7 +731,7 @@ linux_child_remove_vfork_catchpoint (int pid)
 static int
 linux_child_insert_exec_catchpoint (int pid)
 {
-  return !linux_supports_tracefork (pid);
+  return !linux_supports_tracefork ();
 }
 
 static int
@@ -1002,7 +744,7 @@ static int
 linux_child_set_syscall_catchpoint (int pid, int needed, int any_count,
 				    int table_size, int *table)
 {
-  if (!linux_supports_tracesysgood (pid))
+  if (!linux_supports_tracesysgood ())
     return 1;
 
   /* On GNU/Linux, we ignore the arguments.  It means that we only
@@ -1430,12 +1172,9 @@ int
 lin_lwp_attach_lwp (ptid_t ptid)
 {
   struct lwp_info *lp;
-  sigset_t prev_mask;
   int lwpid;
 
   gdb_assert (is_lwp (ptid));
-
-  block_child_signals (&prev_mask);
 
   lp = find_lwp_pid (ptid);
   lwpid = GET_LWP (ptid);
@@ -1452,7 +1191,7 @@ lin_lwp_attach_lwp (ptid_t ptid)
 
       if (ptrace (PTRACE_ATTACH, lwpid, 0, 0) < 0)
 	{
-	  if (linux_supports_tracefork_flag)
+	  if (linux_supports_tracefork ())
 	    {
 	      /* If we haven't stopped all threads when we get here,
 		 we may have seen a thread listed in thread_db's list,
@@ -1464,7 +1203,6 @@ lin_lwp_attach_lwp (ptid_t ptid)
 		  /* We've already seen this thread stop, but we
 		     haven't seen the PTRACE_EVENT_CLONE extended
 		     event yet.  */
-		  restore_child_signals_mask (&prev_mask);
 		  return 0;
 		}
 	      else
@@ -1481,8 +1219,6 @@ lin_lwp_attach_lwp (ptid_t ptid)
 		    {
 		      if (WIFSTOPPED (status))
 			add_to_pid_list (&stopped_pids, lwpid, status);
-
-		      restore_child_signals_mask (&prev_mask);
 		      return 1;
 		    }
 		}
@@ -1495,7 +1231,6 @@ lin_lwp_attach_lwp (ptid_t ptid)
 	     to create them.  */
 	  warning (_("Can't attach %s: %s"), target_pid_to_str (ptid),
 		   safe_strerror (errno));
-	  restore_child_signals_mask (&prev_mask);
 	  return -1;
 	}
 
@@ -1506,10 +1241,7 @@ lin_lwp_attach_lwp (ptid_t ptid)
 
       status = linux_nat_post_attach_wait (ptid, 0, &cloned, &signalled);
       if (!WIFSTOPPED (status))
-	{
-	  restore_child_signals_mask (&prev_mask);
-	  return 1;
-	}
+	return 1;
 
       lp = add_lwp (ptid);
       lp->stopped = 1;
@@ -1545,7 +1277,6 @@ lin_lwp_attach_lwp (ptid_t ptid)
     }
 
   lp->last_resume_kind = resume_stop;
-  restore_child_signals_mask (&prev_mask);
   return 0;
 }
 
@@ -1978,7 +1709,6 @@ static void
 linux_nat_resume (struct target_ops *ops,
 		  ptid_t ptid, int step, enum gdb_signal signo)
 {
-  sigset_t prev_mask;
   struct lwp_info *lp;
   int resume_many;
 
@@ -1990,8 +1720,6 @@ linux_nat_resume (struct target_ops *ops,
 			(signo != GDB_SIGNAL_0
 			 ? strsignal (gdb_signal_to_host (signo)) : "0"),
 			target_pid_to_str (inferior_ptid));
-
-  block_child_signals (&prev_mask);
 
   /* A specific PTID means `step only this process id'.  */
   resume_many = (ptid_equal (minus_one_ptid, ptid)
@@ -2050,7 +1778,6 @@ linux_nat_resume (struct target_ops *ops,
 			    "LLR: Short circuiting for status 0x%x\n",
 			    lp->status);
 
-      restore_child_signals_mask (&prev_mask);
       if (target_can_async_p ())
 	{
 	  target_async (inferior_event_handler, 0);
@@ -2083,7 +1810,6 @@ linux_nat_resume (struct target_ops *ops,
 			(signo != GDB_SIGNAL_0
 			 ? strsignal (gdb_signal_to_host (signo)) : "0"));
 
-  restore_child_signals_mask (&prev_mask);
   if (target_can_async_p ())
     target_async (inferior_event_handler, 0);
 }
@@ -2316,7 +2042,6 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 	     this fork.  We're actually doing an infcall in
 	     linux-fork.c.  */
 	  ourstatus->kind = TARGET_WAITKIND_SPURIOUS;
-	  linux_enable_event_reporting (pid_to_ptid (new_pid));
 
 	  /* Report the stop to the core.  */
 	  return 0;
@@ -3481,7 +3206,7 @@ linux_nat_wait_1 (struct target_ops *ops,
       lp->resumed = 1;
     }
 
-  /* Make sure SIGCHLD is blocked.  */
+  /* Make sure SIGCHLD is blocked until the sigsuspend below.  */
   block_child_signals (&prev_mask);
 
 retry:
@@ -4275,7 +4000,7 @@ linux_nat_thread_name (struct thread_info *thr)
   char *result = NULL;
 
   snprintf (buf, sizeof (buf), FORMAT, pid, lwp);
-  comm_file = fopen (buf, "r");
+  comm_file = gdb_fopen_cloexec (buf, "r");
   if (comm_file)
     {
       /* Not exported by the kernel, so we define it here.  */
@@ -4309,14 +4034,14 @@ linux_child_pid_to_exec_file (int pid)
 {
   char *name1, *name2;
 
-  name1 = xmalloc (MAXPATHLEN);
-  name2 = xmalloc (MAXPATHLEN);
+  name1 = xmalloc (PATH_MAX);
+  name2 = xmalloc (PATH_MAX);
   make_cleanup (xfree, name1);
   make_cleanup (xfree, name2);
-  memset (name2, 0, MAXPATHLEN);
+  memset (name2, 0, PATH_MAX);
 
   sprintf (name1, "/proc/%d/exe", pid);
-  if (readlink (name1, name2, MAXPATHLEN - 1) > 0)
+  if (readlink (name1, name2, PATH_MAX - 1) > 0)
     return name2;
   else
     return name1;
@@ -4402,7 +4127,7 @@ linux_proc_xfer_partial (struct target_ops *ops, enum target_object object,
   /* We could keep this file open and cache it - possibly one per
      thread.  That requires some juggling, but is even faster.  */
   sprintf (filename, "/proc/%d/mem", PIDGET (inferior_ptid));
-  fd = open (filename, O_RDONLY | O_LARGEFILE);
+  fd = gdb_open_cloexec (filename, O_RDONLY | O_LARGEFILE, 0);
   if (fd == -1)
     return 0;
 
@@ -4496,7 +4221,7 @@ linux_proc_xfer_spu (struct target_ops *ops, enum target_object object,
     }
 
   xsnprintf (buf, sizeof buf, "/proc/%d/fd/%s", pid, annex);
-  fd = open (buf, writebuf? O_WRONLY : O_RDONLY);
+  fd = gdb_open_cloexec (buf, writebuf? O_WRONLY : O_RDONLY, 0);
   if (fd <= 0)
     return -1;
 
@@ -4565,19 +4290,19 @@ linux_proc_pending_signals (int pid, sigset_t *pending,
 			    sigset_t *blocked, sigset_t *ignored)
 {
   FILE *procfile;
-  char buffer[MAXPATHLEN], fname[MAXPATHLEN];
+  char buffer[PATH_MAX], fname[PATH_MAX];
   struct cleanup *cleanup;
 
   sigemptyset (pending);
   sigemptyset (blocked);
   sigemptyset (ignored);
   sprintf (fname, "/proc/%d/status", pid);
-  procfile = fopen (fname, "r");
+  procfile = gdb_fopen_cloexec (fname, "r");
   if (procfile == NULL)
     error (_("Could not open %s"), fname);
   cleanup = make_cleanup_fclose (procfile);
 
-  while (fgets (buffer, MAXPATHLEN, procfile) != NULL)
+  while (fgets (buffer, PATH_MAX, procfile) != NULL)
     {
       /* Normal queued signals are on the SigPnd line in the status
 	 file.  However, 2.6 kernels also have a "shared" pending
@@ -4911,11 +4636,13 @@ linux_async_pipe (int enable)
     {
       sigset_t prev_mask;
 
+      /* Block child signals while we create/destroy the pipe, as
+	 their handler writes to it.  */
       block_child_signals (&prev_mask);
 
       if (enable)
 	{
-	  if (pipe (linux_nat_event_pipe) == -1)
+	  if (gdb_pipe_cloexec (linux_nat_event_pipe) == -1)
 	    internal_error (__FILE__, __LINE__,
 			    "creating event pipe failed.");
 
@@ -5022,14 +4749,14 @@ linux_nat_stop (ptid_t ptid)
 }
 
 static void
-linux_nat_close (int quitting)
+linux_nat_close (void)
 {
   /* Unregister from the event loop.  */
   if (linux_nat_is_async_p ())
     linux_nat_async (NULL, 0);
 
   if (linux_ops->to_close)
-    linux_ops->to_close (quitting);
+    linux_ops->to_close ();
 }
 
 /* When requests are passed down from the linux-nat layer to the

@@ -34,7 +34,6 @@
 #include <sys/ptrace.h>
 #include <asm/ptrace.h>
 #include <sys/types.h>
-#include <sys/param.h>
 
 #include "spu-tdep.h"
 
@@ -277,7 +276,9 @@ static int
 spu_bfd_iovec_close (struct bfd *nbfd, void *stream)
 {
   xfree (stream);
-  return 1;
+
+  /* Zero means success.  */
+  return 0;
 }
 
 static file_ptr
