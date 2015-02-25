@@ -413,7 +413,7 @@ case "${targ}" in
     targ_defvec=bfd_elf32_d30v_vec
     ;;
 
-  epiphany-*-elf)
+  epiphany-*-elf | epiphany-*-rtems*)
     targ_defvec=bfd_elf32_epiphany_vec
     ;;
 
