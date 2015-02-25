@@ -1,3 +1,7 @@
+2015-02-25  Hesham ALMatary <heshamelmatary@gmail.com>
+
+	* config.bfd: Add Epiphany RTEMS target.
+
 2013-02-19  Alan Modra  <amodra@gmail.com>
 
 	* configure.in: Bump version to 2.23.52.
