@@ -1,3 +1,22 @@
+2015-08-31  Ola Jeppsson  <ola@adapteva.com>
+
+	* Cherry-picked
+	commit c74f7d1c6c5a968330208757f476c67a4bb66643
+	"Allow gdb to find debug symbols file by build-id for PE file
+	format also"
+
+  2015-06-10  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	  * elf-bfd.h : Remove struct elf_build_id.
+	  * bfd.c : Add struct bfd_build_id.
+	  * bfd-in2.h: Regenerate.
+	  * elf.c (elfobj_grok_gnu_build_id): Update to use bfd_build_id.
+	  * libpei.h: Add protoype and macros for
+	  bfd_XXi_slurp_codeview_record.
+	  * peXXigen.c (_bfd_XXi_slurp_codeview_record): Make public
+	  * peicode.h (pe_bfd_read_buildid): Add.
+	  (pe_bfd_object_p): Use pe_bfd_read_buildid().
+
 2015-02-25  Hesham ALMatary <heshamelmatary@gmail.com>
 
 	* config.bfd: Add Epiphany RTEMS target.

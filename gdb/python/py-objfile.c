@@ -22,6 +22,8 @@
 #include "charset.h"
 #include "objfiles.h"
 #include "language.h"
+#include "build-id.h"
+#include "symtab.h"
 
 typedef struct
 {
@@ -59,6 +61,101 @@ objfpy_get_filename (PyObject *self, void *closure)
     return PyString_Decode (objfile_name (obj->objfile),
 			    strlen (objfile_name (obj->objfile)),
 			    host_charset (), NULL);
+  Py_RETURN_NONE;
+}
+
+/* An Objfile method which returns the objfile's file name, as specified
+   by the user, or None.  */
+
+static PyObject *
+objfpy_get_username (PyObject *self, void *closure)
+{
+  objfile_object *obj = (objfile_object *) self;
+
+  if (obj->objfile)
+    {
+      const char *username = obj->objfile->original_name;
+
+      return PyString_Decode (username, strlen (username),
+			      host_charset (), NULL);
+    }
+
+  Py_RETURN_NONE;
+}
+
+/* If SELF is a separate debug-info file, return the "backlink" field.
+   Otherwise return None.  */
+
+static PyObject *
+objfpy_get_owner (PyObject *self, void *closure)
+{
+  objfile_object *obj = (objfile_object *) self;
+  struct objfile *objfile = obj->objfile;
+  struct objfile *owner;
+
+  OBJFPY_REQUIRE_VALID (obj);
+
+  owner = objfile->separate_debug_objfile_backlink;
+  if (owner != NULL)
+    {
+      PyObject *result = objfile_to_objfile_object (owner);
+
+      Py_XINCREF (result);
+      return result;
+    }
+  Py_RETURN_NONE;
+}
+
+/* An Objfile method which returns the objfile's build id, or None.  */
+
+static PyObject *
+objfpy_get_build_id (PyObject *self, void *closure)
+{
+  objfile_object *obj = (objfile_object *) self;
+  struct objfile *objfile = obj->objfile;
+  const struct bfd_build_id *build_id = NULL;
+
+  OBJFPY_REQUIRE_VALID (obj);
+
+  TRY
+    {
+      build_id = build_id_bfd_get (objfile->obfd);
+    }
+  CATCH (except, RETURN_MASK_ALL)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+  END_CATCH
+
+  if (build_id != NULL)
+    {
+      char *hex_form = make_hex_string (build_id->data, build_id->size);
+      PyObject *result;
+
+      result = PyString_Decode (hex_form, strlen (hex_form),
+				host_charset (), NULL);
+      xfree (hex_form);
+      return result;
+    }
+
+  Py_RETURN_NONE;
+}
+
+/* An Objfile method which returns the objfile's progspace, or None.  */
+
+static PyObject *
+objfpy_get_progspace (PyObject *self, void *closure)
+{
+  objfile_object *obj = (objfile_object *) self;
+
+  if (obj->objfile)
+    {
+      PyObject *pspace =  pspace_to_pspace_object (obj->objfile->pspace);
+
+      Py_XINCREF (pspace);
+      return pspace;
+    }
+
   Py_RETURN_NONE;
 }
 
@@ -262,6 +359,183 @@ objfpy_is_valid (PyObject *self, PyObject *args)
     Py_RETURN_FALSE;
 
   Py_RETURN_TRUE;
+}
+
+/* Implementation of gdb.Objfile.add_separate_debug_file (self) -> Boolean.  */
+
+static PyObject *
+objfpy_add_separate_debug_file (PyObject *self, PyObject *args, PyObject *kw)
+{
+  static char *keywords[] = { "file_name", NULL };
+  objfile_object *obj = (objfile_object *) self;
+  const char *file_name;
+  int symfile_flags = 0;
+
+  OBJFPY_REQUIRE_VALID (obj);
+
+  if (!PyArg_ParseTupleAndKeywords (args, kw, "s", keywords, &file_name))
+    return NULL;
+
+  TRY
+    {
+      bfd *abfd = symfile_bfd_open (file_name);
+
+      symbol_file_add_separate (abfd, file_name, symfile_flags, obj->objfile);
+    }
+  CATCH (except, RETURN_MASK_ALL)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+  END_CATCH
+
+  Py_RETURN_NONE;
+}
+
+/* Subroutine of gdbpy_lookup_objfile_by_build_id to simplify it.
+   Return non-zero if STRING is a potentially valid build id.  */
+
+static int
+objfpy_build_id_ok (const char *string)
+{
+  size_t i, n = strlen (string);
+
+  if (n % 2 != 0)
+    return 0;
+  for (i = 0; i < n; ++i)
+    {
+      if (!isxdigit (string[i]))
+	return 0;
+    }
+  return 1;
+}
+
+/* Subroutine of gdbpy_lookup_objfile_by_build_id to simplify it.
+   Returns non-zero if BUILD_ID matches STRING.
+   It is assumed that objfpy_build_id_ok (string) returns TRUE.  */
+
+static int
+objfpy_build_id_matches (const struct bfd_build_id *build_id,
+			 const char *string)
+{
+  size_t i;
+
+  if (strlen (string) != 2 * build_id->size)
+    return 0;
+
+  for (i = 0; i < build_id->size; ++i)
+    {
+      char c1 = string[i * 2], c2 = string[i * 2 + 1];
+      int byte = (host_hex_value (c1) << 4) | host_hex_value (c2);
+
+      if (byte != build_id->data[i])
+	return 0;
+    }
+
+  return 1;
+}
+
+/* Subroutine of gdbpy_lookup_objfile to simplify it.
+   Look up an objfile by its file name.  */
+
+static struct objfile *
+objfpy_lookup_objfile_by_name (const char *name)
+{
+  struct objfile *objfile;
+
+  ALL_OBJFILES (objfile)
+    {
+      const char *filename;
+
+      if ((objfile->flags & OBJF_NOT_FILENAME) != 0)
+	continue;
+      /* Don't return separate debug files.  */
+      if (objfile->separate_debug_objfile_backlink != NULL)
+	continue;
+
+      filename = objfile_filename (objfile);
+      if (filename != NULL && compare_filenames_for_search (filename, name))
+	return objfile;
+      if (compare_filenames_for_search (objfile->original_name, name))
+	return objfile;
+    }
+
+  return NULL;
+}
+
+/* Subroutine of gdbpy_lookup_objfile to simplify it.
+   Look up an objfile by its build id.  */
+
+static struct objfile *
+objfpy_lookup_objfile_by_build_id (const char *build_id)
+{
+  struct objfile *objfile;
+
+  ALL_OBJFILES (objfile)
+    {
+      const struct bfd_build_id *obfd_build_id;
+
+      if (objfile->obfd == NULL)
+	continue;
+      /* Don't return separate debug files.  */
+      if (objfile->separate_debug_objfile_backlink != NULL)
+	continue;
+      obfd_build_id = build_id_bfd_get (objfile->obfd);
+      if (obfd_build_id == NULL)
+	continue;
+      if (objfpy_build_id_matches (obfd_build_id, build_id))
+	return objfile;
+    }
+
+  return NULL;
+}
+
+/* Implementation of gdb.lookup_objfile.  */
+
+PyObject *
+gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw)
+{
+  static char *keywords[] = { "name", "by_build_id", NULL };
+  const char *name;
+  PyObject *by_build_id_obj = NULL;
+  int by_build_id;
+  struct objfile *objfile;
+
+  if (! PyArg_ParseTupleAndKeywords (args, kw, "s|O!", keywords,
+				     &name, &PyBool_Type, &by_build_id_obj))
+    return NULL;
+
+  by_build_id = 0;
+  if (by_build_id_obj != NULL)
+    {
+      int cmp = PyObject_IsTrue (by_build_id_obj);
+
+      if (cmp < 0)
+	return NULL;
+      by_build_id = cmp;
+    }
+
+  if (by_build_id)
+    {
+      if (!objfpy_build_id_ok (name))
+	{
+	  PyErr_SetString (PyExc_TypeError, _("Not a valid build id."));
+	  return NULL;
+	}
+      objfile = objfpy_lookup_objfile_by_build_id (name);
+    }
+  else
+    objfile = objfpy_lookup_objfile_by_name (name);
+
+  if (objfile != NULL)
+    {
+      PyObject *result = objfile_to_objfile_object (objfile);
+
+      Py_XINCREF (result);
+      return result;
+    }
+
+  PyErr_SetString (PyExc_ValueError, _("Objfile not found."));
+  return NULL;
 }
 
 

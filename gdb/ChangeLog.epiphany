@@ -1,0 +1,21 @@
+2015-08-31  Ola Jeppsson  <ola@adapteva.com>
+
+	* Cherry-picked
+	commit c74f7d1c6c5a968330208757f476c67a4bb66643
+	"Allow gdb to find debug symbols file by build-id for PE file
+	format also"
+
+  2015-06-10  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	  * build-id.c: Don't include elf-bfd.h.
+	  (build_id_bfd_get): Use bfd_build_id.
+	  (build_id_verify): Ditto.
+	  * build-id.h: Ditto.
+	  (find_separate_debug_file_by_buildid): Ditto.
+	  * python/py-objfile.c: Don't include elf-bfd.h.
+	  (objfpy_get_build_id) Use bfd_build_id.
+	  (objfpy_build_id_matches, objfpy_lookup_objfile_by_build_id): Ditto.
+	  * coffread.c: Include build-id.h.
+	  (coff_symfile_read): Try find_separate_debug_file_by_buildid.
+
+
