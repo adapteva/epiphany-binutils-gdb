@@ -1,3 +1,7 @@
++2015-02-25 Hesham ALMatary <heshamelmatary@gmail.com>
+
+	* configure.tgt: Add Epiphany RTEMS target.
+
 2014-06-07  Alan Modra  <amodra@gmail.com>
 
 	* ldexp.c (exp_fold_tree_1 <etree_provide>): Make PROVIDEd
