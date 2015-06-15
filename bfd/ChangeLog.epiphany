@@ -1,6 +1,17 @@
 2015-08-31  Ola Jeppsson  <ola@adapteva.com>
 
 	* Cherry-picked
+	commit 56f4083249f4633084d4e8d89fc065e895f874cf
+	"Fix build when size_t is not available in bfd-in2.h"
+
+  2015-06-15  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	  * bfd.c: Change struct bfd_build_id to use bfd_size_type.
+	  * bfd-in2.h : Regenerate.
+
+2015-08-31  Ola Jeppsson  <ola@adapteva.com>
+
+	* Cherry-picked
 	commit c74f7d1c6c5a968330208757f476c67a4bb66643
 	"Allow gdb to find debug symbols file by build-id for PE file
 	format also"
