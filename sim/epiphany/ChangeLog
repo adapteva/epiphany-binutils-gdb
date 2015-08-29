@@ -1,0 +1,114 @@
+2012-01-23  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* configure: Regenerate.
+
+2011-11-16  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany-fp.c, Makefile.in, sim-if.c, traps.c, mloop.in:
+	Remove trailing whitespace / replace octuple spaces with tabs.
+
+	* Makefile.in, epiphany-sim.h, mloop.in, epiphany.c, sim-main.h:
+	Update Copyright, reformat, delete obsolete code.
+	* epiphany-fp.c, devices.c, sim-if.c, epiphany-fp.h, traps.c: Likewise.
+
+	* epiphany-fp.c (FINISH, DENORM, f1, foo): Delete.
+	(convert2int): Rename to ...
+	(float_as_int) ... this.  Changed all callers.  Use a union.
+	(int_as_float): New function.
+	(fcal): Use int_as_float instead of volatile variables.
+	Check return value of fesetround.
+	(result, resusi, f, fn, dn): Delete.
+	(epiphany_fix): Use int_as_float instead of volatile variables.
+	(epiphany_icommon): Add flag handling.
+
+2011-11-15  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany.c (epiphany_trap): Add TARGET_SYS_link and
+	TARGET_SYS_unlink.
+
+2011-11-10  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany.c (fetch_str): Delete.
+	(syscall_read_mem, syscall_write_mem): New function.
+	(epiphany_trap): Remove unused variables res_buf and fmt.
+	Use cb_syscall.
+
+2011-11-09  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany.c (printf_wrapper): Delete.
+	(epiphany_trap): Move syscall handling into TRAP_OTHER.
+	Use PARM3 to hold syscall number on entry and errno on exit.
+	Add support for lseek.  Remove printf functionality.
+
+2011-11-08  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany.c: Include <sys/time.h>, <sys/types.h>,
+	<sys/stat.h>, <errno.h>, <unistd.h> and "targ-vals.h".
+	(epiphany_trap) [TRAP_OTHER]: restore PARAM0 as subcode / syscall
+	parameter.  Handle TARGET_SYS_gettimeofday, TARGET_SYS_stat and
+	TARGET_SYS_fstat.
+
+	* epiphany.c: Fix Copyright years and contributing party.
+	* Makefile.in: Likewise.
+
+2011-08-16  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-desc.h, epiphany-opc.h: Deleted.
+
+2011-08-16  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+	* epiphany-desc.h, model.c, epiphany-opc.h, arch.c, arch.h,
+	* decode.c, sem-switch.c, sem.c, cpuall.h, cpu.c, decode.h,
+	* epiphany-desc.c, cpu.h: Regenerated using CGEN.
+	* configure, config.in: Regenerated using autoconf.
+
+2011-08-16  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* epiphany-fp.c (WANT_CPU, WANT_CPU_EPIPHANYBF): Define.
+
+	* devices.c (device_error): Constify message parameter.
+
+	* epiphany.c (epiphany_trap): Replace zfree with free.
+
+2010-03-20  Alan Lehotsky  <apl@alum.mit.edu>
+
+	* model.c, decode.c, sem-switch.c, sem.c, cpu.c epiphany-desc.c
+	  decode.h cpu.h epiphany-desc.h: Regenerate.
+
+2010-03-20  Alan Lehotsky  <apl@alum.mit.edu>
+
+	* epiphany-fp.c, epiphany.epiphany-fp.h: New file for fp simulator.
+	* Makefile.in: Add dependencies
+	* epiphany-opc.h, epiphany-desc.c, epiphany-desc.h,
+	  sem-switch.c, sem.c, cpu.c, cpu.h: Regenerate.
+	* sim-main.h: integrate fp simulator.
+
+2010-03-08  Alan Lehotsky  <apl@alum.mit.edu>
+
+	* model.c, sem-switch.c, decode.c, sem.c,
+	  decode.h, cpu.h: Regenerate.
+	* Makefile.in (EPIPHANYBF_INCLUDE_DEPS): Add dependent headers.
+
+2010-02-21  Alan Lehotsky <apl@alum.mit.edu>
+
+	* epiphany.c (epiphany_trap): finish implementing i/o for
+		  simulator.
+
+2009-10-03  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* model.c, decode.c, sem-switch.c, sem.c, decode.h, cpu.h: Regenerate.
+
+2009-09-29  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* model.c, sem-switch.c, decode.c, sem.c, cpu.c, decode.h: Regenerate.
+	* cpu.h: Likewise.
+
+2009-09-19  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* cpu.h: Regenerate.
+
+2009-09-17  Joern Rennecke  <joern.rennecke@embecosm.com>
+
+	* sem-switch.c, decode.c, sem.c, decode.h: Regenerate.
+
+	* sem-switch.c, sem.c: Regenerate.
