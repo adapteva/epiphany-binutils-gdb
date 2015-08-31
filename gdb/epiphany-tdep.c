@@ -1237,8 +1237,8 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
   /* Put as many args as possible in registers */
   for (argnum = 0; argnum < nargs; argnum++)
     {
-      char           *val;
-      char            valbuf[sizeof (ULONGEST) ];
+      const gdb_byte *val;
+      gdb_byte        valbuf[sizeof (ULONGEST)];
 
       struct value   *arg      = args[argnum];
       struct type    *arg_type = check_typedef (value_type (arg));
@@ -1256,7 +1256,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 	  if (epiphany_aggregate_by_value_p (gdbarch, function, argnum,
 					     args, len))
 	    {
-	      val = (char *) value_contents (arg);
+	      val = value_contents (arg);
 	      epiphany_debug_infrun ("  aggregate passed by value\n");
 	    }
 	  else
@@ -1274,7 +1274,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
       else
 	{
 	  /* Everything else, we just get the value. */
-	  val = (char *) value_contents (arg);
+	  val = value_contents (arg);
 	  epiphany_debug_infrun ("  scalar passed by value\n");
 	}
 
@@ -1458,8 +1458,8 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
   /* Push the remaining args on the stack */
   for (argnum = first_stack_arg; argnum < nargs; argnum++)
     {
-      char           *val;
-      char            valbuf[sizeof (ULONGEST) ];
+      const gdb_byte *val;
+      gdb_byte        valbuf[sizeof (ULONGEST)];
 
       struct value   *arg      = args[argnum];
       struct type    *arg_type = check_typedef (value_type (arg));
@@ -1477,7 +1477,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
 					     args, len))
 	    {
 	      /* Get the value. */
-	      val = (char *) value_contents (arg);
+	      val = value_contents (arg);
 	      epiphany_debug_infrun ("  aggregate passed by value\n");
 	    }
 	  else
@@ -1495,7 +1495,7 @@ epiphany_push_dummy_call (struct gdbarch  *gdbarch,
       else
 	{
 	  /* Get the value of a scalar. */
-	  val = (char *) value_contents (arg);
+	  val = value_contents (arg);
 	  epiphany_debug_infrun ("  scalar passed by value\n");
 	}
 
@@ -2103,6 +2103,8 @@ epiphany_software_single_step (struct frame_info *frame)
       /* We should never get here. */
       gdb_assert (1);
     }
+
+  return 0;
 }	/* epiphany_software_single_step () */
 
 

@@ -1,3 +1,10 @@
+2015-08-31  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb/epiphany-tdep.c (epiphany_push_dummy_call): Fix type
+	warnings.
+	(epiphany_software_single_step): Return 0 if failed to insert
+	breakpoint.
+
 2015-04-22  Hesham ALMatary  <heshamelmatary@gmail.com>
 
 	* configure.tgt: Add epiphany-*-rtems* target
