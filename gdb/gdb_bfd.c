@@ -222,10 +222,11 @@ gdb_bfd_iovec_fileio_open (struct bfd *abfd, void *inferior)
 
   gdb_assert (is_target_filename (filename));
 
-  fd = target_fileio_open ((struct inferior *) inferior,
-			   filename + strlen (TARGET_SYSROOT_PREFIX),
-			   FILEIO_O_RDONLY, 0,
-			   &target_errno);
+  fd = target_fileio_open_warn_if_slow ((struct inferior *) inferior,
+					filename
+					+ strlen (TARGET_SYSROOT_PREFIX),
+					FILEIO_O_RDONLY, 0,
+					&target_errno);
   if (fd == -1)
     {
       errno = fileio_errno_to_host (target_errno);
@@ -252,6 +253,8 @@ gdb_bfd_iovec_fileio_pread (struct bfd *abfd, void *stream, void *buf,
   pos = 0;
   while (nbytes > pos)
     {
+      QUIT;
+
       bytes = target_fileio_pread (fd, (gdb_byte *) buf + pos,
 				   nbytes - pos, offset + pos,
 				   &target_errno);

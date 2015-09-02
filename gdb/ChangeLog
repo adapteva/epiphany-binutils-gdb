@@ -1,3 +1,197 @@
+2015-08-28  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.10.
+
+2015-08-28  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Rename "Changes since GDB 7.9" into "Changes in GDB 7.10".
+
+2015-08-25  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* infcmd.c (signal_command): Call do_cleanups for args_chain.
+
+2015-08-25  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR gdb/18767
+	* infcmd.c (attach_command): Move ARGS_CHAIN cleanup after last ARGS
+	use.
+
+2015-08-24  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/18804
+	* defs.h (maybe_quit): Declare.
+	(QUIT): Now calls maybe_quit.
+	* event-loop.c (clear_async_signal_handler)
+	(async_signal_handler_is_marked): New functions.
+	* event-loop.h (async_signal_handler_is_marked)
+	(clear_async_signal_handler): New declarations.
+	* remote.c (remote_check_pending_interrupt): New function.
+	(interrupt_query): Use make_cleanup_restore_target_terminal.  No
+	longer check whether the target is async.  If waiting for a stop
+	reply, and a Ctrl-C as been sent to the target, offer to
+	disconnect, and throw TARGET_CLOSE_ERROR instead of a quit.
+	Otherwise do not disconnect and throw a quit.
+	(_initialize_remote): Install remote_check_pending_interrupt as
+	to_check_pending_interrupt.
+	* target.c (target_check_pending_interrupt): New function.
+	* target.h (struct target_ops) <to_check_pending_interrupt>: New
+	field.
+	(target_check_pending_interrupt): New declaration.
+	* utils.c (maybe_quit): New function.
+	* target-delegates.c: Regenerate.
+
+2015-08-21  Gary Benson  <gbenson@redhat.com>
+
+	* gdb_bfd.c (gdb_bfd_iovec_fileio_pread): Add QUIT call.
+
+2015-08-21  Gary Benson  <gbenson@redhat.com>
+
+	* target.h (struct target_ops) <to_fileio_open>: New argument
+	warn_if_slow.  Update comment.  All implementations updated.
+	(target_fileio_open_warn_if_slow): New declaration.
+	* target.c (target_fileio_open): Renamed as...
+	(target_fileio_open_1): ...this.  New argument warn_if_slow.
+	Pass warn_if_slow to implementation.  Update debug printing.
+	(target_fileio_open): New function.
+	(target_fileio_open_warn_if_slow): Likewise.
+	* gdb_bfd.c (gdb_bfd_iovec_fileio_open): Use new function
+	target_fileio_open_warn_if_slow.
+
+2015-08-21  Gary Benson  <gbenson@redhat.com>
+
+	* nat/linux-namespaces.c (linux_mntns_access_fs):
+	Do not overwrite old_chain.
+
+2015-08-21  Pedro Alves  <palves@redhat.com>
+
+	* remote.c (struct readahead_cache): New.
+	(struct remote_state) <readahead_cache>: New field.
+	(remote_open_1): Invalidate the cache.
+	(readahead_cache_invalidate, readahead_cache_invalidate_fd): New
+	functions.
+	(remote_hostio_pwrite): Invalidate the readahead cache.
+	(remote_hostio_pread): Rename to ...
+	(remote_hostio_pread_vFile): ... this.
+	(remote_hostio_pread_from_cache): New function.
+	(remote_hostio_pread): Reimplement.
+	(remote_hostio_close): Invalidate the readahead cache.
+
+2015-08-21  Marcin Cieślak <saper@saper.info>  (tiny patch)
+
+	PR build/18843
+	* procfs.c: Include "filestuff.h".
+
+2015-08-18  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* remote.c (strprefix): New.
+	(remote_parse_stop_reply): Use strprefix instead of strncmp
+	to ensure exact match of keyword.
+
+2015-08-18  Yao Qi  <yao.qi@linaro.org>
+
+	PR record/18691
+	* dcache.c (dcache_read_memory_partial): Call
+	raw_memory_xfer_partial.
+	* target.c (raw_memory_xfer_partial): Make it non-static.
+	* target.h (raw_memory_xfer_partial): Declare.
+
+2015-08-13  Joel Brobecker  <brobecker@adacore.com>
+
+	* amd64-tdep.c (amd64_displaced_step_fixup): Fix the mask used to
+	compute RETADDR.
+
+2015-08-12  Luis Machado  <lgustavo@codesourcery.com>
+
+	* breakpoint.c (bp_loc_is_permanent): Return 0 when breakpoint
+	location address is not meaningful.
+	(breakpoint_address_is_meaningful): Update comment.
+
+2015-08-10  Doug Evans  <dje@google.com>
+	    Keith Seitz  <keiths@redhat.com>
+
+	PR gdb/17960
+	* symtab.c (make_file_symbol_completion_list_1): Renamed from
+	make_file_symbol_completion_list and made static.
+	(make_file_symbol_completion_list): New function.
+
+2015-08-06  Clem Dickey  <clemd@acm.org>
+
+	PR python/17136
+	* python/lib/gdb/command/type_printers.py (InfoTypePrinter): Fix typo.
+
+2015-08-06  Pedro Alves  <palves@redhat.com>
+
+	* nat/linux-waitpid.c (my_waitpid): Only print *status if waitpid
+	returned > 0.
+
+2015-08-06  Pedro Alves  <palves@redhat.com>
+
+	* target/waitstatus.h (enum target_stop_reason)
+	<TARGET_STOPPED_BY_SINGLE_STEP>: New value.
+
+2015-08-05  Pedro Alves  <palves@redhat.com>
+	    Joel Brobecker  <brobecker@adacore.com>
+
+        * breakpoint.c (bpstat_what) <bp_longjmp, bp_longjmp_call_dummy>
+	<bp_exception, bp_longjmp_resume, bp_exception_resume>: Handle the
+	case where BS->STOP is not set.
+
+2015-07-30  Pedro Alves  <palves@redhat.com>
+
+	PR threads/18600
+	* linux-nat.c (wait_lwp): Report to the core when thread group
+	leader exits.
+
+2015-07-30  Pedro Alves  <palves@redhat.com>
+	    Simon Marchi  <simon.marchi@ericsson.com>
+
+	PR threads/18600
+	* linux-nat.c (linux_handle_extended_wait): On CLONE event, always
+	mark the new thread as resumed.  Remove STOPPING parameter.
+	(wait_lwp): Adjust call to linux_handle_extended_wait.
+	(linux_nat_filter_event): Adjust call to
+	linux_handle_extended_wait.
+	(resume_stopped_resumed_lwps): Add debug output.
+
+2015-07-10  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* record-btrace.c (record_btrace_goto_begin)
+	(record_btrace_goto_end, record_btrace_goto): Move call to
+	print_stack_frame ...
+	(record_btrace_set_replay): ... here.  Set stop_pc.
+	* record-full.c (record_full_goto_entry): Set stop_pc.
+
+2015-07-09  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* btrace.c (btrace_pt_readmem_callback): Change type of PC argument.
+
+2015-07-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR compile/18484
+	* compile/compile-c-types.c (insert_type): Change gdb_assert to error.
+
+2015-07-08  Robert O'Callahan  <robert@ocallahan.org>
+
+	PR exp/18617
+	* ax-gdb.c (gen_conversion): Extend to 'to' bits, not 'from'.
+
+2015-07-06  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.9.90.DATE-cvs.
+
+2015-07-06  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.9.90 released.
+
+2015-07-06  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 7.9.90.
+
+2015-07-06  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.10 branch created (66c4b3e8a628a207bc6aafef6af0c4128195f56e):
+	* version.in: Bump version to 7.9.90.DATE-cvs.
+
 2015-07-06  Luis Machado  <lgustavo@codesourcery.com>
 
 	* breakpoint.c (remove_breakpoint_1): Don't handle permanent

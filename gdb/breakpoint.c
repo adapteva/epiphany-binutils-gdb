@@ -5752,13 +5752,23 @@ bpstat_what (bpstat bs_head)
 	case bp_longjmp:
 	case bp_longjmp_call_dummy:
 	case bp_exception:
-	  this_action = BPSTAT_WHAT_SET_LONGJMP_RESUME;
-	  retval.is_longjmp = bptype != bp_exception;
+	  if (bs->stop)
+	    {
+	      this_action = BPSTAT_WHAT_SET_LONGJMP_RESUME;
+	      retval.is_longjmp = bptype != bp_exception;
+	    }
+	  else
+	    this_action = BPSTAT_WHAT_SINGLE;
 	  break;
 	case bp_longjmp_resume:
 	case bp_exception_resume:
-	  this_action = BPSTAT_WHAT_CLEAR_LONGJMP_RESUME;
-	  retval.is_longjmp = bptype == bp_longjmp_resume;
+	  if (bs->stop)
+	    {
+	      this_action = BPSTAT_WHAT_CLEAR_LONGJMP_RESUME;
+	      retval.is_longjmp = bptype == bp_longjmp_resume;
+	    }
+	  else
+	    this_action = BPSTAT_WHAT_SINGLE;
 	  break;
 	case bp_step_resume:
 	  if (bs->stop)
@@ -6911,14 +6921,14 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 
 
 /* Return true iff it is meaningful to use the address member of
-   BPT.  For some breakpoint types, the address member is irrelevant
-   and it makes no sense to attempt to compare it to other addresses
-   (or use it for any other purpose either).
+   BPT locations.  For some breakpoint types, the locations' address members
+   are irrelevant and it makes no sense to attempt to compare them to other
+   addresses (or use them for any other purpose either).
 
    More specifically, each of the following breakpoint types will
-   always have a zero valued address and we don't want to mark
+   always have a zero valued location address and we don't want to mark
    breakpoints of any of these types to be a duplicate of an actual
-   breakpoint at address zero:
+   breakpoint location at address zero:
 
       bp_watchpoint
       bp_catchpoint
@@ -8954,6 +8964,13 @@ bp_loc_is_permanent (struct bp_location *loc)
   int retval;
 
   gdb_assert (loc != NULL);
+
+  /* If we have a catchpoint or a watchpoint, just return 0.  We should not
+     attempt to read from the addresses the locations of these breakpoint types
+     point to.  program_breakpoint_here_p, below, will attempt to read
+     memory.  */
+  if (!breakpoint_address_is_meaningful (loc->owner))
+    return 0;
 
   cleanup = save_current_space_and_thread ();
   switch_to_program_space_and_thread (loc->pspace);

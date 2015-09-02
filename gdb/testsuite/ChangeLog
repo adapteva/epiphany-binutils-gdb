@@ -1,3 +1,80 @@
+2015-08-21  Gary Benson <gbenson@redhat.com>
+
+	* gdb.trace/pending.exp: Cope with remote transfer warnings.
+
+2015-08-13  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.base/dso2dso.exp: Improve the testcase's documentation.
+
+2015-08-13  Keith Seitz  <keiths@redhat.com>
+
+	* gdb.base/dso2dso.exp: Pass basename of source file in call to
+	gdb_get_line_number.
+
+2015-08-13  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.base/dso2dso-dso2.c, gdb.base/dso2dso-dso2.h,
+	gdb.base/dso2dso-dso1.c, gdb.base/dso2dso-dso1.h, gdb.base/dso2dso.c,
+	gdb.base/dso2dso.exp: New files.
+
+2015-08-10  Doug Evans  <dje@google.com>
+	    Keith Seitz  <keiths@redhat.com>
+
+	PR gdb/17960
+	* gdb.base/completion.exp: Add location completer tests.
+
+2015-08-06  Pedro Alves  <palves@redhat.com>
+
+	* gdb.threads/forking-threads-plus-breakpoint.exp: New file.
+	* gdb.threads/forking-threads-plus-breakpoint.c: New file.
+
+2015-08-05  Pedro Alves  <palves@redhat.com>
+
+	* gdb.threads/next-while-other-thread-longjmps.c: New file.
+	* gdb.threads/next-while-other-thread-longjmps.exp: New file.
+
+2015-07-30  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (handle_extended_wait): Set the child's last
+	reported status to TARGET_WAITKIND_STOPPED.
+
+2015-07-30  Pedro Alves  <palves@redhat.com>
+
+	PR threads/18600
+	* gdb.threads/fork-plus-threads.exp: Test that "info inferiors"
+	only shows inferior 1.
+
+2015-07-30  Simon Marchi  <simon.marchi@ericsson.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	PR threads/18600
+	* gdb.threads/fork-plus-threads.c: New file.
+	* gdb.threads/fork-plus-threads.exp: New file.
+
+2015-07-10  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/record_goto-step.exp: New.
+
+2015-07-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.asm/asm-source.exp (f at main): Stop at gdbasm_enter.
+	(n at main): New.
+	* gdb.asm/asmsrc1.s: Add comment "mark: main enter".
+
+2015-07-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR compile/18484
+	* gdb.compile/compile.c (struct struct_type): Add volatile to
+	selffield's type.
+	* gdb.compile/compile.exp
+	(compile code struct_object.selffield = &struct_object): Skip further
+	struct_object tests if this one xfails.
+
+2015-07-08  Robert O'Callahan  <robert@ocallahan.org>
+
+	PR exp/18617
+	* gdb.trace/ax.exp: Add test.
+
 2015-06-30  Martin Galvan  <martin.galvan@tallertechnologies.com>
 
 	* lib/gdb.exp (test_class_help): Remove the unneeded escaping of

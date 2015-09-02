@@ -265,6 +265,11 @@ typedef enum target_xfer_status
 			     ULONGEST len,
 			     ULONGEST *xfered_len);
 
+enum target_xfer_status
+  raw_memory_xfer_partial (struct target_ops *ops, gdb_byte *readbuf,
+			   const gdb_byte *writebuf, ULONGEST memaddr,
+			   LONGEST len, ULONGEST *xfered_len);
+
 /* Request that OPS transfer up to LEN addressable units of the target's
    OBJECT.  When reading from a memory object, the size of an addressable unit
    is architecture dependent and can be found using
@@ -631,6 +636,8 @@ struct target_ops
       TARGET_DEFAULT_RETURN (NULL);
     void (*to_stop) (struct target_ops *, ptid_t)
       TARGET_DEFAULT_IGNORE ();
+    void (*to_check_pending_interrupt) (struct target_ops *)
+      TARGET_DEFAULT_IGNORE ();
     void (*to_rcmd) (struct target_ops *,
 		     const char *command, struct ui_file *output)
       TARGET_DEFAULT_FUNC (default_rcmd);
@@ -858,11 +865,14 @@ struct target_ops
     /* Open FILENAME on the target, in the filesystem as seen by INF,
        using FLAGS and MODE.  If INF is NULL, use the filesystem seen
        by the debugger (GDB or, for remote targets, the remote stub).
-       Return a target file descriptor, or -1 if an error occurs (and
-       set *TARGET_ERRNO).  */
+       If WARN_IF_SLOW is nonzero, print a warning message if the file
+       is being accessed over a link that may be slow.  Return a
+       target file descriptor, or -1 if an error occurs (and set
+       *TARGET_ERRNO).  */
     int (*to_fileio_open) (struct target_ops *,
 			   struct inferior *inf, const char *filename,
-			   int flags, int mode, int *target_errno);
+			   int flags, int mode, int warn_if_slow,
+			   int *target_errno);
 
     /* Write up to LEN bytes from WRITE_BUF to FD on the target.
        Return the number of bytes written, or -1 if an error occurs
@@ -1660,6 +1670,14 @@ extern void target_update_thread_list (void);
 
 extern void target_stop (ptid_t ptid);
 
+/* Some targets install their own SIGINT handler while the target is
+   running.  This method is called from the QUIT macro to give such
+   targets a chance to process a Ctrl-C.  The target may e.g., choose
+   to interrupt the (potentially) long running operation, or give up
+   waiting and disconnect.  */
+
+extern void target_check_pending_interrupt (void);
+
 /* Send the specified COMMAND to the target's monitor
    (shell,interpreter) for execution.  The result of the query is
    placed in OUTBUF.  */
@@ -1977,6 +1995,14 @@ extern int target_search_memory (CORE_ADDR start_addr,
 extern int target_fileio_open (struct inferior *inf,
 			       const char *filename, int flags,
 			       int mode, int *target_errno);
+
+/* Like target_fileio_open, but print a warning message if the
+   file is being accessed over a link that may be slow.  */
+extern int target_fileio_open_warn_if_slow (struct inferior *inf,
+					    const char *filename,
+					    int flags,
+					    int mode,
+					    int *target_errno);
 
 /* Write up to LEN bytes from WRITE_BUF to FD on the target.
    Return the number of bytes written, or -1 if an error occurs
