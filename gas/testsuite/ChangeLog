@@ -1,4 +1,118 @@
-2014-10-09  Jose E. Marchesi  &lt;jose.marchesi@oracle.com&gt;
+2014-12-19  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	* gas/mips/r6-64.s: Remove .align directives from LDPC
+	instructions and add further tests for LDPC.
+	* gas/mips/r6-64-n32.d: remove the NOPs from LDPC expected
+	output and update for new tests.
+	* gas/mips/r6-64-n64.d: Likewise.
+	* gas/mips/ldpc-unalign.l: New file.
+	* gas/mips/ldpc-unalign.s: Likewise.
+	* gas/mips/mips.exp: Run ldpc-unalign test.
+
+2014-12-19  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	* gas/mips/r6.s: Test JALRC and NAL
+	* gas/mips/r6-n32.d: Add expected output for JALRC and NAL.
+	* gas/mips/r6-n64.d: Likewise.
+	* gas/mips/r6.d: Likewise.
+
+2014-11-30  Alan Modra  <amodra@gmail.com>
+
+	* gas/ppc/a2.d: Update for mftb change.
+	* gas/ppc/476.d: Likewise.
+
+2014-11-18  Igor Zamyatin  <igor.zamyatin@intel.com>
+
+	* gas/i386/x86-64-mpx-branch-1.d: Don't use *_BND relocations.
+	* gas/i386/x86-64-mpx-branch-2.d: Likewise.
+
+2014-11-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/i386.exp: Run new tests.
+	* gas/i386/avx512vbmi-intel.d: New file.
+	* gas/i386/avx512vbmi.d: Likewise.
+	* gas/i386/avx512vbmi.s: Likewise.
+	* gas/i386/avx512vbmi_vl-intel.d: Likewise.
+	* gas/i386/avx512vbmi_vl.d: Likewise.
+	* gas/i386/avx512vbmi_vl.s: Likewise.
+	* gas/i386/x86-64-avx512vbmi-intel.d: Likewise.
+	* gas/i386/x86-64-avx512vbmi.d: Likewise.
+	* gas/i386/x86-64-avx512vbmi.s: Likewise.
+	* gas/i386/x86-64-avx512vbmi_vl-intel.d: Likewise.
+	* gas/i386/x86-64-avx512vbmi_vl.d: Likewise.
+	* gas/i386/x86-64-avx512vbmi_vl.s: Likewise.
+
+2014-11-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/i386.exp: Run new tests.
+	* gas/i386/avx512ifma-intel.d: New file.
+	* gas/i386/avx512ifma.d: Likewise.
+	* gas/i386/avx512ifma.s: Likewise.
+	* gas/i386/avx512ifma_vl-intel.d: Likewise.
+	* gas/i386/avx512ifma_vl.d: Likewise.
+	* gas/i386/avx512ifma_vl.s: Likewise.
+	* gas/i386/x86-64-avx512ifma-intel.d: Likewise.
+	* gas/i386/x86-64-avx512ifma.d: Likewise.
+	* gas/i386/x86-64-avx512ifma.s: Likewise.
+	* gas/i386/x86-64-avx512ifma_vl-intel.d: Likewise.
+	* gas/i386/x86-64-avx512ifma_vl.d: Likewise.
+	* gas/i386/x86-64-avx512ifma_vl.s: Likewise.
+
+2014-11-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/i386.exp: Run new tests.
+	* gas/i386/pcommit-intel.d: New file.
+	* gas/i386/pcommit.d: Likewise.
+	* gas/i386/pcommit.s: Likewise.
+	* gas/i386/x86-64-pcommit-intel.d: Likewise.
+	* gas/i386/x86-64-pcommit.d: Likewise.
+	* gas/i386/x86-64-pcommit.s: Likewise.
+
+2014-11-17  Ilya Tocar  <ilya.tocar@intel.com>
+
+	* gas/i386/i386.exp: Run new tests.
+	* gas/i386/clwb-intel.d: New file.
+	* gas/i386/clwb.d: Likewise.
+	* gas/i386/clwb.s: Likewise.
+	* gas/i386/x86-64-clwb-intel.d: Likewise.
+	* gas/i386/x86-64-clwb.d: Likewise.
+	* gas/i386/x86-64-clwb.s: Likewise.
+
+2014-11-10  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	Apply trunk patch:
+	* gas/mips/elf_arch_mips32r6.d: New file.
+	* gas/mips/elf_arch_mips64r6.d: New file.
+	* gas/mips/mips.exp: Run the new tests.
+
+2014-11-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Apply trunk patch:
+	2014-11-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/17482
+	* gas/i386/ilp32/x32-tls.d: New file.
+	* gas/i386/ilp32/x32-tls.s: Likewise.
+
+2014-10-28  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	Apply trunk patches
+	2014-10-21  Maciej W. Rozycki  <macro@codesourcery.com>
+	* gas/mips/insn-opts.d: New test.
+	* gas/mips/insn-opts.s: New test source.
+	* gas/mips/mips.exp: Run the new test.
+
+2014-10-28  Alan Modra  <amodra@gmail.com>
+
+	Apply truck patches
+	2014-10-21  Jan Beulich  <jbeulich@suse.com>
+	* gas/ppc/power8.s: Test msgclr and msgsnd.
+	* gas/ppc/power8.d: Adjust accordingly.
+
+	2014-10-18  Alan Modra  <amodra@gmail.com>
+	* gas/i386/inval-equ-2.l: Adjust.
+
+2014-10-09  Jose E. Marchesi  <jose.marchesi@oracle.com>
 
 	* gas/sparc/hpcvis3.d: Remove tests for the `chkpt', `commit',
 	`random', `wr r,i,%cps' and `rd r,%cps' instructions.

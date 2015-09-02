@@ -1,3 +1,71 @@
+2014-12-04  Alan Modra  <amodra@gmail.com>
+
+	* Powerpc.cc (Target_powerpc::Branch_info::make_stub): Ignore
+	addend of PLTREL24 reloc when not generating a plt stub.  Make
+	max_branch_offset an "Address".
+	(Target_powerpc::Relocate::relocate): Make max_branch_offset
+	an "Address".
+
+2014-12-04  Alan Modra  <amodra@gmail.com>
+
+	PR 17670
+	* symtab.cc (Symbol::set_undefined): Remove assertion.
+	* powerpc.cc (Target_powerpc::symval_for_branch): Don't assert
+	on symbols defined in discarded sections, instead return false.
+	Rearrange params, update all callers.
+	(Target_powerpc::Branch_info::make_stub): Don't make stubs for
+	branches to syms in discarded sections.
+	(Global_symbol_visitor_opd::operator()): Set discarded opd syms
+	undefined and flag as discarded.
+	(Target_powerpc::Relocate::relocate): Localize variable.
+
+2014-12-03  Alan Modra  <amodra@gmail.com>
+
+	PR 17566
+	* powerpc.cc (Target_powerpc::Scan::local): Use add_local_section
+	when adding dynamic relocations against section symbols.
+
+2014-11-26  Alan Modra  <amodra@gmail.com>
+
+	* powerpc.cc (Stub_control::set_output_and_owner): New function.
+	(Target_powerpc::group_sections): Use it.
+
+2014-11-25  Cary Coutant  <ccoutant@google.com>
+
+	PR gold/17639
+	* object.cc (Sized_relobj_file): Initialize is_deferred_layout_.
+	(Sized_relobj_file::do_layout): Handle deferred sections properly
+	during GC pass 1. Don't add reloc sections to deferred list twice.
+	* object.h (Sized_relobj_file::is_deferred_layout): New function.
+	(Sized_relobj_file::is_deferred_layout_): New data member.
+
+2014-11-21  Alan Modra  <amodra@gmail.com>
+
+	* powerpc.cc (Target_powerpc::Relocate::relocate): Correct test
+	for undefined weaks.
+
+2014-11-20  Alan Modra  <amodra@gmail.com>
+
+	* powerpc.cc (Stub_control::Stub_control): Init stub14_group_size_
+	from --stub-group-size parameter divided by 1024.
+	(Powerpc_relocate_functions::rela, rela_ua): Add fieldsize
+	template parameter.  Update all uses.
+	(Target_powerpc::Relocate::relocate): Rename has_plt_value to
+	has_stub_value.  Set for long branches.  Don't report overflow for
+	branch to undefined weak symbols.  Print info message on
+	overflowing branch to stub.
+
+2014-11-20  Alan Modra  <amodra@gmail.com>
+
+	* powerpc.cc (Target_powerpc::do_relax): Add __go_go to thread_starters.
+
+2014-10-28  Alan Modra  <amodra@gmail.com>
+
+	Apply trunk patches
+	2014-10-22  Alan Modra  <amodra@gmail.com>
+	* powerpc.cc (do_relax): Add gcc-4.9 libgomp functions to
+	thread_starter.
+
 2014-09-30  Cary Coutant  <ccoutant@google.com>
 
 	PR gold/17432

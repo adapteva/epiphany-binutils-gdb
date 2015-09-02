@@ -1,3 +1,694 @@
+2014-12-23  Tristan Gingold  <gingold@adacore.com>
+
+	* version.m4: Bump version to 2.25
+	* configure: Regenerate.
+
+2014-12-19  Andrew Bennett  <andrew.bennett@imgtec.com>
+
+	* elfxx-mips.c (mips_elf_calculate_relocation): Only check for
+	overflow on non-weak undefined symbols.
+
+2014-12-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/17713
+	* elflink.c (_bfd_elf_gc_mark_rsec): Check corrupt input.
+
+2014-12-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/17689
+	* elf64-x86-64.c (elf_x86_64_link_hash_entry): Add needs_copy.
+	Change has_bnd_reloc to bit field.
+	(elf_x86_64_link_hash_newfunc): Initialize needs_copy and
+	has_bnd_reloc to 0.
+	(elf_x86_64_check_relocs): Set has_bnd_reloc to 1 instead
+	of TRUE.
+	(elf_x86_64_adjust_dynamic_symbol): Copy needs_copy from the
+	real definition to a weak symbol.
+	(elf_x86_64_allocate_dynrelocs): Also check needs_copy of a
+	weak symbol for PIE when discarding space for relocs against
+	symbols which turn out to need copy relocs.
+	(elf_x86_64_relocate_section): Also check needs_copy of a
+	weak symbol for PIE with copy reloc.
+
+2014-12-12  Alan Modra  <amodra@gmail.com>
+
+	PR 15228
+	* elflink.c (_bfd_elf_adjust_dynamic_copy): Call bfd_set_error.
+
+2014-12-10  Alan Modra  <amodra@gmail.com>
+
+	* dwarf2.c (read_address): Check bfd_target_elf_flavour before
+	calling get_elf_backend_data.
+	(_bfd_dwarf2_find_nearest_line): Fix parens.
+
+2014-12-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf64-x86-64.c (bfd_elf32_get_synthetic_symtab): New.
+
+2014-12-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/17677
+	* elf-bfd.h (_bfd_elf_ifunc_get_synthetic_symtab): New prototype.
+	* elf-ifunc.c (_bfd_elf_ifunc_get_synthetic_symtab): New
+	function.
+	* elf32-i386.c (elf_i386_plt_sym_val): Removed.
+	(elf_backend_plt_sym_val): Likewise.
+	(elf_i386_get_plt_sym_val): New.
+	(elf_i386_get_synthetic_symtab): Likewise.
+	(bfd_elf32_get_synthetic_symtab): Likewise.
+	* elf64-x86-64.c (elf_x86_64_plt_sym_val): Removed.
+	(elf_x86_64_plt_sym_val_offset_plt_bnd): Likewise.
+	(elf_backend_plt_sym_val): Likewise.
+	(elf_x86_64_get_plt_sym_val): New.
+	(elf_x86_64_get_synthetic_symtab): Use
+	_bfd_elf_ifunc_get_synthetic_symtab.
+	(bfd_elf64_get_synthetic_symtab): Don't undefine for NaCl.
+
+2014-12-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf64-x86-64.c (elf_x86_64_create_dynamic_sections): Reformat.
+
+2014-12-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf64-x86-64.c (elf_x86_64_relocate_section): Check
+	info->executable for symbols which need copy relocs.
+
+2014-12-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf64-x86-64.c (elf_x86_64_check_relocs): Revert the last
+	change.
+	(elf_x86_64_adjust_dynamic_symbol): Don't check !info->shared
+	with ELIMINATE_COPY_RELOCS.
+	(elf_x86_64_allocate_dynrelocs): For PIE, discard space for
+	relocs against symbols which turn out to need copy relocs.
+
+2014-12-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf64-x86-64.c (elf_x86_64_create_dynamic_sections): Always
+	allow copy relocs for building executables.
+	(elf_x86_64_check_relocs): Allow copy relocs for non-GOT
+	pc-relative relocation in shared object.
+	(elf_x86_64_adjust_dynamic_symbol): Allocate copy relocs for
+	PIE.
+	(elf_x86_64_relocate_section): Don't copy a pc-relative
+	relocation into the output file if the symbol needs copy reloc.
+
+2014-11-30  Alan Modra  <amodra@gmail.com>
+
+	PR 16452, 16457
+	* elflink.c (_bfd_elf_link_find_version_dependencies): Exclude
+	symbols from libraries that won't be listed in DT_NEEDED.
+	(elf_link_output_extsym): Don't output verdefs for such symbols.
+
+2014-11-24  Tejas Belagod  <tejas.belagod@arm.com>
+
+	* elfnn-aarch64.c (elf_aarch64_compare_mapping): New.
+	(erratum_835769_scan): Sort map list.
+
+2014-11-24  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (plt_stub_pad): Correct.
+
+2014-11-20  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (group_sections): Init stub14_group_size from
+	--stub-group-size parameter divided by 1024.
+
+2014-11-20  Alan Modra  <amodra@gmail.com>
+
+	* elf32-ppc.c (ppc_elf_relax_section): Correct ppc476 workaround
+	alignment calculation.
+
+2014-11-20  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (ppc64_elf_size_stubs): Add __go_go to thread_starters.
+
+2014-11-18  Igor Zamyatin  <igor.zamyatin@intel.com>
+
+	* elf64-x86-64.c (elf_x86_64_check_relocs): Enable MPX PLT only
+	for -z bndplt.
+
+2014-11-17  Nick Clifton  <nickc@redhat.com>
+
+	Apply trunk patches:
+
+	2014-11-14  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17597
+	* opncls.c (bfd_get_debug_link_info): Avoid reading off the end of
+	the section.
+	(bfd_get_alt_debug_link_info): Likewise.
+
+	2014-11-14  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* ieee.c (ieee_archive_p) Skip processing if no bytes are read at
+	all.
+	(ieee_object_p): Likewise.
+
+	2014-11-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* coffcode.h (coff_slurp_line_table): Add cast to unsigned int.
+
+	2014-11-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* coffcode.h (coff_pointerize_aux_hook): Fix a typo.
+
+	2014-11-13  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* coffcode.h (coff_ptr_struct): Add is_sym field.
+	(coff_new_section_hook): Set the is_sym field.
+	(coff_pointerize_aux_hook): Check the is_sym field.
+	(coff_print_aux): Likewise.
+	(coff_compute_section_file_positions): Likewise.
+	(coff_write_object_contents): Likewise.
+	(coff_slurp_line_table): Likewise.
+	(coff_slurp_symbol_table): Likewise.
+	(CALC_ADDEND): Likewise.
+	* coffgen.c (coff_renumber_symbols): Likewise.
+	(coff_mangle_symbols): Likewise.
+	(coff_fix_symbol_name): Likewise.
+	(coff_write_symbol): Likewise.
+	(coff_write_alien_symbol): Likewise.
+	(coff_write_native_symbol): Likewise.
+	(coff_write_symbols): Likewise.
+	(coff_write_linenumbers): Likewise.
+	(coff_pointerize_aux): Likewise.
+	(coff_get_normalized_symtab): Likewise.
+	(coff_get_symbol_info): Likewise.
+	(bfd_coff_get_syment): Likewise.
+	(bfd_coff_get_auxent): Likewise.
+	(coff_print_symbol): Likewise.
+	(coff_find_nearest_line_with_names): Likewise.
+	(bfd_coff_set_symbol_class): Likewise.
+	(coff_make_empty_symbol): Set the is_sym field.
+	(coff_bfd_make_debug_symbol): Likewise.
+	* peicode.h (pe_ILF_make_a_symbol): Likewise.
+	* libcoff.h: Regenerate.
+	* libcoff-in.h: Regenerate.
+
+	2014-11-12  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* coffcode.h (coff_slurp_line_table): Set the line number of
+	corrupt entries to -1.
+	(coff_slurp_symbol_table): Alway initialise the value of the
+	symbol.
+	* coffgen.c (coff_print_symbol): Check that the combined pointer
+	is valid.
+	(coff_print_symbol): Do not print negative line numbers.
+	* peXXigen.c (pe_print_idata): Add range checking displaying
+	member names.
+
+	2014-11-12  Alan Modra  <amodra@gmail.com>
+
+	PR binutils/17512
+	* coffcode.h (coff_slurp_line_table): Drop line number info
+	not preceded by a valid function entry.  Revert last change.
+
+	2014-11-11  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* coffcode.h (coff_slurp_line_table): Initialise the parts of the
+	line number cache that would not be initialised by the copy from
+	the new line number table.
+	(coff_classify_symbol): Allow for _bfd_coff_internal_syment_name
+	returning NULL.
+	* coffgen.c (coff_get_normalized_symbols): Get the external
+	symbols before allocating space for the internal symbols, in case
+	the get fails.
+	* elf.c (_bfd_elf_slurp_version_tables): Only allocate a verref
+	array if one is needed.  Likewise with the verdef array.
+	* peXXigen.c (_bfd_XXi_swap_sym_in): Replace abort()'s with error
+	messages.
+	(_bfd_XXi_swap_aux_in): Make sure that all fields of the aux
+	structure are initialised.
+	(pe_print_edata): Avoid reading off the end of the data buffer.
+
+	2014-11-11  Alan Modra  <amodra@gmail.com>
+
+	PR binutils/17512
+	* coffcode.h (coff_slurp_line_table): Use updated lineno_count
+	when building func_table.
+
+	2014-11-11  Alan Modra  <amodra@gmail.com>
+
+	PR binutils/17512
+	* coffcode.h (coff_slurp_line_table): Don't bfd_zalloc, just
+	memset the particular bits we need.  Update src after hitting loop
+	"continue".  Don't count lineno omitted due to invalid symbols in
+	nbr_func, and update lineno_count.  Init entire terminating
+	lineno.  Don't both allocating terminator in n_lineno_cache.
+	Redirect sym->lineno pointer to where n_lineno_cache will be
+	copied, and free n_lineno_cache.
+	* pe-mips.c (NUM_HOWTOS): Typo fix.
+
+	2014-11-10  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17521
+	* coff-i386.c (NUM_HOWTOS): New define.
+	(RTYPE2HOWTO): Use it.
+	(coff_i386_rtype_to_howto): Likewise.
+	(coff_i386_reloc_name_lookup): Likewise.
+	(CALC_ADDEND): Check that reloc r_type field is valid.
+	* coff-x86_64.c (NUM_HOWTOS): New define.
+	(RTYPE2HOWTO): Use it.
+	(coff_amd64_rtype_to_howto): Likewise.
+	(coff_amd64_reloc_name_lookup): Likewise.
+	(CALC_ADDEND): Check that reloc r_type field is valid.
+	* coffcode.h (coff_slurp_line_table): Check for symbol table
+	indexing underflow.
+	(coff_slurp_symbol_table): Use zalloc to ensure that all table
+	entries are initialised.
+	* coffgen.c (_bfd_coff_read_string_table): Initialise unused bits
+	in the string table.  Also ensure that the table is 0 terminated.
+	(coff_get_normalized_symtab): Check for symbol table indexing
+	underflow.
+	* opncls.c (bfd_alloc): Catch the case where a small negative size
+	can result in only 1 byte being allocated.
+	(bfd_alloc2): Use bfd_alloc.
+	* pe-mips.c (NUM_HOWTOS): New define.
+	(coff_mips_reloc_name_lookup): Use it.
+	(CALC_ADDEND): Check that reloc r_type field is valid.
+	* peXXigen.c (_bfd_XXi_swap_aouthdr_in): Initialise unused entries
+	in the DataDirectory.
+	(pe_print_idata): Avoid reading beyond the end of the data block
+	wen printing strings.
+	(pe_print_edata): Likewise.
+	Check for table indexing underflow.
+	* peicode.h (pe_mkobject): Initialise the pe_opthdr field.
+	(pe_bfd_object_p): Allocate and initialize enough space to hold a
+	PEAOUTHDR, even if the opt_hdr field specified less.
+
+	2014-11-08  Alan Modra  <amodra@gmail.com>
+
+	* peXXigen.c (pe_print_idata): Revert last patch, cast lhs instead.
+
+	2014-11-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* peXXigen.c (pe_print_idata): Cast to unsigned long in range
+	checks.
+
+	2014-11-07  Alan Modra  <amodra@gmail.com>
+
+	* tekhex.c (tekhex_set_arch_mach): Ignore unknown arch errors.
+
+	2014-11-07  Alan Modra  <amodra@gmail.com>
+
+	* tekhex.c (CHUNK_SPAN): Define.
+	(struct data_struct <chunk_init>): Use one byte per span, update
+	all code accessing this field.
+	(find_chunk): Add create param, don't create new entry unless set.
+	(insert_byte): Don't save zeros.
+	(first_phase): Set section SEC_CODE or SEC_DATA flag depending
+	on symbol type.  Create an alternate section if both types of
+	symbol are given.  Attach type '2' and '6' symbols to absolute
+	section.
+	(move_section_contents): Fix caching of chunk.  Don't create chunk
+	when reading, or for writing zeros.
+	(tekhex_set_section_contents): Don't create initial chunks.
+	(tekhex_write_object_contents): Use CHUNK_SPAN.
+
+	2014-11-07  Alan Modra  <amodra@gmail.com>
+
+	* aoutx.h (aout_get_external_symbols): Tidy allocation of symbol buffer.
+
+	2014-11-07  Alan Modra  <amodra@gmail.com>
+
+	* archive.c (_bfd_slurp_extended_name_table): Revert bfd_get_size check.
+	* coffcode.h (coff_set_alignment_hook): Likewise.
+	(coff_slurp_line_table): Likewise.
+	* coffgen.c (coff_get_normalized_symtab): Likewise.
+	(_bfd_coff_get_external_symbols): Likewise.
+	* elf.c (bfd_elf_get_str_section): Likewise.
+	* tekhex.c (first_phase): Likewise.
+
+	2014-11-06  Nick Clifton  <nickc@redhat.com>
+
+	* aoutx.h (slurp_symbol_table): Revert previous delta.
+	(slurp_reloc_table): Likewise.
+	* compress.c (bfd_get_full_section_contents): Remove file size
+	test.
+	* coffgen.c (coff_get_normalized_symtab): Allow zero-sized symtabs
+	and do not complain about linker generated files.
+
+	2014-11-04  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* coffcode.h (handle_COMDAT): Replace abort with BFD_ASSERT.
+	Replace another abort with an error message.
+	(coff_slurp_line_table): Add more range checking.
+	* peXXigen.c (pe_print_debugdata): Add range checking.
+
+	2014-11-05  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* coffcode.h (coff_set_alignment_hook): Warn if the file lies
+	about the number of relocations it contains.
+	(coff_sort_func_alent): Return 0 if the pointers are NULL.
+	(coff_slurp_line_table): Add more range checks.  Do not free new
+	tables created when sorting line numbers.
+	* peXXigen.c (pe_print_idata): Add range checks.
+	(pe_print_edata): Likewise.
+	(rsrc_print_resource_entries): Likewise.  Avoid printing control
+	characters.  Terminate priniting if corruption is detected.
+	(rsrc_print_resource_directory): Terminate printing if an unknown
+	directory type is encountered.
+	(pe_print_debugdata): Fix off-by-one error.
+	(rsrc_count_entries): Add range checking.
+	(rsrc_parse_entry): Likewise.
+
+	2014-11-04  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* compress.c (bfd_get_full_section_contents): Improve test for
+	linker created objects.
+
+	PR binutils/17533
+	* archive.c (_bfd_slurp_extended_name_table): Handle archives with
+	corrupt extended name tables.
+
+	2014-11-03  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* aoutx.h (slurp_symbol_table): Check that computed table size is
+	not bigger than the file from which is it being read.
+	(slurp_reloc_table): Likewise.
+	* coffcode.h (coff_slurp_line_table): Remove unneeded local
+	'warned'.  Do not try to print the details of a symbol with an
+	invalid index.
+	* coffgen.c (make_a_sectiobn_from_file): Check computed string
+	index against length of string table.
+	(bfd_coff_internal_syment_name): Check read in string offset
+	against length of string table.
+	(build_debug_section): Return a pointer to the section used.
+	(_bfd_coff_read_string_table): Store the length of the string
+	table in the coff_tdata structure.
+	(bfd_coff_free_symbols): Set the length of the string table to
+	zero when it is freed.
+	(coff_get_normalized_symtab): Check offsets against string table
+	or data table lengths as appropriate.
+	* cofflink.c (_bfd_coff_link_input_bfd): Check offset against
+	length of string table.
+	* compress.c (bfd_get_full_section_contents): Check computed size
+	against the size of the file.
+	* libcoff-in.h (obj_coff_strings_len): Define.
+	(struct coff_tdata): Add strings_len field.
+	* libcoff.h: Regenerate.
+	* peXXigen.c (pe_print_debugdata): Do not attempt to print the
+	data if the debug section is too small.
+	* xcofflink.c (xcoff_link_input_bfd):  Check offset against
+	length of string table.
+
+	2014-10-31  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/17512
+	* coffgen.c (_bfd_coff_get_external_symbols): Do not try to load a
+	symbol table bigger than the file.
+	* elf.c (bfd_elf_get_str_section): Do not try to load a string
+	table bigger than the file.
+	* tekhex.c (first_phase): Check that the section range is sane.
+
+2014-11-11  Alan Modra  <amodra@gmail.com>
+
+	* elf-eh-frame.c (_bfd_elf_write_section_eh_frame): Adjust section
+	size check to account for possible zero terminator.
+
+2014-11-10  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	Apply trunk patch:
+	* elfxx-mips.c (update_mips_abiflags_isa): Add E_MIPS_ARCH_32R6
+	and E_MIPS_ARCH_64R6 support.
+
+2014-11-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Apply trunk patch:
+	2014-11-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/17482
+	* elf64-x86-64.c (elf_x86_64_relocate_section): Update comments
+	for IE->LE transition.
+
+2014-11-04  Tristan Gingold  <gingold@adacore.com>
+
+	* development.sh: Set development to false.
+
+2014-11-03  Nick Clifton  <nickc@redhat.com>
+
+	* po/fi.po: Updated Finnish translation.
+
+2014-10-31  Nick Clifton  <nickc@redhat.com>
+
+	Apply trunk patch:
+
+	2014-10-30  Nick Clifton  <nickc@redhat.com>
+	PR binutils/17512
+	* ihex.c (ihex_scan): Fix typo in invocation of ihex_bad_byte.
+	* coffgen.c (coff_get_normalized_symtab): Prevent buffer overrun.
+
+2014-10-30  Nick Clifton  <nickc@redhat.com>
+
+	Appy trunk patch:
+
+	2014-10-29  Nick Clifton  <nickc@redhat.com>
+	* elf.c (bfd_section_from_shdr): Fix heap use after free memory
+	leak.
+
+2014-10-28  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	Apply trunk patches:
+
+	2014-10-22  Matthew Fortune  <matthew.fortune@imgtec.com>
+	* elfxx-mips.c (print_mips_ases): Print unknown ASEs.
+	(print_mips_isa_ext): Print the value of an unknown extension.
+
+2014-10-28  Nick Clifton  <nickc@redhat.com>
+
+	Apply trunk patches:
+
+	2014-10-28  Nick Clifton  <nickc@redhat.com>
+	PR binutils/17512
+	* elf.c (bfd_section_from_shdr): Allocate and free the recursion
+	detection table on a per-bfd basis.
+	* peXXigen.c (pe_print_edata): Handle binaries with a truncated
+	export table.
+
+	2014-10-28  Andreas Schwab  <schwab@suse.de>
+		    Nick Clifton  <nickc@redhat.com>
+	PR binutils/17510
+	* srec.c (srec_bad_byte): Increase size of buf to allow for
+	negative values.
+	(srec_scan): Use an unsigned char buffer to hold header bytes.
+
+	2014-10-27  Nick Clifton  <nickc@redhat.com>
+	PR binutils/17512
+	* elf.c (bfd_section_from_shdr): Detect and warn about ELF
+	binaries with a group of sections linked by the string table
+	indicies.
+	* peXXigen.c (_bfd_XXi_swap_aouthdr_in): Handle corrupt binaries
+	with an invalid value for NumberOfRvaAndSizes.
+	(pe_print_edata): Detect out of range rvas and entry counts for
+	the Export Address table, Name Pointer table and Ordinal table.
+
+	PR binutils/17510
+	* elf.c (setup_group): Improve handling of corrupt group
+	sections.
+
+2014-10-28  Alan Modra  <amodra@gmail.com>
+
+	Apply trunk patches:
+
+	2014-10-21  Alan Modra  <amodra@gmail.com>
+	* elf64-ppc.c (ppc64_elf_tls_optimize): Ignore relocs against toc
+	entries that aren't a multiple of 8 rather than failing assertion.
+
+	2014-10-21  Alan Modra  <amodra@gmail.com>
+	* elf64-ppc.c (ppc64_elf_size_stubs): Add gcc-4.9 libgomp functions
+	to thread_starter.
+
+	2014-10-18  Alan Modra  <amodra@gmail.com>
+	* elf64-ppc.c (ppc64_elf_add_symbol_hook): If function code
+	section for function symbols defined in .opd is discarded, let
+	the symbol appear to be undefined.
+	(opd_entry_value): Ensure the result section is that for the
+	function code section in the same object as the OPD entry.
+
+	2014-10-16  Alan Modra  <amodra@gmail.com>
+	PR 17492
+	* elf32-arm.c (elf32_arm_add_symbol_hook): Only set has_gnu_symbols
+	on ELF output bfd.
+	* elf32-i386.c (elf_i386_add_symbol_hook): Likewise.
+	* elf32-m68k.c (elf_m68k_add_symbol_hook): Likewise.
+	* elf32-ppc.c (ppc_elf_add_symbol_hook): Likewise.
+	* elf32-sparc.c (elf32_sparc_add_symbol_hook): Likewise.
+	* elf64-ppc.c (ppc64_elf_add_symbol_hook): Likewise.
+	* elf64-sparc.c (elf64_sparc_add_symbol_hook): Likewise.
+	* elf64-x86-64.c (elf_x86_64_add_symbol_hook): Likewise.
+	* elfxx-aarch64.c (_bfd_aarch64_elf_add_symbol_hook): Likewise.
+	* elf-s390-common.c (elf_s390_add_symbol_hook): Likewise.  Handle
+	STB_GNU_UNIQUE too.
+
+	2014-10-16  Alan Modra  <amodra@gmail.com>
+	* elf64-ppc.c (ppc64_elf_before_check_relocs): Do .opd processing
+	even when output is not ppc64 ELF.  Remove redundant tests on
+	type of input bfd.
+
+	2014-10-15  Alan Modra  <amodra@gmail.com>
+	PR 17481
+	* aoutx.h (NAME (aout, find_nearest_line)): Add "discriminator_ptr"
+	param, group "section" and "offset" params.  Zero discriminator.
+	* bfd.c (bfd_find_nearest_line): Implement with new
+	_bfd_find_nearest_line.
+	(bfd_find_nearest_line_discriminator): Likewise.
+	* coff-i386.c (_bfd_generic_find_nearest_line_discriminator): Don't
+	define.
+	* coff-rs6000.c (xcoff_find_nearest_line,
+	xcoff_find_nearest_line_discriminator): Delete.
+	(_bfd_xcoff_find_nearest_line): Don't define.
+	(_bfd_xcoff_find_nearest_line): Define as coff_find_nearest_line.
+	* coff-x86_64.c (_bfd_generic_find_nearest_line_discriminator): Don't
+	define.
+	* coff64-rs6000.c (rs6000_xcoff64_vec, rs6000_xcoff64_aix_vec): Adjust.
+	* coffgen.c (coff_find_nearest_line_with_names): Reorder params,
+	adjust _bfd_dwarf2_find_nearest_line call.
+	(coff_find_nearest_line): Add "discriminator_ptr" param, reorder
+	others.  Set discriminator.  Adjust call.
+	(coff_find_nearest_line_discriminator): Delete.
+	* dwarf1.c (_bfd_dwarf1_find_nearest_line): Reorder params.
+	* dwarf2.c (find_line): Rename to..
+	(_bfd_dwarf2_find_nearest_line): ..this, reordering params.
+	Simplify setting of do_line.  Delete old function.
+	(_bfd_dwarf2_find_line): Delete.
+	* ecoff.c (_bfd_ecoff_find_nearest_line): Reorder params, add
+	discriminator_ptr and set it.
+	* elf-bfd.h (_bfd_elf_find_nearest_line): Update prototype.
+	(_bfd_elf_find_nearest_line_discriminator): Delete.
+	(_bfd_elf_find_line_discriminator): Delete.
+	(_bfd_generic_find_nearest_line_discriminator): Don't define.
+	* elf.c (elf_find_function): Reorder params.
+	(_bfd_elf_find_nearest_line): Reorder params, add discriminator_ptr.
+	Adjust calls.
+	(_bfd_elf_find_nearest_line_discriminator): Delete.
+	(_bfd_elf_find_line): Adjust call.
+	* elf32-arm.c (arm_elf_find_function): Reorder params.
+	(elf32_arm_find_nearest_line): Reorder params, add discriminator_ptr.
+	Adjust calls.
+	* elf64-alpha.c (elf64_alpha_find_nearest_line): Similarly.
+	* elfnn-aarch64.c (aarch64_elf_find_function): Reorder params.
+	(elfNN_aarch64_find_nearest_line): Reorder params, add
+	discriminator_ptr.  Adjust calls.
+	* elfxx-mips.c (_bfd_mips_elf_find_nearest_line): Similarly.
+	* elfxx-mips.h (_bfd_mips_elf_find_nearest_line): Update prototype.
+	* libaout.h (NAME (aout, find_nearest_line)): Update prototype.
+	* libbfd-in.h (_bfd_nosymbols_find_nearest_line): Update.
+	(_bfd_dwarf1_find_nearest_line): Likewise.
+	(_bfd_dwarf2_find_nearest_line): Likewise.
+	(_bfd_dwarf2_find_line): Delete.
+	(_bfd_generic_find_nearest_line_discriminator): Delete.
+	* libbfd.c (_bfd_generic_find_nearest_line_discriminator): Delete.
+	* libcoff-in.h (coff_find_nearest_line): Update prototype.
+	(coff_find_nearest_line_discriminator): Delete.
+	(coff_find_nearest_line_with_names): Update prototype.
+	* libecoff.h (_bfd_ecoff_find_nearest_line): Update prototype.
+	* mach-o.c (bfd_mach_o_find_nearest_line): Reorder params, add
+	discriminator_ptr.  Adjust calls.
+	* mach-o.h (bfd_mach_o_find_nearest_line): Update prototype.
+	* pdp11.c (NAME (aout, find_nearest_line)): Reorder params, add
+	discriminator_ptr and set.
+	* som.c (som_find_nearest_line): Similarly.
+	* targets.c (BFD_JUMP_TABLE_SYMBOLS): Delete entry for
+	_bfd_find_nearest_line_discriminator.
+	(struct bfd_target <_bfd_find_nearest_line>): Adjust prototype.
+	(struct bfd_target <_bfd_find_nearest_line_discriminator>): Delete.
+	* vms-alpha.c (_bfd_vms_find_nearest_dst_line): Rename to..
+	(_bfd_vms_find_nearest_line): ..this.  Reorder params, add
+	"discriminator" and set.
+	(_bfd_vms_find_nearest_line_discriminator): Delete.
+	(_bfd_generic_find_nearest_line_discriminator): Don't define.
+	(alpha_vms_find_nearest_line): Update define.
+	* bfd-in2.h: Regenerate.
+	* libbfd.h: Regenerate.
+	* libcoff.h: Regenerate.
+
+	2014-10-15  Alan Modra  <amodra@gmail.com>
+	* targets.c (BFD_JUMP_TABLE_SYMBOLS): Use NAME##_find_line.
+	* aout-adobe.c (aout_32_find_line): Define.
+	(aout_32_bfd_make_debug_symbol, aout_32_bfd_reloc_type_lookup,
+	aout_32_bfd_reloc_name_lookup): Define using _bfd_nosymbols define.
+	* aout-target.h (MY_find_line): Define.
+	* aout-tic30.c (MY_find_line): Define.
+	* binary.c (binary_find_line): Define.
+	* bout.c (aout_32_find_line): Define.
+	* coff-rs6000.c (_bfd_xcoff_find_line): Define.
+	* coff64-rs6000.c (rs6000_xcoff64_vec): Use coff_find_line.
+	(rs6000_xcoff64_aix_vec): Likewise.
+	* elf-bfd.h (_bfd_generic_find_line): Don't define.
+	* elfxx-target.h (bfd_elfNN_find_line): Define.
+	* i386msdos.c (msdos_find_line): Define.
+	* i386os9k.c (aout_32_find_line): Define.
+	* ieee.c (ieee_find_nearest_line, ieee_find_inliner_info): Delete func.
+	(ieee_find_nearest_line, ieee_find_line,
+	ieee_find_inliner_info): Define.
+	* ihex.c (ihex_find_line): Define.
+	* libbfd-in.h (_bfd_nosymbols_find_line): Define.
+	(_bfd_generic_find_line): Don't define.
+	* libbfd.c (_bfd_generic_find_line): Delete.
+	* libcoff-in.h (coff_find_line): Define.
+	* libecoff.h (_bfd_ecoff_find_line): Define.
+	* mach-o.h (bfd_mach_o_find_line): Define.
+	* mmo.c (mmo_find_line): Define.
+	* nlm-target.h (nlm_find_line): Define.
+	* oasys.c (oasys_find_nearest_line, oasys_find_inliner_info): Delete.
+	(oasys_find_nearest_line, oasys_find_line,
+	oasys_find_inliner_info): Define.
+	* pef.c (bfd_pef_find_line): Define.
+	* plugin.c (bfd_plugin_find_line): Define.
+	* ppcboot.c (ppcboot_find_line): Define.
+	* som.c (som_find_line): Define.
+	* srec.c (srec_find_line): Define.
+	* tekhex.c (tekhex_find_line): Define.
+	* versados.c (versados_find_line): Define.
+	* vms-alpha.c (alpha_vms_find_line): Define.
+	* xsym.c (bfd_sym_find_line): Define.
+	* bfd-in2.h: Regenerate.
+	* libbfd.h: Regenerate.
+	* libcoff.h: Regenerate.
+
+2014-10-24  Tejas Belagod  <tejas.belagod@arm.com>
+
+	* bfd-in.h (bfd_elf64_aarch64_set_options): Add a parameter.
+	* bfd-in2.h (bfd_elf64_aarch64_set_options): Likewise.
+	* elfnn-aarch64.c (aarch64_erratum_835769_stub): New.
+	(elf_aarch64_stub_type): Add new type
+	aarch64_stub_erratum_835769_veneer.
+	(elf_aarch64_stub_hash_entry): New fields for erratum 835769.
+	(aarch64_erratum_835769_fix): New data struct to record erratum
+	835769.
+	(elf_aarch64_link_hash_table: Global flags for 835769.
+	(aarch64_build_one_stub): Add case for 835769.
+	(aarch64_size_one_stub): Likewise.
+	(aarch64_mem_op_p, aarch64_mlxl_p,
+	aarch64_erratum_sequence,erratum_835769_scan):
+	New. Decode and scan functions for erratum 835769.
+	(elf_aarch64_create_or_find_stub_sec): New.
+	(elfNN_aarch64_size_stubs): Look for erratum 835769 and record
+	them.
+	(bfd_elfNN_aarch64_set_options: Set global flag for 835769.
+	(erratum_835769_branch_to_stub_data,
+	make_branch_to_erratum_835769_stub):New. Connect up all the
+	erratum stubs to occurances by branches.
+	(elfNN_aarch64_write_section): New hook.
+	(aarch64_map_one_stub): Output erratum stub symbol.
+	(elfNN_aarch64_size_dynamic_sections): Init mapping symbol
+	information for erratum 835769.
+	(elf_backend_write_section): Define.
+
+2014-10-14  Tristan Gingold  <gingold@adacore.com>
+
+	* version.m4: Bump version to 2.24.90
+	* configure: Regenerate.
+
 2014-10-14  Alan Modra  <amodra@gmail.com>
 
 	PR 17453

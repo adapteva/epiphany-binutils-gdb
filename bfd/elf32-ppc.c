@@ -3636,9 +3636,10 @@ ppc_elf_add_symbol_hook (bfd *abfd,
       *valp = sym->st_size;
     }
 
-  if ((abfd->flags & DYNAMIC) == 0
-      && (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
-	  || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE))
+  if ((ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+       || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE)
+      && (abfd->flags & DYNAMIC) == 0
+      && bfd_get_flavour (info->output_bfd) == bfd_target_elf_flavour)
     elf_tdata (info->output_bfd)->has_gnu_symbols = TRUE;
 
   return TRUE;
@@ -7173,7 +7174,7 @@ ppc_elf_relax_section (bfd *abfd,
 	  /* Keep space aligned, to ensure the patch code itself does
 	     not cross a page.  Don't decrease size calculated on a
 	     previous pass as otherwise we might never settle on a layout.  */
-	  newsize = 15 - (end_addr & 15);
+	  newsize = 15 - ((end_addr - 1) & 15);
 	  newsize += crossings * 16;
 	  if (relax_info->workaround_size < newsize)
 	    {

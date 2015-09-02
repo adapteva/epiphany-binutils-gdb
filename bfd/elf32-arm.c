@@ -13083,8 +13083,8 @@ elf32_arm_is_target_special_symbol (bfd * abfd ATTRIBUTE_UNUSED, asymbol * sym)
 
 static bfd_boolean
 arm_elf_find_function (bfd *         abfd ATTRIBUTE_UNUSED,
-		       asection *    section,
 		       asymbol **    symbols,
+		       asection *    section,
 		       bfd_vma       offset,
 		       const char ** filename_ptr,
 		       const char ** functionname_ptr)
@@ -13145,30 +13145,32 @@ arm_elf_find_function (bfd *         abfd ATTRIBUTE_UNUSED,
 
 static bfd_boolean
 elf32_arm_find_nearest_line (bfd *          abfd,
-			     asection *     section,
 			     asymbol **     symbols,
+			     asection *     section,
 			     bfd_vma        offset,
 			     const char **  filename_ptr,
 			     const char **  functionname_ptr,
-			     unsigned int * line_ptr)
+			     unsigned int * line_ptr,
+			     unsigned int * discriminator_ptr)
 {
   bfd_boolean found = FALSE;
 
-  /* We skip _bfd_dwarf1_find_nearest_line since no known ARM toolchain uses it.  */
-
-  if (_bfd_dwarf2_find_nearest_line (abfd, dwarf_debug_sections,
-				     section, symbols, offset,
+  if (_bfd_dwarf2_find_nearest_line (abfd, symbols, NULL, section, offset,
 				     filename_ptr, functionname_ptr,
-				     line_ptr, NULL, 0,
+				     line_ptr, discriminator_ptr,
+				     dwarf_debug_sections, 0,
 				     & elf_tdata (abfd)->dwarf2_find_line_info))
     {
       if (!*functionname_ptr)
-	arm_elf_find_function (abfd, section, symbols, offset,
+	arm_elf_find_function (abfd, symbols, section, offset,
 			       *filename_ptr ? NULL : filename_ptr,
 			       functionname_ptr);
 
       return TRUE;
     }
+
+  /* Skip _bfd_dwarf1_find_nearest_line since no known ARM toolchain
+     uses DWARF1.  */
 
   if (! _bfd_stab_section_find_nearest_line (abfd, symbols, section, offset,
 					     & found, filename_ptr,
@@ -13182,7 +13184,7 @@ elf32_arm_find_nearest_line (bfd *          abfd,
   if (symbols == NULL)
     return FALSE;
 
-  if (! arm_elf_find_function (abfd, section, symbols, offset,
+  if (! arm_elf_find_function (abfd, symbols, section, offset,
 			       filename_ptr, functionname_ptr))
     return FALSE;
 
@@ -15906,9 +15908,10 @@ elf32_arm_add_symbol_hook (bfd *abfd, struct bfd_link_info *info,
 			   Elf_Internal_Sym *sym, const char **namep,
 			   flagword *flagsp, asection **secp, bfd_vma *valp)
 {
-  if ((abfd->flags & DYNAMIC) == 0
-      && (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
-	  || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE))
+  if ((ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+       || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE)
+      && (abfd->flags & DYNAMIC) == 0
+      && bfd_get_flavour (info->output_bfd) == bfd_target_elf_flavour)
     elf_tdata (info->output_bfd)->has_gnu_symbols = TRUE;
 
   if (elf32_arm_hash_table (info) == NULL)

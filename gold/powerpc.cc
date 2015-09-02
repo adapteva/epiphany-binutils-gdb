@@ -1015,11 +1015,11 @@ class Target_powerpc : public Sized_target<size, big_endian>
     bool issued_non_pic_error_;
   };
 
-  Address
-  symval_for_branch(const Symbol_table* symtab, Address value,
+  bool
+  symval_for_branch(const Symbol_table* symtab,
 		    const Sized_symbol<size>* gsym,
 		    Powerpc_relobj<size, big_endian>* object,
-		    unsigned int *dest_shndx);
+		    Address *value, unsigned int *dest_shndx);
 
   // The class which implements relocation.
   class Relocate : protected Track_tls
@@ -1524,58 +1524,58 @@ private:
   }
 
   // Do a simple RELA relocation
-  template<int valsize>
+  template<int fieldsize, int valsize>
   static inline Status
   rela(unsigned char* view, Address value, Overflow_check overflow)
   {
-    typedef typename elfcpp::Swap<valsize, big_endian>::Valtype Valtype;
+    typedef typename elfcpp::Swap<fieldsize, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
-    elfcpp::Swap<valsize, big_endian>::writeval(wv, value);
+    elfcpp::Swap<fieldsize, big_endian>::writeval(wv, value);
     return overflowed<valsize>(value, overflow);
   }
 
-  template<int valsize>
+  template<int fieldsize, int valsize>
   static inline Status
   rela(unsigned char* view,
        unsigned int right_shift,
-       typename elfcpp::Valtype_base<valsize>::Valtype dst_mask,
+       typename elfcpp::Valtype_base<fieldsize>::Valtype dst_mask,
        Address value,
        Overflow_check overflow)
   {
-    typedef typename elfcpp::Swap<valsize, big_endian>::Valtype Valtype;
+    typedef typename elfcpp::Swap<fieldsize, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype val = elfcpp::Swap<valsize, big_endian>::readval(wv);
+    Valtype val = elfcpp::Swap<fieldsize, big_endian>::readval(wv);
     Valtype reloc = value >> right_shift;
     val &= ~dst_mask;
     reloc &= dst_mask;
-    elfcpp::Swap<valsize, big_endian>::writeval(wv, val | reloc);
+    elfcpp::Swap<fieldsize, big_endian>::writeval(wv, val | reloc);
     return overflowed<valsize>(value >> right_shift, overflow);
   }
 
   // Do a simple RELA relocation, unaligned.
-  template<int valsize>
+  template<int fieldsize, int valsize>
   static inline Status
   rela_ua(unsigned char* view, Address value, Overflow_check overflow)
   {
-    elfcpp::Swap_unaligned<valsize, big_endian>::writeval(view, value);
+    elfcpp::Swap_unaligned<fieldsize, big_endian>::writeval(view, value);
     return overflowed<valsize>(value, overflow);
   }
 
-  template<int valsize>
+  template<int fieldsize, int valsize>
   static inline Status
   rela_ua(unsigned char* view,
 	  unsigned int right_shift,
-	  typename elfcpp::Valtype_base<valsize>::Valtype dst_mask,
+	  typename elfcpp::Valtype_base<fieldsize>::Valtype dst_mask,
 	  Address value,
 	  Overflow_check overflow)
   {
-    typedef typename elfcpp::Swap_unaligned<valsize, big_endian>::Valtype
+    typedef typename elfcpp::Swap_unaligned<fieldsize, big_endian>::Valtype
       Valtype;
-    Valtype val = elfcpp::Swap<valsize, big_endian>::readval(view);
+    Valtype val = elfcpp::Swap<fieldsize, big_endian>::readval(view);
     Valtype reloc = value >> right_shift;
     val &= ~dst_mask;
     reloc &= dst_mask;
-    elfcpp::Swap_unaligned<valsize, big_endian>::writeval(view, val | reloc);
+    elfcpp::Swap_unaligned<fieldsize, big_endian>::writeval(view, val | reloc);
     return overflowed<valsize>(value >> right_shift, overflow);
   }
 
@@ -1583,28 +1583,29 @@ public:
   // R_PPC64_ADDR64: (Symbol + Addend)
   static inline void
   addr64(unsigned char* view, Address value)
-  { This::template rela<64>(view, value, CHECK_NONE); }
+  { This::template rela<64,64>(view, value, CHECK_NONE); }
 
   // R_PPC64_UADDR64: (Symbol + Addend) unaligned
   static inline void
   addr64_u(unsigned char* view, Address value)
-  { This::template rela_ua<64>(view, value, CHECK_NONE); }
+  { This::template rela_ua<64,64>(view, value, CHECK_NONE); }
 
   // R_POWERPC_ADDR32: (Symbol + Addend)
   static inline Status
   addr32(unsigned char* view, Address value, Overflow_check overflow)
-  { return This::template rela<32>(view, value, overflow); }
+  { return This::template rela<32,32>(view, value, overflow); }
 
   // R_POWERPC_UADDR32: (Symbol + Addend) unaligned
   static inline Status
   addr32_u(unsigned char* view, Address value, Overflow_check overflow)
-  { return This::template rela_ua<32>(view, value, overflow); }
+  { return This::template rela_ua<32,32>(view, value, overflow); }
 
   // R_POWERPC_ADDR24: (Symbol + Addend) & 0x3fffffc
   static inline Status
   addr24(unsigned char* view, Address value, Overflow_check overflow)
   {
-    Status stat = This::template rela<32>(view, 0, 0x03fffffc, value, overflow);
+    Status stat = This::template rela<32,26>(view, 0, 0x03fffffc,
+					     value, overflow);
     if (overflow != CHECK_NONE && (value & 3) != 0)
       stat = STATUS_OVERFLOW;
     return stat;
@@ -1613,18 +1614,18 @@ public:
   // R_POWERPC_ADDR16: (Symbol + Addend) & 0xffff
   static inline Status
   addr16(unsigned char* view, Address value, Overflow_check overflow)
-  { return This::template rela<16>(view, value, overflow); }
+  { return This::template rela<16,16>(view, value, overflow); }
 
   // R_POWERPC_ADDR16: (Symbol + Addend) & 0xffff, unaligned
   static inline Status
   addr16_u(unsigned char* view, Address value, Overflow_check overflow)
-  { return This::template rela_ua<16>(view, value, overflow); }
+  { return This::template rela_ua<16,16>(view, value, overflow); }
 
   // R_POWERPC_ADDR16_DS: (Symbol + Addend) & 0xfffc
   static inline Status
   addr16_ds(unsigned char* view, Address value, Overflow_check overflow)
   {
-    Status stat = This::template rela<16>(view, 0, 0xfffc, value, overflow);
+    Status stat = This::template rela<16,16>(view, 0, 0xfffc, value, overflow);
     if (overflow != CHECK_NONE && (value & 3) != 0)
       stat = STATUS_OVERFLOW;
     return stat;
@@ -1633,7 +1634,7 @@ public:
   // R_POWERPC_ADDR16_HI: ((Symbol + Addend) >> 16) & 0xffff
   static inline void
   addr16_hi(unsigned char* view, Address value)
-  { This::template rela<16>(view, 16, 0xffff, value, CHECK_NONE); }
+  { This::template rela<16,16>(view, 16, 0xffff, value, CHECK_NONE); }
 
   // R_POWERPC_ADDR16_HA: ((Symbol + Addend + 0x8000) >> 16) & 0xffff
   static inline void
@@ -1643,7 +1644,7 @@ public:
   // R_POWERPC_ADDR16_HIGHER: ((Symbol + Addend) >> 32) & 0xffff
   static inline void
   addr16_hi2(unsigned char* view, Address value)
-  { This::template rela<16>(view, 32, 0xffff, value, CHECK_NONE); }
+  { This::template rela<16,16>(view, 32, 0xffff, value, CHECK_NONE); }
 
   // R_POWERPC_ADDR16_HIGHERA: ((Symbol + Addend + 0x8000) >> 32) & 0xffff
   static inline void
@@ -1653,7 +1654,7 @@ public:
   // R_POWERPC_ADDR16_HIGHEST: ((Symbol + Addend) >> 48) & 0xffff
   static inline void
   addr16_hi3(unsigned char* view, Address value)
-  { This::template rela<16>(view, 48, 0xffff, value, CHECK_NONE); }
+  { This::template rela<16,16>(view, 48, 0xffff, value, CHECK_NONE); }
 
   // R_POWERPC_ADDR16_HIGHESTA: ((Symbol + Addend + 0x8000) >> 48) & 0xffff
   static inline void
@@ -1664,7 +1665,7 @@ public:
   static inline Status
   addr14(unsigned char* view, Address value, Overflow_check overflow)
   {
-    Status stat = This::template rela<32>(view, 0, 0xfffc, value, overflow);
+    Status stat = This::template rela<32,16>(view, 0, 0xfffc, value, overflow);
     if (overflow != CHECK_NONE && (value & 3) != 0)
       stat = STATUS_OVERFLOW;
     return stat;
@@ -2362,7 +2363,7 @@ class Stub_control
   // the stubbed branches.
   Stub_control(int32_t size)
     : state_(NO_GROUP), stub_group_size_(abs(size)),
-      stub14_group_size_(abs(size)),
+      stub14_group_size_(abs(size) >> 10),
       stubs_always_before_branch_(size < 0), suppress_size_errors_(false),
       group_end_addr_(0), owner_(NULL), output_section_(NULL)
   {
@@ -2397,6 +2398,14 @@ class Stub_control
   Output_section*
   output_section()
   { return output_section_; }
+
+  void
+  set_output_and_owner(Output_section* o,
+		       const Output_section::Input_section* i)
+  {
+    this->output_section_ = o;
+    this->owner_ = i;
+  }
 
  private:
   typedef enum
@@ -2514,6 +2523,7 @@ Target_powerpc<size, big_endian>::group_sections(Layout* layout,
 		{
 		  stub_table->init(stub_control.owner(),
 				   stub_control.output_section());
+		  stub_control.set_output_and_owner(*o, &*i);
 		  stub_table = NULL;
 		}
 	      if (stub_table == NULL)
@@ -2590,7 +2600,7 @@ Target_powerpc<size, big_endian>::Branch_info::make_stub(
     }
   else
     {
-      unsigned long max_branch_offset;
+      Address max_branch_offset;
       if (this->r_type_ == elfcpp::R_POWERPC_REL14
 	  || this->r_type_ == elfcpp::R_POWERPC_REL14_BRTAKEN
 	  || this->r_type_ == elfcpp::R_POWERPC_REL14_BRNTAKEN)
@@ -2652,14 +2662,16 @@ Target_powerpc<size, big_endian>::Branch_info::make_stub(
 	  if (size == 64)
 	    to += this->object_->ppc64_local_entry_offset(this->r_sym_);
 	}
-      to += this->addend_;
+      if (!(size == 32 && this->r_type_ == elfcpp::R_PPC_PLTREL24))
+	to += this->addend_;
       if (stub_table == NULL)
 	stub_table = this->object_->stub_table(this->shndx_);
       if (size == 64 && target->abiversion() < 2)
 	{
 	  unsigned int dest_shndx;
-	  to = target->symval_for_branch(symtab, to, gsym,
-					 this->object_, &dest_shndx);
+	  if (!target->symval_for_branch(symtab, gsym, this->object_,
+					 &to, &dest_shndx))
+	    return;
 	}
       Address delta = to - from;
       if (delta + max_branch_offset >= 2 * max_branch_offset)
@@ -2708,12 +2720,20 @@ Target_powerpc<size, big_endian>::do_relax(int pass,
 	      /* libanl */
 	      "getaddrinfo_a",
 	      /* libgomp */
+	      "GOMP_parallel",
 	      "GOMP_parallel_start",
+	      "GOMP_parallel_loop_static",
 	      "GOMP_parallel_loop_static_start",
+	      "GOMP_parallel_loop_dynamic",
 	      "GOMP_parallel_loop_dynamic_start",
+	      "GOMP_parallel_loop_guided",
 	      "GOMP_parallel_loop_guided_start",
+	      "GOMP_parallel_loop_runtime",
 	      "GOMP_parallel_loop_runtime_start",
+	      "GOMP_parallel_sections",
 	      "GOMP_parallel_sections_start",
+	      /* libgo */
+	      "__go_go",
 	    };
 
 	  if (parameters->options().shared())
@@ -5461,10 +5481,10 @@ Target_powerpc<size, big_endian>::Scan::local(
 	{
 	  Reloc_section* rela_dyn = target->rela_dyn_section(symtab, layout,
 							     is_ifunc);
+	  unsigned int r_sym = elfcpp::elf_r_sym<size>(reloc.get_r_info());
 	  if ((size == 32 && r_type == elfcpp::R_POWERPC_ADDR32)
 	      || (size == 64 && r_type == elfcpp::R_PPC64_ADDR64))
 	    {
-	      unsigned int r_sym = elfcpp::elf_r_sym<size>(reloc.get_r_info());
 	      unsigned int dynrel = (is_ifunc ? elfcpp::R_POWERPC_IRELATIVE
 				     : elfcpp::R_POWERPC_RELATIVE);
 	      rela_dyn->add_local_relative(object, r_sym, dynrel,
@@ -5472,13 +5492,27 @@ Target_powerpc<size, big_endian>::Scan::local(
 					   reloc.get_r_offset(),
 					   reloc.get_r_addend(), false);
 	    }
-	  else
+	  else if (lsym.get_st_type() != elfcpp::STT_SECTION)
 	    {
 	      check_non_pic(object, r_type);
-	      unsigned int r_sym = elfcpp::elf_r_sym<size>(reloc.get_r_info());
 	      rela_dyn->add_local(object, r_sym, r_type, output_section,
 				  data_shndx, reloc.get_r_offset(),
 				  reloc.get_r_addend());
+	    }
+	  else
+	    {
+	      gold_assert(lsym.get_st_value() == 0);
+	      unsigned int shndx = lsym.get_st_shndx();
+	      bool is_ordinary;
+	      shndx = object->adjust_sym_shndx(r_sym, shndx,
+					       &is_ordinary);
+	      if (!is_ordinary)
+		object->error(_("section symbol %u has bad shndx %u"),
+			      r_sym, shndx);
+	      else
+		rela_dyn->add_local_section(object, shndx, r_type,
+					    output_section, data_shndx,
+					    reloc.get_r_offset());
 	    }
 	}
       break;
@@ -6430,7 +6464,11 @@ class Global_symbol_visitor_opd
     unsigned int shndx = sym->shndx(&is_ordinary);
     if (shndx == symobj->opd_shndx()
 	&& symobj->get_opd_discard(sym->value()))
-      sym->set_symtab_index(-1U);
+      {
+	sym->set_undefined();
+	sym->set_is_defined_in_discarded_section();
+	sym->set_symtab_index(-1U);
+      }
   }
 };
 
@@ -6608,12 +6646,12 @@ ok_lo_toc_insn(uint32_t insn)
 // Return the value to use for a branch relocation.
 
 template<int size, bool big_endian>
-typename Target_powerpc<size, big_endian>::Address
+bool
 Target_powerpc<size, big_endian>::symval_for_branch(
     const Symbol_table* symtab,
-    Address value,
     const Sized_symbol<size>* gsym,
     Powerpc_relobj<size, big_endian>* object,
+    Address *value,
     unsigned int *dest_shndx)
 {
   if (size == 32 || this->abiversion() >= 2)
@@ -6625,20 +6663,20 @@ Target_powerpc<size, big_endian>::symval_for_branch(
   Powerpc_relobj<size, big_endian>* symobj = object;
   if (gsym != NULL
       && gsym->source() != Symbol::FROM_OBJECT)
-    return value;
+    return true;
   if (gsym != NULL)
     symobj = static_cast<Powerpc_relobj<size, big_endian>*>(gsym->object());
   unsigned int shndx = symobj->opd_shndx();
   if (shndx == 0)
-    return value;
+    return true;
   Address opd_addr = symobj->get_output_section_offset(shndx);
   if (opd_addr == invalid_address)
-    return value;
+    return true;
   opd_addr += symobj->output_section_address(shndx);
-  if (value >= opd_addr && value < opd_addr + symobj->section_size(shndx))
+  if (*value >= opd_addr && *value < opd_addr + symobj->section_size(shndx))
     {
       Address sec_off;
-      *dest_shndx = symobj->get_opd_ent(value - opd_addr, &sec_off);
+      *dest_shndx = symobj->get_opd_ent(*value - opd_addr, &sec_off);
       if (symtab->is_section_folded(symobj, *dest_shndx))
 	{
 	  Section_id folded
@@ -6647,11 +6685,13 @@ Target_powerpc<size, big_endian>::symval_for_branch(
 	  *dest_shndx = folded.second;
 	}
       Address sec_addr = symobj->get_output_section_offset(*dest_shndx);
-      gold_assert(sec_addr != invalid_address);
+      if (sec_addr == invalid_address)
+	return false;
+
       sec_addr += symobj->output_section(*dest_shndx)->address();
-      value = sec_addr + sec_off;
+      *value = sec_addr + sec_off;
     }
-  return value;
+  return true;
 }
 
 // Perform a relocation.
@@ -6694,7 +6734,7 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
   Powerpc_relobj<size, big_endian>* const object
     = static_cast<Powerpc_relobj<size, big_endian>*>(relinfo->object);
   Address value = 0;
-  bool has_plt_value = false;
+  bool has_stub_value = false;
   unsigned int r_sym = elfcpp::elf_r_sym<size>(rela.get_r_info());
   if ((gsym != NULL
        ? gsym->use_plt_offset(Scan::get_reference_flags(r_type, target))
@@ -6733,7 +6773,7 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 	  gold_assert(off != invalid_address);
 	  value = stub_table->stub_address() + off;
 	}
-      has_plt_value = true;
+      has_stub_value = true;
     }
 
   if (r_type == elfcpp::R_POWERPC_GOT16
@@ -6764,7 +6804,7 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
   else if (gsym != NULL
 	   && (r_type == elfcpp::R_POWERPC_REL24
 	       || r_type == elfcpp::R_PPC_PLTREL24)
-	   && has_plt_value)
+	   && has_stub_value)
     {
       if (size == 64)
 	{
@@ -6811,10 +6851,9 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 		  if (target->abiversion() < 2)
 		    {
 		      Address addend = rela.get_r_addend();
-		      Address opdent = psymval->value(object, addend);
-		      code = target->symval_for_branch(relinfo->symtab,
-						       opdent, gsym, object,
-						       &dest_shndx);
+		      code = psymval->value(object, addend);
+		      target->symval_for_branch(relinfo->symtab, gsym, object,
+						&code, &dest_shndx);
 		    }
 		  bool is_ordinary;
 		  if (dest_shndx == 0)
@@ -7069,11 +7108,10 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 	  value = psymval->value(object, rela.get_r_addend());
 	}
     }
-  else if (!has_plt_value)
+  else if (!has_stub_value)
     {
       Address addend = 0;
-      unsigned int dest_shndx;
-      if (r_type != elfcpp::R_PPC_PLTREL24)
+      if (!(size == 32 && r_type == elfcpp::R_PPC_PLTREL24))
 	addend = rela.get_r_addend();
       value = psymval->value(object, addend);
       if (size == 64 && is_branch_reloc(r_type))
@@ -7086,10 +7124,13 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 		value += object->ppc64_local_entry_offset(r_sym);
 	    }
 	  else
-	    value = target->symval_for_branch(relinfo->symtab, value,
-					      gsym, object, &dest_shndx);
+	    {
+	      unsigned int dest_shndx;
+	      target->symval_for_branch(relinfo->symtab, gsym, object,
+					&value, &dest_shndx);
+	    }
 	}
-      unsigned int max_branch_offset = 0;
+      Address max_branch_offset = 0;
       if (r_type == elfcpp::R_POWERPC_REL24
 	  || r_type == elfcpp::R_PPC_PLTREL24
 	  || r_type == elfcpp::R_PPC_LOCAL24PC)
@@ -7107,8 +7148,11 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 	    {
 	      Address off = stub_table->find_long_branch_entry(object, value);
 	      if (off != invalid_address)
-		value = (stub_table->stub_address() + stub_table->plt_size()
-			 + off);
+		{
+		  value = (stub_table->stub_address() + stub_table->plt_size()
+			   + off);
+		  has_stub_value = true;
+		}
 	    }
 	}
     }
@@ -7659,9 +7703,17 @@ Target_powerpc<size, big_endian>::Relocate::relocate(
 			     r_type);
       break;
     }
-  if (status != Powerpc_relocate_functions<size, big_endian>::STATUS_OK)
-    gold_error_at_location(relinfo, relnum, rela.get_r_offset(),
-			   _("relocation overflow"));
+  if (status != Powerpc_relocate_functions<size, big_endian>::STATUS_OK
+      && (has_stub_value
+	  || !(gsym != NULL
+	       && gsym->is_weak_undefined()
+	       && is_branch_reloc(r_type))))
+    {
+      gold_error_at_location(relinfo, relnum, rela.get_r_offset(),
+			     _("relocation overflow"));
+      if (has_stub_value)
+	gold_info(_("try relinking with a smaller --stub-group-size"));
+    }
 
   return true;
 }

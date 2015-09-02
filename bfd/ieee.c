@@ -1312,7 +1312,8 @@ ieee_archive_p (bfd *abfd)
 
   /* Ignore the return value here.  It doesn't matter if we don't read
      the entire buffer.  We might have a very small ieee file.  */
-  bfd_bread ((void *) buffer, (bfd_size_type) sizeof (buffer), abfd);
+  if (bfd_bread ((void *) buffer, (bfd_size_type) sizeof (buffer), abfd) <= 0)
+    goto got_wrong_format_error;
 
   ieee->h.first_byte = buffer;
   ieee->h.input_p = buffer;
@@ -1801,7 +1802,8 @@ ieee_object_p (bfd *abfd)
     goto fail;
   /* Read the first few bytes in to see if it makes sense.  Ignore
      bfd_bread return value;  The file might be very small.  */
-  bfd_bread ((void *) buffer, (bfd_size_type) sizeof (buffer), abfd);
+  if (bfd_bread ((void *) buffer, (bfd_size_type) sizeof (buffer), abfd) <= 0)
+    goto got_wrong_format;
 
   ieee->h.input_p = buffer;
   if (this_byte_and_next (&(ieee->h)) != Module_Beginning)
@@ -3675,26 +3677,9 @@ ieee_openr_next_archived_file (bfd *arch, bfd *prev)
     }
 }
 
-static bfd_boolean
-ieee_find_nearest_line (bfd *abfd ATTRIBUTE_UNUSED,
-			asection *section ATTRIBUTE_UNUSED,
-			asymbol **symbols ATTRIBUTE_UNUSED,
-			bfd_vma offset ATTRIBUTE_UNUSED,
-			const char **filename_ptr ATTRIBUTE_UNUSED,
-			const char **functionname_ptr ATTRIBUTE_UNUSED,
-			unsigned int *line_ptr ATTRIBUTE_UNUSED)
-{
-  return FALSE;
-}
-
-static bfd_boolean
-ieee_find_inliner_info (bfd *abfd ATTRIBUTE_UNUSED,
-			const char **filename_ptr ATTRIBUTE_UNUSED,
-			const char **functionname_ptr ATTRIBUTE_UNUSED,
-			unsigned int *line_ptr ATTRIBUTE_UNUSED)
-{
-  return FALSE;
-}
+#define ieee_find_nearest_line _bfd_nosymbols_find_nearest_line
+#define ieee_find_line         _bfd_nosymbols_find_line
+#define ieee_find_inliner_info _bfd_nosymbols_find_inliner_info
 
 static int
 ieee_generic_stat_arch_elt (bfd *abfd, struct stat *buf)

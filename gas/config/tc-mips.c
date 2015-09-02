@@ -15008,10 +15008,14 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       break;
 
     case BFD_RELOC_MIPS_18_PCREL_S3:
-      if ((*valP & 0x7) != 0)
+      if ((S_GET_VALUE (fixP->fx_addsy) & 0x7) != 0)
 	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("PC-relative access to misaligned address (%lx)"),
-		      (long) *valP);
+		      _("PC-relative access using misaligned symbol (%lx)"),
+		      (long) S_GET_VALUE (fixP->fx_addsy));
+      if ((fixP->fx_offset & 0x7) != 0)
+	as_bad_where (fixP->fx_file, fixP->fx_line,
+		      _("PC-relative access using misaligned offset (%lx)"),
+		      (long) fixP->fx_offset);
 
       gas_assert (!fixP->fx_done);
       break;
@@ -15020,7 +15024,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       if ((*valP & 0x3) != 0)
 	as_bad_where (fixP->fx_file, fixP->fx_line,
 		      _("PC-relative access to misaligned address (%lx)"),
-		      (long) *valP);
+		      (long) (S_GET_VALUE (fixP->fx_addsy) + fixP->fx_offset));
 
       gas_assert (!fixP->fx_done);
       break;
@@ -16344,6 +16348,10 @@ s_cpadd (int ignore ATTRIBUTE_UNUSED)
 static void
 s_insn (int ignore ATTRIBUTE_UNUSED)
 {
+  file_mips_check_options ();
+  file_ase_mips16 |= mips_opts.mips16;
+  file_ase_micromips |= mips_opts.micromips;
+
   mips_mark_labels ();
 
   demand_empty_rest_of_line ();
@@ -17966,6 +17974,10 @@ mips_elf_final_processing (void)
       flags.isa_level = 32;
       flags.isa_rev = 5;
       break;
+    case INSN_ISA32R6:
+      flags.isa_level = 32;
+      flags.isa_rev = 6;
+      break;
     case INSN_ISA64:
       flags.isa_level = 64;
       flags.isa_rev = 1;
@@ -17981,6 +17993,10 @@ mips_elf_final_processing (void)
     case INSN_ISA64R5:
       flags.isa_level = 64;
       flags.isa_rev = 5;
+      break;
+    case INSN_ISA64R6:
+      flags.isa_level = 64;
+      flags.isa_rev = 6;
       break;
     }
 
