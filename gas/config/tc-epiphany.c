@@ -365,7 +365,7 @@ epiphany_handle_align (fragS *fragp)
 
    Additionnally, we check for .word symbol@PLT and set the relocation type.  */
 
-void
+bfd_reloc_code_real_type
 epiphany_parse_cons_expression (expressionS *exp,
 				int nbytes)
 {
@@ -377,6 +377,7 @@ epiphany_parse_cons_expression (expressionS *exp,
       exp->X_md = BFD_RELOC_EPIPHANY_CACHE32;
       input_line_pointer += 4;
     }
+  return BFD_RELOC_NONE;
 }
 
 /* Create a fixup for a cons expression. If epiphany_parse_cons_expression
@@ -386,10 +387,9 @@ void
 epiphany_cons_fix_new (fragS *frag,
 		  int where,
 		  int nbytes,
-		  expressionS *exp)
+		  expressionS *exp,
+		  bfd_reloc_code_real_type r)
 {
-  bfd_reloc_code_real_type r;
-
   if (exp->X_md == BFD_RELOC_EPIPHANY_CACHE32)
     r = BFD_RELOC_EPIPHANY_CACHE32;
   else
