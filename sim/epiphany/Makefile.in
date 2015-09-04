@@ -26,13 +26,11 @@ SIM_EXTRA_LIBS = -lm
 
 SIM_OBJS = \
 	$(SIM_NEW_COMMON_OBJS) \
-	sim-cpu.o \
 	sim-hload.o \
-	sim-hrw.o \
 	sim-model.o \
 	sim-reg.o \
 	cgen-utils.o cgen-trace.o cgen-scache.o cgen-fpu.o cgen-accfp.o \
-	cgen-run.o sim-reason.o sim-engine.o sim-stop.o \
+	cgen-run.o sim-reason.o sim-stop.o \
 	sim-if.o arch.o \
 	$(EPIPHANY_OBJS) \
 	devices.o \
@@ -44,7 +42,6 @@ SIM_EXTRA_DEPS = \
 	$(CGEN_INCLUDE_DEPS) \
 	arch.h cpuall.h epiphany-sim.h $(srcdir)/../../opcodes/epiphany-desc.h
 
-SIM_RUN_OBJS = nrun.o
 SIM_EXTRA_CLEAN = epiphany-clean
 
 # This selects the epiphany newlib/libgloss syscall definitions.
@@ -53,7 +50,6 @@ NL_TARGET = -DNL_TARGET_epiphany
 ## COMMON_POST_CONFIG_FRAG
 
 arch = epiphany
-
 
 # EPIPHANY objs
 

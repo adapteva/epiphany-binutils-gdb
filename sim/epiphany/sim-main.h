@@ -3,29 +3,23 @@
 #ifndef SIM_MAIN_H
 #define SIM_MAIN_H
 
-#define USING_SIM_BASE_H /* FIXME: quick hack */
-
 #ifndef WITH_TARGET_FLOATING_POINT_BITSIZE
 #define WITH_TARGET_FLOATING_POINT_BITSIZE 32
 #endif
 
-struct _sim_cpu; /* FIXME: should be in sim-basics.h */
-typedef struct _sim_cpu SIM_CPU;
-
+/* sim-basics.h includes config.h but cgen-types.h must be included before
+   sim-basics.h and cgen-types.h needs config.h.  */
+#include "config.h"
 
 #include "symcat.h"
 #include "sim-basics.h"
 #include "cgen-types.h"
 #include "epiphany-desc.h"
 #include "epiphany-opc.h"
-
 #include "arch.h"
 
 /* These must be defined before sim-base.h.  */
 typedef USI sim_cia;
-
-#define CIA_GET(cpu)     CPU_PC_GET (cpu)
-#define CIA_SET(cpu,val) CPU_PC_SET ((cpu), (val))
 
 #define SIM_ENGINE_HALT_HOOK(sd, cpu, cia) \
 do { \
@@ -55,18 +49,25 @@ struct _sim_cpu {
   sim_fpu_round round;          /* Current rounding mode of processor.  */
   /* Static parts of cgen.  */
   CGEN_CPU cgen_cpu;
+  EPIPHANY_MISC_PROFILE epiphany_misc_profile;
+#define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
+
+  /* CPU specific parts go here.
+     Note that in files that don't need to access these pieces WANT_CPU_FOO
+     won't be defined and thus these parts won't appear.  This is ok in the
+     sense that things work.  It is a source of bugs though.
+     One has to of course be careful to not take the size of this
+     struct and no structure members accessed in non-cpu specific files can
+     go after here.  Oh for a better language.  */
 #if defined (WANT_CPU_EPIPHANYBF)
   EPIPHANYBF_CPU_DATA cpu_data;
 #endif
-  EPIPHANY_MISC_PROFILE epiphany_misc_profile;
-#define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
 };
 
 /* The sim_state struct.  */
 
 struct sim_state {
-  sim_cpu *cpu;
-#define STATE_CPU(sd, n) (/*&*/ (sd)->cpu)
+  sim_cpu *cpu[MAX_NR_PROCESSORS];
 
   CGEN_STATE cgen_state;
 
