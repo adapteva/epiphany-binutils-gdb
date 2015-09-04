@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright (C) 1996-2015 Free Software Foundation, Inc.
+Copyright (C) 1996-2014 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
@@ -124,7 +124,7 @@ typedef enum insn_dc_25_2 {
 
 /* Enum declaration for .  */
 typedef enum gr_names {
-  H_REGISTERS_FP = 11, H_REGISTERS_SP = 13, H_REGISTERS_LR = 14, H_REGISTERS_R0 = 0
+  H_REGISTERS_SP = 13, H_REGISTERS_LR = 14, H_REGISTERS_FP = 15, H_REGISTERS_R0 = 0
  , H_REGISTERS_R1 = 1, H_REGISTERS_R2 = 2, H_REGISTERS_R3 = 3, H_REGISTERS_R4 = 4
  , H_REGISTERS_R5 = 5, H_REGISTERS_R6 = 6, H_REGISTERS_R7 = 7, H_REGISTERS_R8 = 8
  , H_REGISTERS_R9 = 9, H_REGISTERS_R10 = 10, H_REGISTERS_R11 = 11, H_REGISTERS_R12 = 12

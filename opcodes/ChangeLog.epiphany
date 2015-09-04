@@ -1,3 +1,8 @@
+2015-09-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-desc.c: Regenerated.
+	* epiphany-desc.h: Regenerated.
+
 2014-06-13  Pierre Langlois  <pierre.langlois@embecosm.com>
 
 	* epiphany-asm.c: Regenerated.
