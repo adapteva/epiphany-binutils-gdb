@@ -1,5 +1,16 @@
 2015-09-04  Ola Jeppsson  <ola@adapteva.com>
 
+	* aclocal.m4: New file.
+	* configure: Regenerate.
+	* decode.c: Regenerate.
+	* epiphany-desc.c: Remove.
+	* epiphany-desc.h: Remove.
+	* epiphany-opc.h: Remove.
+	* sem-switch.c: Regenerate.
+	* sem.c: Regenerate.
+
+2015-09-04  Ola Jeppsson  <ola@adapteva.com>
+
 	* Makefile.in: Adjust for upstream changes.
 	* sim-main.h: Likewise.
 	* mloop.in (execute): Change TRACE_INSN_INIT to
