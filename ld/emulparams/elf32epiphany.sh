@@ -22,8 +22,16 @@ IVT_LEN=0x040
 #TEXT_START_ADDR=0x00000060
 #EXECUTABLE_SYMBOLS='PROVIDE (___bss_start = __bss_start); PROVIDE (___heap_start = end); PROVIDE (___heap_end = (0x0c0000)); PROVIDE (___stack = (0x0ffff0));'
 
-TEXT_START_ADDR='DEFINED (___text_start) ? ___text_start : 0x80000000'
-EXECUTABLE_SYMBOLS='PROVIDE (___bss_start = __bss_start); PROVIDE (___heap_start = end); PROVIDE (___heap_end = (0x81800000)); PROVIDE (___stack = (0x81fffff0));'
+TEXT_START_ADDR='DEFINED (__text_start) ? __text_start : 0x80000000'
+EXECUTABLE_SYMBOLS='
+PROVIDE (__heap_start = end);
+PROVIDE (__heap_end = (0x81800000));
+PROVIDE (__stack = (0x81fffff0));
+PROVIDE (___bss_start = __bss_start);
+PROVIDE (___heap_start = __heap_start);
+PROVIDE (___heap_end = __heap_end);
+PROVIDE (___stack = __stack);
+'
 
 #Smuggle an alignemnt directive in here so that .bss is aligned.
 OTHER_SDATA_SECTIONS='. = ALIGN(8);'

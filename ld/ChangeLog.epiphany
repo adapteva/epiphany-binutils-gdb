@@ -1,3 +1,9 @@
+2015-09-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* emulparams/elf32epiphany.sh: __USER_LABEL_PREFIX__ was changed
+	from "_" to "" in the Epiphany GCC backend. Adjust for that.
+	* scripttempl/epiphany_4x4.sc: Likewise.
+
 2012-11-28  Joern Rennecke <joern.rennecke@embecosm.com>
 
 	* scripttempl/epiphany_4x4.sc, emulparams/elf32epiphany_4x4.sh: Add.

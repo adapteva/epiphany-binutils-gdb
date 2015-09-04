@@ -648,10 +648,12 @@ cat <<EOF
   PROVIDE ( __stack_start_ = ORIGIN(EXTERNAL_DRAM_0) + __PROG_SIZE_FOR_CORE__ * __CORE_NUM_ + __PROG_SIZE_FOR_CORE__  - 0x10) ;
   .stack ${RELOCATING+__stack_start_} :  {    ___stack = .;    *(.stack)  }
 
-  PROVIDE (  ___heap_start = ORIGIN(EXTERNAL_DRAM_1)  + __HEAP_SIZE_FOR_CORE__ * __CORE_NUM_ );
+  PROVIDE (  __heap_start = ORIGIN(EXTERNAL_DRAM_1)  + __HEAP_SIZE_FOR_CORE__ * __CORE_NUM_ );
+  PROVIDE (  ___heap_start = __heap_start);
   /*.heap_start      __heap_start_    :  {    _heap_start_ = .;    *(.heap_start)  }*/
 
-  PROVIDE (  ___heap_end =   ORIGIN(EXTERNAL_DRAM_1)  + __HEAP_SIZE_FOR_CORE__ * __CORE_NUM_  + __HEAP_SIZE_FOR_CORE__ - 4 );
+  PROVIDE (  __heap_end =   ORIGIN(EXTERNAL_DRAM_1)  + __HEAP_SIZE_FOR_CORE__ * __CORE_NUM_  + __HEAP_SIZE_FOR_CORE__ - 4 );
+  PROVIDE (  ___heap_end = __heap_end);
   
   
  /* .heap_end      __heap_end_    :  {    _heap_end_ = .;    *(.heap_end)  }*/
