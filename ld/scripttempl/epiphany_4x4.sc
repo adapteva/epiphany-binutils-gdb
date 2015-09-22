@@ -37,7 +37,7 @@
 #	OTHER_GOT_SECTIONS - sections just after .got.
 #	OTHER_SDATA_SECTIONS - sections just after .sdata.
 #	OTHER_BSS_SYMBOLS - symbols that appear at the start of the
-#		.bss section besides ___bss_start.
+#		.bss section besides __bss_start.
 #	DATA_PLT - .plt should be in data segment, not text segment.
 #	PLT_BEFORE_GOT - .plt just before .got when .plt is in data segement.
 #	BSS_PLT - .plt should be in bss segment
@@ -244,7 +244,7 @@ DTOR=".dtors     ADDR(.ctors) + SIZEOF(.ctors)    ${CONSTRUCTING-0} :
   }   /*> INTERNAL_RAM*/ "
 STACK="  .stack        ${RELOCATING-0}${RELOCATING+${STACK_ADDR}} :
   {
-    ${RELOCATING+___stack = .;}
+    ${RELOCATING+__stack = .;}
     *(.stack)
   }"
 
@@ -579,11 +579,11 @@ cat <<EOF
   ${SDATA}
   ${OTHER_SDATA_SECTIONS}
   ${RELOCATING+${DATA_END_SYMBOLS-${USER_LABEL_PREFIX}_edata = .; PROVIDE (${USER_LABEL_PREFIX}edata = .);}}
-  /* Align ___bss_start and _end to a multiple of 8 so that we can use strd
+  /* Align __bss_start and _end to a multiple of 8 so that we can use strd
      to clear bss.  N.B., without adding any extra alignment, we would have
      to clear the bss byte by byte.  */
   ${RELOCATING+. = ALIGN(8);}
-  ${RELOCATING+___bss_start = .;}
+  ${RELOCATING+__bss_start = .; PROVIDE (___bss_start = .);}
   ${RELOCATING+${OTHER_BSS_SYMBOLS}}
   ${SBSS}
   ${BSS_PLT+${PLT}}
@@ -646,7 +646,8 @@ cat <<EOF
   /*${STACK_ADDR+${STACK}}*/
   
   PROVIDE ( __stack_start_ = ORIGIN(EXTERNAL_DRAM_0) + __PROG_SIZE_FOR_CORE__ * __CORE_NUM_ + __PROG_SIZE_FOR_CORE__  - 0x10) ;
-  .stack ${RELOCATING+__stack_start_} :  {    ___stack = .;    *(.stack)  }
+  .stack ${RELOCATING+__stack_start_} :  {    __stack = .;    *(.stack)  }
+  PROVIDE (  ___stack = __stack);
 
   PROVIDE (  __heap_start = ORIGIN(EXTERNAL_DRAM_1)  + __HEAP_SIZE_FOR_CORE__ * __CORE_NUM_ );
   PROVIDE (  ___heap_start = __heap_start);

@@ -1,3 +1,8 @@
+2015-09-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* ld/scripttempl/epiphany_4x4.sc: Use __stack instead of ___stack.
+	Use __bss_start instead of ___bss_start.
+
 2015-09-04  Ola Jeppsson  <ola@adapteva.com>
 
 	* emulparams/elf32epiphany.sh: __USER_LABEL_PREFIX__ was changed
