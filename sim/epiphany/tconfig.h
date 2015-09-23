@@ -16,12 +16,6 @@
 /* For MSPR support.  FIXME: revisit.  */
 #define WITH_DEVICES 0
 
-/* FIXME: Revisit.  */
-#ifdef HAVE_DV_SOCKSER
-MODULE_INSTALL_FN dv_sockser_install;
-#define MODULE_LIST dv_sockser_install,
-#endif
-
 #if 0
 /* Enable watchpoints.  */
 #define WITH_WATCHPOINTS 1
@@ -31,10 +25,6 @@ MODULE_INSTALL_FN dv_sockser_install;
 #define SIM_HAVE_BREAKPOINTS
 #define SIM_BREAKPOINT { 0x42, 0x00 }
 #define SIM_BREAKPOINT_SIZE 2
-
-#if 0
-#define HAVE_DV_SOCKSER
-#endif
 
 /* This is a global setting.  Different cpu families can't mix-n-match -scache
    and -pbb.  However some cpu families may use -simple while others use
