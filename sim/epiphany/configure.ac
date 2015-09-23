@@ -22,7 +22,7 @@ SIM_AC_OPTION_INLINE()
 SIM_AC_OPTION_CGEN_MAINT
 
 # Hardware support
-SIM_AC_OPTION_HARDWARE(no,,epiphany_mem)
+SIM_AC_OPTION_HARDWARE(yes,"","epiphany_mem")
 
 
 dnl --enable-emesh-sim
@@ -30,7 +30,7 @@ esim_enabled_cflags="-pthread -DEMESH_SIM=1 -DWITH_EMESH_SIM=1"
 esim_disabled_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0"
 
 AC_ARG_ENABLE(emesh-sim,
-[  --enable-emesh-sim			Enable simulation of eMesh],
+[  --disable-emesh-sim			Disable simulation of eMesh],
 [
 case "x${enableval}" in
   x)    esim="yes"; esim_cflags+=" ${esim_enabled_cflags}";;
@@ -39,7 +39,10 @@ case "x${enableval}" in
   *)    AC_MSG_ERROR([--enable-emesh-sim does not take a value]); ;;
 esac
 ],
-[esim_cflags+=" ${esim_disabled_cflags}"]
+[
+  esim="yes"
+  esim_cflags+=" ${esim_enabled_cflags}"
+]
 )
 
 if test x"${esim}" = x"yes"; then

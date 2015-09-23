@@ -1,5 +1,10 @@
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim/epiphany/configure.ac: Enable hardware by default.
+	Enable emesh-sim by default.
+
+2015-09-23  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim/epiphany/epiphany.c (epiphany_testset): Replace
 	CIA_{GET,SET} with CPU_PC_{GET,SET}.
 	* sim/epiphany/dv-epiphany_mem.c (void epiphany_mem_signal):
