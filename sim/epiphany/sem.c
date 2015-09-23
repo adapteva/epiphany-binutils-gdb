@@ -209,7 +209,7 @@ SEM_FN_NAME (epiphanybf,beq16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (EQBI (CPU (h_zbit), 1)) {
+if (EQBI (GET_H_ZBIT (), 1)) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -236,7 +236,7 @@ SEM_FN_NAME (epiphanybf,beq) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (EQBI (CPU (h_zbit), 1)) {
+if (EQBI (GET_H_ZBIT (), 1)) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -263,7 +263,7 @@ SEM_FN_NAME (epiphanybf,bne16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (EQBI (CPU (h_zbit), 0)) {
+if (EQBI (GET_H_ZBIT (), 0)) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -290,7 +290,7 @@ SEM_FN_NAME (epiphanybf,bne) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (EQBI (CPU (h_zbit), 0)) {
+if (EQBI (GET_H_ZBIT (), 0)) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -317,7 +317,7 @@ SEM_FN_NAME (epiphanybf,bgtu16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (ANDBI (CPU (h_cbit), NOTBI (CPU (h_zbit)))) {
+if (ANDBI (GET_H_CBIT (), NOTBI (GET_H_ZBIT ()))) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -344,7 +344,7 @@ SEM_FN_NAME (epiphanybf,bgtu) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (ANDBI (CPU (h_cbit), NOTBI (CPU (h_zbit)))) {
+if (ANDBI (GET_H_CBIT (), NOTBI (GET_H_ZBIT ()))) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -371,7 +371,7 @@ SEM_FN_NAME (epiphanybf,bgteu16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (EQBI (CPU (h_cbit), 1)) {
+if (EQBI (GET_H_CBIT (), 1)) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -398,7 +398,7 @@ SEM_FN_NAME (epiphanybf,bgteu) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (EQBI (CPU (h_cbit), 1)) {
+if (EQBI (GET_H_CBIT (), 1)) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -425,7 +425,7 @@ SEM_FN_NAME (epiphanybf,blteu16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (ORBI (NOTBI (CPU (h_cbit)), CPU (h_zbit))) {
+if (ORBI (NOTBI (GET_H_CBIT ()), GET_H_ZBIT ())) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -452,7 +452,7 @@ SEM_FN_NAME (epiphanybf,blteu) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (ORBI (NOTBI (CPU (h_cbit)), CPU (h_zbit))) {
+if (ORBI (NOTBI (GET_H_CBIT ()), GET_H_ZBIT ())) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -479,7 +479,7 @@ SEM_FN_NAME (epiphanybf,bltu16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (EQBI (CPU (h_cbit), 0)) {
+if (EQBI (GET_H_CBIT (), 0)) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -506,7 +506,7 @@ SEM_FN_NAME (epiphanybf,bltu) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (EQBI (CPU (h_cbit), 0)) {
+if (EQBI (GET_H_CBIT (), 0)) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -533,7 +533,7 @@ SEM_FN_NAME (epiphanybf,bgt16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (ANDBI (NOTBI (CPU (h_zbit)), EQBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ANDBI (NOTBI (GET_H_ZBIT ()), EQBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -560,7 +560,7 @@ SEM_FN_NAME (epiphanybf,bgt) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (ANDBI (NOTBI (CPU (h_zbit)), EQBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ANDBI (NOTBI (GET_H_ZBIT ()), EQBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -587,7 +587,7 @@ SEM_FN_NAME (epiphanybf,bgte16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (EQBI (CPU (h_vbit), CPU (h_nbit))) {
+if (EQBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -614,7 +614,7 @@ SEM_FN_NAME (epiphanybf,bgte) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (EQBI (CPU (h_vbit), CPU (h_nbit))) {
+if (EQBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -641,7 +641,7 @@ SEM_FN_NAME (epiphanybf,blt16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (XORBI (CPU (h_vbit), CPU (h_nbit))) {
+if (XORBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -668,7 +668,7 @@ SEM_FN_NAME (epiphanybf,blt) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (XORBI (CPU (h_vbit), CPU (h_nbit))) {
+if (XORBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -695,7 +695,7 @@ SEM_FN_NAME (epiphanybf,blte16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (ORBI (CPU (h_zbit), XORBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ORBI (GET_H_ZBIT (), XORBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -722,7 +722,7 @@ SEM_FN_NAME (epiphanybf,blte) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (ORBI (CPU (h_zbit), XORBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ORBI (GET_H_ZBIT (), XORBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -749,7 +749,7 @@ SEM_FN_NAME (epiphanybf,bbeq16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (ORBI (CPU (h_bzbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BZBIT (), GET_H_BZBIT ())) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -776,7 +776,7 @@ SEM_FN_NAME (epiphanybf,bbeq) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (ORBI (CPU (h_bzbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BZBIT (), GET_H_BZBIT ())) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -803,7 +803,7 @@ SEM_FN_NAME (epiphanybf,bbne16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (NOTBI (CPU (h_bzbit))) {
+if (NOTBI (GET_H_BZBIT ())) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -830,7 +830,7 @@ SEM_FN_NAME (epiphanybf,bbne) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (NOTBI (CPU (h_bzbit))) {
+if (NOTBI (GET_H_BZBIT ())) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -857,7 +857,7 @@ SEM_FN_NAME (epiphanybf,bblt16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (ANDBI (CPU (h_bnbit), NOTBI (CPU (h_bzbit)))) {
+if (ANDBI (GET_H_BNBIT (), NOTBI (GET_H_BZBIT ()))) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -884,7 +884,7 @@ SEM_FN_NAME (epiphanybf,bblt) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (ANDBI (CPU (h_bnbit), NOTBI (CPU (h_bzbit)))) {
+if (ANDBI (GET_H_BNBIT (), NOTBI (GET_H_BZBIT ()))) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -911,7 +911,7 @@ SEM_FN_NAME (epiphanybf,bblte16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
-if (ORBI (CPU (h_bnbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BNBIT (), GET_H_BZBIT ())) {
   {
     USI opval = FLD (i_simm8);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -938,7 +938,7 @@ SEM_FN_NAME (epiphanybf,bblte) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
-if (ORBI (CPU (h_bnbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BNBIT (), GET_H_BZBIT ())) {
   {
     USI opval = FLD (i_simm24);
     SEM_BRANCH_VIA_CACHE (current_cpu, sem_arg, opval, vpc);
@@ -1014,7 +1014,7 @@ SEM_FN_NAME (epiphanybf,bl16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = ADDSI (pc, 2);
-    CPU (h_registers[((UINT) 14)]) = opval;
+    SET_H_REGISTERS (((UINT) 14), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
@@ -1044,7 +1044,7 @@ SEM_FN_NAME (epiphanybf,bl) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = ADDSI (pc, 4);
-    CPU (h_registers[((UINT) 14)]) = opval;
+    SET_H_REGISTERS (((UINT) 14), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
@@ -1072,7 +1072,7 @@ SEM_FN_NAME (epiphanybf,jr16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
   {
-    USI opval = * FLD (i_rn);
+    USI opval = GET_H_REGISTERS (FLD (f_rn));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
@@ -1095,7 +1095,7 @@ SEM_FN_NAME (epiphanybf,jr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
   {
-    USI opval = * FLD (i_rn6);
+    USI opval = GET_H_REGISTERS (FLD (f_rn6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
@@ -1120,11 +1120,11 @@ SEM_FN_NAME (epiphanybf,jalr16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = ADDSI (pc, 2);
-    CPU (h_registers[((UINT) 14)]) = opval;
+    SET_H_REGISTERS (((UINT) 14), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    USI opval = * FLD (i_rn);
+    USI opval = GET_H_REGISTERS (FLD (f_rn));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
@@ -1150,11 +1150,11 @@ SEM_FN_NAME (epiphanybf,jalr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = ADDSI (pc, 4);
-    CPU (h_registers[((UINT) 14)]) = opval;
+    SET_H_REGISTERS (((UINT) 14), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    USI opval = * FLD (i_rn6);
+    USI opval = GET_H_REGISTERS (FLD (f_rn6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
@@ -1180,68 +1180,39 @@ SEM_FN_NAME (epiphanybf,ldrbx16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, ADDSI (* FLD (i_rn), * FLD (i_rm))));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)))));
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1254,7 +1225,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -1262,7 +1233,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -1290,78 +1261,49 @@ SEM_FN_NAME (epiphanybf,ldrbp16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn);
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, * FLD (i_rn)));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn))));
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), tmp_tmprm);
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1371,7 +1313,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -1379,7 +1321,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -1408,68 +1350,39 @@ SEM_FN_NAME (epiphanybf,ldrbx_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, SUBSI (* FLD (i_rn6), * FLD (i_rm6))));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 21);
+    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1477,68 +1390,39 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, ADDSI (* FLD (i_rn6), * FLD (i_rm6))));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 21);
+    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1552,7 +1436,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -1560,7 +1444,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -1588,70 +1472,41 @@ SEM_FN_NAME (epiphanybf,ldrbp_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm6);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, * FLD (i_rn6)));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1659,16 +1514,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1679,7 +1534,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -1687,7 +1542,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -1717,70 +1572,41 @@ SEM_FN_NAME (epiphanybf,ldrbd16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, tmp_effa));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1793,7 +1619,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -1801,7 +1627,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -1832,73 +1658,44 @@ SEM_FN_NAME (epiphanybf,ldrbd_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, tmp_effa));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -1911,7 +1708,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -1919,7 +1716,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -1949,68 +1746,39 @@ SEM_FN_NAME (epiphanybf,ldrbdpm_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, * FLD (i_rn6)));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2018,16 +1786,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2038,7 +1806,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2046,7 +1814,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2074,68 +1842,39 @@ SEM_FN_NAME (epiphanybf,ldrhx16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, ADDSI (* FLD (i_rn), * FLD (i_rm))));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)))));
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2148,7 +1887,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2156,7 +1895,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2184,78 +1923,49 @@ SEM_FN_NAME (epiphanybf,ldrhp16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn);
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, * FLD (i_rn)));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn))));
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), tmp_tmprm);
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2265,7 +1975,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2273,7 +1983,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2302,68 +2012,39 @@ SEM_FN_NAME (epiphanybf,ldrhx_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, SUBSI (* FLD (i_rn6), * FLD (i_rm6))));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 21);
+    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2371,68 +2052,39 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, ADDSI (* FLD (i_rn6), * FLD (i_rm6))));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 21);
+    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2446,7 +2098,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2454,7 +2106,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2482,70 +2134,41 @@ SEM_FN_NAME (epiphanybf,ldrhp_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm6);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, * FLD (i_rn6)));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2553,16 +2176,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2573,7 +2196,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2581,7 +2204,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2611,70 +2234,41 @@ SEM_FN_NAME (epiphanybf,ldrhd16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, tmp_effa));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2687,7 +2281,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2695,7 +2289,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2726,73 +2320,44 @@ SEM_FN_NAME (epiphanybf,ldrhd_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, tmp_effa));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2805,7 +2370,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2813,7 +2378,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2843,68 +2408,39 @@ SEM_FN_NAME (epiphanybf,ldrhdpm_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, * FLD (i_rn6)));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2912,16 +2448,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -2932,7 +2468,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -2940,7 +2476,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -2968,68 +2504,39 @@ SEM_FN_NAME (epiphanybf,ldrx16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, ADDSI (* FLD (i_rn), * FLD (i_rm))));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)))));
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3042,7 +2549,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3050,7 +2557,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3078,78 +2585,49 @@ SEM_FN_NAME (epiphanybf,ldrp16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn);
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, * FLD (i_rn)));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn))));
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), tmp_tmprm);
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3159,7 +2637,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3167,7 +2645,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3196,68 +2674,39 @@ SEM_FN_NAME (epiphanybf,ldrx_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, SUBSI (* FLD (i_rn6), * FLD (i_rm6))));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 21);
+    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3265,68 +2714,39 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, ADDSI (* FLD (i_rn6), * FLD (i_rm6))));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 21);
+    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3340,7 +2760,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3348,7 +2768,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3376,70 +2796,41 @@ SEM_FN_NAME (epiphanybf,ldrp_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm6);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, * FLD (i_rn6)));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3447,16 +2838,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3467,7 +2858,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3475,7 +2866,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3505,70 +2896,41 @@ SEM_FN_NAME (epiphanybf,ldrd16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 9);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, tmp_effa));
-    * FLD (i_rd) = opval;
-    written |= (1 << 19);
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3581,7 +2943,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3589,7 +2951,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3620,73 +2982,44 @@ SEM_FN_NAME (epiphanybf,ldrd_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, tmp_effa));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3699,7 +3032,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3707,7 +3040,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3737,68 +3070,39 @@ SEM_FN_NAME (epiphanybf,ldrdpm_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, * FLD (i_rn6)));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 20);
+    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6))));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3806,16 +3110,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3826,7 +3130,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3834,7 +3138,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3863,82 +3167,53 @@ SEM_FN_NAME (epiphanybf,ldrdx16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
-  tmp_loadaddr = ADDSI (* FLD (i_rn), * FLD (i_rm));
+  BI tmp_isAlignmentAccess;
+  tmp_loadaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd) = opval;
-    written |= (1 << 21);
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd), 1)]) = opval;
-    written |= (1 << 17);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd), 1), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -3951,7 +3226,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -3959,7 +3234,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -3987,93 +3262,64 @@ SEM_FN_NAME (epiphanybf,ldrdp16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm));
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
-  tmp_loadaddr = * FLD (i_rn);
+  BI tmp_isAlignmentAccess;
+  tmp_loadaddr = GET_H_REGISTERS (FLD (f_rn));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd) = opval;
-    written |= (1 << 21);
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd), 1)]) = opval;
-    written |= (1 << 17);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd), 1), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), tmp_tmprm);
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4083,7 +3329,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4091,7 +3337,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4121,82 +3367,53 @@ SEM_FN_NAME (epiphanybf,ldrdx_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 if (FLD (f_addsubx)) {
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
-  tmp_loadaddr = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_isAlignmentAccess;
+  tmp_loadaddr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd6), 1)]) = opval;
-    written |= (1 << 18);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd6), 1), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4205,82 +3422,53 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 } else {
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
-  tmp_loadaddr = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_isAlignmentAccess;
+  tmp_loadaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd6), 1)]) = opval;
-    written |= (1 << 18);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd6), 1), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4294,7 +3482,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4302,7 +3490,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4330,85 +3518,56 @@ SEM_FN_NAME (epiphanybf,ldrdp_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_tmprm;
-  tmp_tmprm = * FLD (i_rm6);
+  tmp_tmprm = GET_H_REGISTERS (FLD (f_rm6));
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
-  tmp_loadaddr = * FLD (i_rn6);
+  BI tmp_isAlignmentAccess;
+  tmp_loadaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd6), 1)]) = opval;
-    written |= (1 << 18);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd6), 1), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4416,16 +3575,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), tmp_tmprm);
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), tmp_tmprm);
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4436,7 +3595,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4444,7 +3603,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4474,85 +3633,56 @@ SEM_FN_NAME (epiphanybf,ldrdd16_s) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd) = opval;
-    written |= (1 << 21);
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd), 1)]) = opval;
-    written |= (1 << 17);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd), 1), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4565,7 +3695,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4573,7 +3703,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4604,88 +3734,59 @@ SEM_FN_NAME (epiphanybf,ldrdd_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_loadaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd6), 1)]) = opval;
-    written |= (1 << 18);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd6), 1), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4698,7 +3799,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4706,7 +3807,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4737,82 +3838,53 @@ SEM_FN_NAME (epiphanybf,ldrddpm_l) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
 {
   SI tmp_loadaddr;
-  BI tmp_isAligmentAccess;
-  tmp_loadaddr = * FLD (i_rn6);
+  BI tmp_isAlignmentAccess;
+  tmp_loadaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_loadaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_loadaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_loadaddr, 3), 0)) : (EQSI (ANDSI (tmp_loadaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   tmp_loadaddr = ADDSI (tmp_loadaddr, 4);
   {
     SI opval = tmp_loadaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
     SI opval = GETMEMSI (current_cpu, pc, tmp_loadaddr);
-    CPU (h_registers[ADDSI (FLD (f_rd6), 1)]) = opval;
-    written |= (1 << 18);
+    SET_H_REGISTERS (ADDSI (FLD (f_rd6), 1), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4820,16 +3892,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -4840,7 +3912,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4848,7 +3920,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -4875,90 +3947,39 @@ SEM_FN_NAME (epiphanybf,testsetbt) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-  SI tmp_tmemaddr;
-  SI tmp_tmpValReg;
-  tmp_tmpValReg = * FLD (i_rd6);
+  SI tmp_eff_addr;
+  BI tmp_isAlignmentAccess;
 if (FLD (f_addsubx)) {
-  tmp_tmemaddr = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+  tmp_eff_addr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 } else {
-  tmp_tmemaddr = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+  tmp_eff_addr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 }
-{
-  BI tmp_isAligmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_tmemaddr, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_tmemaddr, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_tmemaddr, 3), 0)) : (EQSI (ANDSI (tmp_tmemaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_eff_addr, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_eff_addr, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_eff_addr, 3), 0)) : (EQSI (ANDSI (tmp_eff_addr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
-{
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
   {
-    SI opval = tmp_tmemaddr;
-    CPU (h_memaddr) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
-  }
-  {
-    SI opval = ZEXTQISI (GETMEMQI (current_cpu, pc, tmp_tmemaddr));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SI opval = epiphany_testset_QI (current_cpu, tmp_eff_addr, GET_H_REGISTERS (FLD (f_rd6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-}
-}
-}
-if (* FLD (i_rd6)) {
-((void) 0); /*nop*/
-} else {
-  {
-    QI opval = tmp_tmpValReg;
-    SETMEMQI (current_cpu, pc, tmp_tmemaddr, opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
@@ -4968,7 +3989,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -4976,7 +3997,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5003,90 +4024,39 @@ SEM_FN_NAME (epiphanybf,testsetht) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-  SI tmp_tmemaddr;
-  SI tmp_tmpValReg;
-  tmp_tmpValReg = * FLD (i_rd6);
+  SI tmp_eff_addr;
+  BI tmp_isAlignmentAccess;
 if (FLD (f_addsubx)) {
-  tmp_tmemaddr = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+  tmp_eff_addr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 } else {
-  tmp_tmemaddr = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+  tmp_eff_addr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 }
-{
-  BI tmp_isAligmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_tmemaddr, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_tmemaddr, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_tmemaddr, 3), 0)) : (EQSI (ANDSI (tmp_tmemaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_eff_addr, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_eff_addr, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_eff_addr, 3), 0)) : (EQSI (ANDSI (tmp_eff_addr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
-{
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
   {
-    SI opval = tmp_tmemaddr;
-    CPU (h_memaddr) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
-  }
-  {
-    SI opval = ZEXTHISI (GETMEMHI (current_cpu, pc, tmp_tmemaddr));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SI opval = epiphany_testset_HI (current_cpu, tmp_eff_addr, GET_H_REGISTERS (FLD (f_rd6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-}
-}
-}
-if (* FLD (i_rd6)) {
-((void) 0); /*nop*/
-} else {
-  {
-    HI opval = tmp_tmpValReg;
-    SETMEMHI (current_cpu, pc, tmp_tmemaddr, opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
@@ -5096,7 +4066,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5104,7 +4074,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5131,90 +4101,39 @@ SEM_FN_NAME (epiphanybf,testsett) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-  SI tmp_tmemaddr;
-  SI tmp_tmpValReg;
-  tmp_tmpValReg = * FLD (i_rd6);
+  SI tmp_eff_addr;
+  BI tmp_isAlignmentAccess;
 if (FLD (f_addsubx)) {
-  tmp_tmemaddr = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+  tmp_eff_addr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 } else {
-  tmp_tmemaddr = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+  tmp_eff_addr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 }
-{
-  BI tmp_isAligmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_tmemaddr, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_tmemaddr, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_tmemaddr, 3), 0)) : (EQSI (ANDSI (tmp_tmemaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_eff_addr, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_eff_addr, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_eff_addr, 3), 0)) : (EQSI (ANDSI (tmp_eff_addr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
-{
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
   {
-    SI opval = tmp_tmemaddr;
-    CPU (h_memaddr) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
-  }
-  {
-    SI opval = ZEXTSISI (GETMEMSI (current_cpu, pc, tmp_tmemaddr));
-    * FLD (i_rd6) = opval;
-    written |= (1 << 22);
+    SI opval = epiphany_testset_SI (current_cpu, tmp_eff_addr, GET_H_REGISTERS (FLD (f_rd6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-}
-}
-}
-if (* FLD (i_rd6)) {
-((void) 0); /*nop*/
-} else {
-  {
-    SI opval = tmp_tmpValReg;
-    SETMEMSI (current_cpu, pc, tmp_tmemaddr, opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
@@ -5224,7 +4143,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5232,7 +4151,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5260,68 +4179,39 @@ SEM_FN_NAME (epiphanybf,strbx16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd);
-    SETMEMQI (current_cpu, pc, ADDSI (* FLD (i_rn), * FLD (i_rm)), opval);
-    written |= (1 << 16);
+    QI opval = GET_H_REGISTERS (FLD (f_rd));
+    SETMEMQI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -5334,7 +4224,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5342,7 +4232,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5371,68 +4261,39 @@ SEM_FN_NAME (epiphanybf,strbx) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
     written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd6);
-    SETMEMQI (current_cpu, pc, SUBSI (* FLD (i_rn6), * FLD (i_rm6)), opval);
-    written |= (1 << 18);
+    QI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMQI (current_cpu, pc, SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -5440,68 +4301,39 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
     written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd6);
-    SETMEMQI (current_cpu, pc, ADDSI (* FLD (i_rn6), * FLD (i_rm6)), opval);
-    written |= (1 << 17);
+    QI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMQI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -5515,7 +4347,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5523,7 +4355,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5551,76 +4383,47 @@ SEM_FN_NAME (epiphanybf,strbp16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn);
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd);
-    SETMEMQI (current_cpu, pc, * FLD (i_rn), opval);
-    written |= (1 << 16);
+    QI opval = GET_H_REGISTERS (FLD (f_rd));
+    SETMEMQI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn)), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -5630,7 +4433,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5638,7 +4441,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5666,68 +4469,39 @@ SEM_FN_NAME (epiphanybf,strbp) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd6);
-    SETMEMQI (current_cpu, pc, * FLD (i_rn6), opval);
-    written |= (1 << 17);
+    QI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMQI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6)), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -5735,16 +4509,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -5755,7 +4529,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5763,7 +4537,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5793,70 +4567,41 @@ SEM_FN_NAME (epiphanybf,strbd16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd);
+    QI opval = GET_H_REGISTERS (FLD (f_rd));
     SETMEMQI (current_cpu, pc, tmp_effa, opval);
-    written |= (1 << 16);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -5869,7 +4614,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5877,7 +4622,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -5908,73 +4653,44 @@ SEM_FN_NAME (epiphanybf,strbd) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd6);
+    QI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMQI (current_cpu, pc, tmp_effa, opval);
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -5987,7 +4703,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -5995,7 +4711,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6025,68 +4741,39 @@ SEM_FN_NAME (epiphanybf,strbdpm) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_BYTE == OPW_BYTE) ? (0) : (OPW_BYTE == OPW_SHORT) ? (1) : (OPW_BYTE == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_BYTE == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_BYTE == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_BYTE == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    QI opval = * FLD (i_rd6);
-    SETMEMQI (current_cpu, pc, * FLD (i_rn6), opval);
-    written |= (1 << 17);
+    QI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMQI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6)), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6094,16 +4781,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -6114,7 +4801,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -6122,7 +4809,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6150,68 +4837,39 @@ SEM_FN_NAME (epiphanybf,strhx16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd);
-    SETMEMHI (current_cpu, pc, ADDSI (* FLD (i_rn), * FLD (i_rm)), opval);
-    written |= (1 << 16);
+    HI opval = GET_H_REGISTERS (FLD (f_rd));
+    SETMEMHI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6224,7 +4882,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -6232,7 +4890,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6261,68 +4919,39 @@ SEM_FN_NAME (epiphanybf,strhx) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
     written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd6);
-    SETMEMHI (current_cpu, pc, SUBSI (* FLD (i_rn6), * FLD (i_rm6)), opval);
-    written |= (1 << 18);
+    HI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMHI (current_cpu, pc, SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6330,68 +4959,39 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
     written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd6);
-    SETMEMHI (current_cpu, pc, ADDSI (* FLD (i_rn6), * FLD (i_rm6)), opval);
-    written |= (1 << 17);
+    HI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMHI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6405,7 +5005,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -6413,7 +5013,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6441,76 +5041,47 @@ SEM_FN_NAME (epiphanybf,strhp16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn);
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd);
-    SETMEMHI (current_cpu, pc, * FLD (i_rn), opval);
-    written |= (1 << 16);
+    HI opval = GET_H_REGISTERS (FLD (f_rd));
+    SETMEMHI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn)), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -6520,7 +5091,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -6528,7 +5099,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6556,68 +5127,39 @@ SEM_FN_NAME (epiphanybf,strhp) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd6);
-    SETMEMHI (current_cpu, pc, * FLD (i_rn6), opval);
-    written |= (1 << 17);
+    HI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMHI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6)), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6625,16 +5167,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -6645,7 +5187,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -6653,7 +5195,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6683,70 +5225,41 @@ SEM_FN_NAME (epiphanybf,strhd16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd);
+    HI opval = GET_H_REGISTERS (FLD (f_rd));
     SETMEMHI (current_cpu, pc, tmp_effa, opval);
-    written |= (1 << 16);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6759,7 +5272,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -6767,7 +5280,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6798,73 +5311,44 @@ SEM_FN_NAME (epiphanybf,strhd) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd6);
+    HI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMHI (current_cpu, pc, tmp_effa, opval);
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6877,7 +5361,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -6885,7 +5369,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -6915,68 +5399,39 @@ SEM_FN_NAME (epiphanybf,strhdpm) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_SHORT == OPW_BYTE) ? (0) : (OPW_SHORT == OPW_SHORT) ? (1) : (OPW_SHORT == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_SHORT == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_SHORT == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_SHORT == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    HI opval = * FLD (i_rd6);
-    SETMEMHI (current_cpu, pc, * FLD (i_rn6), opval);
-    written |= (1 << 17);
+    HI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMHI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6)), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -6984,16 +5439,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -7004,7 +5459,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7012,7 +5467,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7040,68 +5495,39 @@ SEM_FN_NAME (epiphanybf,strx16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn), * FLD (i_rm)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd);
-    SETMEMSI (current_cpu, pc, ADDSI (* FLD (i_rn), * FLD (i_rm)), opval);
-    written |= (1 << 16);
+    SI opval = GET_H_REGISTERS (FLD (f_rd));
+    SETMEMSI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm))), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -7114,7 +5540,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7122,7 +5548,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7151,68 +5577,39 @@ SEM_FN_NAME (epiphanybf,strx) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 if (FLD (f_addsubx)) {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (SUBSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
     written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
-    SETMEMSI (current_cpu, pc, SUBSI (* FLD (i_rn6), * FLD (i_rm6)), opval);
-    written |= (1 << 18);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMSI (current_cpu, pc, SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), opval);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -7220,68 +5617,39 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 } else {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 3), 0)) : (EQSI (ANDSI (ADDSI (* FLD (i_rn6), * FLD (i_rm6)), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 3), 0)) : (EQSI (ANDSI (ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
     written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
-    SETMEMSI (current_cpu, pc, ADDSI (* FLD (i_rn6), * FLD (i_rm6)), opval);
-    written |= (1 << 17);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMSI (current_cpu, pc, ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6))), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -7295,7 +5663,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7303,7 +5671,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7331,76 +5699,47 @@ SEM_FN_NAME (epiphanybf,strp16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn);
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd);
-    SETMEMSI (current_cpu, pc, * FLD (i_rn), opval);
-    written |= (1 << 16);
+    SI opval = GET_H_REGISTERS (FLD (f_rd));
+    SETMEMSI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn)), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -7410,7 +5749,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7418,7 +5757,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7446,68 +5785,39 @@ SEM_FN_NAME (epiphanybf,strp) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
-    SETMEMSI (current_cpu, pc, * FLD (i_rn6), opval);
-    written |= (1 << 17);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMSI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6)), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -7515,16 +5825,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -7535,7 +5845,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7543,7 +5853,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7573,70 +5883,41 @@ SEM_FN_NAME (epiphanybf,strd16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 10);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 11);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 12);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 7);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd);
+    SI opval = GET_H_REGISTERS (FLD (f_rd));
     SETMEMSI (current_cpu, pc, tmp_effa, opval);
-    written |= (1 << 16);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -7649,7 +5930,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 14);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7657,7 +5938,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7688,73 +5969,44 @@ SEM_FN_NAME (epiphanybf,strd) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (tmp_effa, 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (tmp_effa, 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (tmp_effa, 3), 0)) : (EQSI (ANDSI (tmp_effa, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_effa;
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMSI (current_cpu, pc, tmp_effa, opval);
-    written |= (1 << 17);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -7767,7 +6019,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7775,7 +6027,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7805,68 +6057,39 @@ SEM_FN_NAME (epiphanybf,strdpm) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_WORD == OPW_BYTE) ? (0) : (OPW_WORD == OPW_SHORT) ? (1) : (OPW_WORD == OPW_WORD) ? (2) : (3);
 {
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (* FLD (i_rn6), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (* FLD (i_rn6), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (* FLD (i_rn6), 3), 0)) : (EQSI (ANDSI (* FLD (i_rn6), 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_WORD == OPW_BYTE) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 0), 0)) : (OPW_WORD == OPW_SHORT) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 1), 0)) : (OPW_WORD == OPW_WORD) ? (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 3), 0)) : (EQSI (ANDSI (GET_H_REGISTERS (FLD (f_rn6)), 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 11);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 12);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 13);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
-    SI opval = * FLD (i_rn6);
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
     CPU (h_memaddr) = opval;
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
-    SETMEMSI (current_cpu, pc, * FLD (i_rn6), opval);
-    written |= (1 << 17);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SETMEMSI (current_cpu, pc, GET_H_REGISTERS (FLD (f_rn6)), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -7874,16 +6097,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 21);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -7894,7 +6117,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 15);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -7902,7 +6125,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -7931,82 +6154,53 @@ SEM_FN_NAME (epiphanybf,strdx16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
-  tmp_storeaddr = ADDSI (* FLD (i_rn), * FLD (i_rm));
+  BI tmp_isAlignmentAccess;
+  tmp_storeaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd);
+    SI opval = GET_H_REGISTERS (FLD (f_rd));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -8019,7 +6213,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -8027,7 +6221,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -8057,82 +6251,53 @@ SEM_FN_NAME (epiphanybf,strdx) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 if (FLD (f_addsubx)) {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
-  tmp_storeaddr = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_isAlignmentAccess;
+  tmp_storeaddr = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 13);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 15);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd6), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd6), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -8141,82 +6306,53 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 } else {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
-  tmp_storeaddr = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_isAlignmentAccess;
+  tmp_storeaddr = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 13);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 15);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd6), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd6), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -8230,7 +6366,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -8238,7 +6374,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -8267,90 +6403,61 @@ SEM_FN_NAME (epiphanybf,strdp16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
-  tmp_storeaddr = * FLD (i_rn);
+  BI tmp_isAlignmentAccess;
+  tmp_storeaddr = GET_H_REGISTERS (FLD (f_rn));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd);
+    SI opval = GET_H_REGISTERS (FLD (f_rd));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
 }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rn) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -8360,7 +6467,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -8368,7 +6475,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -8397,82 +6504,53 @@ SEM_FN_NAME (epiphanybf,strdp) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
-  tmp_storeaddr = * FLD (i_rn6);
+  BI tmp_isAlignmentAccess;
+  tmp_storeaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 13);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 15);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd6), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd6), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -8480,16 +6558,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_addsubx)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -8500,7 +6578,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -8508,7 +6586,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -8538,85 +6616,56 @@ SEM_FN_NAME (epiphanybf,strdd16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_effa;
   SI tmp_scale;
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
-  tmp_effa = ADDSI (* FLD (i_rn), SLLSI (FLD (f_disp3), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn)), SLLSI (FLD (f_disp3), tmp_scale));
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 19);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 12);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 13);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 17);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 15);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 14);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd);
+    SI opval = GET_H_REGISTERS (FLD (f_rd));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 20);
+    written |= (1 << 13);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 18);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -8629,7 +6678,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 16);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -8637,7 +6686,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -8668,88 +6717,59 @@ SEM_FN_NAME (epiphanybf,strdd) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SI tmp_scale;
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
 if (FLD (f_subd)) {
-  tmp_effa = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 } else {
-  tmp_effa = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
+  tmp_effa = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
 }
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
+  BI tmp_isAlignmentAccess;
   tmp_storeaddr = tmp_effa;
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 13);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 15);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd6), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd6), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -8762,7 +6782,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -8770,7 +6790,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -8801,82 +6821,53 @@ SEM_FN_NAME (epiphanybf,strddpm) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   tmp_scale = (OPW_DOUBLE == OPW_BYTE) ? (0) : (OPW_DOUBLE == OPW_SHORT) ? (1) : (OPW_DOUBLE == OPW_WORD) ? (2) : (3);
 {
   SI tmp_storeaddr;
-  BI tmp_isAligmentAccess;
-  tmp_storeaddr = * FLD (i_rn6);
+  BI tmp_isAlignmentAccess;
+  tmp_storeaddr = GET_H_REGISTERS (FLD (f_rn6));
 {
   BI tmp_scale;
-  tmp_isAligmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
-if (NOTBI (tmp_isAligmentAccess)) {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
+  tmp_isAlignmentAccess = (OPW_DOUBLE == OPW_BYTE) ? (EQSI (ANDSI (tmp_storeaddr, 0), 0)) : (OPW_DOUBLE == OPW_SHORT) ? (EQSI (ANDSI (tmp_storeaddr, 1), 0)) : (OPW_DOUBLE == OPW_WORD) ? (EQSI (ANDSI (tmp_storeaddr, 3), 0)) : (EQSI (ANDSI (tmp_storeaddr, 7), 0));
+if (NOTBI (tmp_isAlignmentAccess)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 20);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_UNALIGNED;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 13);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 14);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 18);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 16);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 15);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
-}
-if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
+if (NOTBI (NOTBI (tmp_isAlignmentAccess))) {
 {
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = * FLD (i_rd6);
+    SI opval = GET_H_REGISTERS (FLD (f_rd6));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
   tmp_storeaddr = ADDSI (tmp_storeaddr, 4);
   {
     SI opval = tmp_storeaddr;
     CPU (h_memaddr) = opval;
-    written |= (1 << 21);
+    written |= (1 << 14);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memaddr", 'x', opval);
   }
   {
-    SI opval = CPU (h_registers[ADDSI (FLD (f_rd6), 1)]);
+    SI opval = GET_H_REGISTERS (ADDSI (FLD (f_rd6), 1));
     SETMEMSI (current_cpu, pc, tmp_storeaddr, opval);
-    written |= (1 << 19);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
 }
@@ -8884,16 +6875,16 @@ if (NOTBI (NOTBI (tmp_isAligmentAccess))) {
 }
 if (FLD (f_subd)) {
   {
-    SI opval = SUBSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 } else {
   {
-    SI opval = ADDSI (* FLD (i_rn6), SLLSI (FLD (f_disp11), tmp_scale));
-    * FLD (i_rn6) = opval;
-    written |= (1 << 23);
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), SLLSI (FLD (f_disp11), tmp_scale));
+    SET_H_REGISTERS (FLD (f_rn6), opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -8904,7 +6895,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -8912,7 +6903,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 22);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -8938,10 +6929,10 @@ SEM_FN_NAME (epiphanybf,cmov16EQ) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (EQBI (CPU (h_zbit), 1)) {
+if (EQBI (GET_H_ZBIT (), 1)) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -8986,10 +6977,10 @@ SEM_FN_NAME (epiphanybf,cmovEQ) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (EQBI (CPU (h_zbit), 1)) {
+if (EQBI (GET_H_ZBIT (), 1)) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9034,10 +7025,10 @@ SEM_FN_NAME (epiphanybf,cmov16NE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (EQBI (CPU (h_zbit), 0)) {
+if (EQBI (GET_H_ZBIT (), 0)) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9082,10 +7073,10 @@ SEM_FN_NAME (epiphanybf,cmovNE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (EQBI (CPU (h_zbit), 0)) {
+if (EQBI (GET_H_ZBIT (), 0)) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9130,10 +7121,10 @@ SEM_FN_NAME (epiphanybf,cmov16GTU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (ANDBI (CPU (h_cbit), NOTBI (CPU (h_zbit)))) {
+if (ANDBI (GET_H_CBIT (), NOTBI (GET_H_ZBIT ()))) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9178,10 +7169,10 @@ SEM_FN_NAME (epiphanybf,cmovGTU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (ANDBI (CPU (h_cbit), NOTBI (CPU (h_zbit)))) {
+if (ANDBI (GET_H_CBIT (), NOTBI (GET_H_ZBIT ()))) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9226,10 +7217,10 @@ SEM_FN_NAME (epiphanybf,cmov16GTEU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (EQBI (CPU (h_cbit), 1)) {
+if (EQBI (GET_H_CBIT (), 1)) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9274,10 +7265,10 @@ SEM_FN_NAME (epiphanybf,cmovGTEU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (EQBI (CPU (h_cbit), 1)) {
+if (EQBI (GET_H_CBIT (), 1)) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9322,10 +7313,10 @@ SEM_FN_NAME (epiphanybf,cmov16LTEU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (ORBI (NOTBI (CPU (h_cbit)), CPU (h_zbit))) {
+if (ORBI (NOTBI (GET_H_CBIT ()), GET_H_ZBIT ())) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9370,10 +7361,10 @@ SEM_FN_NAME (epiphanybf,cmovLTEU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (ORBI (NOTBI (CPU (h_cbit)), CPU (h_zbit))) {
+if (ORBI (NOTBI (GET_H_CBIT ()), GET_H_ZBIT ())) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9418,10 +7409,10 @@ SEM_FN_NAME (epiphanybf,cmov16LTU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (EQBI (CPU (h_cbit), 0)) {
+if (EQBI (GET_H_CBIT (), 0)) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9466,10 +7457,10 @@ SEM_FN_NAME (epiphanybf,cmovLTU) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (EQBI (CPU (h_cbit), 0)) {
+if (EQBI (GET_H_CBIT (), 0)) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9514,10 +7505,10 @@ SEM_FN_NAME (epiphanybf,cmov16GT) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (ANDBI (NOTBI (CPU (h_zbit)), EQBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ANDBI (NOTBI (GET_H_ZBIT ()), EQBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9562,10 +7553,10 @@ SEM_FN_NAME (epiphanybf,cmovGT) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (ANDBI (NOTBI (CPU (h_zbit)), EQBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ANDBI (NOTBI (GET_H_ZBIT ()), EQBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9610,10 +7601,10 @@ SEM_FN_NAME (epiphanybf,cmov16GTE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (EQBI (CPU (h_vbit), CPU (h_nbit))) {
+if (EQBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9658,10 +7649,10 @@ SEM_FN_NAME (epiphanybf,cmovGTE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (EQBI (CPU (h_vbit), CPU (h_nbit))) {
+if (EQBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9706,10 +7697,10 @@ SEM_FN_NAME (epiphanybf,cmov16LT) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (XORBI (CPU (h_vbit), CPU (h_nbit))) {
+if (XORBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9754,10 +7745,10 @@ SEM_FN_NAME (epiphanybf,cmovLT) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (XORBI (CPU (h_vbit), CPU (h_nbit))) {
+if (XORBI (GET_H_VBIT (), GET_H_NBIT ())) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9802,10 +7793,10 @@ SEM_FN_NAME (epiphanybf,cmov16LTE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (ORBI (CPU (h_zbit), XORBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ORBI (GET_H_ZBIT (), XORBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9850,10 +7841,10 @@ SEM_FN_NAME (epiphanybf,cmovLTE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (ORBI (CPU (h_zbit), XORBI (CPU (h_vbit), CPU (h_nbit)))) {
+if (ORBI (GET_H_ZBIT (), XORBI (GET_H_VBIT (), GET_H_NBIT ()))) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 10);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -9899,8 +7890,8 @@ SEM_FN_NAME (epiphanybf,cmov16B) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -9944,8 +7935,8 @@ SEM_FN_NAME (epiphanybf,cmovB) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -9988,10 +7979,10 @@ SEM_FN_NAME (epiphanybf,cmov16BEQ) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (ORBI (CPU (h_bzbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BZBIT (), GET_H_BZBIT ())) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10036,10 +8027,10 @@ SEM_FN_NAME (epiphanybf,cmovBEQ) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (ORBI (CPU (h_bzbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BZBIT (), GET_H_BZBIT ())) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10084,10 +8075,10 @@ SEM_FN_NAME (epiphanybf,cmov16BNE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (NOTBI (CPU (h_bzbit))) {
+if (NOTBI (GET_H_BZBIT ())) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10132,10 +8123,10 @@ SEM_FN_NAME (epiphanybf,cmovBNE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (NOTBI (CPU (h_bzbit))) {
+if (NOTBI (GET_H_BZBIT ())) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 8);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10180,10 +8171,10 @@ SEM_FN_NAME (epiphanybf,cmov16BLT) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (ANDBI (CPU (h_bnbit), NOTBI (CPU (h_bzbit)))) {
+if (ANDBI (GET_H_BNBIT (), NOTBI (GET_H_BZBIT ()))) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10228,10 +8219,10 @@ SEM_FN_NAME (epiphanybf,cmovBLT) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (ANDBI (CPU (h_bnbit), NOTBI (CPU (h_bzbit)))) {
+if (ANDBI (GET_H_BNBIT (), NOTBI (GET_H_BZBIT ()))) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10276,10 +8267,10 @@ SEM_FN_NAME (epiphanybf,cmov16BLTE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (ORBI (CPU (h_bnbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BNBIT (), GET_H_BZBIT ())) {
   {
-    SI opval = * FLD (i_rn);
-    * FLD (i_rd) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10324,10 +8315,10 @@ SEM_FN_NAME (epiphanybf,cmovBLTE) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
 {
-if (ORBI (CPU (h_bnbit), CPU (h_bzbit))) {
+if (ORBI (GET_H_BNBIT (), GET_H_BZBIT ())) {
   {
-    SI opval = * FLD (i_rn6);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_REGISTERS (FLD (f_rn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     written |= (1 << 9);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
@@ -10373,7 +8364,7 @@ SEM_FN_NAME (epiphanybf,movts16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = * FLD (i_rd);
+    USI opval = GET_H_REGISTERS (FLD (f_rd));
     SET_H_CORE_REGISTERS (FLD (f_sn), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
@@ -10418,7 +8409,7 @@ SEM_FN_NAME (epiphanybf,movts6) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = * FLD (i_rd6);
+    USI opval = GET_H_REGISTERS (FLD (f_rd6));
     SET_H_CORE_REGISTERS (FLD (f_sn6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
@@ -10463,8 +8454,8 @@ SEM_FN_NAME (epiphanybf,movtsdma) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = * FLD (i_rd6);
-    CPU (h_coredma_registers[FLD (f_sn6)]) = opval;
+    USI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SET_H_COREDMA_REGISTERS (FLD (f_sn6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "coredma-registers", 'x', opval);
   }
 {
@@ -10508,8 +8499,8 @@ SEM_FN_NAME (epiphanybf,movtsmem) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = * FLD (i_rd6);
-    CPU (h_coremem_registers[FLD (f_sn6)]) = opval;
+    USI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SET_H_COREMEM_REGISTERS (FLD (f_sn6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "coremem-registers", 'x', opval);
   }
 {
@@ -10553,8 +8544,8 @@ SEM_FN_NAME (epiphanybf,movtsmesh) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = * FLD (i_rd6);
-    CPU (h_coremesh_registers[FLD (f_sn6)]) = opval;
+    USI opval = GET_H_REGISTERS (FLD (f_rd6));
+    SET_H_COREMESH_REGISTERS (FLD (f_sn6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "coremesh-registers", 'x', opval);
   }
 {
@@ -10599,7 +8590,7 @@ SEM_FN_NAME (epiphanybf,movfs16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = GET_H_CORE_REGISTERS (FLD (f_sn));
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -10644,7 +8635,7 @@ SEM_FN_NAME (epiphanybf,movfs6) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = GET_H_CORE_REGISTERS (FLD (f_sn6));
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -10688,8 +8679,8 @@ SEM_FN_NAME (epiphanybf,movfsdma) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    SI opval = CPU (h_coredma_registers[FLD (f_sn6)]);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_COREDMA_REGISTERS (FLD (f_sn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -10733,8 +8724,8 @@ SEM_FN_NAME (epiphanybf,movfsmem) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    SI opval = CPU (h_coremem_registers[FLD (f_sn6)]);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_COREMEM_REGISTERS (FLD (f_sn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -10778,8 +8769,8 @@ SEM_FN_NAME (epiphanybf,movfsmesh) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    SI opval = CPU (h_coremesh_registers[FLD (f_sn6)]);
-    * FLD (i_rd6) = opval;
+    SI opval = GET_H_COREMESH_REGISTERS (FLD (f_sn6));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -10941,16 +8932,25 @@ SEM_FN_NAME (epiphanybf,idle) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   ARGBUF *abuf = SEM_ARGBUF (sem_arg);
   int UNUSED written = 0;
   IADDR UNUSED pc = abuf->addr;
+  SEM_BRANCH_INIT
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
+  USI tmp_tmpPC;
   {
     BI opval = 0;
-    CPU (h_caibit) = opval;
+    SET_H_CAIBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "caibit", 'x', opval);
   }
-sim_engine_halt (CPU_STATE (current_cpu), current_cpu, NULL, 		pc, sim_exited, 0);}
+  tmp_tmpPC = pc;
+  {
+    USI opval = tmp_tmpPC;
+    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
+  }
+}
 
+  SEM_BRANCH_FINI (vpc);
   return vpc;
 #undef FLD
 }
@@ -11012,22 +9012,7 @@ SEM_FN_NAME (epiphanybf,rti) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    USI opval = epiphany_rti (current_cpu, GET_H_CORE_REGISTERS (((UINT) 13)), GET_H_CORE_REGISTERS (((UINT) 9)));
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    BI opval = 0;
-    CPU (h_gidisablebit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    BI opval = 0;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    USI opval = GET_H_CORE_REGISTERS (((UINT) 8));
+    USI opval = epiphany_rti (current_cpu);
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
@@ -11053,7 +9038,7 @@ SEM_FN_NAME (epiphanybf,wand) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 1;
-    CPU (h_sflagbit) = opval;
+    SET_H_SFLAGBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "sflagbit", 'x', opval);
   }
 {
@@ -11137,18 +9122,14 @@ SEM_FN_NAME (epiphanybf,gien) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-  {
-    BI opval = 0;
-    CPU (h_gidisablebit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
+epiphany_gie (current_cpu);
 {
   USI tmp_tmpPC;
 if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 5);
+    written |= (1 << 4);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -11156,7 +9137,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 6);
+    written |= (1 << 5);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -11184,7 +9165,7 @@ SEM_FN_NAME (epiphanybf,gidis) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 1;
-    CPU (h_gidisablebit) = opval;
+    SET_H_GIDISABLEBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
   }
 {
@@ -11227,52 +9208,20 @@ SEM_FN_NAME (epiphanybf,swi_num) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 2);
 
 {
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 128), 0)) {
 {
   {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    written |= (1 << 9);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_SWI;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 5);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    written |= (1 << 8);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 128);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 7);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 36;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 10);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 128);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 6);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-}
 }
 }
 
-  abuf->written = written;
   SEM_BRANCH_FINI (vpc);
   return vpc;
 #undef FLD
@@ -11292,7 +9241,7 @@ SEM_FN_NAME (epiphanybf,trap16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
   {
     SI opval = epiphany_trap (current_cpu, pc, FLD (f_trap_num));
-    CPU (h_registers[((UINT) 0)]) = opval;
+    SET_H_REGISTERS (((UINT) 0), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 
@@ -11317,34 +9266,34 @@ SEM_FN_NAME (epiphanybf,add16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = ADDCFSI (* FLD (i_rn), * FLD (i_rm), 0);
-    CPU (h_cbit) = opval;
+    BI opval = ADDCFSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)), 0);
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = ADDOFSI (* FLD (i_rn), * FLD (i_rm), 0);
-    CPU (h_vbit) = opval;
+    BI opval = ADDOFSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rd) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11391,34 +9340,34 @@ SEM_FN_NAME (epiphanybf,add) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = ADDCFSI (* FLD (i_rn6), * FLD (i_rm6), 0);
-    CPU (h_cbit) = opval;
+    BI opval = ADDCFSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)), 0);
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = ADDOFSI (* FLD (i_rn6), * FLD (i_rm6), 0);
-    CPU (h_vbit) = opval;
+    BI opval = ADDOFSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rd6) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11465,34 +9414,34 @@ SEM_FN_NAME (epiphanybf,sub16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = NOTBI (SUBCFSI (* FLD (i_rn), * FLD (i_rm), 0));
-    CPU (h_cbit) = opval;
+    BI opval = NOTBI (SUBCFSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)), 0));
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = SUBOFSI (* FLD (i_rn), * FLD (i_rm), 0);
-    CPU (h_vbit) = opval;
+    BI opval = SUBOFSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = SUBSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rd) = opval;
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11539,34 +9488,34 @@ SEM_FN_NAME (epiphanybf,sub) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = NOTBI (SUBCFSI (* FLD (i_rn6), * FLD (i_rm6), 0));
-    CPU (h_cbit) = opval;
+    BI opval = NOTBI (SUBCFSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)), 0));
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = SUBOFSI (* FLD (i_rn6), * FLD (i_rm6), 0);
-    CPU (h_vbit) = opval;
+    BI opval = SUBOFSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = SUBSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rd6) = opval;
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11614,28 +9563,28 @@ SEM_FN_NAME (epiphanybf,and16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = ANDSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rd) = opval;
+    SI opval = ANDSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11683,28 +9632,28 @@ SEM_FN_NAME (epiphanybf,and) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = ANDSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rd6) = opval;
+    SI opval = ANDSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11752,28 +9701,28 @@ SEM_FN_NAME (epiphanybf,orr16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = ORSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rd) = opval;
+    SI opval = ORSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11821,28 +9770,28 @@ SEM_FN_NAME (epiphanybf,orr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = ORSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rd6) = opval;
+    SI opval = ORSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11890,28 +9839,28 @@ SEM_FN_NAME (epiphanybf,eor16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = XORSI (* FLD (i_rn), * FLD (i_rm));
-    * FLD (i_rd) = opval;
+    SI opval = XORSI (GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -11959,28 +9908,28 @@ SEM_FN_NAME (epiphanybf,eor) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = XORSI (* FLD (i_rn6), * FLD (i_rm6));
-    * FLD (i_rd6) = opval;
+    SI opval = XORSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12027,34 +9976,34 @@ SEM_FN_NAME (epiphanybf,addi16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = ADDCFSI (* FLD (i_rn), FLD (f_sdisp3), 0);
-    CPU (h_cbit) = opval;
+    BI opval = ADDCFSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_sdisp3), 0);
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = ADDOFSI (* FLD (i_rn), FLD (f_sdisp3), 0);
-    CPU (h_vbit) = opval;
+    BI opval = ADDOFSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_sdisp3), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn), FLD (f_sdisp3));
-    * FLD (i_rd) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_sdisp3));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12101,34 +10050,34 @@ SEM_FN_NAME (epiphanybf,addi) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = ADDCFSI (* FLD (i_rn6), FLD (f_sdisp11), 0);
-    CPU (h_cbit) = opval;
+    BI opval = ADDCFSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_sdisp11), 0);
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = ADDOFSI (* FLD (i_rn6), FLD (f_sdisp11), 0);
-    CPU (h_vbit) = opval;
+    BI opval = ADDOFSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_sdisp11), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = ADDSI (* FLD (i_rn6), FLD (f_sdisp11));
-    * FLD (i_rd6) = opval;
+    SI opval = ADDSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_sdisp11));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12175,34 +10124,34 @@ SEM_FN_NAME (epiphanybf,subi16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = NOTBI (SUBCFSI (* FLD (i_rn), FLD (f_sdisp3), 0));
-    CPU (h_cbit) = opval;
+    BI opval = NOTBI (SUBCFSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_sdisp3), 0));
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = SUBOFSI (* FLD (i_rn), FLD (f_sdisp3), 0);
-    CPU (h_vbit) = opval;
+    BI opval = SUBOFSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_sdisp3), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = SUBSI (* FLD (i_rn), FLD (f_sdisp3));
-    * FLD (i_rd) = opval;
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_sdisp3));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12249,34 +10198,34 @@ SEM_FN_NAME (epiphanybf,subi) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = NOTBI (SUBCFSI (* FLD (i_rn6), FLD (f_sdisp11), 0));
-    CPU (h_cbit) = opval;
+    BI opval = NOTBI (SUBCFSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_sdisp11), 0));
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
-    BI opval = SUBOFSI (* FLD (i_rn6), FLD (f_sdisp11), 0);
-    CPU (h_vbit) = opval;
+    BI opval = SUBOFSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_sdisp11), 0);
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_vsbit), CPU (h_vbit));
-    CPU (h_vsbit) = opval;
+    BI opval = ORBI (GET_H_VSBIT (), GET_H_VBIT ());
+    SET_H_VSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vsbit", 'x', opval);
   }
 }
   {
-    SI opval = SUBSI (* FLD (i_rn6), FLD (f_sdisp11));
-    * FLD (i_rd6) = opval;
+    SI opval = SUBSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_sdisp11));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12324,28 +10273,28 @@ SEM_FN_NAME (epiphanybf,asr16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRASI (* FLD (i_rn), ANDSI (* FLD (i_rm), 31));
-    * FLD (i_rd) = opval;
+    SI opval = SRASI (GET_H_REGISTERS (FLD (f_rn)), ANDSI (GET_H_REGISTERS (FLD (f_rm)), 31));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12393,28 +10342,28 @@ SEM_FN_NAME (epiphanybf,asr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRASI (* FLD (i_rn6), ANDSI (* FLD (i_rm6), 31));
-    * FLD (i_rd6) = opval;
+    SI opval = SRASI (GET_H_REGISTERS (FLD (f_rn6)), ANDSI (GET_H_REGISTERS (FLD (f_rm6)), 31));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12462,28 +10411,28 @@ SEM_FN_NAME (epiphanybf,lsr16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRLSI (* FLD (i_rn), ANDSI (* FLD (i_rm), 31));
-    * FLD (i_rd) = opval;
+    SI opval = SRLSI (GET_H_REGISTERS (FLD (f_rn)), ANDSI (GET_H_REGISTERS (FLD (f_rm)), 31));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12531,28 +10480,28 @@ SEM_FN_NAME (epiphanybf,lsr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRLSI (* FLD (i_rn6), ANDSI (* FLD (i_rm6), 31));
-    * FLD (i_rd6) = opval;
+    SI opval = SRLSI (GET_H_REGISTERS (FLD (f_rn6)), ANDSI (GET_H_REGISTERS (FLD (f_rm6)), 31));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12600,28 +10549,28 @@ SEM_FN_NAME (epiphanybf,lsl16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SLLSI (* FLD (i_rn), ANDSI (* FLD (i_rm), 31));
-    * FLD (i_rd) = opval;
+    SI opval = SLLSI (GET_H_REGISTERS (FLD (f_rn)), ANDSI (GET_H_REGISTERS (FLD (f_rm)), 31));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12669,28 +10618,28 @@ SEM_FN_NAME (epiphanybf,lsl) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SLLSI (* FLD (i_rn6), ANDSI (* FLD (i_rm6), 31));
-    * FLD (i_rd6) = opval;
+    SI opval = SLLSI (GET_H_REGISTERS (FLD (f_rn6)), ANDSI (GET_H_REGISTERS (FLD (f_rm6)), 31));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12738,28 +10687,28 @@ SEM_FN_NAME (epiphanybf,lsri16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRLSI (* FLD (i_rn), FLD (f_shift));
-    * FLD (i_rd) = opval;
+    SI opval = SRLSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_shift));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12807,28 +10756,28 @@ SEM_FN_NAME (epiphanybf,lsri32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRLSI (* FLD (i_rn6), FLD (f_shift));
-    * FLD (i_rd6) = opval;
+    SI opval = SRLSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_shift));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12876,28 +10825,28 @@ SEM_FN_NAME (epiphanybf,lsli16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SLLSI (* FLD (i_rn), FLD (f_shift));
-    * FLD (i_rd) = opval;
+    SI opval = SLLSI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_shift));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -12945,28 +10894,28 @@ SEM_FN_NAME (epiphanybf,lsli32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SLLSI (* FLD (i_rn6), FLD (f_shift));
-    * FLD (i_rd6) = opval;
+    SI opval = SLLSI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_shift));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -13014,28 +10963,28 @@ SEM_FN_NAME (epiphanybf,asri16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRASI (* FLD (i_rn), FLD (f_shift));
-    * FLD (i_rd) = opval;
+    SI opval = SRASI (GET_H_REGISTERS (FLD (f_rn)), FLD (f_shift));
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -13083,28 +11032,28 @@ SEM_FN_NAME (epiphanybf,asri32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
   {
-    SI opval = SRASI (* FLD (i_rn6), FLD (f_shift));
-    * FLD (i_rd6) = opval;
+    SI opval = SRASI (GET_H_REGISTERS (FLD (f_rn6)), FLD (f_shift));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -13151,7 +11100,7 @@ SEM_FN_NAME (epiphanybf,bitr16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_v;
-  tmp_v = * FLD (i_rn);
+  tmp_v = GET_H_REGISTERS (FLD (f_rn));
   tmp_v = ORSI (ANDSI (SRLSI (tmp_v, 1), 1431655765), SLLSI (ANDSI (tmp_v, 1431655765), 1));
   tmp_v = ORSI (ANDSI (SRLSI (tmp_v, 2), 858993459), SLLSI (ANDSI (tmp_v, 858993459), 2));
   tmp_v = ORSI (ANDSI (SRLSI (tmp_v, 4), 252645135), SLLSI (ANDSI (tmp_v, 252645135), 4));
@@ -13159,28 +11108,28 @@ SEM_FN_NAME (epiphanybf,bitr16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   tmp_v = ORSI (SRLSI (tmp_v, 16), SLLSI (tmp_v, 16));
   {
     SI opval = tmp_v;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
   {
-    BI opval = EQSI (* FLD (i_rd), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
@@ -13227,7 +11176,7 @@ SEM_FN_NAME (epiphanybf,bitr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   SI tmp_v;
-  tmp_v = * FLD (i_rn6);
+  tmp_v = GET_H_REGISTERS (FLD (f_rn6));
   tmp_v = ORSI (ANDSI (SRLSI (tmp_v, 1), 1431655765), SLLSI (ANDSI (tmp_v, 1431655765), 1));
   tmp_v = ORSI (ANDSI (SRLSI (tmp_v, 2), 858993459), SLLSI (ANDSI (tmp_v, 858993459), 2));
   tmp_v = ORSI (ANDSI (SRLSI (tmp_v, 4), 252645135), SLLSI (ANDSI (tmp_v, 252645135), 4));
@@ -13235,28 +11184,28 @@ SEM_FN_NAME (epiphanybf,bitr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   tmp_v = ORSI (SRLSI (tmp_v, 16), SLLSI (tmp_v, 16));
   {
     SI opval = tmp_v;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_cbit) = opval;
+    SET_H_CBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "cbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_vbit) = opval;
+    SET_H_VBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "vbit", 'x', opval);
   }
 }
@@ -13302,13 +11251,13 @@ SEM_FN_NAME (epiphanybf,fext) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -13354,13 +11303,13 @@ SEM_FN_NAME (epiphanybf,fdep) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -13406,13 +11355,13 @@ SEM_FN_NAME (epiphanybf,lfsr) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
 {
   {
-    BI opval = EQSI (* FLD (i_rd6), 0);
-    CPU (h_zbit) = opval;
+    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_ZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "zbit", 'x', opval);
   }
   {
-    BI opval = LTSI (* FLD (i_rd6), 0);
-    CPU (h_nbit) = opval;
+    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
+    SET_H_NBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "nbit", 'x', opval);
   }
 }
@@ -13458,7 +11407,7 @@ SEM_FN_NAME (epiphanybf,mov8) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = ZEXTSISI (FLD (i_imm8));
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -13503,7 +11452,7 @@ SEM_FN_NAME (epiphanybf,mov16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   {
     SI opval = ZEXTSISI (FLD (i_imm16));
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -13547,8 +11496,8 @@ SEM_FN_NAME (epiphanybf,movt) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
   {
-    SI opval = ORSI (ANDSI (* FLD (i_rd6), 65535), SLLSI (FLD (i_imm16), 16));
-    * FLD (i_rd6) = opval;
+    SI opval = ORSI (ANDSI (GET_H_REGISTERS (FLD (f_rd6)), 65535), SLLSI (FLD (i_imm16), 16));
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 {
@@ -13592,139 +11541,95 @@ SEM_FN_NAME (epiphanybf,f_addf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fadd (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fadd (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_iadd (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  tmp_sdtmp = epiphany_iadd (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -13736,6 +11641,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -13743,6 +11649,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -13769,139 +11676,95 @@ SEM_FN_NAME (epiphanybf,f_addf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fadd (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fadd (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_iadd (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  tmp_sdtmp = epiphany_iadd (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -13913,6 +11776,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -13920,6 +11784,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -13946,139 +11811,95 @@ SEM_FN_NAME (epiphanybf,f_subf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fsub (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fsub (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_isub (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  tmp_sdtmp = epiphany_isub (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -14090,6 +11911,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -14097,6 +11919,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -14123,139 +11946,95 @@ SEM_FN_NAME (epiphanybf,f_subf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fsub (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fsub (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_isub (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  tmp_sdtmp = epiphany_isub (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -14267,6 +12046,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -14274,6 +12054,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -14300,139 +12081,95 @@ SEM_FN_NAME (epiphanybf,f_mulf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fmul (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fmul (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_imul (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  tmp_sdtmp = epiphany_imul (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -14444,6 +12181,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -14451,6 +12189,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -14477,139 +12216,95 @@ SEM_FN_NAME (epiphanybf,f_mulf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fmul (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fmul (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_imul (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  tmp_sdtmp = epiphany_imul (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -14621,6 +12316,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -14628,6 +12324,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -14654,139 +12351,95 @@ SEM_FN_NAME (epiphanybf,f_maddf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fmadd (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fmadd (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_imadd (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  tmp_sdtmp = epiphany_imadd (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -14798,6 +12451,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -14805,6 +12459,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -14831,139 +12486,95 @@ SEM_FN_NAME (epiphanybf,f_maddf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fmadd (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fmadd (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_imadd (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  tmp_sdtmp = epiphany_imadd (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -14975,6 +12586,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -14982,6 +12594,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15008,139 +12621,95 @@ SEM_FN_NAME (epiphanybf,f_msubf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fmsub (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fmsub (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_imsub (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rm));
+  tmp_sdtmp = epiphany_imsub (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rm)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -15152,6 +12721,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15159,6 +12729,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15185,139 +12756,95 @@ SEM_FN_NAME (epiphanybf,f_msubf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 
 {
 {
-if (EQBI (CPU (h_arithmetic_modebit2), 0)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 0)) {
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fmsub (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fmsub (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = get_epiphany_fzeroflag (current_cpu, tmp_sdtmp);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_fnegativeflag (current_cpu, tmp_sdtmp);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
-    written |= (1 << 26);
+    SET_H_BVBIT (opval);
+    written |= (1 << 18);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    written |= (1 << 24);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    written |= (1 << 21);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
-    written |= (1 << 27);
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    written |= (1 << 25);
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
+    written |= (1 << 17);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    written |= (1 << 22);
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
+    written |= (1 << 15);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_bvsbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_busbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BVSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BUSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 23);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
 }
 }
 }
-}
-}
-if (EQBI (CPU (h_arithmetic_modebit2), 1)) {
+if (EQBI (GET_H_ARITHMETIC_MODEBIT2 (), 1)) {
 {
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_imsub (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  tmp_sdtmp = epiphany_imsub (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
-    written |= (1 << 28);
+    SET_H_BZBIT (opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
-    written |= (1 << 23);
+    SET_H_BNBIT (opval);
+    written |= (1 << 16);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
+    written |= (1 << 25);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -15329,6 +12856,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15336,6 +12864,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 24);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15364,35 +12893,25 @@ SEM_FN_NAME (epiphanybf,f_absf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fabs (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rn));
+  tmp_sdtmp = epiphany_fabs (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rn)));
   {
     BI opval = 0;
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
-  }
-  {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -15402,7 +12921,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15410,7 +12929,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15439,35 +12958,25 @@ SEM_FN_NAME (epiphanybf,f_absf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fabs (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rn6));
+  tmp_sdtmp = epiphany_fabs (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rn6)));
   {
     BI opval = 0;
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
-  }
-  {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -15477,7 +12986,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15485,7 +12994,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15514,35 +13023,25 @@ SEM_FN_NAME (epiphanybf,f_loatf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_float (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rn));
+  tmp_sdtmp = epiphany_float (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rn)));
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
-  }
-  {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -15552,7 +13051,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15560,7 +13059,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15589,35 +13088,25 @@ SEM_FN_NAME (epiphanybf,f_loatf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_float (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rn6));
+  tmp_sdtmp = epiphany_float (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rn6)));
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
-  }
-  {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -15627,7 +13116,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
-    written |= (1 << 17);
+    written |= (1 << 11);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15635,7 +13124,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    written |= (1 << 18);
+    written |= (1 << 12);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15664,111 +13153,65 @@ SEM_FN_NAME (epiphanybf,f_ixf16) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fix (current_cpu, * FLD (i_rd), * FLD (i_rn), * FLD (i_rn));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fix (current_cpu, GET_H_REGISTERS (FLD (f_rd)), GET_H_REGISTERS (FLD (f_rn)), GET_H_REGISTERS (FLD (f_rn)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
+    SET_H_BVBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_busbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_bvsbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BUSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BVSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 27);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 21);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 28);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 19);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-}
-}
 }
 }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd) = opval;
+    SET_H_REGISTERS (FLD (f_rd), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
 }
@@ -15778,6 +13221,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15785,6 +13229,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 22);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15813,105 +13258,60 @@ SEM_FN_NAME (epiphanybf,f_ixf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 {
   SF tmp_fptemp;
   SI tmp_sdtmp;
-  tmp_sdtmp = epiphany_fix (current_cpu, * FLD (i_rd6), * FLD (i_rn6), * FLD (i_rm6));
+  BI tmp_bubit;
+  BI tmp_bibit;
+  tmp_sdtmp = epiphany_fix (current_cpu, GET_H_REGISTERS (FLD (f_rd6)), GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
   {
     BI opval = EQSI (tmp_sdtmp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
     BI opval = LTSI (tmp_sdtmp, 0);
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = get_epiphany_foverflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bvbit) = opval;
+    SET_H_BVBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
+  tmp_bubit = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
+  tmp_bibit = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
   {
-    BI opval = get_epiphany_funderflowflag (current_cpu, tmp_sdtmp);
-    CPU (h_bubit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bubit", 'x', opval);
-  }
-  {
-    BI opval = get_epiphany_finvalidflag (current_cpu, tmp_sdtmp);
-    CPU (h_bibit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bibit", 'x', opval);
-  }
-  {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_busbit), CPU (h_bubit));
-    CPU (h_busbit) = opval;
+    BI opval = ORBI (GET_H_BUSBIT (), tmp_bubit);
+    SET_H_BUSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bisbit), CPU (h_bibit));
-    CPU (h_bisbit) = opval;
+    BI opval = ORBI (GET_H_BISBIT (), tmp_bibit);
+    SET_H_BISBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bisbit", 'x', opval);
   }
   {
     SI opval = tmp_sdtmp;
-    * FLD (i_rd6) = opval;
+    SET_H_REGISTERS (FLD (f_rd6), opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
   }
-if (ORBI (ANDBI (CPU (h_invExcEnbit), CPU (h_bisbit)), ORBI (ANDBI (CPU (h_ovfExcEnbit), CPU (h_busbit)), ANDBI (CPU (h_unExcEnbit), CPU (h_bvsbit))))) {
+if (ORBI (ANDBI (GET_H_INVEXCENBIT (), GET_H_BISBIT ()), ORBI (ANDBI (GET_H_OVFEXCENBIT (), GET_H_BUSBIT ()), ANDBI (GET_H_UNEXCENBIT (), GET_H_BVSBIT ())))) {
 {
   {
-    BI opval = 1;
-    CPU (h_expcause0bit) = opval;
-    written |= (1 << 28);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause0bit", 'x', opval);
+    UQI opval = H_SCR_STATUS_EXCAUSE_FPU;
+    SET_H_SCR_STATUS_EXCAUSE (opval);
+    written |= (1 << 22);
+    CGEN_TRACE_RESULT (current_cpu, abuf, "scr-status-excause", 'x', opval);
   }
   {
-    BI opval = 1;
-    CPU (h_expcause1bit) = opval;
-    written |= (1 << 29);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "expcause1bit", 'x', opval);
-  }
-if (EQBI (CPU (h_gidisablebit), 0)) {
-if (EQSI (ANDSI (GET_H_CORE_REGISTERS (((UINT) 9)), 2), 0)) {
-{
-  {
-    BI opval = 1;
-    CPU (h_kmbit) = opval;
-    CGEN_TRACE_RESULT (current_cpu, abuf, "kmbit", 'x', opval);
-  }
-  {
-    BI opval = 1;
-    CPU (h_gidisablebit) = opval;
-    written |= (1 << 30);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "gidisablebit", 'x', opval);
-  }
-  {
-    USI opval = ADDSI (pc, 2);
-    SET_H_CORE_REGISTERS (((UINT) 8), opval);
+    USI opval = 2;
+    SET_H_CORE_REGISTERS (((UINT) 11), opval);
+    written |= (1 << 20);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 13)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 13), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-  {
-    USI opval = 4;
-    SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
-  }
-}
-} else {
-  {
-    USI opval = ORSI (GET_H_CORE_REGISTERS (((UINT) 10)), 2);
-    SET_H_CORE_REGISTERS (((UINT) 10), opval);
-    written |= (1 << 31);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
-  }
-}
-}
 }
 }
 }
@@ -15921,6 +13321,7 @@ if (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7)))) {
   {
     USI opval = SUBSI (GET_H_CORE_REGISTERS (((UINT) 5)), 1);
     SET_H_CORE_REGISTERS (((UINT) 5), opval);
+    written |= (1 << 21);
     CGEN_TRACE_RESULT (current_cpu, abuf, "core-registers", 'x', opval);
   }
 }
@@ -15928,6 +13329,7 @@ if (ANDBI (EQSI (pc, GET_H_CORE_REGISTERS (((UINT) 7))), NOTBI (EQSI (GET_H_CORE
   {
     USI opval = GET_H_CORE_REGISTERS (((UINT) 6));
     SEM_BRANCH_VIA_ADDR (current_cpu, sem_arg, opval, vpc);
+    written |= (1 << 23);
     CGEN_TRACE_RESULT (current_cpu, abuf, "pc", 'x', opval);
   }
 }
@@ -15957,28 +13359,28 @@ SEM_FN_NAME (epiphanybf,f_recipf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SF tmp_fptemp;
   {
     BI opval = 0;
-    CPU (h_bvbit) = opval;
+    SET_H_BVBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_busbit) = opval;
+    SET_H_BUSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   tmp_fptemp = epiphany_frecip (current_cpu, GET_H_FPREGISTERS (FLD (f_rn6)));
   {
     BI opval = CGEN_CPU_FPU (current_cpu)->ops->ltsf (CGEN_CPU_FPU (current_cpu), tmp_fptemp, 0);
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = CGEN_CPU_FPU (current_cpu)->ops->eqsf (CGEN_CPU_FPU (current_cpu), tmp_fptemp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
@@ -16031,28 +13433,28 @@ SEM_FN_NAME (epiphanybf,f_sqrtf32) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   SF tmp_fptemp;
   {
     BI opval = 0;
-    CPU (h_bvbit) = opval;
+    SET_H_BVBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvbit", 'x', opval);
   }
   {
     BI opval = 0;
-    CPU (h_busbit) = opval;
+    SET_H_BUSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "busbit", 'x', opval);
   }
   tmp_fptemp = epiphany_fsqrt (current_cpu, GET_H_FPREGISTERS (FLD (f_rn6)));
   {
     BI opval = CGEN_CPU_FPU (current_cpu)->ops->ltsf (CGEN_CPU_FPU (current_cpu), tmp_fptemp, 0);
-    CPU (h_bnbit) = opval;
+    SET_H_BNBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
   }
   {
     BI opval = CGEN_CPU_FPU (current_cpu)->ops->eqsf (CGEN_CPU_FPU (current_cpu), tmp_fptemp, 0);
-    CPU (h_bzbit) = opval;
+    SET_H_BZBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
   }
   {
-    BI opval = ORBI (CPU (h_bvsbit), CPU (h_bvbit));
-    CPU (h_bvsbit) = opval;
+    BI opval = ORBI (GET_H_BVSBIT (), GET_H_BVBIT ());
+    SET_H_BVSBIT (opval);
     CGEN_TRACE_RESULT (current_cpu, abuf, "bvsbit", 'x', opval);
   }
   {
