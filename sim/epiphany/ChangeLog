@@ -1,3 +1,8 @@
+2015-09-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* Merge Epiphany multicore simulator branch
+	[ No log entries between: 2014-03-18 -- 2014-10-28 ]
+
 2015-09-04  Ola Jeppsson  <ola@adapteva.com>
 
 	* aclocal.m4: New file.
