@@ -112,7 +112,7 @@ static void epiphany_mem_signal(struct hw *me, unsigned_word addr,
   address_word ip;
 
   current_cpu = hw_system_cpu(me);
-  cia = current_cpu ? CIA_GET (current_cpu) : NULL_CIA;
+  cia = current_cpu ? CPU_PC_GET (current_cpu) : NULL_CIA;
   ip = CIA_ADDR (cia);
 
   switch (sigrc)

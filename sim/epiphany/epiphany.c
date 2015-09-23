@@ -528,7 +528,7 @@ SI epiphany_testset(SIM_CPU *current_cpu, USI addr, SI newval, int bytes)
 fail:
   /* SIM framework has no concept of test and set so this is the closest
      we can get */
-  epiphany_core_signal(sd, current_cpu, CIA_GET(current_cpu), read_map,
+  epiphany_core_signal(sd, current_cpu, CPU_PC_GET(current_cpu), read_map,
 		       bytes, addr, read_transfer,
 		       sim_core_unmapped_signal);
 return tmpval;
