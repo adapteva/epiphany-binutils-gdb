@@ -1,5 +1,10 @@
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim/epiphany/mem-barrier.h: Use __sync_synchronize() as
+	fallback.
+
+2015-09-23  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim/epiphany/sim-if.c (sim_open): Remove check for
 	HAVE_DV_SOCKSER and remove call to dv_sockser_install.
 	* sim/epiphany/tconfig.h: Remove check for HAVE_DV_SOCKSER.

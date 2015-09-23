@@ -3,6 +3,7 @@
 #if defined (__i386__) || defined (__amd64__)
 #define MEM_BARRIER() asm volatile ("" : : : "memory")
 #else
-#error "Architecture not supported. Need to define MEM_BARRIER."
+/* This is safe but might be suboptimal, depending on arch. */
+#define MEM_BARRIER() __sync_synchronize()
 #endif
 #endif
