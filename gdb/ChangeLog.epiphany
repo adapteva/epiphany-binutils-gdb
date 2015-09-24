@@ -1,5 +1,9 @@
 2015-09-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* gdb/configure: Regenerated.
+
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* gdb/epiphany-tdep.c (EPIPHANY_GPR_FP): Change fp to r15.
 	(EPIPHANY_MOV_FP_SP_INST): Adjust for fp move.
 	(epiphany_debug_infrun): Likewise.
