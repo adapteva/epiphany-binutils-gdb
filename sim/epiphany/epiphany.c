@@ -29,6 +29,8 @@
 
 #include "cpu.h"
 
+#include "mem-barrier.h"
+
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -51,15 +53,61 @@ epiphany_decode_gdb_ctrl_regnum (int gdb_regnum)
   abort ();
 }
 
+static int epiphanybf_scr_gdb_regmap[42] =
+{
+  H_REG_SCR_CONFIG,
+  H_REG_SCR_STATUS,
+  H_REG_SCR_PC,
+  H_REG_SCR_DEBUGSTATUS,
+  H_REG_SCR_LC,
+  H_REG_SCR_LS,
+  H_REG_SCR_LE,
+  H_REG_SCR_IRET,
+  H_REG_SCR_IMASK,
+  H_REG_SCR_ILAT,
+  H_REG_SCR_ILATST,
+  H_REG_SCR_ILATCL,
+  H_REG_SCR_IPEND,
+  H_REG_SCR_FSTATUS,
+  H_REG_SCR_DEBUGCMD,
+  H_REG_MESH_RESETCORE,
+  H_REG_SCR_CTIMER0,
+  H_REG_SCR_CTIMER1,
+  H_REG_MEM_STATUS,
+  H_REG_MEM_PROTECT,
+  H_REG_DMA0_CONFIG,
+  H_REG_DMA0_STRIDE,
+  H_REG_DMA0_COUNT,
+  H_REG_DMA0_SRCADDR,
+  H_REG_DMA0_DSTADDR,
+  H_REG_DMA0_AUTO0,
+  H_REG_DMA0_AUTO1,
+  H_REG_DMA0_STATUS,
+  H_REG_DMA1_CONFIG,
+  H_REG_DMA1_STRIDE,
+  H_REG_DMA1_COUNT,
+  H_REG_DMA1_SRCADDR,
+  H_REG_DMA1_DSTADDR,
+  H_REG_DMA1_AUTO0,
+  H_REG_DMA1_AUTO1,
+  H_REG_DMA1_STATUS,
+  H_REG_MESH_CONFIG,
+  H_REG_MESH_COREID,
+  H_REG_MESH_MULTICAST,
+  H_REG_MESH_CMESHROUTE,
+  H_REG_MESH_XMESHROUTE,
+  H_REG_MESH_RMESHROUTE
+};
+static size_t epiphanybf_scr_gdb_regmap_num_regs =
+  sizeof(epiphanybf_scr_gdb_regmap) / sizeof(epiphanybf_scr_gdb_regmap[0]);
+
+
+
 /* Number of general purpose registers (GPRs).  */
 #define EPIPHANY_NUM_GPRS   64
 /* Number of Special Core Registers (SCRs).  */
-#define EPIPHANY_NUM_SCRS   32
-
-/* Number of Special Core Registers (SCRs), first group.  */
-#define EPIPHANY_NUM_SCRS_0  16
-/* Number of Special Core Registers (SCRs), DMA group.  */
-#define EPIPHANY_NUM_SCRS_1   16
+#define EPIPHANY_NUM_SCRS_0 16
+#define EPIPHANY_NUM_SCRS   (epiphanybf_scr_gdb_regmap_num_regs)
 
 /* Number of raw registers used.  */
 #define  EPIPHANY_NUM_REGS   (EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS)
@@ -90,10 +138,18 @@ epiphany_decode_gdb_ctrl_regnum (int gdb_regnum)
 #define EPIPHANY_SCR_HSCONFIG 17
 #define EPIPHANY_SCR_DEBUGCMD 18
 
+/** @todo Reg fetch/store can be simplified ((reg mmr offset - mmr base) / 4 )
+   ... but then we have to modify gdb/epiphany-tdep.c
+   ... but then we probably need modify e-server (epiphany remote gdb server)
+   ... so leave it be for now and *never* use in simulator code until
+       (if ever) we get consistency across the board.
+ */
+
 int
 epiphanybf_fetch_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 			   int len)
 {
+  unsigned reg;
 #ifdef DEBUG
   fprintf(stderr, "epiphanybf_fetch_register %d \n" ,  rn);
 #endif
@@ -110,24 +166,11 @@ epiphanybf_fetch_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
     }
   else if (rn < EPIPHANY_TOTAL_NUM_REGS)
     {
+      reg = epiphanybf_scr_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
       /* Other.  */
-
-      /* Special group 0.  */
-      if (rn < EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS_0)
-	{
-
-	  if (rn - EPIPHANY_NUM_GPRS == EPIPHANY_SCR_PC)
-	    SETTWI (buf, epiphanybf_h_pc_get (current_cpu));
-	  else
-	    SETTWI (buf,
-		    epiphanybf_h_core_registers_get (current_cpu,
-						     rn - EPIPHANY_NUM_GPRS));
-	}
-      else
-	SETTWI (buf,
-		epiphanybf_h_coredma_registers_get (current_cpu,
-						    rn - EPIPHANY_NUM_GPRS -
-						    EPIPHANY_NUM_SCRS_0));
+      SETTWI (buf,
+	      epiphanybf_h_all_registers_get (current_cpu,
+					      reg));
     }
   else
     fprintf (stderr,
@@ -141,11 +184,15 @@ int
 epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 			   int len)
 {
+  unsigned reg;
+#ifdef DEBUG
+  fprintf(stderr, "epiphanybf_store_register %d \n" ,  rn);
+#endif
   if (rn < EPIPHANY_NUM_GPRS)
     {
       /* General R regs.  */
 #ifdef DEBUG
-      fprintf (stderr, "epiphanybf_fetch_register REG VALHEX  %x \n" ,
+      fprintf (stderr, "epiphanybf_store_register REG VALHEX  %x \n" ,
 	       epiphanybf_h_registers_get (current_cpu, rn));
 #endif
       epiphanybf_h_registers_set (current_cpu, rn, GETTWI (buf));
@@ -153,30 +200,118 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
     }
   else if (rn < EPIPHANY_TOTAL_NUM_REGS)
     {
+      reg = epiphanybf_scr_gdb_regmap[rn - EPIPHANY_NUM_GPRS];
       /* Other.  */
-
-      /* Special group 0.  */
-      if (rn < EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS_0)
-	{
-	  if (rn - EPIPHANY_NUM_GPRS == EPIPHANY_SCR_PC)
-	    epiphanybf_h_pc_set (current_cpu, GETTWI (buf));
-
-	  else
-	    epiphanybf_h_core_registers_set (current_cpu,
-					     rn - EPIPHANY_NUM_GPRS,
-					     GETTWI (buf));
-	}
-      else
-	epiphanybf_h_coredma_registers_set (current_cpu,
-					    rn - EPIPHANY_NUM_GPRS -
-					    EPIPHANY_NUM_SCRS_0,
-					    GETTWI (buf));
+      epiphanybf_h_all_registers_set (current_cpu, reg, GETTWI (buf));
     }
   else
     fprintf (stderr,
 	     "Warning: Attempt to write to unknown register %d : ignored\n",
 	     rn);
   return 4;
+}
+
+/* Custom register setters */
+void
+epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
+{
+  /** @todo Any sticky bits? */
+  CPU(h_all_registers[H_REG_SCR_CONFIG]) = val;
+
+  /* Rounding mode might have changed */
+  epiphany_set_rounding_mode(current_cpu, val);
+}
+
+void
+epiphanybf_set_status(SIM_CPU *current_cpu, USI val)
+{
+  USI old, new;
+
+  old = CPU(h_all_registers[H_REG_SCR_STATUS]);
+  /* First 3 bits are sticky */
+  new = (old & 7) | (val & (~7));
+  CPU(h_all_registers[H_REG_SCR_STATUS]) = new;
+}
+
+void
+epiphanybf_set_imask(SIM_CPU *current_cpu, USI val)
+{
+  CPU(h_all_registers[H_REG_SCR_IMASK]) = val;
+
+  /* Might trigger interrupt */
+  OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
+}
+
+void
+epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val)
+{
+  /* Write directly to ILAT. This is ok since we have mutual exclusion. */
+  OR_REG_ATOMIC(H_REG_SCR_ILAT, val);
+
+  OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
+}
+
+void
+epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val)
+{
+  /* Don't write directly to ILAT. Interrupts are positive edge triggered,
+   * so the target sim process should be able to see one before it's cleared.
+   */
+  OR_REG_ATOMIC(H_REG_SCR_ILATCL, val);
+  /* Might wake up inactive core */
+  OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
+}
+
+void
+epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val)
+{
+  USI masked;
+
+  masked = val & 3; /* Only allow writes to bit 0-1 */
+
+  CPU(h_all_registers[H_REG_SCR_STATUS]) = masked;
+
+  /*! @todo Manual does not mention what bit 1 means. Only check bit 0.
+   *  Might be wrong. */
+
+  /* Set or clear halt bit */
+  if (masked & 1)
+    OR_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, 1);
+  else
+    AND_REG_ATOMIC(H_REG_SCR_DEBUGSTATUS, ~1);
+}
+
+void
+epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
+{
+  USI masked, old;
+
+  masked = val & 1; /* Only allow writes to bit 0 */
+
+  old = CPU(h_all_registers[H_REG_MESH_RESETCORE]);
+  CPU(h_all_registers[H_REG_MESH_RESETCORE]) = masked;
+
+  /* Asserted */
+  if (!old && masked)
+    {
+      /* Clear CAI- and set GID-bit. Not exactly what hardware would do but
+       * it should have same effect (stop core until RESET is deasserted). */
+      AND_REG_ATOMIC(H_REG_SCR_STATUS, (~(1 << H_SCR_STATUS_CAIBIT)));
+      OR_REG_ATOMIC( H_REG_SCR_STATUS, (1 << H_SCR_STATUS_GIDISABLEBIT));
+    }
+  /* Deasserted */
+  else if (old && !masked)
+    {
+      OOB_EMIT_EVENT(OOB_EVT_RESET_DEASSERT);
+    }
+}
+
+/* Backdoor access for e.g read-only register */
+void
+epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
+				    SI newval)
+{
+  (CPU (h_all_registers)[regno] = (newval));
 }
 
 USI
@@ -211,6 +346,29 @@ epiphany_break (SIM_CPU * current_cpu, PCADDR brkaddr)
   return;
 }
 
+void
+epiphany_gie(SIM_CPU *current_cpu)
+{
+  USI gidbit;
+
+  gidbit = (1 << H_SCR_STATUS_GIDISABLEBIT);
+
+  /* Clear GID bit */
+  AND_REG_ATOMIC(H_REG_SCR_STATUS, ~gidbit);
+
+  /* Might trigger interrupt */
+  OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
+}
+
+int
+epiphany_cpu_is_active(SIM_CPU *current_cpu)
+{
+  return (!GET_H_ALL_REGISTERS(H_REG_MESH_RESETCORE) &&
+	  GET_H_CAIBIT() &&
+	  !(GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGSTATUS) & 1));
+}
+
+
 /* Read/write functions for system call interface.  */
 
 static int
@@ -241,10 +399,11 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
   host_callback *cb = STATE_CALLBACK (sd);
   void *buf;
 
-#define PARM0 CPU (h_registers[0])
-#define PARM1 CPU (h_registers[1])
-#define PARM2 CPU (h_registers[2])
-#define PARM3 CPU (h_registers[3])
+/** @todo Revisit. Might rename H_ALL_REGISTERS */
+#define PARM0 (GET_H_ALL_REGISTERS(H_REG_R0))
+#define PARM1 (GET_H_ALL_REGISTERS(H_REG_R1))
+#define PARM2 (GET_H_ALL_REGISTERS(H_REG_R2))
+#define PARM3 (GET_H_ALL_REGISTERS(H_REG_R3))
   USI result = -1;		/* Assume FAIL status */
   USI error = 0;
 
@@ -262,15 +421,19 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
 
     case TRAP_EXIT:
       /*void exit (int status);  */
+
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_exited, PARM0);
+      break;
 
     case TRAP_PASS:
       sim_io_write (sd, 1, "pass\n", 5);
+
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_exited, 0);
       break;
 
     case TRAP_FAIL:
       sim_io_write (sd, 1, "fail\n", 5);
+
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_exited, 1);
       break;
 
@@ -342,6 +505,50 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
   return result;
 }
 
+
+SI epiphany_testset(SIM_CPU *current_cpu, USI addr, SI newval, int bytes)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  USI tmpval = newval;
+#if WITH_EMESH_SIM
+  if (es_mem_testset(STATE_ESIM(sd), addr, bytes, (uint8_t *) &tmpval) != ES_OK)
+    goto fail;
+#else
+  if (bytes != 4)
+    goto fail;
+
+  tmpval = sim_core_read_unaligned_4 (current_cpu, GET_H_PC(), read_map, addr);
+  if (!tmpval)
+    sim_core_write_unaligned_4 (current_cpu, GET_H_PC(), write_map, addr,
+				newval);
+#endif
+
+  return tmpval;
+
+fail:
+  /* SIM framework has no concept of test and set so this is the closest
+     we can get */
+  epiphany_core_signal(sd, current_cpu, CPU_PC_GET(current_cpu), read_map,
+		       bytes, addr, read_transfer,
+		       sim_core_unmapped_signal);
+return tmpval;
+}
+
+SI epiphany_testset_SI(SIM_CPU* current_cpu, USI addr, SI newval)
+{
+  return epiphany_testset(current_cpu, addr, newval, 4);
+}
+
+SI epiphany_testset_HI(SIM_CPU* current_cpu, USI addr, HI newval)
+{
+  return epiphany_testset(current_cpu, addr, newval, 2);
+}
+
+SI epiphany_testset_QI(SIM_CPU* current_cpu, USI addr, QI newval)
+{
+  return epiphany_testset(current_cpu, addr, newval, 1);
+}
+
 void
 epiphanybf_model_insn_before (SIM_CPU * cpu ATTRIBUTE_UNUSED,
 			      int first_p ATTRIBUTE_UNUSED)
@@ -390,6 +597,33 @@ epiphanybf_model_epiphany32_u_exec (SIM_CPU * cpu, const IDESC * idesc,
   return 1;
 }
 
+void
+epiphanybf_cpu_reset(SIM_CPU *current_cpu)
+{
+  int i;
+
+  /* R0-R64 are not reset ...*/
+  for (i=64; i < H_REG_NUM_REGS; i++)
+    {
+      /* ... and neither are these */
+      switch (i)
+	{
+	case H_REG_DMA0_STRIDE:
+	case H_REG_DMA0_SRCADDR:
+	case H_REG_DMA0_DSTADDR:
+	case H_REG_DMA0_AUTO0:
+	case H_REG_DMA0_AUTO1:
+	case H_REG_DMA1_STRIDE:
+	case H_REG_DMA1_SRCADDR:
+	case H_REG_DMA1_DSTADDR:
+	case H_REG_DMA1_AUTO0:
+	case H_REG_DMA1_AUTO1:
+	  continue;
+	}
+      CPU(h_all_registers[i]) = 0;
+    }
+}
+
 USI
 epiphany_post_isn_callback (SIM_CPU * current_cpu, USI pc)
 {
@@ -419,3 +653,33 @@ epiphany_post_isn_callback (SIM_CPU * current_cpu, USI pc)
     }
   return pc + 2;
 }
+
+#if WITH_SCACHE
+void
+epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc)
+{
+  SCACHE *sc;
+  unsigned int hash_mask;
+  CGEN_INSN_WORD unused_addr;
+
+  hash_mask = CPU_SCACHE_HASH_MASK (current_cpu);
+
+  unused_addr = 0xffffffff;
+  /* Look up current insn in hash table. */
+#if WITH_SCACHE_PBB
+  /** @todo Not tested */
+  sc = scache_lookup(current_cpu, vpc);
+#else
+  sc = CPU_SCACHE_CACHE (current_cpu) + SCACHE_HASH_PC (vpc, hash_mask);
+#endif
+
+  if (sc && sc->argbuf.addr == vpc)
+    {
+#ifdef DEBUG
+      fprintf (stderr, "---------------   scache invalidate %08x\n", vpc);
+#endif
+      sc->argbuf.addr = unused_addr;
+    }
+}
+#endif /* WITH_SCACHE */
+

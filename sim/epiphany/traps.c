@@ -28,6 +28,8 @@
 #include "cgen-par.h"
 #include "sim-fpu.h"
 
+#include "cgen-ops.h"
+#include "cpu.h"
 
 /* The semantic code invokes this for invalid (unrecognized) instructions.  */
 
@@ -37,6 +39,7 @@ sim_engine_invalid_insn (SIM_CPU *current_cpu, IADDR cia, SEM_PC pc)
   SIM_DESC sd = CPU_STATE (current_cpu);
 
   fprintf(stderr, "----------- sim_engine_invalid_insn at pc 0x%p\n", pc);
+
   sim_engine_halt (sd, current_cpu, NULL, cia, sim_stopped, SIM_SIGILL);
 
   return pc;
@@ -77,13 +80,48 @@ syscall_write_mem (host_callback *cb, struct cb_syscall *sc,
 }
 
 
-
-USI epiphany_rti(SIM_CPU *current_cpu, USI ipend, USI imask)
+/*! @todo Rewrite this and interrupt_handler in oob_events */
+USI epiphany_rti(SIM_CPU *current_cpu)
 {
-  unsigned long ffs_index = ffs ((~imask) & ipend);
+  USI ipend, ilat, iret, imask;
+  int serviced, next;
 
+  ipend = GET_H_ALL_REGISTERS(H_REG_SCR_IPEND);
+  ilat  = GET_H_ALL_REGISTERS(H_REG_SCR_ILAT);
+  iret  = GET_H_ALL_REGISTERS(H_REG_SCR_IRET);
+  imask = GET_H_ALL_REGISTERS(H_REG_SCR_IMASK);
 
-  return ( ipend & (~( 1 << (ffs_index-1))) );
+  serviced = ffs(ipend) - 1 ;
+
+  /* Clear serviced interrupt */
+  if (serviced > -1)
+    ipend = ipend & (~(1 << serviced));
+  SET_H_ALL_REGISTERS(H_REG_SCR_IPEND, ipend);
+
+  /* Check if there are pending non-masked interrupts */
+  /* @todo We should check IPEND??? Need to rewrite interrupt_handler() too */
+  next = ffs(ilat & ~imask) - 1;
+  if (next > -1)
+    {
+      /* Set cai, gidisable, and km-bit */
+      OR_REG_ATOMIC(H_REG_SCR_STATUS, (( 1 << H_SCR_STATUS_CAIBIT)
+				       |(1 << H_SCR_STATUS_GIDISABLEBIT)
+				       |(1 << H_SCR_STATUS_KMBIT)));
+
+      /* Set ipend */
+      OR_REG_ATOMIC(H_REG_SCR_IPEND, (1 << next));
+
+      /* Clear current interrupt from ILAT */
+      AND_REG_ATOMIC(H_REG_SCR_ILAT, (~(1 << next)));
+
+      return (next << 2);
+    }
+  else
+    {
+      SET_H_GIDISABLEBIT(0);
+      SET_H_KMBIT(0);
+      return iret;
+    }
 }
 
 void

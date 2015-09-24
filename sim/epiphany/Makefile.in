@@ -18,11 +18,32 @@
 
 ## COMMON_PRE_CONFIG_FRAG
 
-EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o
+EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o \
+                oob-events.o
 
-CONFIG_DEVICES = dv-sockser.o
-CONFIG_DEVICES =
-SIM_EXTRA_LIBS = -lm
+SIM_EXTRA_LIBS = -lm @epiphany_extra_libs@
+
+SIM_EXTRA_INSTALL =
+ifeq (@esim@, yes)
+	SIM_EXTRA_INSTALL += esim-install
+endif
+
+SIM_EXTRA_ALL =
+ifeq (@esim@, yes)
+	SIM_EXTRA_ALL += epiphany-elf-sim.py
+ifneq (@have_target_as@, no)
+	SIM_EXTRA_ALL += epiphany-elf-sim-dummy
+endif
+endif
+
+
+ESIM_OBJS =
+ifeq (@esim@, yes)
+	ESIM_OBJS += esim/esim.o
+endif
+ifeq (@esim_net@, yes)
+	ESIM_OBJS += esim/esim-net.o
+endif
 
 SIM_OBJS = \
 	$(SIM_NEW_COMMON_OBJS) \
@@ -33,9 +54,9 @@ SIM_OBJS = \
 	cgen-run.o sim-reason.o sim-stop.o \
 	sim-if.o arch.o \
 	$(EPIPHANY_OBJS) \
-	devices.o \
 	traps.o \
-	$(CONFIG_DEVICES)
+	$(ESIM_OBJS)
+
 
 # Extra headers included by sim-main.h.
 SIM_EXTRA_DEPS = \
@@ -63,15 +84,45 @@ epiphany-fp.o : epiphany-fp.c $(EPIPHANYBF_INCLUDE_DEPS)
 
 arch.o: arch.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
-devices.o: devices.c $(SIM_MAIN_DEPS)
 traps.o: traps.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
+esim/esim.o: ALL_CFLAGS += -fvisibility=default
+esim/esim.o: esim/stamp-esim esim/esim.c $(SIM_MAIN_DEPS) \
+			 $(EPIPHANYBF_INCLUDE_DEPS)
+
+esim/stamp-esim:
+	mkdir -p esim
+	touch esim/stamp-esim
+
+# ESIM shared library
+libesim.so: libsim.a $(LIBDEPS) $(ESIM_OBJS)
+	$(CC) $(ALL_CFLAGS) -shared -o $@ -fPIC \
+	    -Wl,--whole-archive $(ESIM_OBJS) -Wl,--no-whole-archive \
+	    libsim.a $(LIBDEPS) $(EXTRA_LIBS)
+
+
+
+# ESIM tests
+ESIM_TEST_SRCS = esim/test/calculate_node_dims.c
+ESIM_TEST_OBJS = $(ESIM_TEST_SRCS:.c=.o)
+ESIM_TEST_BINS = $(ESIM_TEST_SRCS:.c=)
+
+.PHONY: esim-test
+esim-test: esim/test/stamp-esim-test $(ESIM_TEST_BINS)
+
+esim/test/stamp-esim-test:
+	mkdir -p esim/test
+	touch esim/test/stamp-esim-test
+
+$(ESIM_TEST_BINS): $(ESIM_TEST_OBJS) libsim.a $(LIBDEPS)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $@.o -o $@ \
+	  libsim.a $(EXTRA_LIBS)
 
 # FIXME: Use of `mono' is wip.
 mloop.c eng.h: stamp-mloop
 stamp-mloop: $(srcdir)/../common/genmloop.sh mloop.in Makefile
 	$(SHELL) $(srccom)/genmloop.sh -shell $(SHELL) \
-		-mono -fast -pbb -switch sem-switch.c \
+		-mono -scache \
 		-cpu epiphanybf -infile $(srcdir)/mloop.in
 	$(SHELL) $(srcroot)/move-if-change eng.hin eng.h
 	$(SHELL) $(srcroot)/move-if-change mloop.cin mloop.c
@@ -83,37 +134,61 @@ decode.o: decode.c $(EPIPHANYBF_INCLUDE_DEPS)
 sem.o: sem.c $(EPIPHANYBF_INCLUDE_DEPS)
 model.o: model.c $(EPIPHANYBF_INCLUDE_DEPS)
 
+epiphany-elf-sim-dummy: epiphany-elf-sim-dummy.s
+	epiphany-elf-as -o epiphany-elf-sim-dummy \
+		$(srcdir)/epiphany-elf-sim-dummy.s
+
+epiphany-elf-sim.py: $(srcdir)/epiphany-elf-sim.py.in
+	sed 's,@TARGET_PREFIX@,$(DESTDIR)$(exec_prefix)/$(target_alias),g' \
+		$(srcdir)/epiphany-elf-sim.py.in > epiphany-elf-sim.py
+
+.PHONY: esim-install
+esim-install: installdirs
+	$(INSTALL_PROGRAM) epiphany-elf-sim.py \
+		$(DESTDIR)$(bindir)/epiphany-elf-sim
+	$(INSTALL) -d libexec $(DESTDIR)$(exec_prefix)/$(target_alias)/libexec
+ifneq (@have_target_as@, no)
+	$(INSTALL_PROGRAM) epiphany-elf-sim-dummy \
+		$(DESTDIR)$(exec_prefix)/$(target_alias)/libexec/epiphany-elf-sim-dummy
+endif
+
+
 epiphany-clean:
 	rm -f mloop.c eng.h stamp-mloop
 	rm -f tmp-*
 	rm -f stamp-arch stamp-cpu
+	rm -f esim/stamp-esim esim/*.o
+	rm -f esim/test/stamp-esim-test $(ESIM_TEST_OBJS) $(ESIM_TEST_BINS)
+	rm -f libesim.so
+	rm -f epiphany-elf-sim.py
+	rm -f epiphany-elf-sim-dummy
 
 # cgen support, enable with --enable-cgen-maint
 CGEN_MAINT = ; @true
 # The following line is commented in or out depending upon --enable-cgen-maint.
 @CGEN_MAINT@CGEN_MAINT =
 
-stamp-arch: $(CGEN_READ_SCM) $(CGEN_ARCH_SCM) $(CGEN_CPU_DIR)/epiphany.cpu
+stamp-arch: $(CGEN_READ_SCM) $(CGEN_ARCH_SCM) $(CPU_DIR)/epiphany.cpu
 	$(MAKE) cgen-arch $(CGEN_FLAGS_TO_PASS) mach=all \
-	  archfile=$(CGEN_CPU_DIR)/epiphany.cpu \
+	  archfile=$(CPU_DIR)/epiphany.cpu \
 	  FLAGS="with-scache with-profile=fn"
 	touch stamp-arch
 arch.h arch.c cpuall.h: $(CGEN_MAINT) stamp-arch
 
 
 
-stamp-desc: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CGEN_CPU_DIR)/epiphany.cpu $(CGEN_CPU_DIR)/epiphany.opc Makefile
+stamp-desc: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CPU_DIR)/epiphany.cpu $(CPU_DIR)/epiphany.opc Makefile
 	$(MAKE) cgen-desc $(CGEN_FLAGS_TO_PASS) cpu=epiphany mach=all \
-			archfile=$(CGEN_CPU_DIR)/epiphany.cpu
+			archfile=$(CPU_DIR)/epiphany.cpu
 	touch $@
 
 desc.h: $(CGEN_MAINT) stamp-desc
 	@true
 
-stamp-cpu: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CGEN_DECODE_SCM) $(CGEN_CPU_DIR)/epiphany.cpu
+stamp-cpu: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(CGEN_DECODE_SCM) $(CPU_DIR)/epiphany.cpu
 	$(MAKE) cgen-cpu-decode $(CGEN_FLAGS_TO_PASS) \
 	  cpu=epiphanybf mach=epiphany32 SUFFIX= \
-	  archfile=$(CGEN_CPU_DIR)/epiphany.cpu \
+	  archfile=$(CPU_DIR)/epiphany.cpu \
 	  FLAGS="with-scache with-profile=fn" \
 	  EXTRAFILES="$(CGEN_CPU_SEM) $(CGEN_CPU_SEMSW)"
 	touch stamp-cpu

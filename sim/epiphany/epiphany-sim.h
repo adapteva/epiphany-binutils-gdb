@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef EPIPHANY_SIM_H
 #define EPIPHANY_SIM_H
 
+#include "cgen-atomic.h"
+
 /* GDB register numbers.  */
 /* TBS */
 
@@ -58,6 +60,14 @@ extern void epiphanybf_h_accum_set_handler (SIM_CPU *, DI);
 #define SET_H_ACCUM(val) \
   XCONCAT2 (WANT_CPU,_h_accum_set_handler) (current_cpu, (val))
 #endif
+
+/* Custom reg getters/setters */
+void epiphanybf_set_config(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_status(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val);
 
 /* Misc. profile data.  */
 
@@ -138,12 +148,6 @@ do { \
 #define EPIPHANY_DEVICE_ADDR  0x0
 #define EPIPHANY_DEVICE_LEN   0x2040
 
-/* sim_core_attach device argument.  */
-extern device epiphany_devices;
-
-/* FIXME: Temporary, until device support ready.  */
-struct _device { int foo; };
-
 /* Handle the trap insn.  */
 extern USI epiphany_trap (SIM_CPU *, PCADDR, int);
 
@@ -154,10 +158,29 @@ extern void epiphany_break( SIM_CPU *,PCADDR );
 extern void epiphany_fpu_error (CGEN_FPU *, int);
 
 /* Handle ipend on rti call.  */
-extern USI epiphany_rti (SIM_CPU *, USI ipend, USI imask);
+extern USI epiphany_rti (SIM_CPU *);
+
+/* Handle the gie insn.  */
+extern void epiphany_gie( SIM_CPU * );
 
 /* Call back after every instruction.  */
 extern USI epiphany_post_isn_callback (SIM_CPU *cpu , USI pc) ;
+
+/* Check if core is active */
+extern int epiphany_cpu_is_active(SIM_CPU *current_cpu);
+
+#if WITH_SCACHE
+extern void epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc);
+#endif
+
+void
+epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
+				    SI newval);
+
+SI epiphany_testset(SIM_CPU *, USI, SI, int);
+SI epiphany_testset_SI(SIM_CPU *, USI, SI);
+SI epiphany_testset_HI(SIM_CPU *, USI, HI);
+SI epiphany_testset_QI(SIM_CPU *, USI, QI);
 
 
 #endif /* EPIPHANY_SIM_H */
