@@ -77,10 +77,10 @@
 #define EPIPHANY_GPR_LCS  10	/*!< Offset to last callee saved register */
 #define EPIPHANY_GPR_SB    9	/*!< Offset to static base register */
 #define EPIPHANY_GPR_SL   10	/*!< Offset to stack limit register */
-#define EPIPHANY_GPR_FP   11	/*!< Offset to frame pointer register */
 #define EPIPHANY_GPR_IP   12	/*!< Offset to Inter-proc call scratch reg */
 #define EPIPHANY_GPR_SP   13	/*!< Offset to stack pointer register */
 #define EPIPHANY_GPR_LR   14	/*!< Offset to link register */
+#define EPIPHANY_GPR_FP   15	/*!< Offset to frame pointer register */
 
 /*! Number of general purpose registers (GPRs). */
 #define EPIPHANY_NUM_GPRS         64
@@ -219,7 +219,7 @@
 #define EPIPHANY_BKPT_INST_STRUCT      {0xc2, 0x01}
 
 /*! Numeric value of frame pointer setup instruction (mov  fp,sp) */
-#define EPIPHANY_MOV_FP_SP_INST  0x240274ef
+#define EPIPHANY_MOV_FP_SP_INST  0x2402f4ef
 
 /*! Size of the breakpoint instruction (in bytes) */
 #define EPIPHANY_BKPT_INSTLEN  2
@@ -351,7 +351,7 @@ epiphany_debug_infrun (const char *fmt,
    on the stack are not fixed. When optimizing, non-prologue instructions may
    be interspersed in the prologue.
 
-   Note however, that since either the FP (r11) or SP (r13) is involved,
+   Note however, that since either the FP (r15) or SP (r13) is involved,
    these are always 32-bit instructions.
 
    ANALYSIS
@@ -446,14 +446,15 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
       insn = read_memory_unsigned_integer (current_pc, 4, byte_order_for_code);
 
       if (   ((insn & 0xff00fc7f) == 0x2400b41b)
-	  || ((insn & 0xff00fc7f) == 0x2400ac1b)
-	  || ((insn & 0xff00fc7f) == 0x2400741b)
-	  || ((insn & 0xff00fc7f) == 0x24006c1b))
+	  || ((insn & 0xff00fc7f) == 0x2400bc1b)
+	  || ((insn & 0xff00fc7f) == 0x2400f41b)
+	  || ((insn & 0xff00fc7f) == 0x2400fc1b))
 	{
-	  /* add sp,sp,#<simm>  00100100ssssssss101101sss0011011.
-	     add sp,fp,#<simm>  00100100ssssssss101011sss0011011.
-	     add fp,sp,#<simm>  00100100ssssssss011101sss0011011.
-	     add fp,fp,#<simm>  00100100ssssssss011011sss0011011.
+	  /*                    dddn nn             dddn nn
+	     add sp,sp,#<simm>  0010 0100 ssss ssss 1011 01ss s001 1011.
+	     add sp,fp,#<simm>  0010 0100 ssss ssss 1011 11ss s001 1011.
+	     add fp,sp,#<simm>  0010 0100 ssss ssss 1111 01ss s001 1011.
+	     add fp,fp,#<simm>  0010 0100 ssss ssss 1111 11ss s001 1011.
 
 	     The constant should be a negative multiple of words (falling
 	     stack). */
@@ -477,27 +478,28 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	      regs[rd] = pv_add_constant (regs[rn], (CORE_ADDR) simm);
 	    }
 	}
-      else if ((insn & 0xffffffff) == 0x2402acef)
+      else if ((insn & 0xffffffff) == 0x2402bcef)
 	{
-	  /* mov sp,fp. 00100100000000101010110011101111. */
+	  /* mov sp,fp. 0010 0100 0000 0010 1011 1100 1110 1111. */
 	  epiphany_frame_debug ("PC %p: insn 0x%08x: mov sp,fp\n",
 				(void *) current_pc, insn);
 
 	  regs[EPIPHANY_SP_REGNUM] = regs[EPIPHANY_FP_REGNUM];
 	}
-      else if ((insn & 0xffffffff) == 0x240274ef)
+      else if ((insn & 0xffffffff) == 0x2402f4ef)
 	{
-	  /* mov fp,sp. 00100100000000100111010011101111. */
+	  /* mov fp,sp. 0010 0100 0000 0010 1111 0100 1110 1111. */
 	  epiphany_frame_debug ("PC %p: insn 0x%08x: mov fp,sp\n",
 				(void *) current_pc, insn);
 
 	  regs[EPIPHANY_FP_REGNUM] = regs[EPIPHANY_SP_REGNUM];
 	}
       else if (   ((insn & 0x1e001c1f) == 0x0400141c)
-	       || ((insn & 0x1e001c1f) == 0x04000c1c))
+	       || ((insn & 0x1e001c1f) == 0x04001c1c))
 	{
-	  /* str<sz> rD,[sp,#+/-<imm>]. ddd0010+iiiiiiiiddd101iiizz11100
-	     str<sz> rD,[fp,#+/-<imm>]. ddd0010+iiiiiiiiddd011iiizz11100
+	  /*                            dddn nn             dddn nn
+	     str<sz> rD,[sp,#+/-<imm>]. ddd0 010+ iiii iiii ddd1 01ii izz1 1100
+	     str<sz> rD,[fp,#+/-<imm>]. ddd0 010+ iiii iiii ddd1 11ii izz1 1100
 
 	     Displacement addressing. Potentially this trashes the stack, in
 	     which case we give up here. */
@@ -558,10 +560,11 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	    }
 	}
       else if (   ((insn & 0x1e001c7f) == 0x0600145c)
-	       || ((insn & 0x1e001c7f) == 0x06000c5c))
+	       || ((insn & 0x1e001c7f) == 0x06001c5c))
 	{
-	  /* str rD,[sp],#+/-<imm>. ddd0011+iiiiiiiiddd101iii1011100
-	     str rD,[fp],#+/-<imm>. ddd0011+iiiiiiiiddd011iii1011100
+	  /*                        dddn nn             dddn nn
+	     str rD,[sp],#+/-<imm>. ddd0 011+ iiii iiii ddd1 01ii i101 1100
+	     str rD,[fp],#+/-<imm>. ddd0 011+ iiii iiii ddd1 11ii i101 1100
 
 	     Displacement-postmodify. Potentially this trashes, the stack, in
 	     which case we stop here. */
@@ -1043,7 +1046,7 @@ epiphany_register_name (struct gdbarch *gdbarch,
     {
       /* general purpose registers */
       "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
-      "r8",  "r9",  "r10", "fp",  "ip",  "sp",  "lr",  "r15",
+      "r8",  "r9",  "r10", "r11",  "ip",  "sp",  "lr", "fp",
       "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
       "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31",
       "r32", "r33", "r34", "r35", "r36", "r37", "r38", "r39",

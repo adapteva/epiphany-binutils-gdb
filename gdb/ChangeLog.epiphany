@@ -1,5 +1,13 @@
 2015-09-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* gdb/epiphany-tdep.c (EPIPHANY_GPR_FP): Change fp to r15.
+	(EPIPHANY_MOV_FP_SP_INST): Adjust for fp move.
+	(epiphany_debug_infrun): Likewise.
+	(epiphany_analyse_prologue): Likewise.
+	(epiphany_register_name): Likewise.
+
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* gdb/configure.tgt (epiphany-*): Specify gdb_sim_libs.
 
 2015-09-24  Ola Jeppsson  <ola@adapteva.com>
