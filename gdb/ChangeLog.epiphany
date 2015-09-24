@@ -1,3 +1,8 @@
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb/configure.tgt: Add gdb_sim_libs variable.
+	* gdb/configure.ac: Support gdb_sim_libs variable.
+
 2015-08-31  Ola Jeppsson  <ola@adapteva.com>
 
 	* gdb/epiphany-tdep.c (epiphany_push_dummy_call): Fix type
