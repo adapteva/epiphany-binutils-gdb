@@ -1,3 +1,10 @@
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* opcodes/epiphany-desc.c: Regenerated
+	* opcodes/epiphany-desc.h: Regenerated
+	* opcodes/epiphany-opc.c: Regenerated
+	* opcodes/epiphany-opc.h: Regenerated
+
 2015-09-04  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-desc.c: Regenerated.
