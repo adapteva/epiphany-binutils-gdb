@@ -139,6 +139,7 @@ epiphany-*-elf* | epiphany-*-rtems*)
 	# Target: Adapteva EPIPHANY embedded system
 	gdb_target_obs="epiphany-tdep.o"
 	gdb_sim=../sim/epiphany/libsim.a
+	gdb_sim_libs="rt pthread"
 	;;
 
 frv-*-*)

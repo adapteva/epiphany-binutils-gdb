@@ -1,5 +1,9 @@
 2015-09-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* gdb/configure.tgt (epiphany-*): Specify gdb_sim_libs.
+
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* gdb/configure.tgt: Add gdb_sim_libs variable.
 	* gdb/configure.ac: Support gdb_sim_libs variable.
 
