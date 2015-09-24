@@ -1,5 +1,9 @@
 2015-09-25  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim/epiphany/configure: Regenerated.
+
+2015-09-25  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim/epiphany/Makefile.in: Delay building epiphany-sim-dummy
 	until install stage. This way an in-tree assembler can be
 	detected.
