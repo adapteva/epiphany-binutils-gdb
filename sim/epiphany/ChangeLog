@@ -1,47 +1,47 @@
 2015-09-25  Ola Jeppsson  <ola@adapteva.com>
 
-	* sim/epiphany/configure: Regenerated.
+	* configure: Regenerated.
 
 2015-09-25  Ola Jeppsson  <ola@adapteva.com>
 
-	* sim/epiphany/Makefile.in: Delay building epiphany-sim-dummy
+	* Makefile.in: Delay building epiphany-sim-dummy
 	until install stage. This way an in-tree assembler can be
 	detected.
-	* sim/epiphany/configure.ac: Remove redundant check for target
+	* configure.ac: Remove redundant check for target
 	assembler.
 
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
-	* sim/epiphany/config.in: Regenerate.
-	* sim/epiphany/configure: Likewise.
-	* sim/epiphany/cpu.c: Likewise.
-	* sim/epiphany/decode.c: Likewise.
-	* sim/epiphany/decode.h: Likewise.
-	* sim/epiphany/sem-switch.c: Likewise.
-	* sim/epiphany/sem.c: Likewise.
+	* config.in: Regenerate.
+	* configure: Likewise.
+	* cpu.c: Likewise.
+	* decode.c: Likewise.
+	* decode.h: Likewise.
+	* sem-switch.c: Likewise.
+	* sem.c: Likewise.
 
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
-	* sim/epiphany/configure.ac: Enable hardware by default.
+	* configure.ac: Enable hardware by default.
 	Enable emesh-sim by default.
 
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
-	* sim/epiphany/epiphany.c (epiphany_testset): Replace
+	* epiphany.c (epiphany_testset): Replace
 	CIA_{GET,SET} with CPU_PC_{GET,SET}.
-	* sim/epiphany/dv-epiphany_mem.c (void epiphany_mem_signal):
+	* dv-epiphany_mem.c (void epiphany_mem_signal):
 	Likewise.
 
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
-	* sim/epiphany/mem-barrier.h: Use __sync_synchronize() as
+	* mem-barrier.h: Use __sync_synchronize() as
 	fallback.
 
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
-	* sim/epiphany/sim-if.c (sim_open): Remove check for
+	* sim-if.c (sim_open): Remove check for
 	HAVE_DV_SOCKSER and remove call to dv_sockser_install.
-	* sim/epiphany/tconfig.h: Remove check for HAVE_DV_SOCKSER.
+	* tconfig.h: Remove check for HAVE_DV_SOCKSER.
 
 2015-09-22  Ola Jeppsson  <ola@adapteva.com>
 
