@@ -31,9 +31,6 @@ endif
 SIM_EXTRA_ALL =
 ifeq (@esim@, yes)
 	SIM_EXTRA_ALL += epiphany-elf-sim.py
-ifneq (@have_target_as@, no)
-	SIM_EXTRA_ALL += epiphany-elf-sim-dummy
-endif
 endif
 
 
@@ -134,22 +131,23 @@ decode.o: decode.c $(EPIPHANYBF_INCLUDE_DEPS)
 sem.o: sem.c $(EPIPHANYBF_INCLUDE_DEPS)
 model.o: model.c $(EPIPHANYBF_INCLUDE_DEPS)
 
-epiphany-elf-sim-dummy: epiphany-elf-sim-dummy.s
-	epiphany-elf-as -o epiphany-elf-sim-dummy \
-		$(srcdir)/epiphany-elf-sim-dummy.s
-
 epiphany-elf-sim.py: $(srcdir)/epiphany-elf-sim.py.in
 	sed 's,@TARGET_PREFIX@,$(DESTDIR)$(exec_prefix)/$(target_alias),g' \
 		$(srcdir)/epiphany-elf-sim.py.in > epiphany-elf-sim.py
 
-.PHONY: esim-install
+# Delay building dummy until install. This way will be an assembler when doing
+# a unified source tree toolchain build.
 esim-install: installdirs
 	$(INSTALL_PROGRAM) epiphany-elf-sim.py \
 		$(DESTDIR)$(bindir)/epiphany-elf-sim
 	$(INSTALL) -d libexec $(DESTDIR)$(exec_prefix)/$(target_alias)/libexec
-ifneq (@have_target_as@, no)
+ifneq (, $(shell which $(AS_FOR_TARGET)))
+	$(AS_FOR_TARGET) $(srcdir)/epiphany-elf-sim-dummy.s -o \
+		epiphany-elf-sim-dummy
 	$(INSTALL_PROGRAM) epiphany-elf-sim-dummy \
 		$(DESTDIR)$(exec_prefix)/$(target_alias)/libexec/epiphany-elf-sim-dummy
+else
+	@echo Skipping epiphany-sim-dummy. No target assembler found.
 endif
 
 

@@ -1,3 +1,11 @@
+2015-09-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim/epiphany/Makefile.in: Delay building epiphany-sim-dummy
+	until install stage. This way an in-tree assembler can be
+	detected.
+	* sim/epiphany/configure.ac: Remove redundant check for target
+	assembler.
+
 2015-09-23  Ola Jeppsson  <ola@adapteva.com>
 
 	* sim/epiphany/config.in: Regenerate.
