@@ -1,3 +1,12 @@
+2015-09-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* cpu/epiphany.cpu: Fix inconsistent alias for fp.
+
+2015-09-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* Merge Epiphany multicore simulator branch
+	[ No log entries between: 2014-03-18 -- 2014-10-28 ]
+
 2015-08-29  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu: Move fp alias back to r15.
