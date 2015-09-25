@@ -136,12 +136,12 @@
 
 ;; define the fields of the instruction.
 ;;   name            description              ATTR  MSB LEN
-(dnf f-opc	  "primary opcode"	       ()     3 4)
+(dnf f-opc        "primary opcode"             ()     3 4)
 (dnf f-opc-4-1    "secondary opcode"           ()     4 1)
 (dnf f-opc-6-3    "secondary opcode"           ()     6 3) ;;
 (dnf f-opc-8-5    "tertiary opcode"            ()     8 5) ;;
 (dnf f-opc-19-4   "additional opcode bits"     ()    19 4)
-(dnf f-condcode   "condition codes" 	       ()     7 4)
+(dnf f-condcode   "condition codes"            ()     7 4)
 (dnf f-secondary-ccs "flag for secondary ccs"  ()     7 1)
 (dnf f-shift      "shift amount"               ()     9 5)
 (dnf f-wordsize   "load/store size"            ()     6 2)
@@ -157,20 +157,20 @@
     ((value pc) (sra SI (sub SI value pc) 1))
     ((value pc) (add SI (sll SI value 1) pc)))
 
-(df f-sdisp3     "signed immediate 3 bit"      ()     9 3  INT #f #f)
+(df f-sdisp3      "signed immediate 3 bit"     ()     9 3  INT #f #f)
 
 (dnf f-disp3      "address offset"             ()     9 3)
 (dnf f-disp8      "address offset"             ()    23 8)
 
-(dnf f-imm8      "move/add/sub imm8"           ()    12 8)
-(dnf f-imm-27-8  "move/add/sub imm16"          ()    27 8)
-(dnf f-addsubx   "+/- index address"           ()    20 1)
-(dnf f-subd      "+/- displ address"           ()    24 1)
-(dnf f-pm        "post-modify immediate"       ()    25 1)
+(dnf f-imm8       "move/add/sub imm8"          ()    12 8)
+(dnf f-imm-27-8   "move/add/sub imm16"         ()    27 8)
+(dnf f-addsubx    "+/- index address"          ()    20 1)
+(dnf f-subd       "+/- displ address"          ()    24 1)
+(dnf f-pm         "post-modify immediate"      ()    25 1)
 
-(dnf f-rm        "short rm"                    ()     9 3)   ;; RM
-(dnf f-rn        "short rn"                    ()    12 3)   ;; RN
-(dnf f-rd        "short rd"                    ()    15 3)   ;; RD
+(dnf f-rm         "short rm"                   ()     9 3)   ;; RM
+(dnf f-rn         "short rn"                   ()    12 3)   ;; RN
+(dnf f-rd         "short rd"                   ()    15 3)   ;; RD
 
 (dnf f-rm-x       "extension rm"               ()    25 3)   ;; RM
 (dnf f-rn-x       "extension rn"               ()    28 3)   ;; RN
@@ -178,18 +178,15 @@
 
 (dnf f-dc-9-1     "DC"                 (RESERVED)     9 1)
 
-(dnf f-sn        "short sn"                    ()    12 3)   ;; SN
-(dnf f-sd        "short sd"                    ()    15 3)   ;; SD
+(dnf f-sn         "short sn"                   ()    12 3)   ;; SN
+(dnf f-sd         "short sd"                   ()    15 3)   ;; SD
 
 (dnf f-sn-x       "extension sn"               ()    28 3)   ;; SN
 (dnf f-sd-x       "extension sd"               ()    31 3)   ;; SD
 
-
-
-(dnf f-dc-7-4     "movts zeros"                 ()     7 4)
-(dnf f-trap-swi-9-1     "trap or swi"                 ()     9 1)
-(dnf f-gien-gidis-9-1     "gien or gidis"                 ()     9 1)
-
+(dnf f-dc-7-4     "movts zeros"                ()     7 4)
+(dnf f-trap-swi-9-1 "trap or swi"              ()     9 1)
+(dnf f-gien-gidis-9-1 "gien or gidis"          ()     9 1)
 
 (dnf f-dc-15-3    "DC"                 (RESERVED)    15 3)
 (dnf f-dc-15-7    "DC"                 (RESERVED)    15 7)

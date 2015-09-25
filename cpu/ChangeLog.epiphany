@@ -1,3 +1,7 @@
+2015-09-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Fix (some) code formatting.
+
 2015-09-24  Ola Jeppsson  <ola@adapteva.com>
 
 	* cpu/epiphany.cpu: Fix inconsistent alias for fp.
