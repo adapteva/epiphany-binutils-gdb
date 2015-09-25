@@ -141,6 +141,8 @@
 (dnf f-opc-6-3    "secondary opcode"           ()     6 3) ;;
 (dnf f-opc-8-5    "tertiary opcode"            ()     8 5) ;;
 (dnf f-opc-19-4   "additional opcode bits"     ()    19 4)
+(dnf f-opc-9-6    "additional opcode bits"     ()     9 6)
+(dnf f-opc-21-6   "additional opcode bits"     ()    21 6)
 (dnf f-condcode   "condition codes"            ()     7 4)
 (dnf f-secondary-ccs "flag for secondary ccs"  ()     7 1)
 (dnf f-shift      "shift amount"               ()     9 5)
@@ -188,9 +190,12 @@
 (dnf f-trap-swi-9-1 "trap or swi"              ()     9 1)
 (dnf f-gien-gidis-9-1 "gien or gidis"          ()     9 1)
 
+(dnf f-arith6-l   "low half of arith6"         ()    15 3)
+(dnf f-arith6-h   "high half of arith6"        ()    31 3)
+
 (dnf f-dc-15-3    "DC"                 (RESERVED)    15 3)
 (dnf f-dc-15-7    "DC"                 (RESERVED)    15 7)
-(dnf f-dc-15-6    "DC"                 ()            15 6)
+(dnf f-dc-15-6    "DC"                         ()    15 6)
 (dnf f-trap-num   "trap number"                ()    15 6)
 
 (dnf f-dc-20-1    "DC"                 (RESERVED)    20 1)
@@ -242,6 +247,16 @@
 					  (ifield f-imm8))))
       )
 
+;; TODO: It works but error output is confusing. Add a parse(?) handler.
+(dnmf f-arith6 "Immediate for MODE" () UINT (f-arith6-l f-arith6-h)
+	(sequence ()
+		(set (ifield f-arith6-l) (and (ifield f-arith6) #x7))
+		(set (ifield f-arith6-h) (srl (ifield f-arith6) #x3)))
+	(sequence ()
+		(set (ifield f-arith6)
+			(or (sll (ifield f-arith6-h) #x3)
+			    (sll (ifield f-arith6-l) #x0))))
+	)
 
 ;; 32 bit instructions have the register number broken into two non-contiguous fields
 
@@ -1174,6 +1189,7 @@
 (define-operand (name imm8) (comment "8-bit unsigned literal") (attrs RELAX)
   (type h-addr) (index f-imm8) (handlers (parse "imm8")))
 
+(dnop arith6 "6-bit unsigned literal"      () h-uint f-arith6)
 (define-operand
   (name direction)
   (comment "+/- indexing")
@@ -2011,6 +2027,20 @@
 (op-mmr-movts  dma  sndma  #x1)
 (op-mmr-movts  mem  snmem  #x2)
 (op-mmr-movts  mesh snmesh #x3)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; MODE imm6; arithmetic mode switch
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(dni_wrapper
+	mode
+	"mode"
+	() ;; TODO: (attr (MACH epiphany-v))
+	"mode $arith6"
+	(+ OP4_MISC (f-opc-9-6 #x30) (f-dc-21-2 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) arith6 (f-sn #x0) (f-sn-x #x0))
+	(set (hcr-config) (or (and (hcr-config) #xff81ffff) (sll arith6 17))) ;; TODO: Test
+	()
+	)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MOVFS
