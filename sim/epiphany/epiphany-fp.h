@@ -36,12 +36,6 @@ extern SI epiphany_fix(SIM_CPU *current_cpu,  SI fr0, SI frm, SI frn);
 extern SI epiphany_float(SIM_CPU *current_cpu, SI fr0, SI frm, SI frn);
 extern SI epiphany_fabs(SIM_CPU *current_cpu,  SI fr0, SI frm, SI frn);
 
-extern SF epiphany_frecip(SIM_CPU *current_cpu, SF frg);
-
-extern SF epiphany_fsqrt(SIM_CPU *current_cpu, SF frg);
-
-
-
 extern BI get_epiphany_fzeroflag(SIM_CPU *current_cpu, unsigned res) ;
 extern BI get_epiphany_fnegativeflag(SIM_CPU *current_cpu, unsigned res) ;
 extern BI get_epiphany_funderflowflag(SIM_CPU *current_cpu, unsigned ) ;

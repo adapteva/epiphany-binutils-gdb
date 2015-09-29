@@ -622,23 +622,6 @@ epiphany_set_rounding_mode (SIM_CPU * cpu, int configVal)
     }
 }
 
-
-SF
-epiphany_frecip (SIM_CPU * current_cpu, SF frg)
-{
-  SF result = 0;
-
-  return result;
-}
-
-SF
-epiphany_fsqrt (SIM_CPU * current_cpu, SF frg)
-{
-  SF result = 0;
-
-  return result;
-}
-
 enum I_OP
 { IADD = 0, ISUB = 1, IMUL = 2, IMADD = 3, IMSUB = 4 };
 
