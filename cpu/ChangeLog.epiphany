@@ -1,5 +1,10 @@
 2015-09-29  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu: Remove fext, fdep, lfsr, frecip, and fsqrt
+	instructions. They were never realised in  hardware.
+
+2015-09-29  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu: Add long alias for 'mode'.
 
 2015-09-29  Ola Jeppsson  <ola@adapteva.com>

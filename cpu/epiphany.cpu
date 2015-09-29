@@ -336,19 +336,8 @@
 (define-normal-insn-enum insn-bop "binary operator subcodes" () OPB_ f-opc-6-3
   (EOR ADD LSL SUB LSR AND ASR ORR))
 
-					; dsp 3 operand opcodes
-(define-normal-insn-enum insn-bopext "binary operator subcodes" () OPBE_ f-opc-6-3
-  (FEXT FDEP LFSR - - - - -))
-
-
 (define-normal-insn-enum insn-fop "floating operators" () OPF_ f-opc-6-3
   (ADD SUB MUL MADD MSUB FLOAT FIX FABS))
-
-(define-normal-insn-enum insn-fopexn "extended floating operators" () OPF_ f-opc-6-3
-  (FRECIP FSQRT - - - - - -))
-
-
-
 
 ; Immediate operation secondary opcodes
 (define-normal-insn-enum insn-immop "immediate operators" () OPI_ f-opc-6-3
@@ -2577,44 +2566,6 @@
       (emit bitr rd6 rn6)
       )
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Integer arithmetic instructions
-;; Extended operation
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-pmacro (op-iextrrr  name  cond-op)
-  (begin
-
-    (dni_wrapper (%sym name)
-		 (%str name)
-		 ()
-		 (%str name " $rd6,$rn6,$rm6")
-		 (+ OP4_MISC (%sym "OPBE_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0)  (f-dc-20-1 #x1)
-		    rd6 rn6 rm6)
-		 (sequence ()
-			   ;;  TODO cond operation (cond-op rn6 rm6)
-			   ;;(set rd6 (sem-op SI rn6 rm6))
-			   (set zbit (zflag rd6))
-			   (set nbit (nflag rd6))
-			   )
-		 ()
-		 )
-
-    (dnmi (%sym name ".l")
-	  (%str name)
-	  (NO-DIS)
-	  (%str name ".l $rd6,$rn6,$rm6")
-	  (emit (%sym name) rd6  rn6 rm6)
-	  )
-    )
-  )
-
-(op-iextrrr fext  sub-vc)
-(op-iextrrr fdep  sub-vc)
-(op-iextrrr lfsr  sub-vc)
-
-
-
 ;; Immediate moves.  The 8 bit form is relaxed if it doesn't fit or is external
 ;; Move RD,#IMM
 (dni_wrapper mov8
@@ -2996,90 +2947,6 @@
 
 
 (op-float2fix-float ix OPF_FIX)
-
-;; MAC (Multiply and Accumulate Instructions
-;; (define-pmacro (op-mac-float name code)
-;;   (begin
-;;     (dni_wrapper (%sym "fm" name "f16")
-;; 	 (%str "fm" name)
-;; 	 (SHORT-INSN)
-;; 	 (%str "fm" name " $frd,$frn,$frm")
-;; 	 (+ OP4_DSP16 code frd frn frm)
-;; 	 (sequence ((SF fptemp))
-;; 		   (set bvbit 0)
-;; 		   (set busbit 0)
-;;                    (set fptemp (c-call SF (%str "epiphany_fm" name) frd frm frn))
-;; 		   (set bnbit (lt SF fptemp (const SF 0)))
-;; 		   (set bzbit (eq SF fptemp (const SF 0)))
-;; 		   (set bvsbit (or bvsbit bvbit))
-;;                    (set frd fptemp)
-;; ;		   (set rd (subword SI frd 0))
-;; 		   )
-;; 	 ()
-;; 	 )
-
-;;     (dni_wrapper (%sym "fm" name "f32")
-;; 	 (%str "fm" name)
-;; 	 ()
-;; 	 (%str "fm" name " $frd6,$frn6,$frm6")
-;; 	 (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) frd6 frn6 frm6)
-;; 	 (sequence ((SF fptemp))
-;; 		   (set bvbit 0)
-;; 		   (set busbit 0)
-;;                    (set fptemp (c-call SF (%str "epiphany_fm" name) frd6 frm6 frn6))
-;; 		   (set bnbit (lt SF fptemp (const SF 0)))
-;; 		   (set bzbit (eq SF fptemp (const SF 0)))
-;; 		   (set bvsbit (or bvsbit bvbit))
-;;                    (set frd6 fptemp)
-;; ;		   (set rd6 (subword SI frd6 0))
-;; 		   )
-;; 	 ()
-;; 	 )
-;;     )
-;; )
-
-
-
-
-
-
-
-					; extended floating point operation
-
-
-(define-pmacro (op-fextop-float name code)
-  (begin
-
-    (dni_wrapper (%sym "f_" name "f32")
-		 (%str "f_" name)
-		 ()
-		 (%str "f" name " $frd6,$frn6")
-		 (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-2 #x0) (f-dc-20-1 #x1) frd6 frn6 frn6)
-		 (sequence ((SF fptemp))
-			   (set bvbit 0)
-			   (set busbit 0)
-			   (set fptemp (c-call SF (%str "epiphany_f" name) frn6))
-			   (set bnbit (lt SF fptemp (const SF 0)))
-			   (set bzbit (eq SF fptemp (const SF 0)))
-			   (set bvsbit (or bvsbit bvbit))
-			   (set frd6 fptemp)
-
-			   )
-		 ()
-		 )
-
-
-    (dnmi (%sym "f_" name "f32.l")
-	  (%str "f_" name)
-	  (NO-DIS)
-	  (%str "f" name ".l $frd6,$frn6")
-	  (emit (%sym "f_" name "f32") frd6 frn6)
-	  )
-    )
-  )
-
-(op-fextop-float recip OPF_FRECIP)
-(op-fextop-float sqrt  OPF_FSQRT)
 
 
 
