@@ -369,7 +369,7 @@
 	(NUM-REGS 512)
 	; GPR group
 	; some preferred aliases
-	(SP 13) (LR 14) (FP 15)
+	(IP 12) (SP 13) (LR 14) (FP 15)
 	; the default register names
 	(R0  0)  (R1   1) (R2   2) (R3   3) (R4   4) (R5   5) (R6   6) (R7   7)
 	(R8  8)  (R9   9) (R10 10) (R11 11) (R12 12) (R13 13) (R14 14) (R15 15)
@@ -382,7 +382,7 @@
 	; some less popular aliases
 	(A1  0) (A2  1) (A3  2) (A4  3) (V1  4) (V2  5) (V3  6) (V4  7)
 	(V5  8) (V6  9) (V7 10) (V8 11)
-	(SB  9) (SL 10) (IP 12)
+	(SB  9) (SL 10)
 
 	;; SCR group
 	(SCR-CONFIG      #x100) ;; configuration register
@@ -475,7 +475,7 @@
   (name-prefix "")
   (values
 ; some preferred aliases
-   (sp 13) (lr 14) (fp 15)
+   (ip 12) (sp 13) (lr 14) (fp 15)
 ; the default register names
    (r0  0)  (r1  1)  (r2  2)  (r3  3)  (r4  4)  (r5  5)  (r6  6)  (r7  7)
    (r8  8)  (r9  9) (r10 10) (r11 11) (r12 12) (r13 13) (r14 14) (r15 15)
@@ -488,7 +488,7 @@
 ; some less popular aliases
    (a1  0) (a2  1) (a3  2) (a4  3) (v1  4) (v2  5) (v3  6) (v4  7)
    (v5  8) (v6  9) (v7 10) (v8 11)
-   (sb 9) (sl 10) (ip 12)
+   (sb 9) (sl 10)
    )
   )
 
@@ -737,7 +737,7 @@
 	(config       0)
 	(status       1) ; unified condition codes
 	(pc           2) ; virtualized PC
-	(debugstatus  3) ;
+	(debug        3) ; debugstatus
 	(iab          4)
 	(lc           5) ;loop counter            Not impemented
 	(ls           6) ;loop start address      Not impemented
@@ -900,7 +900,7 @@
 			    config
 			    status
 			    pc
-			    debugstatus
+			    debug ;; debugstatus
 			    iab
 			    lc
 			    ls
