@@ -2033,14 +2033,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (dni_wrapper
-	mode
-	"mode"
-	() ;; TODO: (attr (MACH epiphany-v))
-	"mode $arith6"
-	(+ OP4_MISC (f-opc-9-6 #x30) (f-dc-21-2 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) arith6 (f-sn #x0) (f-sn-x #x0))
-	(set (hcr-config) (or (and (hcr-config) #xff81ffff) (sll arith6 17))) ;; TODO: Test
-	()
-	)
+  mode
+  "mode"
+  () ;; TODO: (attr (MACH epiphany-v))
+  "mode $arith6"
+  (+ OP4_MISC (f-opc-9-6 #x30) (f-dc-21-2 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) arith6 (f-sn #x0) (f-sn-x #x0))
+  (set (hcr-config) (or (and (hcr-config) #xff81ffff) (sll arith6 17))) ;; TODO: Test
+  ()
+)
+(dnmi
+  (mode.l)
+  ("mode.l")
+  (NO-DIS)
+  "mode.l $arith6"
+  (emit mode arith6)
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MOVFS

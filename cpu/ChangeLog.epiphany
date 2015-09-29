@@ -1,5 +1,9 @@
 2015-09-29  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu: Add long alias for 'mode'.
+
+2015-09-29  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu: Fix register rename regressions for gas. Promote ip as
 	default alias for r12. Rename debugstatus back to debug.
 
