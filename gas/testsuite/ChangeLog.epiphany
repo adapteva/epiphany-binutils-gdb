@@ -1,5 +1,12 @@
 2015-09-30  Ola Jeppsson  <ola@adapteva.com>
 
+	* gas/epiphany/addr-syntax.d: Expect that zero
+	displacement immediates for ldr instructions gets printed.
+	* gas/epiphany/allinsn.d: Likewise.
+	* gas/epiphany/regression.d: Likewise.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
 	* gas/epiphany/addr-syntax.d: Adjusted for fp move to r15.
 	Removed default register aliases for (sl=r10), and (sb=r9).
 	Long suffix '.l' dropped for ldr/str operations.
