@@ -1,5 +1,9 @@
 2015-09-30  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu: Add atomic instruction group and boilerplate.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (mode): Change to 4-bit operand.
 
 2015-09-29  Ola Jeppsson  <ola@adapteva.com>

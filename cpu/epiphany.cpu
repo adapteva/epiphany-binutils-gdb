@@ -193,6 +193,9 @@
 (dnf f-mode4-l    "low 3 bits of mode4"        ()    15 3)
 (dnf f-mode4-h    "high bit of mode4"          ()    29 1)
 
+(dnf f-ctrlmode5  "atomic #imm5 ctrlmode"      ()    20 5)
+(dnf f-atomic     "atomic bits"                ()    22 2)
+
 (dnf f-dc-15-3    "DC"                 (RESERVED)    15 3)
 (dnf f-dc-15-7    "DC"                 (RESERVED)    15 7)
 (dnf f-dc-15-6    "DC"                         ()    15 6)
@@ -322,6 +325,23 @@
 					; load=0, store=1
   (LOAD STORE)
   )
+
+(define-normal-insn-enum insn-atomicity
+  "is atomic" ()
+  OPA_ f-atomic
+  (
+    (TESTSET 1) ;; Legacy
+    (ATOMIC  3)
+  )
+)
+
+(define-normal-insn-enum insn-atomic-ctrlmode
+  "atomic ctrlmode" ()
+  OP_CTRLMODE_ f-ctrlmode5
+  (
+    (TESTSET   0)
+  )
+)
 
 					; enum for trap codes used by simulator
 (define-normal-insn-enum trap-codes "trap instruction dispatch code" () TRAP_ f-trap-num
@@ -1180,6 +1200,8 @@
   (type h-addr) (index f-imm8) (handlers (parse "imm8")))
 
 (dnop mode4 "4-bit unsigned literal"      () h-uint f-mode4)
+(dnop ctrlmode5 "atomic #imm5 ctrlmode"    () h-uint f-ctrlmode5)
+
 (define-operand
   (name direction)
   (comment "+/- indexing")
@@ -1753,6 +1775,63 @@
 ;;(testset-insn testsetd DI OPW_DOUBLE load-double-from-ea)
 
 
+(define-pmacro (op-atomic-atomic-helper name store sfx size)
+  (begin
+    (dni_wrapper
+      (%sym name sfx)
+      (%str name sfx)
+      () ;; TODO Epiphany-5 attr
+      (%str name sfx " $rd,[$rn,$rm],$ctrlmode5")
+      (+ OP4_LDSTRX store size OPA_ATOMIC rd6 rn6 rm6 ctrlmode5)
+      (nop) ;; TODO: Implement
+      ()
+    )
+    (dnmi
+      (%sym name sfx ".l")
+      (%str name sfx ".l")
+      (NO-DIS) ;; TODO Epiphany-5 attr
+      (%str name sfx ".l $rd,[$rn,$rm],$ctrlmode5")
+      (emit (%sym name sfx) rd6 rn6 rm6 ctrlmode5)
+    )
+  )
+)
+(define-pmacro (op-atomic-atomic name store)
+  (begin
+    (op-atomic-atomic-helper name store "b" OPW_BYTE)
+    (op-atomic-atomic-helper name store "h" OPW_SHORT)
+    (op-atomic-atomic-helper name store ""  OPW_WORD)
+    (op-atomic-atomic-helper name store "d" OPW_DOUBLE)
+  )
+)
+
+(define-pmacro (op-atomic-helper name store ctrlmode sfx size)
+  (begin
+    (dni_wrapper
+      (%sym name sfx)
+      (%str name sfx)
+      () ;; TODO Epiphany-5 attr
+      (%str name sfx " $rd,[$rn,$rm]")
+      (+ OP4_LDSTRX store size OPA_ATOMIC rd6 rn6 rm6 ctrlmode)
+      (nop) ;; TODO: Implement
+      ()
+    )
+    (dnmi
+      (%sym name sfx ".l")
+      (%str name sfx ".l")
+      (NO-DIS) ;; TODO Epiphany-5 attr
+      (%str name sfx ".l $rd,[$rn,$rm]")
+      (emit (%sym name sfx) rd6 rn6 rm6)
+    )
+  )
+)
+(define-pmacro (op-atomic name store ctrlmode)
+  (begin
+    (op-atomic-helper name store ctrlmode "b" OPW_BYTE)
+    (op-atomic-helper name store ctrlmode "h" OPW_SHORT)
+    (op-atomic-helper name store ctrlmode ""  OPW_WORD)
+    (op-atomic-helper name store ctrlmode "d" OPW_DOUBLE)
+  )
+)
 
 ;; need 16 bit forms too
 (define-pmacro (store-insn name mode sel sem-op)
