@@ -190,8 +190,8 @@
 (dnf f-trap-swi-9-1 "trap or swi"              ()     9 1)
 (dnf f-gien-gidis-9-1 "gien or gidis"          ()     9 1)
 
-(dnf f-arith6-l   "low half of arith6"         ()    15 3)
-(dnf f-arith6-h   "high half of arith6"        ()    31 3)
+(dnf f-mode4-l    "low 3 bits of mode4"        ()    15 3)
+(dnf f-mode4-h    "high bit of mode4"          ()    29 1)
 
 (dnf f-dc-15-3    "DC"                 (RESERVED)    15 3)
 (dnf f-dc-15-7    "DC"                 (RESERVED)    15 7)
@@ -214,6 +214,7 @@
 
 (dnf f-dc-28-1    "DC"                 (RESERVED)    28 1)
 (dnf f-dc-31-3    "DC"                 (RESERVED)    31 3)
+(dnf f-dc-31-2    "DC"                 (RESERVED)    31 2)
 
 (dnmf f-disp11 "Unsigned offset for load/store" () UINT (f-disp3 f-disp8)
       (sequence ()
@@ -248,15 +249,15 @@
       )
 
 ;; TODO: It works but error output is confusing. Add a parse(?) handler.
-(dnmf f-arith6 "Immediate for MODE" () UINT (f-arith6-l f-arith6-h)
-	(sequence ()
-		(set (ifield f-arith6-l) (and (ifield f-arith6) #x7))
-		(set (ifield f-arith6-h) (srl (ifield f-arith6) #x3)))
-	(sequence ()
-		(set (ifield f-arith6)
-			(or (sll (ifield f-arith6-h) #x3)
-			    (sll (ifield f-arith6-l) #x0))))
-	)
+(dnmf f-mode4 "Immediate for MODE" () UINT (f-mode4-l f-mode4-h)
+  (sequence ()
+    (set (ifield f-mode4-l) (and (ifield f-mode4) #x7))
+    (set (ifield f-mode4-h) (srl (ifield f-mode4) #x3)))
+  (sequence ()
+    (set (ifield f-mode4)
+      (or (sll (ifield f-mode4-h) #x3)
+          (sll (ifield f-mode4-l) #x0))))
+)
 
 ;; 32 bit instructions have the register number broken into two non-contiguous fields
 
@@ -1178,7 +1179,7 @@
 (define-operand (name imm8) (comment "8-bit unsigned literal") (attrs RELAX)
   (type h-addr) (index f-imm8) (handlers (parse "imm8")))
 
-(dnop arith6 "6-bit unsigned literal"      () h-uint f-arith6)
+(dnop mode4 "4-bit unsigned literal"      () h-uint f-mode4)
 (define-operand
   (name direction)
   (comment "+/- indexing")
@@ -2025,17 +2026,17 @@
   mode
   "mode"
   () ;; TODO: (attr (MACH epiphany-v))
-  "mode $arith6"
-  (+ OP4_MISC (f-opc-9-6 #x30) (f-dc-21-2 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) arith6 (f-sn #x0) (f-sn-x #x0))
-  (set (hcr-config) (or (and (hcr-config) #xff81ffff) (sll arith6 17))) ;; TODO: Test
+  "mode $mode4"
+  (+ OP4_MISC (f-opc-9-6 #x30) (f-dc-21-2 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) mode4 (f-sn #x0) (f-sn-x #x0) (f-dc-31-2 #x0))
+  (set (hcr-config) (or (and (hcr-config) #xffe1ffff) (sll mode4 17))) ;; TODO: Test
   ()
 )
 (dnmi
   (mode.l)
   ("mode.l")
   (NO-DIS)
-  "mode.l $arith6"
-  (emit mode arith6)
+  "mode.l $mode4"
+  (emit mode mode4)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
