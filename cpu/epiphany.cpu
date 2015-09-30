@@ -2605,6 +2605,60 @@
 (op-shift-rri lsl OP4_LSHIFT16 1 #x6 sll)
 (op-shift-rri asr OP4_ASHIFT16 0 #xe sra)
 
+;; 64 bit integer ops
+(define-pmacro (op64-rrr name sem-op cond-op)
+  (begin
+    (dni_wrapper
+      (%sym name "64")
+      (%str name "64")
+      () ;; TODO: Add Epiphany-5 attribute
+      (%str name "64 $rd6,$rn6,$rm6")
+      (+ OP4_MISC (%sym "OPB_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0) (f-dc-20-1 #x1) rd6 rn6 rm6)
+      (nop) ;; TODO: Implement
+      ()
+    )
+
+    (dnmi
+      (%sym name "64.l")
+      (%str name "64.l")
+      (NO-DIS)
+      (%str name "64.l $rd6,$rn6,$rm6")
+      (emit (%sym name "64") rd6 rn6 rm6)
+    )
+  )
+)
+(op64-rrr add nop nop)
+(op64-rrr sub nop nop)
+(op64-rrr and nop nop)
+(op64-rrr orr nop nop)
+(op64-rrr eor nop nop)
+
+;; 64-bit shift instructions
+(define-pmacro (shift64-rrr name sem-op)
+  (begin
+    (dni_wrapper
+      (%sym name "64")
+      (%str name "64")
+      () ;; TODO: Epiphany-5 attr
+      (%str name "64 $rd6,$rn6,$rm6")
+      (+ OP4_MISC (%sym "OPB_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0) (f-dc-20-1 #x1) rd6 rn6 rm6)
+      (nop) ;; TODO: Implement
+      ()
+    )
+    (dnmi
+      (%sym name "64.l")
+      (%str name "64.l")
+      (NO-DIS)
+      (%str name "64.l $rd6,$rn6,$rm6")
+      (emit (%sym name "64") rd6 rn6 rm6)
+    )
+  )
+)
+(shift64-rrr asr sra)
+(shift64-rrr lsr srl)
+(shift64-rrr lsl sll)
+
+
 ;; BITR - bitreversal (FFT)
 ;;
 ;; From Dr Dobbs et al.

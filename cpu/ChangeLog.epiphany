@@ -1,5 +1,9 @@
 2015-09-30  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu: Add 64-bit integer register instructions.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu: Add Epiphany-5 instructions: fmax,
 	and umul.
 
