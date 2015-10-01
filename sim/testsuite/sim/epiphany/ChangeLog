@@ -1,0 +1,11 @@
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
+	* bkpt.cgs: bkpt stops the program with
+	signal 5 (bkpt, trap).
+	* idle.cgs: Disable test.
+	* ldrdp16.cgs: Fix alignment.
+	* ldrx.cgs: Fix 32-bit mov.
+	* ldrx16.cgs: Likewise.
+	* movfs16.cgs: Only compare nbit.
+	* syscalls.cgs: Pass syscall args in right
+	order.
