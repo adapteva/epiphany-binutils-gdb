@@ -1,3 +1,10 @@
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-pc): Implement support for hardware loops in
+	setter.
+	(dni_wrapper): Remove incorrect hardware-loops
+	implementation. In other words: don't set pc here.
+
 2015-09-30  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu: Add 64-bit integer register instructions.

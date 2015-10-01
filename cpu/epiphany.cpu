@@ -841,6 +841,13 @@
 					; PC is a byte-addressed register
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+(define-hardware
+  (name h-hwloop-next)
+  ;; Set to true means that we should jump to ls after this instruction
+  (type register BI)
+)
+
 (define-hardware
   (name h-pc)
   (comment "program counter")
@@ -848,7 +855,45 @@
   (attrs PC PROFILE VIRTUAL)
   ;; Forward get/set to h-all-registers handlers
   (get () (reg h-all-registers (enum USI H-REG-SCR-PC)))
-  (set (newval) (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newval))
+  (set (newpc)
+    (if (eq (reg h-all-registers (enum USI H-REG-SCR-LC)) 0)
+      (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
+      (if (reg h-hwloop-next)
+        (sequence ((USI lc))
+          (set (reg h-hwloop-next) 0)
+          (set (reg h-all-registers (enum USI H-REG-SCR-PC))
+               (reg h-all-registers (enum USI H-REG-SCR-LS)))
+          (set lc (reg h-all-registers (enum USI H-REG-SCR-LC)))
+          (set (reg h-all-registers (enum USI H-REG-SCR-LC)) (sub lc 1))
+        )
+        (sequence ((USI lc) (USI ls) (USI le) (USI corebase) (USI globpc))
+          (set corebase
+               (sll (reg h-all-registers (enum USI H-REG-MESH-COREID)) 20))
+
+          (set lc (reg h-all-registers (enum USI H-REG-SCR-LC)))
+
+          (set ls (reg h-all-registers (enum USI H-REG-SCR-LS)))
+          (if (lt ls #x100000) (set ls (or ls corebase)))
+          (set le (reg h-all-registers (enum USI H-REG-SCR-LE)))
+          (if (lt le #x100000) (set le (or le corebase)))
+
+          (if (lt newpc #x100000)
+            (set globpc (or newpc corebase))
+            (set globpc newpc)
+          )
+
+          (if (eq globpc ls)
+            (set (reg h-all-registers (enum USI H-REG-SCR-LC)) (sub lc 1))
+          )
+          (if (eq globpc le)
+            ;; ???: TODO: Throw unaligned exception if (addr % 8 != 0)
+            (set (reg h-hwloop-next) 1)
+          )
+          (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
+        )
+      )
+    )
+  )
 )
 
 
@@ -1244,33 +1289,11 @@
 )
 
 
-;;      (lc             5);loop counter            Not impemented
-;;       (ls             6);loop start address      Not impemented
-;;       (le             7);loop end address        Not impemented
-
-;;have callback to adjust pc in case od events ( HW loops ... )
 (define-pmacro (dni_wrapper isnid stdrdesc attr_ strassembl iopcode proceed null_b)
   (begin
-    (dni isnid stdrdesc attr_ strassembl iopcode
-	 (sequence () proceed
-		   (sequence ((USI tmpPC))
-			     ;;(set tmpPC  (c-call  USI "epiphany_post_isn_callback" pc))
-
-			     (if (eq pc (hcr-le))
-				 (set (hcr-lc) (sub (hcr-lc) #x1)))
-			     (if (and
-				   (eq pc (hcr-le))
-				   (not (eq (hcr-lc) #x0)))
-				 (set pc (hcr-ls)))
-			     )
-		   )
-	 null_b)
-    )
+    (dni isnid stdrdesc attr_ strassembl iopcode proceed null_b)
   )
-
-
-
-
+)
 
 ;; Some handy macros
 ;;
