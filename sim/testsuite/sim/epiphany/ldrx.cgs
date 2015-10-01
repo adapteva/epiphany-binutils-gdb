@@ -3,7 +3,7 @@
 
 	.include "testutils.inc"
 
-		
+
 	.data
         .align  4
 v:	.long 1,2,3
@@ -12,7 +12,7 @@ v:	.long 1,2,3
 
 	.global ldrx
 ldrx:
-	mov	r15,v
+	mova	r15,v
 	mov	r16,4
 	ldr	r14,[r15,r16]  	; v[1]
 	add	r16,r16,4
@@ -20,4 +20,4 @@ ldrx:
 	add	r14,r14,r13	; 2+3
 	compare	r14,5
 
-	
+

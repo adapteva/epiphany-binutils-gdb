@@ -1,15 +1,15 @@
 # epiphany testcase for trap $disp3 -*- Asm -*-
 # mach: all
 # output:pass\n
-	
+
 	.include "testutils.inc"
 	start
 
 	.global syscalls
 syscalls:
 	mova    r0,file        ; path
-        mov     r1,0777        ; mode
-        mov     r2,0x200|0x2   ; TARGET_O_CREAT|TARGET_O_RDWR
+        mov     r1,0x200|0x2   ; TARGET_O_CREAT|TARGET_O_RDWR
+        mov     r2,0777        ; mode
 	trap	2              ; open
         add     r8,r0,0        ; file handle - save for later use
         blt     1f             ; no file
@@ -27,8 +27,8 @@ syscalls:
         blt     1f              ; close failed
 
         mova    r0,file         ; reopen the file
-        mov     r1,0777         ; 
-        mov     r2,0            ; O_RDONLY
+        mov     r1,0            ; O_RDONLY
+        mov     r2,0777         ;
         trap    2               ; open
         add     r0,r0,0
         blt     1f              ;reopen failed
@@ -40,7 +40,7 @@ syscalls:
         blt     1f
         sub     r2,r0,13       ; better have read all the data
         bne     1f             ; nope
-        
+
         ;;  check that we read the correct data
         mova r4,buffer
         mova r5,hello
@@ -52,12 +52,17 @@ syscalls:
         fail                    ;read not matching write
 4:      sub     r0,r0,1
         bne     3b
-        
+
 	pass
-1:	
-2:      trap    3               ;exit
+1:	mov r0, 4
+	trap    3               ;exit
+2:	mov r0, 5
+	trap    3               ;exit
 
 	.data
+.align 3
 file:   .ascii  "/tmp/trap-test.txt\0"
+.align 3
 hello:	.ascii	"hello, world\n"
+.align 3
 buffer: .byte   16

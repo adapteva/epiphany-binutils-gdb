@@ -1,5 +1,5 @@
 # epiphany testcase for IDLE instruction
-# mach: all
+# mach: none
 # xfail: epiphany-*-elf
 
 	.include "testutils.inc"
