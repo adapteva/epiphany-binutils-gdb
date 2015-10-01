@@ -1,5 +1,9 @@
 2015-10-01  Ola Jeppsson  <ola@adapteva.com>
 
+	* hwloops.cgs: New test.
+
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
 	* bkpt.cgs: bkpt stops the program with
 	signal 5 (bkpt, trap).
 	* idle.cgs: Disable test.
