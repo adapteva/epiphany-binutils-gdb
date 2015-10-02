@@ -1,3 +1,9 @@
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-registers-di) (h-registers-df) (rd6-di)
+	(rn6-di) (rm6-di) (rd6-df) (rn6-df) (rm6-df): Add 64-bit
+	versions of registers and operands.
+
 2015-10-01  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu: Remove dni_wrapper pmacro. Use dni

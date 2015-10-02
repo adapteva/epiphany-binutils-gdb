@@ -588,6 +588,36 @@
   (set (index newval) (set (reg h-all-registers index) (subword SI newval 0)))
 )
 
+;; Same 64 registers as dword registers
+;; TODO: ??? Do in C to avoid race conditions.
+;; TODO: Throw exception if unaligned?
+(define-hardware
+  (name h-registers-di)
+  (comment "all GPRs as DWORDs")
+  (type register DI (64))
+  (attrs PROFILE VIRTUAL)
+  (indices extern-keyword gr-names)
+  ;; Forward get/set to h-all-registers handlers
+  ;; Offset to GPR is 0 so we don't need to add anything to index.
+  (get (index) (join DI SI (reg h-all-registers (add UINT index 1))
+                           (reg h-all-registers index)))
+  (set (index newval) (sequence ()
+      (set (reg h-all-registers index) (subword SI newval 1))
+      (set (reg h-all-registers (add USI index 1)) (subword SI newval 0)))
+  )
+)
+
+(define-hardware
+  (name h-registers-df)
+  (comment "all GPRs as double precision floating point values")
+  (type register DF (64))
+  (attrs PROFILE VIRTUAL)
+  (indices extern-keyword gr-names)
+  ;; Forward get/set to h-all-dwregisters handlers
+  ;; Offset to GPR is 0 so we don't need to add anything to index.
+  (get (index) (subword DF (reg h-registers-di index) 0))
+  (set (index newval) (set (reg h-registers-di index) (subword DI newval 0)))
+)
 
 (define-enum
   (name e-scr-status-bits)
@@ -1211,6 +1241,15 @@
 (dnop frd6 "fp destination register" () h-fpregisters f-rd6)
 (dnop frn6 "fp source register"      () h-fpregisters f-rn6)
 (dnop frm6 "fp source register"      () h-fpregisters f-rm6)
+
+; 64-bit versions of general purpose regs
+(dnop rd6-di "destination register" () h-registers-di f-rd6)
+(dnop rn6-di "source register"      () h-registers-di f-rn6)
+(dnop rm6-di "source register"      () h-registers-di f-rm6)
+
+(dnop rd6-df "destination register" () h-registers-df f-rd6)
+(dnop rn6-df "source register"      () h-registers-df f-rn6)
+(dnop rm6-df "source register"      () h-registers-df f-rm6)
 
 					; special regs (0-7)
 (short-regs-core sd d h-core-registers "special destination")
