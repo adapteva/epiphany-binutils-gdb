@@ -1,5 +1,10 @@
 2015-10-02  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (add64) (sub64) (and64) (orr64) (eor64) (asr64)
+	(lsr64) (lsl64): Add semantics for 64-bit integer instructions.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (add-vc) (sub-vc) (logic-vc): Add mode
 	parameter.
 	(op-rrr) (op-rri) (shift-rrr) (shift-rri): Adjust for above.
