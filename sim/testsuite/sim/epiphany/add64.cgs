@@ -1,0 +1,40 @@
+# epiphany testcase for add64 $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global sub64
+	;; -1384596542001320762  + 2319424522055352464 = 934827980054031702
+	;; -0x133713381339133a   + 0x2030405060708090  = CF92D184D376D56
+	;; Representation
+	;; 0xecc8ecc7ecc6ecc6    + 0x2030405060708090  = CF92D184D376D56
+sub64:	mova	r30, 0xecc6ecc6
+	mova	r31, 0xecc8ecc7
+	mova	r32, 0x60708090
+	mova	r33, 0x20304050
+	mova	r34, 0x4D376D56
+	mova	r35, 0xCF92D18
+	add64	r36, r30, r32
+	movfs	r40, status
+	add64	r38, r32, r30
+	movfs	r41, status
+
+	;; check commutativity
+	sub	r42, r36, r38
+	bne	1f
+	sub	r42, r37, r39
+	bne	1f
+	;; compare flags
+	sub	r42, r40, r41
+	bne	1f
+
+	sub	r42, r36, r34
+	bne	1f
+	sub	r42, r37, r35
+	bne	1f
+
+	pass
+1:
+	fail
