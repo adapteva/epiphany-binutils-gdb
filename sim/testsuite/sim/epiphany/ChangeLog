@@ -1,5 +1,9 @@
 2015-10-02  Ola Jeppsson  <ola@adapteva.com>
 
+	* and64.cgs: New test.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
 	* add64.cgs: New test.
 	* asr64.cgs: New test.
 	* eor64.cgs: New test.
