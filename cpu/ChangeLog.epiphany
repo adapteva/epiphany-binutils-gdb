@@ -1,5 +1,11 @@
 2015-10-02  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu: Fix disassembly output for 64-bit integer
+	instructions. Don't append "-di" suffix, use normal register
+	names.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (add64) (sub64) (and64) (orr64) (eor64) (asr64)
 	(lsr64) (lsl64): Add semantics for 64-bit integer instructions.
 
