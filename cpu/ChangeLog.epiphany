@@ -1,5 +1,11 @@
 2015-10-02  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (add-vc) (sub-vc) (logic-vc): Add mode
+	parameter.
+	(op-rrr) (op-rri) (shift-rrr) (shift-rri): Adjust for above.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (h-registers-di) (h-registers-df) (rd6-di)
 	(rn6-di) (rm6-di) (rd6-df) (rn6-df) (rm6-df): Add 64-bit
 	versions of registers and operands.
