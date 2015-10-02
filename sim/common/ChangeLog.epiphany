@@ -1,0 +1,8 @@
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* cgen-ops.h (ADDCDI): Added missing 64-bit variant.
+	(ADDCFDI): Likewise.
+	(ADDOFDI): Likewise.
+	(SUBCDI): Likewise.
+	(SUBCFDI): Likewise.
+	(SUBOFDI): Likewise.

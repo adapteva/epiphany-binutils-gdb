@@ -631,6 +631,53 @@ SUBOFQI (QI a, QI b, BI c)
   return res;
 }
 
+SEMOPS_INLINE DI
+ADDCDI (DI a, DI b, BI c)
+{
+  DI res = ADDDI (a, ADDDI (b, c));
+  return res;
+}
+
+SEMOPS_INLINE BI
+ADDCFDI (DI a, DI b, BI c)
+{
+  DI tmp = ADDDI (a, ADDDI (b, c));
+  BI res = ((UDI) tmp < (UDI) a) || (c && tmp == a);
+  return res;
+}
+
+SEMOPS_INLINE BI
+ADDOFDI (DI a, DI b, BI c)
+{
+  DI tmp = ADDDI (a, ADDDI (b, c));
+  BI res = (((a < 0LL) == (b < 0LL))
+	    && ((a < 0LL) != (tmp < 0LL)));
+  return res;
+}
+
+SEMOPS_INLINE DI
+SUBCDI (DI a, DI b, BI c)
+{
+  DI res = SUBDI (a, ADDDI (b, c));
+  return res;
+}
+
+SEMOPS_INLINE BI
+SUBCFDI (DI a, DI b, BI c)
+{
+  BI res = ((UDI) a < (UDI) b) || (c && a == b);
+  return res;
+}
+
+SEMOPS_INLINE BI
+SUBOFDI (DI a, DI b, BI c)
+{
+  DI tmp = SUBDI (a, ADDDI (b, c));
+  BI res = (((a < 0LL) != (b < 0LL))
+	    && ((a < 0LL) != (tmp < 0LL)));
+  return res;
+}
+
 #else
 
 SI ADDCSI (SI, SI, BI);
@@ -651,6 +698,12 @@ UBI ADDOFQI (QI, QI, BI);
 QI SUBCQI (QI, QI, BI);
 UBI SUBCFQI (QI, QI, BI);
 UBI SUBOFQI (QI, QI, BI);
+DI ADDCDI (DI, DI, BI);
+UBI ADDCFDI (DI, DI, BI);
+UBI ADDOFDI (DI, DI, BI);
+DI SUBCDI (DI, DI, BI);
+UBI SUBCFDI (DI, DI, BI);
+UBI SUBOFDI (DI, DI, BI);
 
 #endif
 
