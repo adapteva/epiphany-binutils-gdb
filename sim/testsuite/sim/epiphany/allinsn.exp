@@ -1,11 +1,19 @@
 # EPIPHANY simulator testsuite.
 
 if [istarget epiphany*-*-*] {
+    global global_ld_options
+
     # load support procs (none yet)
     # load_lib cgen.exp
 
     # all machines
     set all_machs "epiphany32"
+
+    set board [target_info name]
+
+    if {[board_info $board sim,ldflags] != ""} {
+	set global_ld_options [board_info $board sim,ldflags]
+    }
 
     # The .cgs suffix is for "cgen .s".
     foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.cgs]] {

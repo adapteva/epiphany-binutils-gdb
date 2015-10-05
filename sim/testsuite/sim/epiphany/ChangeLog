@@ -1,3 +1,8 @@
+2015-10-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* allinsn.exp: Allow baseboard to set ldflags for the simulator
+	testsuite via sim,ldflags
+
 2015-10-02  Ola Jeppsson  <ola@adapteva.com>
 
 	* and64.cgs: New test.
