@@ -1,18 +1,31 @@
 # epiphany testcase for hardware loops -*- Asm -*-
 # mach: all
 
+# The test calculates pc-relative addresses for le and ls.
+# This is mostly for demonstration purposes, to show that we can support
+# hardware loops and position independent code with the current isa.
+
 	.include "testutils.inc"
 
 	start
 
 	.global hwloops
 hwloops:
+	movfs	r2, pc			;; get pc
+	mov	r1, %low(hwloops)	;; and load address
+	movt	r1, %high(hwloops)
+
 	gid
+
 	mov	r0, %low(.Lstart)
 	movt	r0, %high(.Lstart)
+	sub	r3, r0,r1		;; calculate offset from load address
+	add	r0, r2,r3		;; and add to pc
 	movts	ls, r0
-	mov	r0, %low(.Lend)
+	mov	r0, %low(.Lend)		;; same as above.
 	movt	r0, %high(.Lend)
+	sub	r3, r0,r1
+	add	r0, r2,r3
 	movts	le, r0
 	mov	r0, 64
 	movts	lc, r0

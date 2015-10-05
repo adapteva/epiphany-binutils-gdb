@@ -1,5 +1,9 @@
 2015-10-05  Ola Jeppsson  <ola@adapteva.com>
 
+	* hwloops.cgs: Calculate pc-relative addresses for ls and le.
+
+2015-10-05  Ola Jeppsson  <ola@adapteva.com>
+
 	* allinsn.exp: Allow baseboard to set ldflags for the simulator
 	testsuite via sim,ldflags
 
