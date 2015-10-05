@@ -1,3 +1,9 @@
+2015-10-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.opc: Use parse_dword_regs for 64-bit operands.
+	* epiphany.cpu (parse_dword_regs): New function. Only allow
+	even register numbers for 64-bit operands.
+
 2015-10-02  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu: Fix disassembly output for 64-bit integer

@@ -80,6 +80,11 @@ extern const char * parse_branch_addr (CGEN_CPU_DESC cd,
 				       enum cgen_parse_operand_result * resultp,
 				       bfd_vma *valuep);
 
+extern const char * parse_dword_regs (CGEN_CPU_DESC cd,
+				      const char ** strp,
+				      CGEN_KEYWORD * keywords,
+				      long * valuep);
+
 /* Allows reason codes to be output when assembler errors occur.  */
 #define CGEN_VERBOSE_ASSEMBLER_ERRORS
 
@@ -105,6 +110,26 @@ parse_shortregs (CGEN_CPU_DESC cd,
 
   if (*regno > 7)
     errmsg = _("register unavailable for short instructions");
+
+  return errmsg;
+}
+
+const char *
+parse_dword_regs (CGEN_CPU_DESC cd,
+		  const char ** strp,
+		  CGEN_KEYWORD * keywords,
+		  long * regno)
+{
+  const char * errmsg;
+
+  /* Parse register.  */
+  errmsg = cgen_parse_keyword (cd, strp, keywords, regno);
+
+  if (errmsg)
+    return errmsg;
+
+  if (*regno & 1)
+    errmsg = _("64-bit instructions must use even register numbers");
 
   return errmsg;
 }
