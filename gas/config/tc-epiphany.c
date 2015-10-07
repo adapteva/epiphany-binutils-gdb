@@ -562,8 +562,8 @@ md_assemble (char *str)
     }
 
   /* Checks for behavioral restrictions on LD/ST instructions.  */
+  /* 64-bit even register operand constraints is already checked by cgen */
 #define DISPMOD _("destination register modified by displacement-post-modified address")
-#define LDSTODD _("ldrd/strd requires even:odd register pair")
 
   /* Helper macros for spliting apart instruction fields.  */
 #define ADDR_POST_MODIFIED(i) (((i) >> 25) & 0x1)
@@ -583,12 +583,6 @@ md_assemble (char *str)
 	      as_bad ("%s", DISPMOD);
 	      return;
 	    }
-	if ((insn.fields.f_rd & 1) /* Odd-numbered register...  */
-	    && insn.fields.f_wordsize == OPW_DOUBLE) /* ...and 64 bit transfer.  */
-	  {
-	    as_bad ("%s", LDSTODD);
-	    return;
-	  }
 	break;
       }
 
@@ -603,25 +597,6 @@ md_assemble (char *str)
 	      as_bad ("%s", DISPMOD);
 	      return;
 	    }
-	if ((insn.fields.f_rd6 & 1) && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)
-	  /* Lsb of RD odd and 64 bit transfer.  */
-	  {
-	    as_bad ("%s", LDSTODD);
-	    return;
-	  }
-	break;
-      }
-
-    case OP4_LDSTR16X:
-    case OP4_LDSTR16D:
-      {
-	/* Check for unaligned load/store double.  */
-	if ((insn.fields.f_rd & 1) && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)
-	  /* Lsb of RD odd and 64 bit transfer.  */
-	  {
-	    as_bad ("%s", LDSTODD);
-	    return;
-	  }
 	break;
       }
 
@@ -635,17 +610,6 @@ md_assemble (char *str)
 		    && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)))
 	  {
 	    as_bad ("%s", DISPMOD);
-	    return;
-	  }
-      }
-      /* fall-thru.  */
-
-    case OP4_LDSTRX:
-      {
-	/* Check for unaligned load/store double.  */
-	if ((insn.fields.f_rd6 & 1) && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)
-	  {
-	    as_bad ("%s", LDSTODD);
 	    return;
 	  }
 	break;
