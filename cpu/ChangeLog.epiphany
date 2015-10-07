@@ -1,3 +1,10 @@
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (op-atomic-atomic-helper, op-atomic-atomic,
+	op-atomic-helper, op-atomic): Don't use shortregs.
+	Limit rd6 operand to even register numbers when size is 64
+	bits.
+
 2015-10-05  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.opc: Use parse_dword_regs for 64-bit operands.
