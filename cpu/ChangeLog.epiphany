@@ -1,3 +1,5 @@
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (rd-di): New operand. Parser is
 	parse_dword_shortregs.
 	(load-insn) (store-insn): Limit rd6 operand to even register
