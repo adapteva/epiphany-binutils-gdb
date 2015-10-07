@@ -1,3 +1,8 @@
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/64bit-err-uneven-regs.s: New test.
+	* gas/epiphany/allinsn.exp: Load gas-dg.
+
 2015-09-30  Ola Jeppsson  <ola@adapteva.com>
 
 	* gas/epiphany/addr-syntax.d: Expect that zero
