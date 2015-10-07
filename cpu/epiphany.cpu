@@ -926,15 +926,6 @@
   )
 )
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-					; Memory Effective Address wants to be visible
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(dnh h-memaddr "memory effective address" (PROFILE) (register SI) () () ())
-(dnop memaddr  "memory effective address" (SEM-ONLY) h-memaddr f-nil)
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					; Special Core Registers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1558,15 +1549,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(define-pmacro (callMisalignmentExceptionIfNeeded sel  addr isAlignmentAccess)
+(define-pmacro (callMisalignmentExceptionIfNeeded sel addr isAligned)
   (sequence ((BI scale))
-    (set isAlignmentAccess
+    (set isAligned
 	 (case BI sel
 	   ((OPW_BYTE)	(eq (and addr #x0) #x0))
 	   ((OPW_SHORT)	(eq (and addr #x1) #x0))
 	   ((OPW_WORD)	(eq (and addr #x3) #x0))
 	   (else	(eq (and addr #x7) #x0))))
-    (if (not BI isAlignmentAccess)
+    (if (not BI isAligned)
 	  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-UNALIGNED))
 	)
   )
@@ -1586,71 +1577,40 @@
 
 ;; common load macros from effective address, handling 8/16/32/64 bits
 (define-pmacro (load-double-from-ea regnum eff-addr mode sel)
-  (sequence ((SI loadaddr) (BI isAlignmentAccess))
-	    (set loadaddr eff-addr)
-	    (callMisalignmentExceptionIfNeeded sel  loadaddr isAlignmentAccess)
-
-	    (if (not (not BI isAlignmentAccess))
-		(sequence ()
-			  (set memaddr loadaddr)
-			  (set regnum (mem SI loadaddr))
-			  (set loadaddr (add loadaddr (const 4)))
-			  (set memaddr loadaddr)
-			  (set (reg h-registers
-				    (add (index-of regnum)
-					 (const 1)))
-			       (mem SI loadaddr))
-
-			  )
-		)
-	    )
+  (sequence ((BI isAligned))
+    (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
+    (if isAligned (set regnum (mem DI eff-addr)))
   )
+)
 
 (define-pmacro (load-from-ea regnum eff-addr mode sel)
-  (sequence ((BI isAlignmentAccess))
-
-	    (callMisalignmentExceptionIfNeeded sel eff-addr   isAlignmentAccess)
-	    (if (not (not BI isAlignmentAccess))
-		(sequence ()
-			  (set memaddr eff-addr)
-			  (set regnum (zext SI (mem mode eff-addr)))
-			  )
-		)
-	    )
-  ) ;; 8/16/32 bit cases
+  (sequence ((BI isAligned))
+    (callMisalignmentExceptionIfNeeded sel eff-addr   isAligned)
+    (if isAligned (set regnum (zext SI (mem mode eff-addr))))
+  )
+) ;; 8/16/32 bit cases
 
 
 ;; common store to effective address, handling 8/16/32/64 bit data
 (define-pmacro (store-double-to-ea eff-addr regnum mode sel)
-  (sequence ((SI storeaddr) (BI isAlignmentAccess))
-	    (set storeaddr eff-addr)
-	    (callMisalignmentExceptionIfNeeded sel storeaddr isAlignmentAccess)
-	    (if (not (not BI isAlignmentAccess))
-		(sequence ()
-			  (set memaddr storeaddr)
-			  (set (mem SI storeaddr) regnum)
-			  (set storeaddr (add storeaddr (const 4)))
-			  (set memaddr storeaddr)
-			  (set (mem SI storeaddr)
-			       (reg h-registers (add (index-of regnum) (const 1))))
-			  )
-		)
-	    )
+  (sequence ((BI isAligned))
+    (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
+    (if isAligned (set (mem DI eff-addr) regnum))
   )
+)
 
 (define-pmacro (store-to-ea eff-addr regnum mode sel)
-  (sequence ((BI isAlignmentAccess))
-	    (callMisalignmentExceptionIfNeeded sel eff-addr   isAlignmentAccess)
-	    (if (not (not BI isAlignmentAccess))
-		(sequence ()
-			  (set memaddr eff-addr)
-			  (set (mem mode eff-addr) regnum)
-			  )
-		)
-	    )
-  )	;8/16/32 bit cases
+  (sequence ((BI isAligned))
+    (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
+    (if isAligned (set (mem mode eff-addr) regnum))
+  )
+) ;8/16/32 bit cases
 
 (define-pmacro (load-insn name mode sel sem-op sfx)
+  (%let (
+    (rd-op  (%sym rd  sfx))
+    (rd6-op (%sym rd6 sfx))
+  )
   (begin
     (dni (%sym name "x16.s")
 		 (%str "load " mode " indexed")
@@ -1658,7 +1618,7 @@
 		 (%str name " ${rd" sfx "},[$rn,$rm]")
 		 (+ OP4_LDSTR16X sel OP_LOAD rd rn rm)
 		 (sequence ()
-			   (sem-op rd (add rn rm) mode sel))
+			   (sem-op rd-op (add rn rm) mode sel))
 		 ()
 		 )
 
@@ -1670,7 +1630,7 @@
 		 (+ OP4_LDSTR16P sel OP_LOAD rd rn rm)
 		 (sequence ((SI tmprm))
 			   (set tmprm rm)
-			   (sem-op rd rn mode sel)
+			   (sem-op rd-op rn mode sel)
 			   (set rn (add rn tmprm)))
 		 ()
 		 )
@@ -1683,8 +1643,8 @@
 		 (+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x0) rd6 rn6 direction rm6)
 		 (sequence ()
 			   (if (ifield f-addsubx)
-			       (sem-op rd6 (sub rn6 rm6) mode sel)
-			       (sem-op rd6 (add rn6 rm6) mode sel)))
+			       (sem-op rd6-op (sub rn6 rm6) mode sel)
+			       (sem-op rd6-op (add rn6 rm6) mode sel)))
 		 ()
 		 )
 
@@ -1704,7 +1664,7 @@
 		 (+ OP4_LDSTRP sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-2 #x0) rd6 rn6 direction rm6)
 		 (sequence ((SI tmprm))
 			   (set tmprm rm6)
-			   (sem-op rd6 rn6 mode sel)
+			   (sem-op rd6-op rn6 mode sel)
 			   (if (ifield f-addsubx)
 			       (set rn6 (sub rn6 tmprm))
 			       (set rn6 (add rn6 tmprm)))
@@ -1731,7 +1691,7 @@
 			    (SI scale))
 			   (ConvertSelectorToShift sel scale)
 			   (set effa (add rn (sll disp3 scale)))
-			   (sem-op rd effa mode sel)
+			   (sem-op rd-op effa mode sel)
 			   )
 		 ()
 		 )
@@ -1749,7 +1709,7 @@
 			       (set effa (sub rn6 (sll disp11 scale)))
 			       (set effa (add rn6 (sll disp11 scale)))
 			       )
-			   (sem-op rd6 effa mode sel)
+			   (sem-op rd6-op effa mode sel)
 			   )
 		 ()
 		 )
@@ -1770,7 +1730,7 @@
 		 (+ OP4_LDSTRD sel OP_LOAD PMOD_POST rd6 rn6 dpmi disp11)
 		 (sequence ((SI scale))
 			   (ConvertSelectorToShift sel scale)
-			   (sem-op rd6 rn6 mode sel)
+			   (sem-op rd6-op rn6 mode sel)
 			   (if dpmi
 			       (set rn6 (sub rn6 (sll disp11 scale)))
 			       (set rn6 (add rn6 (sll disp11 scale)))
@@ -1807,6 +1767,7 @@
 
     )
   )
+)
 
 (load-insn ldrb QI OPW_BYTE   load-from-ea "")
 (load-insn ldrh HI OPW_SHORT  load-from-ea "")
@@ -1831,15 +1792,13 @@
 		(%str name " $rd6,[$rn6,$direction$rm6]")
 		(+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x1)
 		   rd6 rn6 direction rm6)
-		(sequence ((SI eff-addr) (BI isAlignmentAccess))
+		(sequence ((SI eff-addr) (BI isAligned))
 		  (if (ifield f-addsubx)
 			(set  eff-addr  (sub rn6 rm6))
 			(set  eff-addr  (add rn6 rm6))
 		  )
-		  (callMisalignmentExceptionIfNeeded sel eff-addr isAlignmentAccess)
-		  (if (not (not BI isAlignmentAccess))
-			(set rd6 (c-call SI c-fun eff-addr rd6))
-		  )
+		  (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
+		  (if isAligned (set rd6 (c-call SI c-fun eff-addr rd6)))
 		)
 		()
 	  )
@@ -1922,6 +1881,10 @@
 
 ;; need 16 bit forms too
 (define-pmacro (store-insn name mode sel sem-op sfx)
+  (%let (
+    (rd-op  (%sym rd  sfx))
+    (rd6-op (%sym rd6 sfx))
+  )
   (begin
     (dni (%sym name "x16")
 		 (%str "store" mode " indexed")
@@ -1929,7 +1892,7 @@
 		 (%str name " ${rd" sfx "},[$rn,$rm]")
 		 (+ OP4_LDSTR16X sel OP_STORE rd rn rm)
 		 (sequence ()
-			   (sem-op (add rn rm) rd mode sel)
+			   (sem-op (add rn rm) rd-op mode sel)
 			   )
 		 ()
 		 )
@@ -1941,8 +1904,8 @@
 		 (+ OP4_LDSTRX sel OP_STORE (f-opc-19-4 #x0)  (f-dc-22-1 #x0) (f-dc-21-1 #x0) rd6 rn6 direction rm6)
 		 (sequence ()
 			   (if (ifield f-addsubx)
-			       (sem-op (sub rn6 rm6) rd6 mode sel)
-			       (sem-op (add rn6 rm6) rd6 mode sel)
+			       (sem-op (sub rn6 rm6) rd6-op mode sel)
+			       (sem-op (add rn6 rm6) rd6-op mode sel)
 			       ))
 		 ()
 		 )
@@ -1964,7 +1927,7 @@
 		 (%str name " ${rd" sfx "},[$rn],$rm")
 		 (+ OP4_LDSTR16P sel OP_STORE rd rn rm)
 		 (sequence ()
-			   (sem-op rn rd mode sel)
+			   (sem-op rn rd-op mode sel)
 			   (set rn (add rn rm))
 			   )
 		 ()
@@ -1976,7 +1939,7 @@
 		 (%str name " ${rd6" sfx "},[$rn6],$direction$rm6")
 		 (+ OP4_LDSTRP sel OP_STORE (f-opc-19-4 #x0) (f-dc-22-2 #x0) rd6 rn6 direction rm6)
 		 (sequence ()
-			   (sem-op rn6 rd6 mode sel)
+			   (sem-op rn6 rd6-op mode sel)
 			   (if (ifield f-addsubx)
 			       (set rn6	(sub rn6 rm6))
 			       (set rn6 (add rn6 rm6)))
@@ -1999,7 +1962,7 @@
 			    (SI scale))
 			   (ConvertSelectorToShift sel scale)
 			   (set effa (add rn (sll disp3 scale)))
-			   (sem-op effa rd mode sel)
+			   (sem-op effa rd-op mode sel)
 			   )
 		 ()
 		 )
@@ -2016,7 +1979,7 @@
 			       (set effa (sub rn6 (sll disp11 scale)))
 			       (set effa (add rn6 (sll disp11 scale)))
 			       )
-			   (sem-op effa rd6 mode sel)
+			   (sem-op effa rd6-op mode sel)
 			   )
 		 ()
 		 )
@@ -2036,7 +1999,7 @@
 		 (+ OP4_LDSTRD sel OP_STORE PMOD_POST rd6 rn6 dpmi disp11) ;; convert size to 'B'
 		 (sequence ((SI scale))
 			   (ConvertSelectorToShift sel scale)
-			   (sem-op rn6 rd6 mode sel)
+			   (sem-op rn6 rd6-op mode sel)
 			   (if dpmi
 			       (set rn6 (sub rn6 (sll disp11 scale)))
 			       (set rn6 (add rn6 (sll disp11 scale)))
@@ -2074,6 +2037,7 @@
 
     )
   )
+)
 
 (store-insn strb QI OPW_BYTE   store-to-ea "")
 (store-insn strh HI OPW_SHORT  store-to-ea "")

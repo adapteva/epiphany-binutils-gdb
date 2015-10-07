@@ -1,5 +1,17 @@
 2015-10-07  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (h-memaddr) (memaddr): Removed.
+	(callMisalignmentExceptionIfNeeded): Rename isAlignedAccess to
+	isAligned.
+	(load-double-from-ea): Rename isAlignedAccess to isAligned and
+	simplify.
+	(load-from-ea): Likewise.
+	(store-double-to-ea): Likewise.
+	(store-to-ea): Likewise.
+	(testset-insn): Likewise.
+
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (rd-di): New operand. Parser is
 	parse_dword_shortregs.
 	(load-insn) (store-insn): Limit rd6 operand to even register
