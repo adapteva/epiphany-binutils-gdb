@@ -1,3 +1,10 @@
+	* epiphany.cpu (rd-di): New operand. Parser is
+	parse_dword_shortregs.
+	(load-insn) (store-insn): Limit rd6 operand to even register
+	numbers when size is 64 bits.
+	* epiphany.opc (parse_dword_shortregs): New function.
+	(parse_dword_regs): Adjust error message.
+
 2015-10-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (op-atomic-atomic-helper, op-atomic-atomic,

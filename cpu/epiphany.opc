@@ -73,6 +73,11 @@ extern const char * parse_shortregs (CGEN_CPU_DESC cd,
 				     CGEN_KEYWORD * keywords,
 				     long * valuep);
 
+extern const char * parse_dword_shortregs (CGEN_CPU_DESC cd,
+					   const char ** strp,
+					   CGEN_KEYWORD * keywords,
+					   long * valuep);
+
 extern const char * parse_branch_addr (CGEN_CPU_DESC cd,
 				       const char ** strp,
 				       int opindex,
@@ -115,6 +120,26 @@ parse_shortregs (CGEN_CPU_DESC cd,
 }
 
 const char *
+parse_dword_shortregs (CGEN_CPU_DESC cd,
+		       const char ** strp,
+		       CGEN_KEYWORD * keywords,
+		       long * regno)
+{
+  const char * errmsg;
+
+  /* Parse register.  */
+  errmsg = parse_shortregs (cd, strp, keywords, regno);
+
+  if (errmsg)
+    return errmsg;
+
+  if (*regno & 1)
+    errmsg = _("instruction requires even:odd register pair(s)");
+
+  return errmsg;
+}
+
+const char *
 parse_dword_regs (CGEN_CPU_DESC cd,
 		  const char ** strp,
 		  CGEN_KEYWORD * keywords,
@@ -129,7 +154,7 @@ parse_dword_regs (CGEN_CPU_DESC cd,
     return errmsg;
 
   if (*regno & 1)
-    errmsg = _("64-bit instructions must use even register numbers");
+    errmsg = _("instruction requires even:odd register pair(s)");
 
   return errmsg;
 }

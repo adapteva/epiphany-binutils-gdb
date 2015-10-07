@@ -1229,6 +1229,16 @@
 (short-regs rn n h-registers "source register")
 (short-regs rm m h-registers "source register")
 
+; double-word shortreg
+(define-operand
+  (name rd-di)
+  (comment "destination register")
+  (attrs)
+  (type h-registers-di)
+  (index f-rd)
+  (handlers (parse "dword_shortregs") (print "keyword"))
+)
+
 (short-regs frd d h-fpregisters "fp destination register")
 (short-regs frn n h-fpregisters "fp source register")
 (short-regs frm m h-fpregisters "fp source register")
@@ -1640,13 +1650,12 @@
 	    )
   )	;8/16/32 bit cases
 
-
-(define-pmacro (load-insn name mode sel sem-op)
+(define-pmacro (load-insn name mode sel sem-op sfx)
   (begin
     (dni (%sym name "x16.s")
 		 (%str "load " mode " indexed")
 		 (SHORT-INSN)
-		 (%str name " $rd,[$rn,$rm]")
+		 (%str name " ${rd" sfx "},[$rn,$rm]")
 		 (+ OP4_LDSTR16X sel OP_LOAD rd rn rm)
 		 (sequence ()
 			   (sem-op rd (add rn rm) mode sel))
@@ -1657,7 +1666,7 @@
     (dni (%sym name "p16.s")
 		 (%str "load " mode " postmodify")
 		 (SHORT-INSN)
-		 (%str name " $rd,[$rn],$rm")
+		 (%str name " ${rd" sfx "},[$rn],$rm")
 		 (+ OP4_LDSTR16P sel OP_LOAD rd rn rm)
 		 (sequence ((SI tmprm))
 			   (set tmprm rm)
@@ -1670,7 +1679,7 @@
     (dni (%sym name "x.l")
 		 (%str "load " mode " indexed")
 		 ()
-		 (%str name " $rd6,[$rn6,$direction$rm6]")
+		 (%str name " ${rd6" sfx "},[$rn6,$direction$rm6]")
 		 (+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x0) rd6 rn6 direction rm6)
 		 (sequence ()
 			   (if (ifield f-addsubx)
@@ -1682,7 +1691,7 @@
     (dnmi (%sym name "x")
 	  (%str "load " mode " indexed")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6,$direction$rm6]")
+	  (%str name ".l ${rd6" sfx "},[$rn6,$direction$rm6]")
 	  (emit  (%sym name "x.l") rd6 rn6 direction rm6)
 	  )
 
@@ -1691,7 +1700,7 @@
     (dni (%sym name "p.l")
 		 (%str "load " mode " postmodify")
 		 ()
-		 (%str name " $rd6,[$rn6],$direction$rm6")
+		 (%str name " ${rd6" sfx "},[$rn6],$direction$rm6")
 		 (+ OP4_LDSTRP sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-2 #x0) rd6 rn6 direction rm6)
 		 (sequence ((SI tmprm))
 			   (set tmprm rm6)
@@ -1707,7 +1716,7 @@
     (dnmi (%sym name "p")
 	  (%str "load " mode " postmodify")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6],$direction$rm6")
+	  (%str name ".l ${rd6" sfx "},[$rn6],$direction$rm6")
 	  (emit  (%sym name "p.l") rd6 rn6 direction rm6)
 	  )
 
@@ -1716,7 +1725,7 @@
     (dni (%sym name "d16.s")
 		 (%str "load " mode " displacement")
 		 (SHORT-INSN IMM3)
-		 (%str name " $rd,[$rn,$disp3]")
+		 (%str name " ${rd" sfx "},[$rn,$disp3]")
 		 (+ OP4_LDSTR16D sel OP_LOAD rd rn disp3) ;; convert size to 'B'
 		 (sequence ((SI effa)
 			    (SI scale))
@@ -1731,7 +1740,7 @@
     (dni (%sym name "d.l")
 		 (%str "load " mode " displacement")
 		 ()
-		 (%str name " $rd6,[$rn6,$dpmi$disp11]")
+		 (%str name " ${rd6" sfx "},[$rn6,$dpmi$disp11]")
 		 (+ OP4_LDSTRD sel OP_LOAD PMOD_DISP rd6 rn6 dpmi disp11)
 		 (sequence ((SI effa)
 			    (SI scale))
@@ -1748,7 +1757,7 @@
     (dnmi (%sym name "d")
 	  (%str "load " mode " displacement")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6,$dpmi$disp11]")
+	  (%str name ".l ${rd6" sfx "},[$rn6,$dpmi$disp11]")
 	  (emit  (%sym name "d.l") rd6 rn6  dpmi disp11)
 	  )
 
@@ -1757,7 +1766,7 @@
     (dni (%sym name "dpm.l")
 		 (%str "load " mode " displacement post-modify")
 		 ()
-		 (%str name " $rd6,[$rn6],$dpmi$disp11")
+		 (%str name " ${rd6" sfx "},[$rn6],$dpmi$disp11")
 		 (+ OP4_LDSTRD sel OP_LOAD PMOD_POST rd6 rn6 dpmi disp11)
 		 (sequence ((SI scale))
 			   (ConvertSelectorToShift sel scale)
@@ -1773,7 +1782,7 @@
     (dnmi (%sym name "dpm")
 	  (%str "load " mode " displacement post-modify")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6],$dpmi$disp11")
+	  (%str name ".l ${rd6" sfx "},[$rn6],$dpmi$disp11")
 	  (emit  (%sym name "dpm.l") rd6 rn6  dpmi disp11)
 	  )
 
@@ -1781,17 +1790,17 @@
     ;; ;; macro form with a zero displacement
     (dnmi (%sym name "ds0") "load with 0 disp"
 	  (SHORT-INSN IMM3)
-	  (%str name " $rd,[$rn]")
+	  (%str name " ${rd" sfx "},[$rn]")
 	  (emit (%sym name "d16.s") rd rn (disp3 0))
 	  )
     (dnmi (%sym name "dl0") "load with 0 disp"
     	  (NO-DIS)
-	  (%str name " $rd6,[$rn6]")
+	  (%str name " ${rd6" sfx "},[$rn6]")
 	  (emit (%sym name "d.l") rd6 rn6 (dpmi 0) (disp11 0))
 	  )
     (dnmi (%sym name "dl0.l") "load with 0 disp"
     	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6]")
+	  (%str name ".l ${rd6" sfx "},[$rn6]")
 	  (emit (%sym name "d.l") rd6 rn6 (dpmi 0) (disp11 0))
 	  )
 
@@ -1799,10 +1808,10 @@
     )
   )
 
-(load-insn ldrb QI OPW_BYTE load-from-ea)
-(load-insn ldrh HI OPW_SHORT load-from-ea)
-(load-insn ldr  SI OPW_WORD  load-from-ea)
-(load-insn ldrd DI OPW_DOUBLE load-double-from-ea)
+(load-insn ldrb QI OPW_BYTE   load-from-ea "")
+(load-insn ldrh HI OPW_SHORT  load-from-ea "")
+(load-insn ldr  SI OPW_WORD   load-from-ea "")
+(load-insn ldrd DI OPW_DOUBLE load-double-from-ea "-di")
 
 
 
@@ -1811,7 +1820,6 @@
 ;; if (~TMP)            /* Check if memory location is zero.  */
 ;;   MEM[RD+RM] = RD;   /* If zero, write RD to memory.  */
 ;; RD = TMP;            /* Always write tmp into RD (NOTE it's destructive).  */
-
 
 (define-pmacro (testset-insn name mode sel)
   (%let
@@ -1913,12 +1921,12 @@
 )
 
 ;; need 16 bit forms too
-(define-pmacro (store-insn name mode sel sem-op)
+(define-pmacro (store-insn name mode sel sem-op sfx)
   (begin
     (dni (%sym name "x16")
 		 (%str "store" mode " indexed")
 		 (SHORT-INSN)
-		 (%str name " $rd,[$rn,$rm]")
+		 (%str name " ${rd" sfx "},[$rn,$rm]")
 		 (+ OP4_LDSTR16X sel OP_STORE rd rn rm)
 		 (sequence ()
 			   (sem-op (add rn rm) rd mode sel)
@@ -1929,7 +1937,7 @@
     (dni (%sym name "x")
 		 (%str "store" mode " indexed")
 		 ()
-		 (%str name " $rd6,[$rn6,$direction$rm6]")
+		 (%str name " ${rd6" sfx "},[$rn6,$direction$rm6]")
 		 (+ OP4_LDSTRX sel OP_STORE (f-opc-19-4 #x0)  (f-dc-22-1 #x0) (f-dc-21-1 #x0) rd6 rn6 direction rm6)
 		 (sequence ()
 			   (if (ifield f-addsubx)
@@ -1942,7 +1950,7 @@
     (dnmi (%sym name "x.l")
 	  (%str "store" mode " indexed")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6,$direction$rm6]")
+	  (%str name ".l ${rd6" sfx "},[$rn6,$direction$rm6]")
 	  (emit  (%sym name "x")  rd6 rn6 direction rm6)
 	  )
 
@@ -1953,7 +1961,7 @@
     (dni (%sym name "p16")
 		 (%str "store " mode " postmodify")
 		 (SHORT-INSN)
-		 (%str name " $rd,[$rn],$rm")
+		 (%str name " ${rd" sfx "},[$rn],$rm")
 		 (+ OP4_LDSTR16P sel OP_STORE rd rn rm)
 		 (sequence ()
 			   (sem-op rn rd mode sel)
@@ -1965,7 +1973,7 @@
     (dni (%sym name "p")
 		 (%str "store " mode " postmodify")
 		 ()
-		 (%str name " $rd6,[$rn6],$direction$rm6")
+		 (%str name " ${rd6" sfx "},[$rn6],$direction$rm6")
 		 (+ OP4_LDSTRP sel OP_STORE (f-opc-19-4 #x0) (f-dc-22-2 #x0) rd6 rn6 direction rm6)
 		 (sequence ()
 			   (sem-op rn6 rd6 mode sel)
@@ -1978,14 +1986,14 @@
     (dnmi (%sym name "p.l")
 	  (%str "store " mode " postmodify")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6],$direction$rm6")
+	  (%str name ".l ${rd6" sfx "},[$rn6],$direction$rm6")
 	  (emit (%sym name "p") rd6 rn6 direction rm6)
 	  )
 
     (dni (%sym name "d16")
 		 (%str "store " mode " displacement")
 		 (SHORT-INSN IMM3)
-		 (%str name " $rd,[$rn,$disp3]")
+		 (%str name " ${rd" sfx "},[$rn,$disp3]")
 		 (+ OP4_LDSTR16D sel OP_STORE rd rn disp3) ;; convert size to 'B'
 		 (sequence ((SI effa)
 			    (SI scale))
@@ -1999,7 +2007,7 @@
     (dni (%sym name "d")
 		 (%str "store " mode " displacement")
 		 ()
-		 (%str name " $rd6,[$rn6,$dpmi$disp11]")
+		 (%str name " ${rd6" sfx "},[$rn6,$dpmi$disp11]")
 		 (+ OP4_LDSTRD sel OP_STORE PMOD_DISP rd6 rn6 dpmi disp11)
 		 (sequence ((SI effa)
 			    (SI scale))
@@ -2016,7 +2024,7 @@
     (dnmi (%sym name "d.l")
 	  (%str "store " mode " displacement")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6,$dpmi$disp11]")
+	  (%str name ".l ${rd6" sfx "},[$rn6,$dpmi$disp11]")
 	  (emit (%sym name "d") rd6 rn6 dpmi disp11)
 	  )
 
@@ -2024,7 +2032,7 @@
     (dni (%sym name "dpm")
 		 (%str "store " mode " displacement post-modify")
 		 ()
-		 (%str name " $rd6,[$rn6],$dpmi$disp11")
+		 (%str name " ${rd6" sfx "},[$rn6],$dpmi$disp11")
 		 (+ OP4_LDSTRD sel OP_STORE PMOD_POST rd6 rn6 dpmi disp11) ;; convert size to 'B'
 		 (sequence ((SI scale))
 			   (ConvertSelectorToShift sel scale)
@@ -2039,7 +2047,7 @@
     (dnmi (%sym name "dpm.l")
 	  (%str "store " mode " displacement post-modify")
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6],$dpmi$disp11")
+	  (%str name ".l ${rd6" sfx "},[$rn6],$dpmi$disp11")
 	  (emit (%sym name "dpm") rd6 rn6 dpmi disp11)
 	  )
 
@@ -2052,13 +2060,13 @@
 
     (dnmi (%sym name "dl0")  "store w 0 disp"
 	  ()
-	  (%str name " $rd6,[$rn6]")
+	  (%str name " ${rd6" sfx "},[$rn6]")
 	  (emit (%sym name "d") rd6 rn6 (dpmi 0) (disp11 0))
 	  )
 
     (dnmi (%sym name "dl0.l")  "store w 0 disp"
 	  (NO-DIS)
-	  (%str name ".l $rd6,[$rn6]")
+	  (%str name ".l ${rd6" sfx "},[$rn6]")
 	  (emit (%sym name "d") rd6 rn6 (dpmi 0) (disp11 0))
 	  )
 
@@ -2067,10 +2075,10 @@
     )
   )
 
-(store-insn strb QI OPW_BYTE store-to-ea)
-(store-insn strh HI OPW_SHORT store-to-ea)
-(store-insn str  SI OPW_WORD store-to-ea)
-(store-insn strd DI OPW_DOUBLE store-double-to-ea)
+(store-insn strb QI OPW_BYTE   store-to-ea "")
+(store-insn strh HI OPW_SHORT  store-to-ea "")
+(store-insn str  SI OPW_WORD   store-to-ea "")
+(store-insn strd DI OPW_DOUBLE store-double-to-ea "-di")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MOV<COND> RD,RN
