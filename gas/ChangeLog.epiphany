@@ -1,3 +1,8 @@
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* config/tc-epiphany.c (parse_reglist): Remove function.
+	(md_assemble): Remove push/pop macro instructions.
+
 2015-10-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* config/tc-epiphany.c (md_assemble): Remove 64-bit even register

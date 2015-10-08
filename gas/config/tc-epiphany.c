@@ -420,116 +420,14 @@ epiphany_cons_fix_new (fragS *frag,
   fix_new_exp (frag, where, (int) nbytes, exp, 0, r);
 }
 
-/* Read a comma separated incrementing list of register names
-   and form a bit mask of upto 15 registers 0..14.  */
-
-static const char *
-parse_reglist (const char * s, int * mask)
-{
-  int regmask = 0;
-
-  while (*s)
-    {
-      long value;
-
-      while (*s == ' ')
-	++s;
-
-      /* Parse a list with "," or "}" as limiters.  */
-      const char *errmsg
-	= cgen_parse_keyword (gas_cgen_cpu_desc, &s,
-			      &epiphany_cgen_opval_gr_names, &value);
-      if (errmsg)
-	return errmsg;
-
-      if (value > 15)
-	return _("register number too large for push/pop");
-
-      regmask |= 1 << value;
-      if (regmask < *mask)
-	return _("register is out of order");
-      *mask |= regmask;
-
-      while (*s==' ')
-	++s;
-
-      if (*s == '}')
-	return NULL;
-      else if (*s++ == ',')
-	continue;
-      else
-	return _("bad register list");
-    }
-
-  return _("malformed reglist in push/pop");
-}
-
 
 void
 md_assemble (char *str)
 {
   epiphany_insn insn;
   char *errmsg = 0;
-  const char * pperr = 0;
-  int regmask=0, push=0, pop=0;
 
   memset (&insn, 0, sizeof (insn));
-
-  /* Special-case push/pop instruction macros.  */
-  if (0 == strncmp (str, "push {", 6))
-    {
-      char * s = str + 6;
-      push = 1;
-      pperr = parse_reglist (s, &regmask);
-    }
-  else if (0 == strncmp (str, "pop {", 5))
-    {
-      char * s = str + 5;
-      pop = 1;
-      pperr = parse_reglist (s, &regmask);
-    }
-
-  if (pperr)
-    {
-      as_bad ("%s", pperr);
-      return;
-    }
-
-  if (push && regmask)
-    {
-      char buff[20];
-      int i,p ATTRIBUTE_UNUSED;
-
-      md_assemble ("mov r15,4");
-      md_assemble ("sub sp,sp,r15");
-
-      for (i = 0, p = 1; i <= 15; ++i, regmask >>= 1)
-	{
-	  if (regmask == 1)
-	    sprintf (buff, "str r%d,[sp]", i); /* Last one.  */
-	  else if (regmask & 1)
-	    sprintf (buff, "str r%d,[sp],-r15", i);
-	  else
-	    continue;
-	  md_assemble (buff);
-	}
-      return;
-    }
-  else if (pop && regmask)
-    {
-      char buff[20];
-      int i,p;
-
-      md_assemble ("mov r15,4");
-
-      for (i = 15, p = 1 << 15; i >= 0; --i, p >>= 1)
-	if (regmask & p)
-	  {
-	    sprintf (buff, "ldr r%d,[sp],+r15", i);
-	    md_assemble (buff);
-	  }
-      return;
-    }
 
   /* Initialize GAS's cgen interface for a new instruction.  */
   gas_cgen_init_parse ();
