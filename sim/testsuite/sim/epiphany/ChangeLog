@@ -1,3 +1,10 @@
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* fabs.cgs: New test.
+	* fix.cgs: New test.
+	* float.cgs: New test.
+	* iadd.cgs: New test.
+
 2015-10-05  Ola Jeppsson  <ola@adapteva.com>
 
 	* hwloops.cgs: Calculate pc-relative addresses for ls and le.
