@@ -524,7 +524,7 @@ epiphany_fmsub (SIM_CPU * current_cpu, SI frd, SI frm, SI frn)
 
 
 SI
-epiphany_fix (SIM_CPU * current_cpu, SI a1, SI a2, SI a3)
+epiphany_fix (SIM_CPU * current_cpu, SI rd, SI rn)
 {
   float fn;
 
@@ -539,16 +539,16 @@ epiphany_fix (SIM_CPU * current_cpu, SI a1, SI a2, SI a3)
   feclearexcept (FE_ALL_EXCEPT);
   isInvalidExp_patch = 0;
 
-  fn = int_as_float (a2);
+  fn = int_as_float (rn);
 
-  if (isNAN (a2))
+  if (isNAN (rn))
     {
-      if (isNegative (a2))
+      if (isNegative (rn))
 	result = max_int_n;
       else
 	result = max_int_p;
     }
-  else if (isDenormal (a2))
+  else if (isDenormal (rn))
     result = 0;
   else
     {
@@ -566,7 +566,7 @@ epiphany_fix (SIM_CPU * current_cpu, SI a1, SI a2, SI a3)
 }
 
 SI
-epiphany_float (SIM_CPU * current_cpu, SI rd, SI rm, SI rn)
+epiphany_float (SIM_CPU * current_cpu, SI rd, SI rn)
 {
   float f;
   SI *u;
@@ -575,16 +575,16 @@ epiphany_float (SIM_CPU * current_cpu, SI rd, SI rm, SI rn)
   feclearexcept (FE_ALL_EXCEPT);
   isInvalidExp_patch = 0;
 
-  f = (float) (rm);
+  f = (float) (rn);
 
   return float_as_int (f);
 }
 
 SI
-epiphany_fabs (SIM_CPU * current_cpu, SI a1, SI a2, SI a3)
+epiphany_fabs (SIM_CPU * current_cpu, SI rd, SI rn)
 {
   USI result;
-  USI u = a2;
+  USI u = rn;
   if (isDenormal (u))
     u = makeZero (u);
 

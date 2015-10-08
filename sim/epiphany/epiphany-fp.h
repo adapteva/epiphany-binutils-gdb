@@ -32,9 +32,9 @@ extern SI epiphany_fmul(SIM_CPU *current_cpu, SI fr0, SI frg, SI frh);
 extern SI epiphany_fsub(SIM_CPU *current_cpu, SI fr0, SI frg, SI frh);
 extern SI epiphany_fmadd(SIM_CPU *current_cpu, SI fr0, SI frm, SI frn);
 extern SI epiphany_fmsub(SIM_CPU *current_cpu, SI fr0, SI frm, SI frn);
-extern SI epiphany_fix(SIM_CPU *current_cpu,  SI fr0, SI frm, SI frn);
-extern SI epiphany_float(SIM_CPU *current_cpu, SI fr0, SI frm, SI frn);
-extern SI epiphany_fabs(SIM_CPU *current_cpu,  SI fr0, SI frm, SI frn);
+extern SI epiphany_fix(SIM_CPU *current_cpu,  SI frd, SI frn);
+extern SI epiphany_float(SIM_CPU *current_cpu, SI frd, SI frn);
+extern SI epiphany_fabs(SIM_CPU *current_cpu,  SI frd, SI frn);
 
 extern BI get_epiphany_fzeroflag(SIM_CPU *current_cpu, unsigned res) ;
 extern BI get_epiphany_fnegativeflag(SIM_CPU *current_cpu, unsigned res) ;
