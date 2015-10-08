@@ -1,0 +1,26 @@
+# epiphany testcase for mode $arith4 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global mode
+mode:
+	mode	4 ;; integer
+	mov	r20,9
+	mov	r21,10
+	isub	r22,r21,r20
+	sub	r23,r22,1
+	bne	1f
+	mode	0 ;; float
+	mova	r30,0f5.5
+	mova	r31,0f3.3
+	fadd	r32,r30,r31
+	fix	r33,r32
+	sub	r34,r33,9
+	bne	1f
+
+	trap	#4
+1:
+	trap	#5

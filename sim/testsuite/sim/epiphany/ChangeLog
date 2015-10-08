@@ -1,5 +1,9 @@
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* mode.cgs: New test.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* float.cgs: Add real test instead of accidental symlink.
 
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
