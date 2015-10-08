@@ -3063,7 +3063,7 @@
   () ;; TODO: Epiphany-5 attrib
   ("fmax $rd6,$rn6,$rm6")
   (+ OP4_MISC OPF_FMAX (f-opc-19-4 #x7) (f-dc-20-1 #x1) (f-dc-22-2 #x0) rd6 rn6 rm6)
-  (nop) ;; TODO: Implement
+  (sem-fpu #t #t #f #f max rd6 (rn6 rm6))
   ()
 )
 (%for-each (%pmacro (name sfx) (%exec

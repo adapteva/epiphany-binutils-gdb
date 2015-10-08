@@ -1,5 +1,9 @@
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (dni fmax): Add semantics.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (h-scr-config-arithmode): New hardware, alias
 	for arith mode bits in config register.
 	(e-arithmode): Arithmetic mode enum.
