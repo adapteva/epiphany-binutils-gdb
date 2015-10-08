@@ -126,6 +126,7 @@ makeNAN (USI x)
 #define    FMADD_FP_OP 3
 #define    FMSUB_FP_OP 4
 #define    FIX_FP_OP  5
+#define    FMAX_FP_OP 6
 
 
 typedef long double float_calc_type;
@@ -239,6 +240,9 @@ fcal (SIM_CPU * current_cpu, USI op, USI a1, USI a2, USI a3)
       break;
     case FMSUB_FP_OP:
       d1a -= d2 * d3;
+      break;
+    case FMAX_FP_OP:
+      d1a = d2 >= d3 ? d2 : d3;
       break;
     default:
 
@@ -372,6 +376,9 @@ fcal (SIM_CPU * current_cpu, USI op, USI a1, USI a2, USI a3)
       break;
     case FMSUB_FP_OP:
       d1 -= d2 * d3;
+      break;
+    case FMAX_FP_OP:
+      d1 = d2 >= d3 ? d2 : d3;
       break;
     default:
 
@@ -694,4 +701,11 @@ SI
 epiphany_imsub (SIM_CPU * current_cpu, SI rd, SI rn, SI rm)
 {
   return epiphany_icommon (current_cpu, rd, rn, rm, IMSUB);
+}
+
+/* Epiphany-V instruction */
+SI
+epiphany_fmax (SIM_CPU * current_cpu, SI frd, SI frn, SI frm)
+{
+  return fcal (current_cpu, FMAX_FP_OP, frd, frn, frm);
 }

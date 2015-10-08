@@ -46,4 +46,6 @@ extern BI get_epiphany_finvalidflag(SIM_CPU *current_cpu, unsigned ) ;
 /* Record changes to the CONFIG register in the CPU structure.  */
 extern void epiphany_set_rounding_mode(SIM_CPU *cpu, int config);
 
+/* Epiphany V */
+extern SI epiphany_fmax(SIM_CPU *current_cpu, SI frd, SI frn, SI frm);
 #endif

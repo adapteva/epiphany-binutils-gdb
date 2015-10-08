@@ -1,5 +1,9 @@
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* fmax.cgs: New test.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* pushpop.cgs: Remove.
 
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>

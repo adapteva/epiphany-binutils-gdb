@@ -1,5 +1,11 @@
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-fp.c (fcal): Handle FMAX_FP_OP.
+	(epiphany_fmax): New function.
+	* epiphany-fp.h: Add prototype for epiphany_fmax().
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-fp.c (epiphany_fix): Adjust arguments.
 	(epiphany_float): Likewise.
 	(epiphany_fabs): Likewise.
