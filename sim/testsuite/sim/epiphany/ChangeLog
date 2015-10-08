@@ -1,5 +1,9 @@
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* pushpop.cgs: Remove.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* fabs.cgs: New test.
 	* fix.cgs: New test.
 	* float.cgs: New test.
