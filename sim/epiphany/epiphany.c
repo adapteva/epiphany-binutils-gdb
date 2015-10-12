@@ -213,7 +213,7 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 
 /* Custom register setters */
 void
-epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_config(SIM_CPU *current_cpu, SI val)
 {
   /** @todo Any sticky bits? */
   CPU(h_all_registers[H_REG_SCR_CONFIG]) = val;
@@ -223,9 +223,9 @@ epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
 }
 
 void
-epiphanybf_set_status(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_status(SIM_CPU *current_cpu, SI val)
 {
-  USI old, new;
+  SI old, new;
 
   old = CPU(h_all_registers[H_REG_SCR_STATUS]);
   /* First 3 bits are sticky */
@@ -234,7 +234,7 @@ epiphanybf_set_status(SIM_CPU *current_cpu, USI val)
 }
 
 void
-epiphanybf_set_imask(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_imask(SIM_CPU *current_cpu, SI val)
 {
   CPU(h_all_registers[H_REG_SCR_IMASK]) = val;
 
@@ -243,7 +243,7 @@ epiphanybf_set_imask(SIM_CPU *current_cpu, USI val)
 }
 
 void
-epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_ilatst(SIM_CPU *current_cpu, SI val)
 {
   /* Write directly to ILAT. This is ok since we have mutual exclusion. */
   OR_REG_ATOMIC(H_REG_SCR_ILAT, val);
@@ -252,7 +252,7 @@ epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val)
 }
 
 void
-epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_ilatcl(SIM_CPU *current_cpu, SI val)
 {
   /* Don't write directly to ILAT. Interrupts are positive edge triggered,
    * so the target sim process should be able to see one before it's cleared.
@@ -263,9 +263,9 @@ epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val)
 }
 
 void
-epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_debugcmd(SIM_CPU *current_cpu, SI val)
 {
-  USI masked;
+  SI masked;
 
   masked = val & 3; /* Only allow writes to bit 0-1 */
 
@@ -282,9 +282,9 @@ epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val)
 }
 
 void
-epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_resetcore(SIM_CPU *current_cpu, SI val)
 {
-  USI masked, old;
+  SI masked, old;
 
   masked = val & 1; /* Only allow writes to bit 0 */
 
@@ -314,7 +314,7 @@ epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
   (CPU (h_all_registers)[regno] = (newval));
 }
 
-USI
+SI
 epiphanybf_h_cr_get_handler (SIM_CPU * current_cpu, UINT cr)
 {
   if (cr <= 8)
@@ -324,7 +324,7 @@ epiphanybf_h_cr_get_handler (SIM_CPU * current_cpu, UINT cr)
 }
 
 void
-epiphanybf_h_cr_set_handler (SIM_CPU * current_cpu, UINT cr, USI newval)
+epiphanybf_h_cr_set_handler (SIM_CPU * current_cpu, UINT cr, SI newval)
 {
   if (cr <= 8)
     epiphanybf_h_core_registers_set (current_cpu, cr, newval);
@@ -349,7 +349,7 @@ epiphany_break (SIM_CPU * current_cpu, PCADDR brkaddr)
 void
 epiphany_gie(SIM_CPU *current_cpu)
 {
-  USI gidbit;
+  SI gidbit;
 
   gidbit = (1 << H_SCR_STATUS_GIDISABLEBIT);
 
@@ -392,7 +392,7 @@ syscall_write_mem (host_callback *cb, struct cb_syscall *sc,
 }
 
 /* SysCall trap support.  */
-USI
+SI
 epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
@@ -404,8 +404,8 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
 #define PARM1 (GET_H_ALL_REGISTERS(H_REG_R1))
 #define PARM2 (GET_H_ALL_REGISTERS(H_REG_R2))
 #define PARM3 (GET_H_ALL_REGISTERS(H_REG_R3))
-  USI result = -1;		/* Assume FAIL status */
-  USI error = 0;
+  SI result = -1;		/* Assume FAIL status */
+  SI error = 0;
 
   switch (num)
     {
@@ -506,10 +506,10 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
 }
 
 
-SI epiphany_testset(SIM_CPU *current_cpu, USI addr, SI newval, int bytes)
+SI epiphany_testset(SIM_CPU *current_cpu, SI addr, SI newval, int bytes)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
-  USI tmpval = newval;
+  SI tmpval = newval;
 #if WITH_EMESH_SIM
   if (es_mem_testset(STATE_ESIM(sd), addr, bytes, (uint8_t *) &tmpval) != ES_OK)
     goto fail;
@@ -534,17 +534,17 @@ fail:
 return tmpval;
 }
 
-SI epiphany_testset_SI(SIM_CPU* current_cpu, USI addr, SI newval)
+SI epiphany_testset_SI(SIM_CPU* current_cpu, SI addr, SI newval)
 {
   return epiphany_testset(current_cpu, addr, newval, 4);
 }
 
-SI epiphany_testset_HI(SIM_CPU* current_cpu, USI addr, HI newval)
+SI epiphany_testset_HI(SIM_CPU* current_cpu, SI addr, HI newval)
 {
   return epiphany_testset(current_cpu, addr, newval, 2);
 }
 
-SI epiphany_testset_QI(SIM_CPU* current_cpu, USI addr, QI newval)
+SI epiphany_testset_QI(SIM_CPU* current_cpu, SI addr, QI newval)
 {
   return epiphany_testset(current_cpu, addr, newval, 1);
 }
@@ -624,8 +624,8 @@ epiphanybf_cpu_reset(SIM_CPU *current_cpu)
     }
 }
 
-USI
-epiphany_post_isn_callback (SIM_CPU * current_cpu, USI pc)
+SI
+epiphany_post_isn_callback (SIM_CPU * current_cpu, SI pc)
 {
 
 #ifdef DEBUG

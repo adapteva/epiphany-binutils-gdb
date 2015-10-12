@@ -32,8 +32,8 @@ extern int epiphany_decode_gdb_ctrl_regnum (int);
 #define GET_H_SM() ((CPU (h_psw) & 0x80) != 0)
 
 #ifndef GET_H_CR
-extern USI  epiphanybf_h_cr_get_handler (SIM_CPU *, UINT);
-extern void epiphanybf_h_cr_set_handler (SIM_CPU *, UINT, USI);
+extern SI  epiphanybf_h_cr_get_handler (SIM_CPU *, UINT);
+extern void epiphanybf_h_cr_set_handler (SIM_CPU *, UINT, SI);
 
 #define GET_H_CR(regno) \
   XCONCAT2 (WANT_CPU,_h_cr_get_handler) (current_cpu, (regno))
@@ -62,12 +62,13 @@ extern void epiphanybf_h_accum_set_handler (SIM_CPU *, DI);
 #endif
 
 /* Custom reg getters/setters */
-void epiphanybf_set_config(SIM_CPU *current_cpu, USI val);
-void epiphanybf_set_status(SIM_CPU *current_cpu, USI val);
-void epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val);
-void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);
-void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val);
-void epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_config(SIM_CPU *current_cpu, SI val);
+void epiphanybf_set_status(SIM_CPU *current_cpu, SI val);
+void epiphanybf_set_imask(SIM_CPU *current_cpu, SI val);
+void epiphanybf_set_ilatst(SIM_CPU *current_cpu, SI val);
+void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, SI val);
+void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, SI val);
+void epiphanybf_set_resetcore(SIM_CPU *current_cpu, SI val);
 
 /* Misc. profile data.  */
 
@@ -149,7 +150,7 @@ do { \
 #define EPIPHANY_DEVICE_LEN   0x2040
 
 /* Handle the trap insn.  */
-extern USI epiphany_trap (SIM_CPU *, PCADDR, int);
+extern SI epiphany_trap (SIM_CPU *, PCADDR, int);
 
 /* Handle the bkpt insn.  */
 extern void epiphany_break( SIM_CPU *,PCADDR );
@@ -158,13 +159,13 @@ extern void epiphany_break( SIM_CPU *,PCADDR );
 extern void epiphany_fpu_error (CGEN_FPU *, int);
 
 /* Handle ipend on rti call.  */
-extern USI epiphany_rti (SIM_CPU *);
+extern SI epiphany_rti (SIM_CPU *);
 
 /* Handle the gie insn.  */
 extern void epiphany_gie( SIM_CPU * );
 
 /* Call back after every instruction.  */
-extern USI epiphany_post_isn_callback (SIM_CPU *cpu , USI pc) ;
+extern SI epiphany_post_isn_callback (SIM_CPU *cpu , SI pc) ;
 
 /* Check if core is active */
 extern int epiphany_cpu_is_active(SIM_CPU *current_cpu);
@@ -173,14 +174,15 @@ extern int epiphany_cpu_is_active(SIM_CPU *current_cpu);
 extern void epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc);
 #endif
 
-void
-epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
-				    SI newval);
+extern void epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu,
+						UINT regno, SI newval);
+extern void epiphanybf_h_all_registers_set (SIM_CPU *current_cpu, UINT regno,
+					    SI newval);
 
-SI epiphany_testset(SIM_CPU *, USI, SI, int);
-SI epiphany_testset_SI(SIM_CPU *, USI, SI);
-SI epiphany_testset_HI(SIM_CPU *, USI, HI);
-SI epiphany_testset_QI(SIM_CPU *, USI, QI);
+extern SI epiphany_testset(SIM_CPU *, SI, SI, int);
+extern SI epiphany_testset_SI(SIM_CPU *, SI, SI);
+extern SI epiphany_testset_HI(SIM_CPU *, SI, HI);
+extern SI epiphany_testset_QI(SIM_CPU *, SI, QI);
 
 
 #endif /* EPIPHANY_SIM_H */

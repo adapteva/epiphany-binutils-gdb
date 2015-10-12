@@ -36,11 +36,11 @@ extern SI epiphany_fix(SIM_CPU *current_cpu,  SI frd, SI frn);
 extern SI epiphany_float(SIM_CPU *current_cpu, SI frd, SI frn);
 extern SI epiphany_fabs(SIM_CPU *current_cpu,  SI frd, SI frn);
 
-extern BI get_epiphany_fzeroflag(SIM_CPU *current_cpu, unsigned res) ;
-extern BI get_epiphany_fnegativeflag(SIM_CPU *current_cpu, unsigned res) ;
-extern BI get_epiphany_funderflowflag(SIM_CPU *current_cpu, unsigned ) ;
-extern BI get_epiphany_foverflowflag(SIM_CPU *current_cpu, unsigned ) ;
-extern BI get_epiphany_finvalidflag(SIM_CPU *current_cpu, unsigned ) ;
+extern BI get_epiphany_fzeroflag(SIM_CPU *current_cpu, SI res);
+extern BI get_epiphany_fnegativeflag(SIM_CPU *current_cpu, SI res);
+extern BI get_epiphany_funderflowflag(SIM_CPU *current_cpu, SI res);
+extern BI get_epiphany_foverflowflag(SIM_CPU *current_cpu, SI res);
+extern BI get_epiphany_finvalidflag(SIM_CPU *current_cpu, SI res);
 
 
 /* Record changes to the CONFIG register in the CPU structure.  */

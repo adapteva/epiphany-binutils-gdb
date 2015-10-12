@@ -480,11 +480,10 @@ sim_esim_init(SIM_DESC sd)
 /* Create an instance of the simulator.  */
 
 SIM_DESC
-sim_open (kind, callback, abfd, argv)
-     SIM_OPEN_KIND kind;
-     host_callback *callback;
-     struct bfd *abfd;
-     char **argv;
+sim_open (SIM_OPEN_KIND kind,
+	  host_callback *callback,
+	  struct bfd *abfd,
+	  char **argv)
 {
   SIM_DESC sd = sim_state_alloc (kind, callback);
   char c;
@@ -650,9 +649,8 @@ sim_open (kind, callback, abfd, argv)
 }
 
 void
-sim_close (sd, quitting)
-     SIM_DESC sd;
-     int quitting;
+sim_close (SIM_DESC sd,
+	   int quitting)
 {
   epiphany_cgen_cpu_close (CPU_CPU_DESC (STATE_CPU (sd, 0)));
 #if WITH_EMESH_SIM
@@ -668,11 +666,10 @@ sim_close (sd, quitting)
 }
 
 SIM_RC
-sim_create_inferior (sd, abfd, argv, envp)
-     SIM_DESC sd;
-     struct bfd *abfd;
-     char **argv;
-     char **envp;
+sim_create_inferior (SIM_DESC sd,
+		     struct bfd *abfd,
+		     char **argv,
+		     char **envp)
 {
   SIM_CPU *current_cpu = STATE_CPU (sd, 0);
   SIM_ADDR addr;

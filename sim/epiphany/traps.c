@@ -81,9 +81,9 @@ syscall_write_mem (host_callback *cb, struct cb_syscall *sc,
 
 
 /*! @todo Rewrite this and interrupt_handler in oob_events */
-USI epiphany_rti(SIM_CPU *current_cpu)
+SI epiphany_rti(SIM_CPU *current_cpu)
 {
-  USI ipend, ilat, iret, imask;
+  SI ipend, ilat, iret, imask;
   int serviced, next;
 
   ipend = GET_H_ALL_REGISTERS(H_REG_SCR_IPEND);

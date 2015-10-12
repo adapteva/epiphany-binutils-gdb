@@ -13,8 +13,8 @@ static IADDR
 interrupt_handler(SIM_CPU *current_cpu, IADDR vpc)
 {
   BI gidisablebit;
-  USI status, ilat, ilatcl, iret, imask, ipend;
-  USI possible;       /* Bitmask with possible interrupts to service */
+  SI status, ilat, ilatcl, iret, imask, ipend;
+  SI possible;       /* Bitmask with possible interrupts to service */
   signed interrupt; /* Highest prio interrupt to handle */
   signed current;     /* Highest currently serviced interrupt */
 

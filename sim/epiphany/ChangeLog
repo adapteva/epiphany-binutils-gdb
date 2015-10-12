@@ -1,3 +1,27 @@
+2015-10-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* cgen-atomic.h: Fix signedness warnings.
+	* epiphany-fp.c (float_as_int): Likewise.
+	(int_as_float): Likewise.
+	(fcal): Likewise.
+	(epiphany_fabs): Likewise.
+	* epiphany-fp.h: Likewise.
+	* epiphany-sim.h: Likewise.
+	* epiphany.c (epiphanybf_set_status): Likewise.
+	(epiphanybf_set_debugcmd): Likewise.
+	(epiphanybf_set_resetcore): Likewise.
+	(epiphany_gie): Likewise.
+	(SI epiphany_testset): Likewise.
+	* oob-events.c (interrupt_handler): Likewise.
+	* traps.c (SI epiphany_rti): Likewise.
+	* sim-if.c (sim_open): Fix old style function prototype
+	warnings.
+	(sim_close): Likewise.
+	(sim_create_inferior): Likewise.
+	* esim/esim.c (es_set_cpu_state): Fix function type prototype
+	warning.
+	* esim/esim.h: Likewise.
+
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-fp.c (fcal): Handle FMAX_FP_OP.

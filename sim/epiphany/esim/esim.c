@@ -78,7 +78,7 @@ es_shm_core_index(const es_state *esim, unsigned coreid)
  *
  * @return Pointer to start of Epiphany cores memory, or NULL
  */
-volatile static uint8_t *
+static volatile uint8_t *
 es_shm_core_base(const es_state *esim, unsigned coreid)
 {
   signed offset = es_shm_core_index(esim, coreid);
@@ -1318,7 +1318,7 @@ es_client_disconnect(es_state *esim)
  *
  * @return ES_OK if ESIM is initialized, -EINVAL otherwise.
  */
-int inline
+inline int
 es_initialized(const es_state* esim)
 {
   return ((esim && esim->initialized == 1) ? ES_OK : -EINVAL);
@@ -1525,7 +1525,7 @@ es_set_coreid(es_state *esim, unsigned coreid)
  *
  * @return Pointer to CPU state address or NULL
  */
-volatile void *
+void *
 es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 {
 
@@ -1539,7 +1539,7 @@ es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 	 ES_SHM_CORE_STATE_SIZE - ES_SHM_CORE_STATE_HEADER_SIZE);
   memmove((void *)esim->this_core_cpu_state, cpu, size);
 
-  return esim->this_core_cpu_state;
+  return (void *) esim->this_core_cpu_state;
 }
 
 /*! Dump node and cluster configuration

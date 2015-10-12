@@ -41,80 +41,80 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "cpu.h"
 
 
-inline USI
-extract_mant (USI x)
+inline SI
+extract_mant (SI x)
 {
   return (x & 0x7fffff);
 }
 
-inline USI
-extract_exp (USI x)
+inline SI
+extract_exp (SI x)
 {
   return (x >> 23) & 0xff;
 }
 
-inline USI
-extract_sign (USI x)
+inline SI
+extract_sign (SI x)
 {
   return (x >> 31) & 0x1;
 }
 
-inline USI
-isDenormalOrZero (USI x)
+inline SI
+isDenormalOrZero (SI x)
 {
   return (extract_exp (x) == 0);
 }
 
-inline USI
-isDenormal (USI x)
+inline SI
+isDenormal (SI x)
 {
   return ((extract_exp (x) == 0) && (extract_mant (x) != 0));
 }
 
-inline USI
-makeZero (USI x)
+inline SI
+makeZero (SI x)
 {
   return (x & 0x80000000);
 }
 
-inline USI
-makeNegative (USI x)
+inline SI
+makeNegative (SI x)
 {
   return (x | 0x80000000);
 }
 
-inline USI
-makePositive (USI x)
+inline SI
+makePositive (SI x)
 {
   return (x & 0x7fffffff);
 }
 
-inline USI
-isZero (USI x)
+inline SI
+isZero (SI x)
 {
   return ((extract_exp (x) == 0) && (extract_mant (x) == 0));
 }
 
-inline USI
-isNegative (USI x)
+inline SI
+isNegative (SI x)
 {
   return ((0x80000000 & x) != 0);
 }
 
-inline USI
-isInf (USI x)
+inline SI
+isInf (SI x)
 {
   return (extract_exp (x) == 0xff) && (extract_mant (x) == 0);
 }
 
-inline USI
-isNAN (USI x)
+inline SI
+isNAN (SI x)
 {
   return (extract_exp (x) == 0xff) && (extract_mant (x) != 0);
 }
 
-inline USI
-makeNAN (USI x)
+inline SI
+makeNAN (SI x)
 {
   return ((1 << 23) | (1 << 22) | (x));
 }
@@ -132,19 +132,19 @@ makeNAN (USI x)
 typedef long double float_calc_type;
 typedef float float32_type;
 
-USI
+SI
 float_as_int (float f)
 {
-  union { float f; USI i; } u;
+  union { float f; SI i; } u;
 
   u.f = f;
   return u.i;
 }
 
 float
-int_as_float (USI i)
+int_as_float (SI i)
 {
-  union { float f; USI i; } u;
+  union { float f; SI i; } u;
 
   u.i = i;
   return u.f;
@@ -153,18 +153,18 @@ int_as_float (USI i)
 
 static unsigned isInvalidExp_patch = 0;
 
-USI
-fcal (SIM_CPU * current_cpu, USI op, USI a1, USI a2, USI a3)
+SI
+fcal (SIM_CPU * current_cpu, SI op, SI a1, SI a2, SI a3)
 {
-  USI res;
-  USI u1, u2, u3;
+  SI res;
+  SI u1, u2, u3;
   float fres;
 
   float f1, f2, f3;
   float_calc_type d1, d2, d3, d1a;
 
   float d1aF;
-  USI res2;
+  SI res2;
   double double_val;
 
   unsigned macResRoundAdjust = 0;
@@ -452,19 +452,19 @@ fcal (SIM_CPU * current_cpu, USI op, USI a1, USI a2, USI a3)
 }
 
 BI
-get_epiphany_fzeroflag (SIM_CPU * current_cpu, USI res)
+get_epiphany_fzeroflag (SIM_CPU * current_cpu, SI res)
 {
   return (BI) (isZero (res));
 }
 
 BI
-get_epiphany_fnegativeflag (SIM_CPU * current_cpu, USI res)
+get_epiphany_fnegativeflag (SIM_CPU * current_cpu, SI res)
 {
   return (BI) (extract_sign (res));
 }
 
 BI
-get_epiphany_funderflowflag (SIM_CPU * current_cpu, USI res)
+get_epiphany_funderflowflag (SIM_CPU * current_cpu, SI res)
 {
   return (BI) (0 !=
 	       (FE_UNDERFLOW &
@@ -472,7 +472,7 @@ get_epiphany_funderflowflag (SIM_CPU * current_cpu, USI res)
 }
 
 BI
-get_epiphany_foverflowflag (SIM_CPU * current_cpu, USI res)
+get_epiphany_foverflowflag (SIM_CPU * current_cpu, SI res)
 {
   return (BI) (0 !=
 	       (FE_OVERFLOW &
@@ -480,7 +480,7 @@ get_epiphany_foverflowflag (SIM_CPU * current_cpu, USI res)
 }
 
 BI
-get_epiphany_finvalidflag (SIM_CPU * current_cpu, USI res)
+get_epiphany_finvalidflag (SIM_CPU * current_cpu, SI res)
 {
 
   return (BI) ((isInvalidExp_patch != 0)
@@ -590,8 +590,8 @@ epiphany_float (SIM_CPU * current_cpu, SI rd, SI rn)
 SI
 epiphany_fabs (SIM_CPU * current_cpu, SI rd, SI rn)
 {
-  USI result;
-  USI u = rn;
+  SI result;
+  SI u = rn;
   if (isDenormal (u))
     u = makeZero (u);
 
