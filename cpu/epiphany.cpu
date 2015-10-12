@@ -1914,7 +1914,7 @@
       (%str name ins-sfx ".l")
       (NO-DIS) ;; TODO Epiphany-5 attr
       (%str name ins-sfx ".l ${rd6" op-sfx "},[$rn6,$rm6]")
-      (emit (%sym name ins-sfx) rd6-di rn6-di rm6-di)
+      (emit (%sym name ins-sfx) rd6 rn6 rm6)
     )
   )
 )
