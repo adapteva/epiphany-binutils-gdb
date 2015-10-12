@@ -973,7 +973,7 @@
 (define-hardware
   (name h-core-registers)
   (comment "Special Core Registers")
-  (type register USI (17))
+  (type register SI (17))
   (attrs VIRTUAL)
   (indices extern-keyword cr-names)
   ;; Forward get/set to h-all-registers handlers
@@ -1035,7 +1035,7 @@
 		(type register BI)
 		(get ()
 		  (
-			sequence ((USI regval) (USI bitval))
+			sequence ((SI regval) (SI bitval))
 			  (set regval operand)
 			  (set bitval (and (srl regval bitidx) 1))
 			  (trunc BI bitval)
@@ -1087,14 +1087,14 @@
   (attrs VIRTUAL)
   ;; Forward get/set to h-all-registers handlers
   (get ()
-	(sequence ((USI status))
-	   (set status (reg h-all-registers (enum USI H-REG-SCR-STATUS)))
+	(sequence ((SI status))
+	   (set status (reg h-all-registers (enum SI H-REG-SCR-STATUS)))
 	   (and (srl status H-SCR-STATUS-EXCAUSE0BIT) #xf)
 	)
   )
   ;; Two steps: clear bits, then set value
   (set (newval)
-	(sequence ((USI mask) (USI shifted))
+	(sequence ((SI mask) (SI shifted))
 	  (set mask #xfff0ffff)  ;; bit 16-19
 	  (set shifted (sll (and newval #xf) (enum USI H-SCR-STATUS-EXCAUSE0BIT)))
 	  (c-raw-call VOID "AND_REG_ATOMIC"  (enum USI H-REG-SCR-STATUS) mask)
@@ -1134,7 +1134,7 @@
   (attrs VIRTUAL)
   ;; Forward get/set to h-all-registers handlers
   (get ()
-    (sequence ((USI mode))
+    (sequence ((SI mode))
        (set mode (reg h-all-registers (enum USI H-REG-SCR-CONFIG)))
        (and (srl mode H-SCR-CONFIG-ARITH-MODEBIT0) #x7)
     )
@@ -1175,7 +1175,7 @@
 (define-hardware
   (name h-coredma-registers)
   (comment "DMA registers in MMR space")
-  (type register USI (16))
+  (type register SI (16))
   (attrs VIRTUAL)
   (indices extern-keyword crdma-names)
   ;; Forward get/set to h-all-registers handlers
@@ -1192,7 +1192,7 @@
 (define-hardware
   (name h-coremem-registers)
   (comment "MEM registers in MMR space")
-  (type register USI (4))
+  (type register SI (4))
   (attrs VIRTUAL) ;; ?? PROFILE ??
   (indices extern-keyword crmem-names)
   (get (index)
@@ -1208,7 +1208,7 @@
 (define-hardware
   (name h-coremesh-registers)
   (comment "MESH registers in MMR space")
-  (type register USI (4))
+  (type register SI (4))
   (attrs VIRTUAL) ;; ?PROFILE?
   (indices extern-keyword crmesh-names)
   (get (index)
