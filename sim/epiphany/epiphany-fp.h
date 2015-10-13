@@ -20,13 +20,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef EPIPHANY_FP_H
 #define EPIPHANY_FP_H
 
+/* Record changes to the CONFIG register in the CPU structure.  */
+extern void epiphany_set_rounding_mode(SIM_CPU *cpu, int config);
+
+/*! Integer instructions */
 extern SI epiphany_iadd(SIM_CPU *current_cpu, SI , SI , SI );
 extern SI epiphany_imul(SIM_CPU *current_cpu, SI , SI , SI );
 extern SI epiphany_isub(SIM_CPU *current_cpu, SI , SI , SI );
 extern SI epiphany_imadd(SIM_CPU *current_cpu, SI , SI , SI );
 extern SI epiphany_imsub(SIM_CPU *current_cpu, SI , SI , SI );
 
-
+/*! Single precision float */
 extern SI epiphany_fadd(SIM_CPU *current_cpu, SI fr0, SI frg, SI frh);
 extern SI epiphany_fmul(SIM_CPU *current_cpu, SI fr0, SI frg, SI frh);
 extern SI epiphany_fsub(SIM_CPU *current_cpu, SI fr0, SI frg, SI frh);
@@ -42,10 +46,27 @@ extern BI get_epiphany_funderflowflag(SIM_CPU *current_cpu, SI res);
 extern BI get_epiphany_foverflowflag(SIM_CPU *current_cpu, SI res);
 extern BI get_epiphany_finvalidflag(SIM_CPU *current_cpu, SI res);
 
+/*! Epiphany V instructions */
 
-/* Record changes to the CONFIG register in the CPU structure.  */
-extern void epiphany_set_rounding_mode(SIM_CPU *cpu, int config);
-
-/* Epiphany V */
+/*! Single precision float */
 extern SI epiphany_fmax(SIM_CPU *current_cpu, SI frd, SI frn, SI frm);
+
+/* Double precision float */
+extern DI epiphany_fadd64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh);
+extern DI epiphany_fmul64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh);
+extern DI epiphany_fsub64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh);
+extern DI epiphany_fmadd64(SIM_CPU *current_cpu, DI fr0, DI frm, DI frn);
+extern DI epiphany_fmsub64(SIM_CPU *current_cpu, DI fr0, DI frm, DI frn);
+#if 0
+extern DI epiphany_fix64(SIM_CPU *current_cpu,  DI frd, DI frn);
+extern DI epiphany_float64(SIM_CPU *current_cpu, DI frd, DI frn);
+#endif
+extern DI epiphany_fabs64(SIM_CPU *current_cpu,  DI frd, DI frn);
+extern DI epiphany_fmax64(SIM_CPU *current_cpu, DI frd, DI frn, DI frm);
+
+extern BI get_epiphany_fzeroflag64(SIM_CPU *current_cpu, DI res);
+extern BI get_epiphany_fnegativeflag64(SIM_CPU *current_cpu, DI res);
+extern BI get_epiphany_funderflowflag64(SIM_CPU *current_cpu, DI res);
+extern BI get_epiphany_foverflowflag64(SIM_CPU *current_cpu, DI res);
+extern BI get_epiphany_finvalidflag64(SIM_CPU *current_cpu, DI res);
 #endif

@@ -703,9 +703,156 @@ epiphany_imsub (SIM_CPU * current_cpu, SI rd, SI rn, SI rm)
   return epiphany_icommon (current_cpu, rd, rn, rm, IMSUB);
 }
 
-/* Epiphany-V instruction */
+
+/* Epiphany-V instructions */
+
+/* Single-precision float */
 SI
 epiphany_fmax (SIM_CPU * current_cpu, SI frd, SI frn, SI frm)
 {
   return fcal (current_cpu, FMAX_FP_OP, frd, frn, frm);
+}
+
+
+/* Double precision float */
+DI
+epiphany_fadd64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fadd64");
+  return 0;
+}
+
+DI
+epiphany_fmul64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fmul64");
+  return 0;
+}
+
+DI
+epiphany_fsub64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fsub64");
+  return 0;
+}
+
+DI
+epiphany_fmadd64(SIM_CPU *current_cpu, DI fr0, DI frm, DI frn)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fmadd64");
+  return 0;
+}
+
+DI
+epiphany_fmsub64(SIM_CPU *current_cpu, DI fr0, DI frm, DI frn)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fmsub64");
+  return 0;
+}
+
+#if 0
+DI
+epiphany_fix64(SIM_CPU *current_cpu,  DI frd, DI frn)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fix64");
+  return 0;
+}
+
+DI
+epiphany_float64(SIM_CPU *current_cpu, DI frd, DI frn)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "float64");
+  return 0;
+}
+#endif
+
+DI
+epiphany_fabs64(SIM_CPU *current_cpu, DI frd, DI frn)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fabs64");
+  return 0;
+}
+
+DI
+epiphany_fmax64(SIM_CPU *current_cpu, DI frd, DI frn, DI frm)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fmax64");
+  return 0;
+}
+
+BI
+get_epiphany_fzeroflag64(SIM_CPU *current_cpu, DI res)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fzeroflag64");
+  return 0;
+}
+
+BI
+get_epiphany_fnegativeflag64(SIM_CPU *current_cpu, DI res)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "fnegativeflag64");
+  return 0;
+}
+
+BI
+get_epiphany_funderflowflag64(SIM_CPU *current_cpu, DI res)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "funderflowflag64");
+  return 0;
+}
+
+BI
+get_epiphany_foverflowflag64(SIM_CPU *current_cpu, DI res)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "foverflowflag64");
+  return 0;
+}
+
+BI
+get_epiphany_finvalidflag64(SIM_CPU *current_cpu, DI res)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  sim_engine_abort (sd, current_cpu, GET_H_PC(),
+		    "%s: function not implemented.\n",
+		    "finvalidflag64");
+  return 0;
 }

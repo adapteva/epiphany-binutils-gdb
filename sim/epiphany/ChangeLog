@@ -1,3 +1,22 @@
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (epiphany_fadd64): Added placeholder function.
+	(epiphany_fmul64): Likewise.
+	(epiphany_fsub64): Likewise.
+	(epiphany_fmadd64): Likewise.
+	(epiphany_fmsub64): Likewise.
+	(epiphany_fix64): Likewise.
+	(epiphany_float64): Likewise.
+	(epiphany_fabs64): Likewise.
+	(epiphany_fmax64): Likewise.
+	(get_epiphany_fzeroflag64): Likewise.
+	(get_epiphany_fnegativeflag64): Likewise.
+	(get_epiphany_funderflowflag64): Likewise.
+	(get_epiphany_foverflowflag64): Likewise.
+	(get_epiphany_finvalidflag64): Likewise.
+	* sim/epiphany/epiphany-fp.h: Add prototypes for above
+	functions.
+
 2015-10-12  Ola Jeppsson  <ola@adapteva.com>
 
 	* cgen-atomic.h: Fix signedness warnings.
