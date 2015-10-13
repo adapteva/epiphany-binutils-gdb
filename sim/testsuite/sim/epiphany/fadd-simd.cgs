@@ -1,0 +1,23 @@
+# epiphany testcase for fadd-simd $frd6,$frn6,$frm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.type fadd_simd,@function
+	.global fadd_simd
+fadd_simd:
+	mode	8
+	mova	r8,0f128.5
+	mova	r10,0f0.5
+	mova	r9,0f125.5
+	mova	r11,0f0.5
+	fadd	r12,r8,r10
+	mova	r14,0f129.0
+	mova	r15,0f126.0
+	eor64	r16,r12,r14
+	bne	1f
+	pass
+1:
+	fail

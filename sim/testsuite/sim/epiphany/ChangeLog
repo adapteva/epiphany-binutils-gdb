@@ -1,3 +1,11 @@
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* fadd-simd.cgs: New test.
+	* fmadd-simd.cgs: New test.
+	* fmsub-simd.cgs: New test.
+	* fmul-simd.cgs: New test.
+	* fsub-simd.cgs: New test.
+
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* mode.cgs: New test.

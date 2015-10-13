@@ -1,0 +1,23 @@
+# epiphany testcase for fmul-simd $frd6,$frn6,$frm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fmul_simd
+fmul_simd:
+	mova	r20,0f9.25
+	mova	r21,0f-10.5
+	mova	r22,0f6.0
+	mova	r23,0f6.0
+	mova	r30,0f55.5
+	mova	r31,0f-63.0
+	mode	8
+	fmul	r40,r20,r22
+	eor64	r42,r30,r40
+	bne	1f
+
+	trap	#4
+1:
+	trap	#5
