@@ -10,11 +10,11 @@ orr64         r10,r20,r31        ; { dg-error "Error: instruction requires even:
 orr64.l       r10,r21,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
 eor64         r11,r20,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
 eor64.l       r10,r21,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
-asr64         r10,r20,r31        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
+asr64         r10,r20,r31        ; legal (rm is a 32-bit register)
 asr64.l       r10,r21,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
 lsr64         r11,r20,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
 lsr64.l       r10,r21,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
-lsl64         r10,r20,r31        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
+lsl64         r10,r20,r31        ; legal (rm is a 32-bit register)
 lsl64.l       r10,r21,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }
 
 fmax64        r11,r20,r30        ; { dg-error "Error: instruction requires even:odd register pair\\(s\\)" }

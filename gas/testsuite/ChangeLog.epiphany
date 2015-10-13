@@ -1,3 +1,9 @@
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/64bit-err-uneven-regs.s: 64-bit shift
+	instructions shift operator (rm) is 32-bits, i.e., uneven
+	register numbers are allowed.
+
 2015-10-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* gas/epiphany/64bit-err-uneven-regs.s: New test.
