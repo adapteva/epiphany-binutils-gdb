@@ -1599,16 +1599,16 @@
 
 ;; Semantics helper pmacros for instructions with 64-bit operands
 (define-pmacro (sem-dword-regs-1 xrd)
-  (not (and xrd 1))
+  (and xrd 1)
 )
 (define-pmacro (sem-dword-regs-2 xrd xrn)
-  (not (or (and xrn 1) (sem-dword-regs-1 xrd)))
+  (or (and xrn 1) (sem-dword-regs-1 xrd))
 )
 (define-pmacro (sem-dword-regs-3 xrd xrn xrm)
-  (not (or (and xrm 1) (sem-dword-regs-2 xrd xrn)))
+  (or (and xrm 1) (sem-dword-regs-2 xrd xrn))
 )
 (define-pmacro (sem-dword-regs xregs sem-op)
-  (if (%apply (%sym sem-dword-regs- (%length xregs)) xregs)
+  (if (not (%apply (%sym sem-dword-regs- (%length xregs)) xregs))
     sem-op
     (schedule-exception (enum H-SCR-STATUS-EXCAUSE-UNALIGNED))
   )
@@ -2714,6 +2714,7 @@
       (%sym name "64")
       (%str name "64")
       () ;; TODO: Add Epiphany-5 attribute
+      ;; N.B: Shift register (rm) is a 32-bit register
       (%str name "64 ${rd6-di},${rn6-di},${rm6-di}")
       (+ OP4_MISC (%sym "OPB_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0) (f-dc-20-1 #x1) rd6-di rn6-di rm6-di)
       (sem-dword-regs ((regno rd6-di) (regno rn6-di) (regno rm6-di))
@@ -2749,13 +2750,13 @@
       (%sym name "64")
       (%str name "64")
       () ;; TODO: Epiphany-5 attr
-      (%str name "64 ${rd6-di},${rn6-di},${rm6-di}")
-      (+ OP4_MISC (%sym "OPB_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0) (f-dc-20-1 #x1) rd6-di rn6-di rm6-di)
-      ;; ??? TODO: Does rm need to be a 64-bit reg?
-      (sem-dword-regs ((regno rd6-di) (regno rn6-di) (regno rm6-di))
+      ;; N.B: Shift register (rm) is a 32-bit register
+      (%str name "64 ${rd6-di},${rn6-di},$rm6")
+      (+ OP4_MISC (%sym "OPB_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0) (f-dc-20-1 #x1) rd6-di rn6-di rm6)
+      (sem-dword-regs ((regno rd6-di) (regno rn6-di))
         (sequence ()
-          (logic-vc mode rn6-di rm6-di)
-          (set rd6-di (sem-op mode rn6-di (and rm6-di (const 63))))
+          (logic-vc mode rn6-di rm6)
+          (set rd6-di (sem-op mode rn6-di (and rm6 (const 63))))
           (set zbit (zflag mode rd6-di))
           (set nbit (nflag mode rd6-di))
         )
@@ -2766,8 +2767,8 @@
       (%sym name "64.l")
       (%str name "64.l")
       (NO-DIS)
-      (%str name "64.l ${rd6-di},${rn6-di},${rm6-di}")
-      (emit (%sym name "64") rd6-di rn6-di rm6-di)
+      (%str name "64.l ${rd6-di},${rn6-di},$rm6")
+      (emit (%sym name "64") rd6-di rn6-di rm6)
     )
   )
 )

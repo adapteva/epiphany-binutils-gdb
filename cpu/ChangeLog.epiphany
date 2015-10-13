@@ -1,5 +1,11 @@
 2015-10-13  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (pmacro shift64-rrr): rm operand is a 32-bit
+	register.
+	(pmacro sem-dword-regs): Fix silly logic bug.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (pmacro sem-fpu-apply): New helper pmacro.
 	(pmacro sem-fpu-float): Generic code for single-precision
 	double precision and single-precision SIMD.
