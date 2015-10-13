@@ -1,5 +1,13 @@
 2015-10-13  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (pmacro sem-fpu-apply): New helper pmacro.
+	(pmacro sem-fpu-float): Generic code for single-precision
+	double precision and single-precision SIMD.
+	(pmacro sem-fpu): Adjust arguments, use indexes instead of
+	values. Handle SF-SIMD mode. Add boilerplate code for DF.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (pmacro sem-dword-regs): Semantics helper for
 	insns with 64-bit operands. Throws exception if regs are not
 	aligned, otherwise performs applies sem-op.
