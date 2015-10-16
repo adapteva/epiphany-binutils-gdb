@@ -130,9 +130,8 @@ makeNAN (SI x)
 
 
 typedef long double float_calc_type;
-typedef float float32_type;
 
-SI
+inline SI
 float_as_int (float f)
 {
   union { float f; SI i; } u;
@@ -141,7 +140,7 @@ float_as_int (float f)
   return u.i;
 }
 
-float
+inline float
 int_as_float (SI i)
 {
   union { float f; SI i; } u;
@@ -153,7 +152,7 @@ int_as_float (SI i)
 
 static unsigned isInvalidExp_patch = 0;
 
-SI
+static SI
 fcal (SIM_CPU * current_cpu, SI op, SI a1, SI a2, SI a3)
 {
   SI res;
@@ -576,7 +575,6 @@ SI
 epiphany_float (SIM_CPU * current_cpu, SI rd, SI rn)
 {
   float f;
-  SI *u;
 
   /* Clear all exceptions.  */
   feclearexcept (FE_ALL_EXCEPT);
@@ -600,8 +598,6 @@ epiphany_fabs (SIM_CPU * current_cpu, SI rd, SI rn)
   return result;
 }
 
-extern BI epiphanybf_h_trancateModebit_get (SIM_CPU *);
-/* record changes to the CONFIG register in the CPU structure */
 void
 epiphany_set_rounding_mode (SIM_CPU * cpu, int configVal)
 {
@@ -632,7 +628,7 @@ epiphany_set_rounding_mode (SIM_CPU * cpu, int configVal)
 enum I_OP
 { IADD = 0, ISUB = 1, IMUL = 2, IMADD = 3, IMSUB = 4 };
 
-SI
+static SI
 epiphany_icommon (SIM_CPU * current_cpu, SI rd, SI rn, SI rm, unsigned i_op)
 {
   signed long long a1, a2, a3;

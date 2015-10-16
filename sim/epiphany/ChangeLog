@@ -1,3 +1,9 @@
+2015-10-16  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c: Remove dead code. Fix compiler
+	warnings.
+	(epiphany_float): Remove unused u.
+
 2015-10-13  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-fp.c (epiphany_fadd64): Added placeholder function.
