@@ -18,6 +18,7 @@
 
     */
 
+#include <limits.h>
 
 #include "sim-main.h"
 #include "hw-main.h"
@@ -79,6 +80,9 @@ static const struct hw_port_descriptor epiphany_mem_ports[] = {
 static void
 epiphany_mem_finish (struct hw *me)
 {
+  const int bottom = INT_MAX;
+  struct hw *parent = hw_parent (me);
+
   HW_TRACE ((me, "epiphany_mem_finish"));
   set_hw_data (me, NULL);
   set_hw_io_read_buffer (me, epiphany_mem_io_read_buffer);
@@ -86,11 +90,17 @@ epiphany_mem_finish (struct hw *me)
   set_hw_ports (me, epiphany_mem_ports);
   set_hw_port_event (me, epiphany_mem_port_event);
 
-  /* Map full address space (except core local memory) */
-  /* Need to do two calls since address size param is target word size and
-     full size cannot be expressed with one call */
-  hw_attach_address (hw_parent (me), 0, 0, 0, 0x80000000, me);
-  hw_attach_address (hw_parent (me), 0, 0, 0x80000000, 0x80000000, me);
+  /* Shadow map entire address space to this device at lowest (INT_MAX) level.
+   * User defined mappings will always take precedence. */
+#if (WITH_TARGET_ADDRESS_BITSIZE == 64)
+  hw_attach_address (parent, bottom, 0, 0, 0xfffffffffffffff0ULL, me);
+  hw_attach_address (parent, bottom, 0, 0xfffffffffffffff0ULL, 0x10, me);
+#elif (WITH_TARGET_ADDRESS_BITSIZE == 32)
+  hw_attach_address (parent, bottom, 0, 0, 0xfffffff0, me);
+  hw_attach_address (parent, bottom, 0, 0xfffffff0, 0x10, me);
+#else
+#error "Unsupported WITH_TARGET_ADDRESS_BITSIZE configuration"
+#endif
 }
 
 static void
@@ -107,38 +117,37 @@ epiphany_mem_port_event (struct hw *me,
 static void epiphany_mem_signal(struct hw *me, unsigned_word addr,
 			   unsigned nr_bytes, char *transfer, int sigrc)
 {
-  SIM_CPU *current_cpu;
+  SIM_CPU *cpu;
   sim_cia cia;
   address_word ip;
 
-  current_cpu = hw_system_cpu(me);
-  cia = current_cpu ? CPU_PC_GET (current_cpu) : NULL_CIA;
+  cpu = hw_system_cpu (me);
+  cia = cpu ? CPU_PC_GET (cpu) : NULL_CIA;
   ip = CIA_ADDR (cia);
 
   switch (sigrc)
     {
     case SIM_SIGSEGV:
       sim_io_eprintf(hw_system(me),
-		     "%s: %d byte %s at unmapped address 0x%lx at 0x%lx\n",
+		     "%s: %d byte %s to unmapped address 0x%lx at 0x%lx\n",
 		     hw_path(me), (int) nr_bytes, transfer,
 		     (unsigned long) addr, (unsigned long) ip);
       break;
     case SIM_SIGBUS:
       sim_io_eprintf(hw_system(me),
-		     "%s: %d byte misaligned %s at unmapped address 0x%lx at "
+		     "%s: %d byte misaligned %s to unmapped address 0x%lx at "
 		     "0x%lx\n",
 		     hw_path(me), (int) nr_bytes, transfer,
 		     (unsigned long) addr, (unsigned long) ip);
       break;
     default:
       sim_io_eprintf(hw_system(me),
-		     "%s: %d byte %s at address 0x%lx at 0x%lx\n",
+		     "%s: %d byte %s to address 0x%lx at 0x%lx\n",
 		     hw_path(me), (int) nr_bytes, transfer,
 		     (unsigned long) addr, (unsigned long) ip);
       break;
     }
-
-    hw_halt(me, sim_stopped, sigrc);
+  hw_halt (me, sim_stopped, sigrc);
 }
 
 static unsigned
