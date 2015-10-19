@@ -1,3 +1,10 @@
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* allinsn.exp: Separate cgen instruction unit tests and CPU
+	behaviour tests by file extension.
+	* hwloops.s: Renamed from hwloops.cgs
+	* syscalls.s: Renamed from syscalls.cgs
+
 2015-10-13  Ola Jeppsson  <ola@adapteva.com>
 
 	* fadd-simd.cgs: New test.

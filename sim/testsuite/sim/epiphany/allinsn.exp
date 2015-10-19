@@ -16,7 +16,8 @@ if [istarget epiphany*-*-*] {
     }
 
     # The .cgs suffix is for "cgen .s".
-    foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.cgs]] {
+    foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.cgs \
+					 $srcdir/$subdir/*.s]] {
 	# If we're only testing specific files and this isn't one of them,
 	# skip it.
 	if ![runtest_file_p $runtests $src] {
