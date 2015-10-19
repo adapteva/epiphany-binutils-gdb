@@ -1,5 +1,10 @@
 2015-10-19  Ola Jeppsson  <ola@adapteva.com>
 
+	* fmul-denormal-exception.s: New test.
+	* fmul64-denormal-exception.s: New test.
+
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
 	* fabs64.cgs: New test.
 	* fadd64.cgs: New test.
 	* fmadd64.cgs: New test.
