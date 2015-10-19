@@ -3077,7 +3077,7 @@
          ()
          (%str "f" name " $rd6,$rn6")
          (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
-         (sem-fpu #t #f #f #f name f-rd6 (f-rn6))
+         (sem-fpu #t #t #f #f name f-rd6 (f-rn6))
          ()
          )
     (dnmi (%sym "f_" name "f32.l")
