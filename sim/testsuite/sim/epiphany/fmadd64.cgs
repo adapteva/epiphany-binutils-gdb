@@ -1,0 +1,27 @@
+# epiphany testcase for fmadd64 $frd6-di,$frn6-di,$frm6-di -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fmadd64
+fmadd64:
+	mode	1
+
+	mova	r40,values
+	ldrd	r20,[r40],+1
+	ldrd	r22,[r40],+1
+	ldrd	r24,[r40],+1
+	ldrd	r26,[r40],+1
+	fmadd64	r20,r22,r24
+	fsub64	r32,r20,r26
+	bbne	1f
+	pass
+1:
+	fail
+
+.align 3
+values:
+;;	rd	rn	rm		expect
+.double	-128.0,	0.5,	-96.375,	-176.1875

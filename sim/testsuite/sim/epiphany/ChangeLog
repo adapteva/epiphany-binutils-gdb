@@ -1,5 +1,15 @@
 2015-10-19  Ola Jeppsson  <ola@adapteva.com>
 
+	* fabs64.cgs: New test.
+	* fadd64.cgs: New test.
+	* fmadd64.cgs: New test.
+	* fmax64.cgs: New test.
+	* fmsub64.cgs: New test.
+	* fmul64.cgs: New test.
+	* fsub64.cgs: New test.
+
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
 	* allinsn.exp: Separate cgen instruction unit tests and CPU
 	behaviour tests by file extension.
 	* hwloops.s: Renamed from hwloops.cgs

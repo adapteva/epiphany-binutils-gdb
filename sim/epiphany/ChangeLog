@@ -1,3 +1,34 @@
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (float64_calc): Common float64 calculation
+	function. Same structure as the single-precision
+	implementation.
+	(get_epiphany_fzeroflag64): Implemented.
+	(get_epiphany_fnegativeflag64): Implemented.
+	(get_epiphany_funderflowflag64): Implemented.
+	(get_epiphany_foverflowflag64): Implemented.
+	(get_epiphany_finvalidflag64): Implemented.
+	(epiphany_fadd64): Add call to float64_calc().
+	(epiphany_fmul64): Likewise.
+	(epiphany_fsub64): Likewise.
+	(epiphany_fmadd64): Likewise.
+	(epiphany_fmsub64): Likewise.
+	(epiphany_fabs64): Likewise.
+	(epiphany_fmax64): Likewise.
+	(epiphany_fix64): Likewise.
+	(epiphany_float64): Likewise.
+	(GETMANTDF): Double precision float helper function.
+	(GETEXPDF): Likewise.
+	(DENORMALDF_P): Likewise.
+	(MAKEZERODF): Likewise.
+	(MAKEPOSITIVEDF): Likewise.
+	(ZERODF_P): Likewise.
+	(NEGATIVEDF_P): Likewise.
+	(NANDF_P): Likewise.
+	(MAKENANDF): Likewise.
+	(DFTODI): Likewise.
+	(DITODF): Likewise.
+
 2015-10-18  Ola Jeppsson  <ola@adapteva.com>
 
 	* dv-epiphany_mem.c (epiphany_mem_finish): Map address space

@@ -1,0 +1,31 @@
+# epiphany testcase for fabs64 $frd6-di,$frn6-di -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fabs64
+fabs64:
+	mode	1
+
+	mova	r40,values
+	ldrd	r20,[r40],+1
+	ldrd	r22,[r40],+1
+	fabs	r30,r20
+	fsub64	r32,r30,r22
+	bbne	1f
+	ldrd	r2,[r40],+1
+	ldrd	r4,[r40],+1
+	fabs	r30,r2
+	fsub64	r32,r30,r4
+	bbne	1f
+	pass
+1:
+	fail
+
+.align 3
+values:
+;;	in               expect
+.double	1099511627776.0, 1099511627776.0
+.double	-1.5,		 1.5

@@ -709,56 +709,331 @@ epiphany_fmax (SIM_CPU * current_cpu, SI frd, SI frn, SI frm)
   return fcal (current_cpu, FMAX_FP_OP, frd, frn, frm);
 }
 
-
 /* Double precision float */
-DI
-epiphany_fadd64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh)
+union df {
+  DI di;
+  double df;
+  struct {
+    uint64_t mantissa:52;
+    unsigned exponent:11;
+    unsigned sign:1;
+  } __attribute__((packed));
+} __attribute__((packed));
+
+static inline DI
+GETMANTDF (DI x)
 {
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fadd64");
-  return 0;
+  union df df = { .di = x };
+  return df.mantissa;
+}
+
+static inline DI
+GETEXPDF (DI x)
+{
+  union df df = { .di = x };
+  return df.exponent;
+}
+
+static inline BI
+DENORMALDF_P (DI x)
+{
+  return ((GETEXPDF (x) == 0) && (GETMANTDF (x) != 0));
+}
+
+static inline DI
+MAKEZERODF (DI x)
+{
+  union df df = { .di = x };
+  df.mantissa = 0ULL;
+  df.exponent = 0;
+  /* sign bit is preserved */
+  return df.di;
+}
+
+static inline DI
+MAKEPOSITIVEDF (DI x)
+{
+  union df df = { .di = x };
+  df.sign = 0;
+  return df.di;
+}
+
+static inline BI
+ZERODF_P (DI x)
+{
+  return ((GETEXPDF (x) == 0) && (GETMANTDF (x) == 0));
+}
+
+static inline BI
+NEGATIVEDF_P (DI x)
+{
+  union df df = { .di = x };
+  return df.sign;
+}
+
+static inline BI
+NANDF_P (DI x)
+{
+  return (GETEXPDF (x) == 0x7ff) && (GETMANTDF (x) != 0);
+}
+
+static inline DI
+MAKENANDF (DI x)
+{
+  union df df = { .di = x };
+
+  assert (x); /* x must be non-zero, otherwise result would be infinity */
+
+  df.exponent = 0x7ff;
+
+  return df.di;
+}
+
+static inline DI
+DFTODI (double x)
+{
+  union df df = { .df = x };
+  return df.di;
+}
+
+static inline double
+DITODF (DI x)
+{
+  union df df = { .di = x };
+  return df.df;
+}
+
+static DI
+float64_calc (SIM_CPU * current_cpu, int op, DI rd, DI rn, DI rm)
+{
+  DI res;
+  float_calc_type rdx, rnx, rmx; /* Use extended precision for calculations */
+  int roundingmode, tmproundingmode;
+  bool macresroundadjust = false;
+
+  assert (sizeof (float_calc_type) >= 12);
+
+  roundingmode = fegetround ();
+
+  /* Denormal operands are flushed to zero when input to a computation unit and
+   * do not generate an underflow exception. */
+  if (DENORMALDF_P (rd))
+    rd = MAKEZERODF (rd);
+  if (DENORMALDF_P (rn))
+    rn = MAKEZERODF (rn);
+  if (DENORMALDF_P (rm))
+    rm = MAKEZERODF (rm);
+
+  rdx = (float_calc_type) DITODF(rd);
+  rnx = (float_calc_type) DITODF(rn);
+  rmx = (float_calc_type) DITODF(rm);
+
+  /* Clear all exceptions.  */
+  feclearexcept (FE_ALL_EXCEPT);
+  isInvalidExp_patch = 0;
+
+  if (roundingmode != FE_TOWARDZERO && roundingmode != FE_TONEAREST)
+    {
+      fprintf (stderr, "Internal error: unknown RoundingMode\n");
+      exit (19);
+    }
+
+  switch (op)
+    {
+    case FADD_FP_OP:
+      rdx = rnx + rmx;
+      break;
+    case FSUB_FP_OP:
+      rdx = rnx - rmx;
+      break;
+    case FMUL_FP_OP:
+      rdx = rnx * rmx;
+      break;
+    case FMADD_FP_OP:
+      rdx += rnx * rmx;
+      break;
+    case FMSUB_FP_OP:
+      rdx -= rnx * rmx;
+      break;
+    case FMAX_FP_OP:
+      rdx = rnx >= rmx ? rnx : rmx;
+      break;
+    default:
+
+      fprintf (stderr, "Internal error: unknown operation\n");
+      exit (19);
+    };
+
+  if (rdx != 0.0 && roundingmode != FE_TOWARDZERO)
+    {
+      /* mult > 0 and acc > 0 and add. */
+      if (rdx > 0 && ((rnx > 0 && rmx > 0) || (rnx < 0 && rmx < 0))
+	  && (FMADD_FP_OP == op))
+	macresroundadjust = true;
+      /* mult < 0 and acc < 0 and add.  */
+      if (rdx < 0 && ((rnx > 0 && rmx < 0) || (rnx < 0 && rmx > 0))
+	  && (FMADD_FP_OP == op))
+	macresroundadjust = true;
+      /* mult < 0 and acc > 0 and sub.  */
+      if (rdx > 0 && ((rnx > 0 && rmx < 0) || (rnx < 0 && rmx > 0))
+	  && (FMSUB_FP_OP == op))
+	macresroundadjust = true;
+      /* mult > 0 and acc < 0 and sub.  */
+      if (rdx < 0 && ((rnx > 0 && rmx > 0) || (rnx < 0 && rmx < 0))
+	  && (FMSUB_FP_OP == op))
+	macresroundadjust = true;
+
+      if (rdx > 0)
+	tmproundingmode = macresroundadjust ? FE_UPWARD : FE_DOWNWARD;
+      else
+	tmproundingmode = macresroundadjust ? FE_DOWNWARD : FE_UPWARD;
+
+      if (fesetround (tmproundingmode))
+	{
+	  perror ("float64_calc: fesetround");
+	  exit(19);
+	}
+
+      /* Calculate again. */
+      rdx = (float_calc_type) DITODF(rd);
+      switch (op)
+	{
+	case FADD_FP_OP:
+	  rdx = rnx + rmx;
+	  break;
+	case FSUB_FP_OP:
+	  rdx = rnx - rmx;
+	  break;
+	case FMUL_FP_OP:
+	  rdx = rnx * rmx;
+	  break;
+	case FMADD_FP_OP:
+	  rdx += rnx * rmx;
+	  break;
+	case FMSUB_FP_OP:
+	  rdx -= rnx * rmx;
+	  break;
+	case FMAX_FP_OP:
+	  rdx = rnx >= rmx ? rnx : rmx;
+	  break;
+	default:
+
+	  fprintf (stderr, "Internal error: unknown operation\n");
+	  exit (19);
+	};
+
+      /* Return to previous rounding mode. */
+      if (fesetround (roundingmode))
+	{
+	  perror ("float64_calc: fesetround");
+	  exit(19);
+	}
+    }
+
+  res = DFTODI ((double) rdx);
+
+  /* Patch if one of operands is NAN.  */
+  if ((op == FMADD_FP_OP || op == FMSUB_FP_OP) && NANDF_P(rd))
+    res = MAKENANDF (rd);
+
+  if (NANDF_P (rm))
+    res = MAKENANDF (rm);
+
+  if (NANDF_P (rn))
+    res = MAKENANDF (rn);
+
+  if (NANDF_P (res))
+    {
+      isInvalidExp_patch = 1;
+      if (!NANDF_P (rn) && !NANDF_P (rm)
+	  && ((op != FMADD_FP_OP && op != FMSUB_FP_OP)
+	      || ((op == FMADD_FP_OP || op == FMSUB_FP_OP) && !NANDF_P (rd))))
+	res = MAKEPOSITIVEDF (res);
+    }
+
+  if (DENORMALDF_P (res))
+    res = MAKEZERODF (res);
+
+  return res;
+}
+
+BI
+get_epiphany_fzeroflag64 (SIM_CPU * current_cpu, DI res)
+{
+  return ZERODF_P (res);
+}
+
+BI
+get_epiphany_fnegativeflag64 (SIM_CPU * current_cpu, DI res)
+{
+  return NEGATIVEDF_P (res);
+}
+
+BI
+get_epiphany_funderflowflag64 (SIM_CPU * current_cpu, DI res)
+{
+  return (fetestexcept (FE_UNDERFLOW));
+}
+
+BI
+get_epiphany_foverflowflag64 (SIM_CPU * current_cpu, DI res)
+{
+  return (fetestexcept (FE_OVERFLOW));
+}
+
+BI
+get_epiphany_finvalidflag64 (SIM_CPU * current_cpu, DI res)
+{
+  return (isInvalidExp_patch || fetestexcept (FE_INVALID));
 }
 
 DI
-epiphany_fmul64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh)
+epiphany_fadd64 (SIM_CPU * current_cpu, DI rd, DI rn, DI rm)
 {
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fmul64");
-  return 0;
+  return float64_calc (current_cpu, FADD_FP_OP, rd, rn, rm);
 }
 
 DI
-epiphany_fsub64(SIM_CPU *current_cpu, DI fr0, DI frg, DI frh)
+epiphany_fmul64 (SIM_CPU * current_cpu, DI rd, DI rn, DI rm)
 {
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fsub64");
-  return 0;
+  return float64_calc (current_cpu, FMUL_FP_OP, rd, rn, rm);
 }
 
 DI
-epiphany_fmadd64(SIM_CPU *current_cpu, DI fr0, DI frm, DI frn)
+epiphany_fsub64 (SIM_CPU * current_cpu, DI rd, DI rn, DI rm)
 {
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fmadd64");
-  return 0;
+  return float64_calc (current_cpu, FSUB_FP_OP, rd, rn, rm);
 }
 
 DI
-epiphany_fmsub64(SIM_CPU *current_cpu, DI fr0, DI frm, DI frn)
+epiphany_fmadd64 (SIM_CPU * current_cpu, DI rd, DI rn, DI rm)
 {
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fmsub64");
-  return 0;
+  return float64_calc (current_cpu, FMADD_FP_OP, rd, rn, rm);
+}
+
+DI
+epiphany_fmsub64 (SIM_CPU * current_cpu, DI rd, DI rn, DI rm)
+{
+  return float64_calc (current_cpu, FMSUB_FP_OP, rd, rn, rm);
+}
+
+DI
+epiphany_fabs64 (SIM_CPU * current_cpu, DI rd, DI rn)
+{
+  rd = rn;
+
+  if (DENORMALDF_P (rd))
+    rd = MAKEZERODF (rd);
+
+  rd = MAKEPOSITIVEDF (rd);
+
+  return rd;
+}
+
+DI
+epiphany_fmax64 (SIM_CPU * current_cpu, DI rd, DI rn, DI rm)
+{
+  return float64_calc (current_cpu, FMAX_FP_OP, rd, rn, rm);
 }
 
 #if 0
@@ -782,73 +1057,3 @@ epiphany_float64(SIM_CPU *current_cpu, DI frd, DI frn)
   return 0;
 }
 #endif
-
-DI
-epiphany_fabs64(SIM_CPU *current_cpu, DI frd, DI frn)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fabs64");
-  return 0;
-}
-
-DI
-epiphany_fmax64(SIM_CPU *current_cpu, DI frd, DI frn, DI frm)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fmax64");
-  return 0;
-}
-
-BI
-get_epiphany_fzeroflag64(SIM_CPU *current_cpu, DI res)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fzeroflag64");
-  return 0;
-}
-
-BI
-get_epiphany_fnegativeflag64(SIM_CPU *current_cpu, DI res)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "fnegativeflag64");
-  return 0;
-}
-
-BI
-get_epiphany_funderflowflag64(SIM_CPU *current_cpu, DI res)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "funderflowflag64");
-  return 0;
-}
-
-BI
-get_epiphany_foverflowflag64(SIM_CPU *current_cpu, DI res)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "foverflowflag64");
-  return 0;
-}
-
-BI
-get_epiphany_finvalidflag64(SIM_CPU *current_cpu, DI res)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  sim_engine_abort (sd, current_cpu, GET_H_PC(),
-		    "%s: function not implemented.\n",
-		    "finvalidflag64");
-  return 0;
-}
