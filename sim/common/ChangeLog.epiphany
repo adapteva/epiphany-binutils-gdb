@@ -1,5 +1,10 @@
 2015-10-21  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim-memopt.c (memory_option_handler): Print 64-bit addresses
+	zero-padded to 16 digits.
+
+2015-10-21  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-core.h (struct _sim_core_mapping): Change to address_word type
 	for addr, bound, and nr_bytes.
 	* sim-hw.c (sim_cpu_hw_io_read_buffer): Change to address_word type
