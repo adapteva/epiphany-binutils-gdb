@@ -61,8 +61,8 @@ void sim_cpu_hw_io_read_buffer
  struct hw *hw,
  void *dest,
  int space,
- unsigned_word addr,
- unsigned nr_bytes);
+ address_word addr,
+ address_word nr_bytes);
 
 void sim_cpu_hw_io_write_buffer
 (sim_cpu *cpu,
@@ -70,28 +70,28 @@ void sim_cpu_hw_io_write_buffer
  struct hw *hw,
  const void *source,
  int space,
- unsigned_word addr,
- unsigned nr_bytes);
+ address_word addr,
+ address_word nr_bytes);
 
 
 
 /* SYSTEM: A data transfer is being initiated by the system. */
 
-unsigned sim_hw_io_read_buffer
+address_word sim_hw_io_read_buffer
 (struct sim_state *sd,
  struct hw *hw,
  void *dest,
  int space,
- unsigned_word addr,
- unsigned nr_bytes);
+ address_word addr,
+ address_word nr_bytes);
 
-unsigned sim_hw_io_write_buffer
+address_word sim_hw_io_write_buffer
 (struct sim_state *sd,
  struct hw *hw,
  const void *source,
  int space,
- unsigned_word addr,
- unsigned nr_bytes);
+ address_word addr,
+ address_word nr_bytes);
 
 
 #endif

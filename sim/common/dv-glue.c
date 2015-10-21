@@ -179,8 +179,8 @@ struct hw_glue
   unsigned sizeof_input;
   /* our output registers */
   int space;
-  unsigned_word address;
-  unsigned sizeof_output;
+  address_word address;
+  address_word sizeof_output;
   int *output;
   int nr_outputs;
 };
@@ -293,20 +293,20 @@ hw_glue_finish (struct hw *me)
 	     glue->int_number, glue->nr_inputs, glue->nr_outputs));
 }
 
-static unsigned
+static address_word
 hw_glue_io_read_buffer (struct hw *me,
 			void *dest,
 			int space,
-			unsigned_word addr,
-			unsigned nr_bytes)
+			address_word addr,
+			address_word nr_bytes)
 {
   struct hw_glue *glue = (struct hw_glue *) hw_data (me);
   int reg = ((addr - glue->address) / sizeof (unsigned_word)) % glue->nr_outputs;
 
   if (nr_bytes != sizeof (unsigned_word)
       || (addr % sizeof (unsigned_word)) != 0)
-    hw_abort (me, "missaligned read access (%d:0x%lx:%d) not supported",
-	      space, (unsigned long)addr, nr_bytes);
+    hw_abort (me, "missaligned read access (%d:0x%lx:%lu) not supported",
+	      space, (unsigned long) addr, (unsigned long) nr_bytes);
 
   *(unsigned_word *)dest = H2BE_4 (glue->output[reg]);
 
@@ -317,20 +317,20 @@ hw_glue_io_read_buffer (struct hw *me,
 }
 
 
-static unsigned
+static address_word
 hw_glue_io_write_buffer (struct hw *me,
 			 const void *source,
 			 int space,
-			 unsigned_word addr,
-			 unsigned nr_bytes)
+			 address_word addr,
+			 address_word nr_bytes)
 {
   struct hw_glue *glue = (struct hw_glue *) hw_data (me);
   int reg = ((addr - glue->address) / sizeof (unsigned_word)) % max_nr_ports;
 
   if (nr_bytes != sizeof (unsigned_word)
       || (addr % sizeof (unsigned_word)) != 0)
-    hw_abort (me, "missaligned write access (%d:0x%lx:%d) not supported",
-	      space, (unsigned long) addr, nr_bytes);
+    hw_abort (me, "missaligned write access (%d:0x%lx:%lu) not supported",
+	      space, (unsigned long) addr, (unsigned long) nr_bytes);
 
   glue->output[reg] = H2BE_4 (*(unsigned_word *)source);
 

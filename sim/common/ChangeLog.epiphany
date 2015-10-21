@@ -1,3 +1,48 @@
+2015-10-21  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-core.h (struct _sim_core_mapping): Change to address_word type
+	for addr, bound, and nr_bytes.
+	* sim-hw.c (sim_cpu_hw_io_read_buffer): Change to address_word type
+	for addr, nr_bytes, and return value.
+	(sim_cpu_hw_io_write_buffer): Likewise.
+	* sim-hw.h: Adjust above read_buffer/write_buffer function prototypes.
+	* hw-device.h (hw_io_read_buffer_method): Change to address_word type
+	for addr, nr_bytes, and return value.
+	(hw_io_write_buffer_method): Likewise.
+	(hw_dma_read_buffer_method): Likewise.
+	(hw_dma_write_buffer_method): Likewise.
+	(hw_unit_address_to_attach_address_method): Change to address_word
+	pointer type for attach_size.
+	(hw_unit_size_to_attach_size_method): Likewise.
+	* hw-base.c (generic_hw_unit_address_to_attach_address): Adjust to
+	address_word pointer type for attach_address.
+	(generic_hw_unit_size_to_attach_size): Likewise.
+	(panic_hw_io_read_buffer): Adjust to address_word type for addr,
+	nr_bytes, and return value.
+	(panic_hw_io_write_buffer): Likewise.
+	(passthrough_hw_dma_read_buffer): Likewise.
+	(passthrough_hw_dma_write_buffer): Likewise.
+	(do_hw_attach_regs): Change to address_word type for attach_address
+	and attach_size.
+	* dv-cfi.c (cfi_io_write_buffer): Adjust to address_word type for
+	addr, nr_bytes, and return value.
+	(cfi_io_read_buffer): Likewise.
+	(attach_cfi_regs): Adjust to address_word pointer type for
+	attach_address.
+	* dv-core.c (dv_core_dma_read_buffer_callback): Adjust to address_word
+	type for addr, nr_bytes, and return value.
+	(dv_core_dma_write_buffer_callback): Likewise.
+	* dv-glue.c (struct hw_glue): Change from unsigned_word to
+	address_word type for address and sizeof_output.
+	(hw_glue_io_read_buffer): Adjust to address_word type for addr,
+	nr_bytes, and return value.
+	(hw_glue_io_write_buffer): Likewise.
+	* dv-pal.c (hw_pal_io_read_buffer): Adjust to address_word type for
+	addr, nr_bytes, and return value.
+	(hw_pal_io_write_buffer): Likewise.
+	(hw_pal_instance_read_callback): Adjust to address_word type for len.
+	(hw_pal_instance_write_callback): Likewise.
+
 2015-10-02  Ola Jeppsson  <ola@adapteva.com>
 
 	* cgen-ops.h (ADDCDI): Added missing 64-bit variant.

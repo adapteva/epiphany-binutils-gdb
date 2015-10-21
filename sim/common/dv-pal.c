@@ -335,12 +335,12 @@ write_hw_pal (struct hw *me,
 
 /* Reads/writes */
 
-static unsigned
+static address_word
 hw_pal_io_read_buffer (struct hw *me,
 		       void *dest,
 		       int space,
-		       unsigned_word addr,
-		       unsigned nr_bytes)
+		       address_word addr,
+		       address_word nr_bytes)
 {
   hw_pal_device *hw_pal = (hw_pal_device *) hw_data (me);
   unsigned_1 *byte = (unsigned_1 *) dest;
@@ -420,12 +420,12 @@ hw_pal_io_read_buffer (struct hw *me,
 }
 
 
-static unsigned
+static address_word
 hw_pal_io_write_buffer (struct hw *me,
 			const void *source,
 			int space,
-			unsigned_word addr,
-			unsigned nr_bytes)
+			address_word addr,
+			address_word nr_bytes)
 {
   hw_pal_device *hw_pal = (hw_pal_device*) hw_data (me);
   unsigned_1 *byte = (unsigned_1 *) source;
@@ -493,7 +493,7 @@ hw_pal_instance_delete_callback (hw_instance *instance)
 static int
 hw_pal_instance_read_callback (hw_instance *instance,
 			      void *buf,
-			      unsigned_word len)
+			      address_word len)
 {
   DITRACE (pal, ("read - %s (%ld)", (const char*) buf, (long int) len));
   return sim_io_read_stdin (buf, len);
@@ -504,7 +504,7 @@ hw_pal_instance_read_callback (hw_instance *instance,
 static int
 hw_pal_instance_write_callback (hw_instance *instance,
 				const void *buf,
-				unsigned_word len)
+				address_word len)
 {
   int i;
   const char *chp = buf;
