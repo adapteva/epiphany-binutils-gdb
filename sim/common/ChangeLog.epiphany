@@ -1,3 +1,8 @@
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* cgen-ops.h (ZEXTDIDI): Add missing 64-bit variant.
+	(TRUNCDIDI): Likewise.
+
 2015-10-21  Ola Jeppsson  <ola@adapteva.com>
 
 	* sim-memopt.c (memory_option_handler): Print 64-bit addresses

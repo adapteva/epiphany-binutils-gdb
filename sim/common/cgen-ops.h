@@ -267,6 +267,11 @@ extern DI ZEXTSIDI (SI);
 #else
 #define ZEXTSIDI(x) ((DI) (USI) (x))
 #endif
+#if defined (DI_FN_SUPPORT)
+extern DI ZEXTDIDI (SI);
+#else
+#define ZEXTDIDI(x) ((DI) (UDI) (x))
+#endif
 
 #define TRUNCQIBI(x) ((BI) (QI) (x))
 #define TRUNCHIBI(x) ((BI) (HI) (x))
@@ -294,6 +299,11 @@ extern HI TRUNCDIHI (DI);
 extern SI TRUNCDISI (DI);
 #else
 #define TRUNCDISI(x) ((SI) (DI) (x))
+#endif
+#if defined (DI_FN_SUPPORT)
+extern DI TRUNCDIDI (DI);
+#else
+#define TRUNCDIDI(x) ((DI) (DI) (x))
 #endif
 
 /* Composing/decomposing the various types.
