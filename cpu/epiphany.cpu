@@ -622,7 +622,7 @@
 (define-enum
   (name e-scr-status-bits)
   (comment "core status bits")
-  ;;(attrs)
+  ;;(attrs) -- epiphany-3,4,5
   (prefix H-SCR-STATUS-)
   (values
     (
@@ -665,38 +665,38 @@
 ;; Exception cause bits, different for Epiphany-III and Epiphany-IV
 ;; Use the Epiphany-III values for now.
 ;; TODO: Have separate machs for Epiphany-III and Epiphany-IV
+;(define-enum
+;  (name e-excause)
+;  (comment "Epiphany-III exception cause")
+;  (prefix H-SCR-STATUS-EXCAUSE-)
+;  ;;(attrs (MACH epiphanymf-3))
+;  (values
+;	(
+;	  ("UNIMPLEMENTED" 4)
+;	  ("SWI"           1)
+;	  ("UNALIGNED"     2)
+;	  ("ILLEGAL"       5)
+;	  ("FPU"           3)
+;	)
+;  )
+;)
+
+;; Epiphany-IV exception causes
 (define-enum
   (name e-excause)
-  (comment "Epiphany-III exception cause")
+  (comment "Epiphany-IV exception cause")
   (prefix H-SCR-STATUS-EXCAUSE-)
-  ;;(attrs (MACH epiphanymf-3))
+  ;;(attrs (MACH epiphanymf-4))
   (values
 	(
-	  ("UNIMPLEMENTED" 4)
-	  ("SWI"           1)
-	  ("UNALIGNED"     2)
-	  ("ILLEGAL"       5)
-	  ("FPU"           3)
+	  ("UNIMPLEMENTED" 15)
+	  ("SWI"           14)
+	  ("UNALIGNED"     13)
+	  ("ILLEGAL"       12)
+	  ("FPU"            7)
 	)
   )
 )
-
-;; Epiphany-IV exception causes
-;;(define-enum
-;;  (name e-excause)
-;;  (comment "Epiphany-IV exception cause")
-;;  (prefix H-SCR-STATUS-EXCAUSE)
-;;  ;;(attrs (MACH epiphanymf-4))
-;;  (values
-;;	(
-;;	  ("UNIMPLEMENTED" 15)
-;;	  ("SWI"           14)
-;;	  ("UNALIGNED"     13)
-;;	  ("ILLEGAL"       12)
-;;	  ("FPU"            7)
-;;	)
-;;  )
-;;)
 
 (define-enum
   (name e-scr-config-bits)
