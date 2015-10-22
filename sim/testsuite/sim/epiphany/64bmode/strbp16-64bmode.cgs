@@ -1,0 +1,23 @@
+# epiphany testcase for strb $rd,[$rn],$rm -*- Asm -*-
+# mach: all
+
+	.include "testutils64.inc"
+
+	start64
+
+	.global strbp16
+strbp16:
+	mova	r0,-1
+	mova	r1,-1
+	mova	r2,0xffff0110
+	mova	r3,0xffffffff
+	mova	r4,1
+	mova	r5,0
+
+	strb r0,[r2],r0		;stores 255 to 0xffffffffffff0110 and decrements
+	ldrb r0,[r2,1]		;load at same address
+	sub	r0,r0,0xff
+	bne	1f
+	pass
+
+1:	fail

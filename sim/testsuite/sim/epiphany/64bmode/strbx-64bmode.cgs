@@ -1,0 +1,18 @@
+# epiphany testcase for strb $rd6,[$rn6,$rm6] -*- Asm -*-
+# mach: all
+
+	.include "testutils64.inc"
+
+	start64
+
+	.global strbx
+strbx:
+	mova	r20,0xffff0000
+	mova	r21,0x0000ffff
+	mova	r22,0x00000100
+	mova	r23,0xffff0000
+
+	mov	r12,0x5aa5
+	strb	r12,[r20,r22]
+	ldrb	r13,[r20,r22]
+	compare	r13,0xa5

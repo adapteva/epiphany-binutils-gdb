@@ -1,3 +1,57 @@
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* 64bmode/allinsn.exp: New file.
+	* 64bmode/ldrbd-64bmode.cgs: New test.
+	* 64bmode/ldrbd16-64bmode.cgs: New test.
+	* 64bmode/ldrbp-64bmode.cgs: New test.
+	* 64bmode/ldrbp16-64bmode.cgs: New test.
+	* 64bmode/ldrbx-64bmode.cgs: New test.
+	* 64bmode/ldrbx16-64bmode.cgs: New test.
+	* 64bmode/ldrd-64bmode.cgs: New test.
+	* 64bmode/ldrd16-64bmode.cgs: New test.
+	* 64bmode/ldrdd-64bmode.cgs: New test.
+	* 64bmode/ldrdd16-64bmode.cgs: New test.
+	* 64bmode/ldrdp-64bmode.cgs: New test.
+	* 64bmode/ldrdp16-64bmode.cgs: New test.
+	* 64bmode/ldrdx-64bmode.cgs: New test.
+	* 64bmode/ldrdx16-64bmode.cgs: New test.
+	* 64bmode/ldrhd-64bmode.cgs: New test.
+	* 64bmode/ldrhd16-64bmode.cgs: New test.
+	* 64bmode/ldrhp-64bmode.cgs: New test.
+	* 64bmode/ldrhp16-64bmode.cgs: New test.
+	* 64bmode/ldrhx-64bmode.cgs: New test.
+	* 64bmode/ldrhx16-64bmode.cgs: New test.
+	* 64bmode/ldrp-64bmode.cgs: New test.
+	* 64bmode/ldrp16-64bmode.cgs: New test.
+	* 64bmode/ldrpd-64bmode.cgs: New test.
+	* 64bmode/ldrx-64bmode.cgs: New test.
+	* 64bmode/ldrx16-64bmode.cgs: New test.
+	* 64bmode/strbd-64bmode.cgs: New test.
+	* 64bmode/strbd16-64bmode.cgs: New test.
+	* 64bmode/strbp-64bmode.cgs: New test.
+	* 64bmode/strbp16-64bmode.cgs: New test.
+	* 64bmode/strbx-64bmode.cgs: New test.
+	* 64bmode/strbx16-64bmode.cgs: New test.
+	* 64bmode/strd-64bmode.cgs: New test.
+	* 64bmode/strd16-64bmode.cgs: New test.
+	* 64bmode/strdd-64bmode.cgs: New test.
+	* 64bmode/strdd16-64bmode.cgs: New test.
+	* 64bmode/strdp-64bmode.cgs: New test.
+	* 64bmode/strdp16-64bmode.cgs: New test.
+	* 64bmode/strdx-64bmode.cgs: New test.
+	* 64bmode/strdx16-64bmode.cgs: New test.
+	* 64bmode/strp-64bmode.cgs: New test.
+	* 64bmode/strp16-64bmode.cgs: New test.
+	* 64bmode/strwd-64bmode.cgs: New test.
+	* 64bmode/strwd16-64bmode.cgs: New test.
+	* 64bmode/strwp-64bmode.cgs: New test.
+	* 64bmode/strwp16-64bmode.cgs: New test.
+	* 64bmode/strwx-64bmode.cgs: New test.
+	* 64bmode/strwx16-64bmode.cgs: New test.
+	* 64bmode/strx-64bmode.cgs: New test.
+	* 64bmode/strx16-64bmode.cgs: New test.
+	* 64bmode/testutils64.inc: New test.
+
 2015-10-19  Ola Jeppsson  <ola@adapteva.com>
 
 	* fmul-denormal-exception.s: New test.

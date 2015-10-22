@@ -1,0 +1,13 @@
+# epiphany testcase for ldrb $rd6,[$rn6,$disp11] -*- Asm -*-
+# mach: all
+
+	.include "testutils64.inc"
+
+	start64
+
+	.global ldrbd
+ldrbd:
+	mova	r22,0xffff0000
+	mova	r23,0xffffffff
+	ldrb r21,[r22,8]
+	compare	r21,8

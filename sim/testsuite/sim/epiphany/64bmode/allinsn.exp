@@ -1,0 +1,59 @@
+# EPIPHANY simulator testsuite.
+
+if [istarget epiphany*-*-*] {
+    global global_ld_options
+    global global_sim_options
+
+    # load support procs (none yet)
+    # load_lib cgen.exp
+
+    # all machines
+    set all_machs "epiphany32"
+
+    set board [target_info name]
+
+    if {[board_info $board sim,ldflags] != ""} {
+	set global_ld_options [board_info $board sim,ldflags]
+    }
+
+    if ![info exists global_sim_options] {
+        set global_sim_options ""
+    }
+    set orig_global_sim_options "$global_sim_options"
+
+    # The .cgs suffix is for "cgen .s".
+
+    foreach src [lsort [glob -nocomplain $srcdir/$subdir/ldr*.cgs \
+					 $srcdir/$subdir/ldr*.s]] {
+
+	# Map test pattern file for ldr tests. This is a bit fragile because
+	# the file is opened in O_RDWR mode.
+	set global_sim_options "$orig_global_sim_options --memory-mapfile [file dirname [info script]]/ldrdata.bin --memory-region 0xffffffffffff0000,0x100"
+
+	# If we're only testing specific files and this isn't one of them,
+	# skip it.
+	if ![runtest_file_p $runtests $src] {
+	    continue
+	}
+
+	run_sim_test $src $all_machs
+    }
+
+    foreach src [lsort [glob -nocomplain $srcdir/$subdir/str*.cgs \
+					 $srcdir/$subdir/str*.s]] {
+
+	# Don't map test pattern file for str tests. Use an empty mapping
+	# instead.
+	set global_sim_options "$orig_global_sim_options --memory-clear --memory-region 0xffffffffffff0100,0x100"
+
+	# If we're only testing specific files and this isn't one of them,
+	# skip it.
+	if ![runtest_file_p $runtests $src] {
+	    continue
+	}
+
+	run_sim_test $src $all_machs
+    }
+
+    set global_sim_options "$orig_global_sim_options"
+}
