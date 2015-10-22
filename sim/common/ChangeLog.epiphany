@@ -1,5 +1,10 @@
 2015-10-22  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim-memopt.h (sim_memopt): Change to address_word type for addr and
+	nr_bytes.
+
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
 	* cgen-ops.h (ZEXTDIDI): Add missing 64-bit variant.
 	(TRUNCDIDI): Likewise.
 
