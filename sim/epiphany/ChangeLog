@@ -1,5 +1,9 @@
 2015-10-22  Ola Jeppsson  <ola@adapteva.com>
 
+	* configure: Regenerate.
+
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
 	* configure.ac (SIM_AC_OPTION_ALIGNMENT): Set 64-bit address word
 	bitsize.
 	* sim-main.h (CIA_ADDR): Define.
