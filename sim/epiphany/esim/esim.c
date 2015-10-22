@@ -97,7 +97,7 @@ es_shm_core_base(const es_state *esim, unsigned coreid)
  * @return Simulator node where addr is located
  */
 static signed
-es_addr_to_node(const es_state *esim, uint32_t addr)
+es_addr_to_node(const es_state *esim, address_word addr)
 {
   unsigned coreid;
   signed row_offset, col_offset, node;
@@ -144,7 +144,8 @@ out:
  * @param[in]  addr   target (Epiphany) memory address
  */
 static void
-es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
+es_addr_translate(const es_state *esim, es_transl *transl,
+		  address_word addr)
 {
   uint8_t *tmp_ptr;
   signed node;
@@ -276,7 +277,7 @@ es_tx_one_shm_load(es_state *esim, es_transaction *tx)
 static int
 es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 {
-  uint32_t i, invalidate;
+  address_word i, invalidate;
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
   memmove(tx->sim_addr.mem, tx->target, n);
   tx->target += n;
@@ -538,14 +539,15 @@ es_tx_run(es_state *esim, es_transaction *tx)
  * @return ES_OK on success
  */
 int
-es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
+es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
+	     uint8_t *src)
 {
   es_transaction tx = {
     ES_REQ_STORE,
     src,
-    addr,
-    size,
-    size,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
     ES_TRANSL_INIT
   };
   return es_tx_run(esim, &tx);
@@ -561,14 +563,15 @@ es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
  * @return ES_OK on success
  */
 int
-es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
+es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
+	    uint8_t *dst)
 {
   es_transaction tx = {
     ES_REQ_LOAD,
     dst,
-    addr,
-    size,
-    size,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
     ES_TRANSL_INIT
   };
   return es_tx_run(esim, &tx);
@@ -584,14 +587,15 @@ es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
  * @return ES_OK on success
  */
 int
-es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
+es_mem_testset(es_state *esim, uint64_t addr, uint64_t size,
+	       uint8_t *dst)
 {
   es_transaction tx = {
     ES_REQ_TESTSET,
     dst,
-    addr,
-    size,
-    size,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
     ES_TRANSL_INIT
   };
   return es_tx_run(esim, &tx);
@@ -1557,7 +1561,7 @@ es_dump_config(const es_state *esim)
 	  "  .cols            = %d\n"
 	  "  .core_mem_region = %zu\n"
 	  "  .ext_ram_node    = %d\n"
-	  "  .ext_ram_base    = 0x%.8x\n"
+	  "  .ext_ram_base    = 0x%.8lx\n"
 	  "  .ext_ram_size    = %zu\n"
 	  "  .cores           = %d\n"
 	  "  .nodes           = %d\n"

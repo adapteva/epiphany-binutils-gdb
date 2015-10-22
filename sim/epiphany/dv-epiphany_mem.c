@@ -93,8 +93,8 @@ epiphany_mem_finish (struct hw *me)
   /* Shadow map entire address space to this device at lowest (INT_MAX) level.
    * User defined mappings will always take precedence. */
 #if (WITH_TARGET_ADDRESS_BITSIZE == 64)
-  hw_attach_address (parent, bottom, 0, 0, 0xfffffffffffffff0ULL, me);
-  hw_attach_address (parent, bottom, 0, 0xfffffffffffffff0ULL, 0x10, me);
+  hw_attach_address (parent, bottom, 0, 0, 0xfffffffffffffff0UL, me);
+  hw_attach_address (parent, bottom, 0, 0xfffffffffffffff0UL, 0x10, me);
 #elif (WITH_TARGET_ADDRESS_BITSIZE == 32)
   hw_attach_address (parent, bottom, 0, 0, 0xfffffff0, me);
   hw_attach_address (parent, bottom, 0, 0xfffffff0, 0x10, me);
@@ -114,8 +114,9 @@ epiphany_mem_port_event (struct hw *me,
   hw_abort (me, "epiphany_mem_port_event: not implemented");
 }
 
-static void epiphany_mem_signal(struct hw *me, unsigned_word addr,
-			   unsigned nr_bytes, char *transfer, int sigrc)
+static void
+epiphany_mem_signal(struct hw *me, address_word addr,
+		    address_word nr_bytes, char *transfer, int sigrc)
 {
   SIM_CPU *cpu;
   sim_cia cia;
@@ -150,12 +151,12 @@ static void epiphany_mem_signal(struct hw *me, unsigned_word addr,
   hw_halt (me, sim_stopped, sigrc);
 }
 
-static unsigned
+static address_word
 epiphany_mem_io_read_buffer (struct hw *me,
 			 void *dest,
 			 int space,
-			 unsigned_word base,
-			 unsigned nr_bytes)
+			 address_word base,
+			 address_word nr_bytes)
 {
   es_state *esim;
 
@@ -171,12 +172,12 @@ epiphany_mem_io_read_buffer (struct hw *me,
     return nr_bytes;
 }
 
-static unsigned
+static address_word
 epiphany_mem_io_write_buffer (struct hw *me,
 			  const void *source,
 			  int space,
-			  unsigned_word base,
-			  unsigned nr_bytes)
+			  address_word base,
+			  address_word nr_bytes)
 {
   es_state *esim;
 

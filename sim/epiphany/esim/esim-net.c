@@ -29,7 +29,6 @@
 #include "esim-net.h"
 #include "esim-int.h"
 
-
 /* Need these for correct cpu struct */
 #define WANT_CPU epiphanybf
 #define WANT_CPU_EPIPHANYBF
@@ -666,7 +665,8 @@ es_net_init_mpi_win(es_state *esim)
 }
 
 void
-es_net_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
+es_net_addr_translate(const es_state *esim, es_transl *transl,
+		      address_word addr)
 {
   if (ES_ADDR_IS_EXT_RAM(addr))
     {

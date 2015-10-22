@@ -1,3 +1,34 @@
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure.ac (SIM_AC_OPTION_ALIGNMENT): Set 64-bit address word
+	bitsize.
+	* sim-main.h (CIA_ADDR): Define.
+	(INVALID_INSTRUCTION_ADDRESS): Define.
+	* dv-epiphany_mem.c (epiphany_mem_finish): Fix compiler warning.
+	(epiphany_mem_signal): Change to address_word type for addr
+	and nr_bytes.
+	(epiphany_mem_io_read_buffer): Change to address word type for
+	addr, nr_bytes, and return value.
+	(epiphany_mem_io_write_buffer): Likewise.
+	* epiphany.c (epiphanybf_scache_invalidate): Use
+	INVALID_INSTRUCTION_ADDRESS instead of hardcoded value.
+	* esim/esim.h (es_cluster_cfg): Use uint64_t type for
+	addresses and sizes in the public API.
+	(es_mem_store): Likewise.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	* esim/esim-int.h (es_transl): Use address_word type for addresses and
+	sizes internally.
+	* esim/esim-net.h (es_net_addr_translate): Likewise.
+	* esim/esim.c (es_tx_one_shm_store): Likewise.
+	(es_addr_to_node(const es_state *esim, address_word addr): Likewise.
+	(es_mem_store): Likewise.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	(es_dump_config):
+	* esim/esim-net.c (es_net_addr_translate): Adjust function header for
+	above.
+
 2015-10-19  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-fp.c (float64_calc): Common float64 calculation

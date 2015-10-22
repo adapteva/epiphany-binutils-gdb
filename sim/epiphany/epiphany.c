@@ -664,7 +664,8 @@ epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc)
 
   hash_mask = CPU_SCACHE_HASH_MASK (current_cpu);
 
-  unused_addr = 0xffffffff;
+  unused_addr = INVALID_INSTRUCTION_ADDRESS;
+
   /* Look up current insn in hash table. */
 #if WITH_SCACHE_PBB
   /** @todo Not tested */

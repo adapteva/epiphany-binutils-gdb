@@ -35,8 +35,8 @@ typedef struct es_cluster_cfg_ {
     size_t   core_mem_region;         /*!< Core memory region size         */
     /* signed   core_phys_mem; */     /* Allocate entire region for now    */
     unsigned ext_ram_node;            /*!< Let this be rank '0' for now    */
-    uint32_t ext_ram_base;            /*!< core_mem_region must be divisor */
-    size_t   ext_ram_size;            /*!< Size of external memory         */
+    uint64_t ext_ram_base;            /*!< core_mem_region must be divisor */
+    uint64_t ext_ram_size;            /*!< Size of external memory         */
 
     /*! @privatesection */
     /* Keep your grubby little mitts off of these plz :) */
@@ -66,9 +66,12 @@ void es_fini(es_state *esim);
 int es_client_connect(es_state **esim);
 void es_client_disconnect(es_state *esim);
 
-int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
-int es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
-int es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
+int es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
+		 uint8_t *src);
+int es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
+		uint8_t *dst);
+int es_mem_testset(es_state *esim, uint64_t addr, uint64_t size,
+		   uint8_t *dst);
 
 void es_wait_run(es_state *esim);
 void es_wait_exit(es_state *esim);

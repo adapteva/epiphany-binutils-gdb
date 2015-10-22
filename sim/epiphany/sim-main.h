@@ -26,7 +26,9 @@
 #endif
 
 /* These must be defined before sim-base.h.  */
+#define CIA_ADDR(cia) (cia)
 typedef USI sim_cia;
+#define INVALID_INSTRUCTION_ADDRESS ((USI)0 - 1)
 
 #define SIM_ENGINE_HALT_HOOK(sd, cpu, cia) \
 do { \

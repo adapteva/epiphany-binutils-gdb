@@ -20,6 +20,8 @@
 
 #include <pthread.h>
 
+#include "sim-types.h"
+
 #if WITH_EMESH_NET
 #include "esim-net.h"
 #endif
@@ -199,8 +201,9 @@ typedef enum es_req_t {
 /*! Address translation */
 typedef struct es_transl_ {
   es_loc_t	location;  /*!< Location (local shm or network) and type */
-  uint32_t	addr;      /*!< Epiphany address */
-  size_t	in_region; /*!< Num of bytes left in region, need better name */
+  address_word  addr;      /*!< Epiphany address */
+  address_word  in_region; /*!< Num of bytes left in region, need better
+				name */
   unsigned	coreid;    /*!< Core (if any) address belongs to */
   unsigned	node;      /*!< Node address belongs to */
   uint8_t	*mem;      /*!< Native pointer into shm region */
@@ -224,10 +227,10 @@ typedef struct es_transl_ {
 typedef struct es_transaction_ {
   es_req_t	type;       /*!< Type of request */
   uint8_t	*target;    /*!< Pointer to target buffer */
-  uint32_t	addr;       /*!< Target (Epiphany) base address */
-  uint32_t	size;       /*!< Total number of bytes requested.
+  address_word  addr;       /*!< Target (Epiphany) base address */
+  address_word  size;       /*!< Total number of bytes requested.
 				 @todo not used? remove? */
-  uint32_t	remaining;  /*!< Remaining bytes in transaction */
+  address_word  remaining;  /*!< Remaining bytes in transaction */
   es_transl	sim_addr;   /*!< Address translation of current region */
 } es_transaction;
 
