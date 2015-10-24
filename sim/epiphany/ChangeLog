@@ -1,5 +1,10 @@
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim-if.c (sim_esim_have_required_params): Provide default values for
+	num_rows, num_cols and coreid if none are specified.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* esim/esim-int.h (es_state): Add session_name member.
 	* esim/esim.c (es_init_impl): Add session_name parameter.
 	(es_init): Likewise.

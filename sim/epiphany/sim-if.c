@@ -300,6 +300,15 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
       return SIM_RC_FAIL;\
     }
 
+  /* Provide default values if none specified */
+  if (emesh_params.num_rows == -1 && emesh_params.num_cols == -1 &&
+      emesh_params.coreid == -1)
+    {
+      emesh_params.num_rows = 1;
+      emesh_params.num_cols = 1;
+      emesh_params.coreid = 0x808;
+    }
+
 #if WITH_EMESH_NET
   /* Coreid is determined by MPI RANK */
 #else
