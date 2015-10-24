@@ -13,6 +13,8 @@ if [istarget epiphany*-*-*] {
 
     if {[board_info $board sim,ldflags] != ""} {
 	set global_ld_options [board_info $board sim,ldflags]
+    } else {
+	set global_ld_options "-Ttext=0 --defsym=__stack=0x7ff0"
     }
 
     # The .cgs suffix is for "cgen .s".

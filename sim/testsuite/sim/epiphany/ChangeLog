@@ -1,3 +1,9 @@
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* allinsn.exp (global_ld_option): Set default value if
+	none is provided by base board configuration.
+	* 64bmode/allinsn.exp: Likewise.
+
 2015-10-22  Ola Jeppsson  <ola@adapteva.com>
 
 	* 64bmode/allinsn.exp: New file.
