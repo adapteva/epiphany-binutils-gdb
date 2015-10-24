@@ -507,7 +507,8 @@ sim_esim_init(SIM_DESC sd)
     pthread_mutexattr_destroy(&mutexattr);
   }
 
-  sim_io_eprintf(sd, "ESIM: Initialized successfully\n");
+  if (STATE_VERBOSE_P (sd))
+    sim_io_eprintf(sd, "ESIM: Initialized successfully\n");
 
   return SIM_RC_OK;
 }
@@ -692,9 +693,13 @@ sim_close (SIM_DESC sd,
 #if WITH_EMESH_SIM
   if (es_initialized(STATE_ESIM(sd)) == ES_OK)
     {
-      sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
+      if (STATE_VERBOSE_P (sd))
+        sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
+
       es_wait_exit(STATE_ESIM(sd));
-      sim_io_eprintf(sd, " done.\n");
+
+      if (STATE_VERBOSE_P (sd))
+        sim_io_eprintf(sd, " done.\n");
     }
 #endif
   sim_module_uninstall (sd);

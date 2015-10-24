@@ -236,10 +236,14 @@ cat <<EOF
   if (!initialized)
     {
 
-      sim_io_eprintf(current_state, "ESIM: Waiting for other cores...");
+      if (STATE_VERBOSE_P (current_state))
+        sim_io_eprintf(current_state, "ESIM: Waiting for other cores...");
+
       /** @todo Would be nice to support Ctrl-C here */
       es_wait_run(STATE_ESIM(current_state));
-      sim_io_eprintf(current_state, " done.\n");
+
+      if (STATE_VERBOSE_P (current_state))
+        sim_io_eprintf(current_state, " done.\n");
 
       core_mem_region_size =
         es_get_core_mem_region_size(STATE_ESIM(current_state));

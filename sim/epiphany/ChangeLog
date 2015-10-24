@@ -1,5 +1,10 @@
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* mloop.in: Only print esim status messages in verbose mode.
+	* sim-if.c (sim_esim_init): Likewise.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-if.c (options_epiphany): Show default values in help text.
 
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
