@@ -59,11 +59,12 @@ typedef struct es_state_ es_state;
 /* API functions */
 
 /* For core simulator processes */
-int es_init(es_state **esim, es_cluster_cfg cluster, unsigned coreid);
+int es_init(es_state **esim, es_cluster_cfg cluster, unsigned coreid,
+	    const char *session_name);
 void es_fini(es_state *esim);
 
 /* Get access to eMesh simulator address space */
-int es_client_connect(es_state **esim);
+int es_client_connect(es_state **esim, const char *session_name);
 void es_client_disconnect(es_state *esim);
 
 int es_mem_store(es_state *esim, uint64_t addr, uint64_t size,

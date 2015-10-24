@@ -1,5 +1,24 @@
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim/esim-int.h (es_state): Add session_name member.
+	* esim/esim.c (es_init_impl): Add session_name parameter.
+	(es_init): Likewise.
+	(es_client_connect): Likewise.
+	* esim/esim.h (es_init): Update prototype.
+	(es_client_connect): Update prototype.
+	* sim-if.c (EPIPHANY_OPTIONS): Add E_OPTION_SESSION_NAME enum.
+	(emesh_params): Rename mesh_add_ext_ram from epiphany_add_ext_ram,
+	change to uint64_t type. Add session_name member.
+	(epiphany_option_handler): Add null check for arg. Add case for
+	E_OPTION_SESSION_NAME.
+	(sim_esim_have_required_params): Fix help strings for
+	--e-num-cols and --e-num-rows.
+	(sim_esim_params_from_xml): Likewise.
+	(sim_esim_init): Fix setting ext_ram_base.
+	(sim_open): Adjust for name change to emesh_params.mesh_add_ext_ram
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* Makefile.in: Add missing esim dependencies.
 	* esim/esim-int.h (ES_ADDR_IS_EXT_RAM): Fix check when
 	external RAM includes top memory byte.

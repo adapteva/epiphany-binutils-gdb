@@ -952,6 +952,7 @@ static int
 es_init_impl(es_state **handle,
 	es_cluster_cfg cluster,
 	unsigned coreid_hint,
+	const char *session_name,
 	int client)
 {
   int error;
@@ -982,8 +983,25 @@ es_init_impl(es_state **handle,
   es_state_reset(esim);
 
   esim->is_client = client;
+  esim->session_name = session_name;
 
-  snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
+  if (session_name)
+    {
+      snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.u.%d-%s",
+	       getuid(), session_name);
+    }
+  else if (!client && cluster.rows == 1 && cluster.cols == 1)
+    {
+      /* Use a unique (PID) private name when there is exactly one
+       * core and no session name is provided. */
+      snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.u%d.p%d",
+	       getuid(), getpid());
+    }
+  else
+    {
+      snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.u%d",
+	       getuid());
+    }
 
   msecs_wait = 0;
   do
@@ -1278,9 +1296,10 @@ err_out:
  *         handle to NULL.
  */
 int
-es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
+es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint,
+	const char *session_name)
 {
-  return es_init_impl(handle, cluster, coreid_hint, 0);
+  return es_init_impl(handle, cluster, coreid_hint, session_name, 0);
 }
 
 /*! Connect to eMesh simulator as a client
@@ -1292,12 +1311,12 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
  *         handle to NULL.
  */
 int
-es_client_connect(es_state **handle)
+es_client_connect(es_state **handle, const char *session_name)
 {
   int rc;
   es_cluster_cfg cluster;
 
-  if ((rc = es_init_impl(handle, cluster, 0, 1)) != ES_OK)
+  if ((rc = es_init_impl(handle, cluster, 0, session_name, 1)) != ES_OK)
     return rc;
 
   es_wait_run(*handle);
