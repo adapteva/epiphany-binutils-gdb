@@ -1,5 +1,14 @@
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* Makefile.in: Add missing esim dependencies.
+	* esim/esim-int.h (ES_ADDR_IS_EXT_RAM): Fix check when
+	external RAM includes top memory byte.
+	* esim/esim.c (es_tx_one_shm_store): Change to PCADDR
+	type for i and invalidate.
+	(es_validate_cluster_cfg): Fix external ram overflow check.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-sim.h: Change function prototypes to unsigned
 	types for register values.
 	* epiphany.c (epiphanybf_set_status): Use USI type for

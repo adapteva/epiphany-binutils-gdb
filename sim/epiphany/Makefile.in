@@ -35,10 +35,12 @@ endif
 
 
 ESIM_OBJS =
+ESIM_DEPS = esim/esim.c esim/esim.h esim/esim-int.h
 ifeq (@esim@, yes)
 	ESIM_OBJS += esim/esim.o
 endif
 ifeq (@esim_net@, yes)
+	ESIM_DEPS += esim/esim-net.c esim/esim-net.h
 	ESIM_OBJS += esim/esim-net.o
 endif
 
@@ -83,8 +85,12 @@ arch.o: arch.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
 traps.o: traps.c $(SIM_MAIN_DEPS) $(EPIPHANYBF_INCLUDE_DEPS)
 
+
 esim/esim.o: ALL_CFLAGS += -fvisibility=default
-esim/esim.o: esim/stamp-esim esim/esim.c $(SIM_MAIN_DEPS) \
+esim/esim.o: esim/stamp-esim esim/esim.c $(SIM_MAIN_DEPS) $(ESIM_DEPS) \
+			 $(EPIPHANYBF_INCLUDE_DEPS)
+
+esim/esim-net.o: esim/stamp-esim esim/esim.c $(SIM_MAIN_DEPS) $(ESIM_DEPS) \
 			 $(EPIPHANYBF_INCLUDE_DEPS)
 
 esim/stamp-esim:

@@ -106,7 +106,7 @@ ES_ATOMIC_INCR_DEF(64)
 
 #define ES_ADDR_IS_EXT_RAM(addr) \
  ((ES_CLUSTER_CFG.ext_ram_base <= (addr) && \
-   (addr) < ES_CLUSTER_CFG.ext_ram_base + ES_CLUSTER_CFG.ext_ram_size))
+   (addr) <= ES_CLUSTER_CFG.ext_ram_base + ES_CLUSTER_CFG.ext_ram_size - 1))
 
 #define ES_ADDR_IS_MMR(addr) \
  (!(ES_ADDR_IS_EXT_RAM((addr))) && \
