@@ -1,5 +1,9 @@
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim-if.c (options_epiphany): Show default values in help text.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-if.c (sim_esim_have_required_params): Provide default values for
 	num_rows, num_cols and coreid if none are specified.
 
