@@ -1,5 +1,12 @@
 2015-12-07  Ola Jeppsson  <ola@adapteva.com>
 
+	* Makefile.in: Add missing esim dependencies.
+	* esim/esim-int.h (ES_ADDR_IS_EXT_RAM): Fix check when
+	external RAM includes top memory byte.
+	(es_validate_cluster_cfg): Fix external ram overflow check.
+
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
 	* Makefile.in (AS_FOR_TARGET): Add missing definition.
 
 2015-09-25  Ola Jeppsson  <ola@adapteva.com>
