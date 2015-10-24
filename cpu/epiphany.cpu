@@ -530,7 +530,7 @@
 (define-hardware
   (name h-all-registers)
   (comment "all addressable registers")
-  (type register SI (512))
+  (type register USI (512))
   (indices extern-keyword all-reg-names)
   (attrs PROFILE)
   ;; Might want add mem barriers for set/get here.
@@ -566,26 +566,13 @@
 (define-hardware
   (name h-registers)
   (comment "General Purpose Registers")
-  (type register SI (64))
+  (type register USI (64))
   (attrs PROFILE VIRTUAL)
   (indices extern-keyword gr-names)
   ;; Forward get/set to h-all-registers handlers
   ;; Offset to GPR is 0 so we don't need to add anything to index.
   (get (index) (reg h-all-registers index))
   (set (index newval) (set (reg h-all-registers index) newval))
-)
-
-;; Same 64 registers as floating point registers
-(define-hardware
-  (name h-fpregisters)
-  (comment "all GPRs as float values")
-  (type register SF (64))
-  (attrs PROFILE VIRTUAL)
-  (indices extern-keyword gr-names)
-  ;; Forward get/set to h-all-registers handlers
-  ;; Offset to GPR is 0 so we don't need to add anything to index.
-  (get (index) (subword SF (reg h-all-registers index) 0))
-  (set (index newval) (set (reg h-all-registers index) (subword SI newval 0)))
 )
 
 ;; Same 64 registers as dword registers
@@ -605,18 +592,6 @@
       (set (reg h-all-registers index) (subword SI newval 1))
       (set (reg h-all-registers (add USI index 1)) (subword SI newval 0)))
   )
-)
-
-(define-hardware
-  (name h-registers-df)
-  (comment "all GPRs as double precision floating point values")
-  (type register DF (64))
-  (attrs PROFILE VIRTUAL)
-  (indices extern-keyword gr-names)
-  ;; Forward get/set to h-all-dwregisters handlers
-  ;; Offset to GPR is 0 so we don't need to add anything to index.
-  (get (index) (subword DF (reg h-registers-di index) 0))
-  (set (index newval) (set (reg h-registers-di index) (subword DI newval 0)))
 )
 
 (define-enum
@@ -997,7 +972,7 @@
 (define-hardware
   (name h-core-registers)
   (comment "Special Core Registers")
-  (type register SI (17))
+  (type register USI (17))
   (attrs VIRTUAL)
   (indices extern-keyword cr-names)
   ;; Forward get/set to h-all-registers handlers
@@ -1200,7 +1175,7 @@
 (define-hardware
   (name h-coredma-registers)
   (comment "DMA registers in MMR space")
-  (type register SI (16))
+  (type register USI (16))
   (attrs VIRTUAL)
   (indices extern-keyword crdma-names)
   ;; Forward get/set to h-all-registers handlers
@@ -1217,7 +1192,7 @@
 (define-hardware
   (name h-coremem-registers)
   (comment "MEM registers in MMR space")
-  (type register SI (4))
+  (type register USI (4))
   (attrs VIRTUAL) ;; ?? PROFILE ??
   (indices extern-keyword crmem-names)
   (get (index)
@@ -1233,7 +1208,7 @@
 (define-hardware
   (name h-coremesh-registers)
   (comment "MESH registers in MMR space")
-  (type register SI (4))
+  (type register USI (4))
   (attrs VIRTUAL) ;; ?PROFILE?
   (indices extern-keyword crmesh-names)
   (get (index)
@@ -1312,18 +1287,10 @@
 (dnop-short-dword-reg rn-di f-rn "dword source register")
 (dnop-short-dword-reg rm-di f-rm "dword source register")
 
-(short-regs frd d h-fpregisters "fp destination register")
-(short-regs frn n h-fpregisters "fp source register")
-(short-regs frm m h-fpregisters "fp source register")
-
 					; long regs (0-63)
 (dnop rd6 "destination register" () h-registers f-rd6)
 (dnop rn6 "source register"      () h-registers f-rn6)
 (dnop rm6 "source register"      () h-registers f-rm6)
-
-(dnop frd6 "fp destination register" () h-fpregisters f-rd6)
-(dnop frn6 "fp source register"      () h-fpregisters f-rn6)
-(dnop frm6 "fp source register"      () h-fpregisters f-rm6)
 
 ; 64-bit versions of general purpose regs
 (define-pmacro (dnop-dword-reg xname xindex xhardware xcomment)
@@ -1339,10 +1306,6 @@
 (dnop-dword-reg rd6-di f-rd6 h-registers-di "destination register")
 (dnop-dword-reg rn6-di f-rn6 h-registers-di "source register")
 (dnop-dword-reg rm6-di f-rm6 h-registers-di "source register")
-
-(dnop-dword-reg rd6-df f-rd6 h-registers-df "destination register")
-(dnop-dword-reg rn6-df f-rn6 h-registers-df "source register")
-(dnop-dword-reg rm6-df f-rm6 h-registers-df "source register")
 
 					; special regs (0-7)
 (short-regs-core sd d h-core-registers "special destination")
@@ -3152,13 +3115,13 @@
     (dnmi (%sym "f64_" name) ;; 64-bit float (double)
           (%str "f64_" name)
           (NO-DIS)
-          (%str "f" name "64 ${rd6-df},${rn6-df},${rm6-df}")
+          (%str "f" name "64 ${rd6-di},${rn6-di},${rm6-di}")
           (emit (%sym "f_" name "f32") rd6  rn6 rm6)
           )
     (dnmi (%sym "f64_" name ".l") ;; 64-bit float (double) ".l"
           (%str "f64_" name ".l")
           (NO-DIS)
-          (%str "f" name "64.l ${rd6-df},${rn6-df},${rm6-df}")
+          (%str "f" name "64.l ${rd6-di},${rn6-di},${rm6-di}")
           (emit (%sym "f_" name "f32") rd6  rn6 rm6)
           )
   )
@@ -3205,7 +3168,7 @@
          (%str "f_" name)
          (SHORT-INSN)
          (%str "f" name " $rd,$rn")
-         (+ OP4_DSP16 code frd frn frn)
+         (+ OP4_DSP16 code rd rn rn)
          (sem-fpu #t #f #f #f name f-rd (f-rn))
          ()
          )
@@ -3274,7 +3237,7 @@
       (emit fmax rd6 rn6 rm6)
     )
   ))
-  (fmax.l fmax64 fmax64.l) ("" "-df" "-df")
+  (fmax.l fmax64 fmax64.l) ("" "-di" "-di")
 )
 
 ;; UMUL

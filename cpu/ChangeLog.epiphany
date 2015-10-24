@@ -1,3 +1,16 @@
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers) (h-registers) (h-core-registers)
+	(h-coredma-registers) (h-coremem-registers)
+	(h-coremesh-registers): Change to unsigned type.
+	(h-fpregisters): Remove hardware.
+	(h-registers-df): Likewise.
+	(frd) (frn) (frm) (frd6) (frn6) (frm6) (rd6-df) (rn6-df)
+	(rm6-df): Remove operands.
+	(op-two_operands-float): Use double-integer operands for
+	float64 instructions.
+	(dnim fmax64) (dnim fmax64.l): Likewise.
+
 2015-10-22  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (e4-scr-config-bits): New enum, not complete.
