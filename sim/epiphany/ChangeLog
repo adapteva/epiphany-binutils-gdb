@@ -1,5 +1,9 @@
 2015-10-28  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in: Change default environment to virtual.
+
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-sim.h: Add prototype for halt_on_inactive.
 	* epiphany.c (epiphany_halt_on_inactive): Add.
 	* mloop.in (full-exec-scache): Rename from old_vpc to prev_vpc.

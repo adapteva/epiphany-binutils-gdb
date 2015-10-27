@@ -88,8 +88,11 @@ Press Ctrl-C at any time to abort the simulation.
 
 
     parser.add_argument(
-            '--environment', type=str, default='user',
-            help='Environment. Either `user\' or `operating\'')
+            '--environment', type=str, default='virtual',
+            help=
+            """Environment. Must be one of `user', `virtual', or `operating'.
+            NOTE: Default is `virtual'. This is different from epiphany-elf-run,
+            where the default environment setting is `user'""")
 
     parser.add_argument(
             '--ext-ram-size', type=auto_int, default=32,
@@ -145,8 +148,8 @@ Press Ctrl-C at any time to abort the simulation.
     if args.ext_ram_size < 0 or 4095 < args.ext_ram_size:
         parser.error('External RAM size must be within range [0..4095]')
 
-    if args.environment != 'user' and args.environment != 'operating':
-        parser.error('Environment must be either `user\' or `operating\'')
+    if not {args.environment} & {'user', 'virtual', 'operating'}:
+        parser.error('Environment must be `user\', `environment\', or `operating\'')
 
     if not args.program and args.environment != 'operating':
         parser.error('No program(s) specified')
