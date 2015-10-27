@@ -741,6 +741,14 @@
 )
 
 (define-enum
+  (name e-interrupts)
+  (comment "Epiphany interrupt numbers")
+  ;;(attrs) -- epiphany-5
+  (prefix H-INTERRUPT-)
+  (values (SYNC EXCEPTION MEMFAULT TIMER0 TIMER1 MESSAGE DMA0 DMA1 WAND SWI MAX))
+)
+
+(define-enum
   (name e-dma-config-bits)
   (comment "dma config bits")
   ;;(attrs)
@@ -1628,8 +1636,9 @@
         ((OPW_SHORT)  (eq (and addr #x1) #x0))
         ((OPW_WORD)   (eq (and addr #x3) #x0))
         (else         (eq (and addr #x7) #x0))))
+    (set memaddr addr)
     (if isAligned
-      (sequence () (set memaddr addr) mem-op)
+      mem-op
       (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-UNALIGNED))
     )
   )

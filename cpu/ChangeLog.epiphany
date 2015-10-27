@@ -1,3 +1,8 @@
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (enum e-interrupts): Add.
+	(sem-memop-or-exception): Always set memaddr.
+
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (h-all-registers) (h-registers) (h-core-registers)
