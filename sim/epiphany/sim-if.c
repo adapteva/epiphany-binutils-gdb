@@ -728,7 +728,6 @@ sim_create_inferior (SIM_DESC sd,
     }
 #endif
 
-
   if (abfd != NULL)
     addr = bfd_get_start_address (abfd);
   else
@@ -754,10 +753,24 @@ sim_create_inferior (SIM_DESC sd,
   epiphanybf_h_all_registers_set_raw(STATE_CPU(sd, 0), H_REG_MESH_COREID,
 				 es_get_coreid(STATE_ESIM(sd)));
 
-  if (STATE_ENVIRONMENT (sd) != OPERATING_ENVIRONMENT)
+  switch (STATE_ENVIRONMENT (sd))
     {
-      /* Start by triggering SYNC interrupt*/
-      epiphanybf_h_all_registers_set(STATE_CPU(sd, 0), H_REG_SCR_ILATST, 1);
+    case ALL_ENVIRONMENT:
+      /* Fall through, default environment is USER */
+    case USER_ENVIRONMENT:
+      /* Start by setting caibit */
+      epiphanybf_h_caibit_set (current_cpu, 1);
+      break;
+    case VIRTUAL_ENVIRONMENT:
+      /* Start by triggering SYNC interrupt */
+      epiphanybf_h_all_registers_set(current_cpu, H_REG_SCR_ILATST, 1);
+      break;
+    case OPERATING_ENVIRONMENT:
+      /* Do nothing, this mode is for full system simulation. */
+      break;
+    default:
+      sim_io_eprintf(sd, "ERROR: Unsupported environment mode\n");
+      abort ();
     }
 
 #endif

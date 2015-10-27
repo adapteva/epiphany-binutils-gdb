@@ -1,3 +1,20 @@
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h: Add prototype for halt_on_inactive.
+	* epiphany.c (epiphany_halt_on_inactive): Add.
+	* mloop.in (full-exec-scache): Rename from old_vpc to prev_vpc.
+	Halt simulation if core becomes inactive in user environment mode.
+	* oob-events.c (halt_on_excause): Add.
+	(halt_on_interrupt): Add.
+	(interrupt_handler): Add prev_vpc argument.
+	(inline IADDR epiphany_handle_oob_events): Add prev_vpc argument.
+	* oob-events.h: Adjust halt_on_interrupt and interrupt_handler
+	prototypes.
+	* sim-if.c (sim_create_inferior): Depending on simulation environment:
+	start with setting caibit in USER_ENVIRONMENT, in VIRTUAL_ENVIRONMENT
+	start by triggering SYNC interrupt, do nothing in
+	OPERATING_ENVIRONMENT.
+
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
 	* mloop.in: Only print esim status messages in verbose mode.

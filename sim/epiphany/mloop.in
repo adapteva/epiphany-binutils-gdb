@@ -230,8 +230,9 @@ cat <<EOF
   static int initialized = 0;
   static size_t core_mem_region_size = 0;
   static size_t core_glob_addr_start = 0;
+  enum sim_environment env = STATE_ENVIRONMENT (CPU_STATE(current_cpu));
 
-  SEM_PC old_vpc = vpc;
+  SEM_PC prev_vpc = vpc;
 
   if (!initialized)
     {
@@ -250,9 +251,9 @@ cat <<EOF
       core_glob_addr_start =
         es_get_coreid(STATE_ESIM(current_state)) * core_mem_region_size;
 
-      vpc = epiphany_handle_oob_events(current_cpu, vpc);
+      vpc = epiphany_handle_oob_events(current_cpu, prev_vpc, vpc);
 
-      if (vpc != old_vpc)
+      if (vpc != prev_vpc)
 	sc = epiphanybf_scache_lookup (current_cpu, vpc, scache, hash_mask, FAST_P);
 
       initialized = 1;
@@ -269,6 +270,9 @@ cat <<EOF
     vpc = execute (current_cpu, sc, FAST_P);
   else
     {
+      if (env == ALL_ENVIRONMENT || env == USER_ENVIRONMENT)
+	epiphany_halt_on_inactive(current_cpu, prev_vpc);
+
       CPU_SCR_WRITESLOT_LOCK();
       if (CPU_SCR_WRITESLOT_EMPTY())
 	CPU_WAKEUP_WAIT();
@@ -282,7 +286,7 @@ cat <<EOF
    * every time before we are called from sim_resume via engine_run_1
    *  (see ../common/cgen-run.c) the scache is flushed.
    */
-  vpc = epiphany_handle_oob_events(current_cpu, vpc);
+  vpc = epiphany_handle_oob_events(current_cpu, prev_vpc, vpc);
 
   if (!CPU_SCR_WRITESLOT_EMPTY())
     {
@@ -297,7 +301,7 @@ wakeup_from_idle:
       CPU_SCR_WRITESLOT_RELEASE();
     }
 
-  vpc = epiphany_handle_oob_events(current_cpu, vpc);
+  vpc = epiphany_handle_oob_events(current_cpu, prev_vpc, vpc);
 
 
   /*
@@ -341,7 +345,7 @@ do\
   }\
 while (0)
 
-  INVALIDATE_IF_NOT_LOCAL(old_vpc);
+  INVALIDATE_IF_NOT_LOCAL(prev_vpc);
 #endif
 
 #endif

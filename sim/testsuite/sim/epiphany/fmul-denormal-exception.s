@@ -1,5 +1,6 @@
 # epiphany testcase for fmul $frd6,$frn6,$frm6 -*- Asm -*-
 # mach: all
+# sim: --environment virtual
 
 	.include "testutils.inc"
 

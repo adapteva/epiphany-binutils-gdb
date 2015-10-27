@@ -170,6 +170,9 @@ extern USI epiphany_post_isn_callback (SIM_CPU *cpu , PCADDR pc) ;
 /* Check if core is active */
 extern int epiphany_cpu_is_active(SIM_CPU *current_cpu);
 
+/* Halt simulation (for user environment) */
+extern void  epiphany_halt_on_inactive(SIM_CPU *current_cpu, PCADDR vpc);
+
 #if WITH_SCACHE
 extern void epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc);
 #endif

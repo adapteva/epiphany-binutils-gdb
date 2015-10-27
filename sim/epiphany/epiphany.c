@@ -368,6 +368,30 @@ epiphany_cpu_is_active(SIM_CPU *current_cpu)
 	  !(GET_H_ALL_REGISTERS(H_REG_SCR_DEBUGSTATUS) & 1));
 }
 
+void
+epiphany_halt_on_inactive(SIM_CPU *current_cpu, PCADDR vpc)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+
+  if (GET_H_ALL_REGISTERS (H_REG_SCR_DEBUGSTATUS))
+    sim_io_eprintf (sd, "DEBUGSTATUS set at 0x%lx\n", (unsigned long) vpc);
+  else if (GET_H_CAIBIT ())
+    sim_io_eprintf (sd, "CAIBIT cleared at 0x%lx\n", (unsigned long) vpc);
+  else if (GET_H_ALL_REGISTERS (H_REG_MESH_RESETCORE))
+    {
+      sim_io_eprintf (sd, "RESETCORE asserted at 0x%lx\n.",
+		      (unsigned long) vpc);
+    }
+  else
+    {
+      sim_io_eprintf (sd, "core inactive at 0x%lx\n. Unknown reason.",
+		      (unsigned long) vpc);
+    }
+
+  sim_engine_halt (sd, current_cpu, NULL, vpc, sim_stopped, SIM_SIGTRAP);
+}
+
+
 
 /* Read/write functions for system call interface.  */
 
