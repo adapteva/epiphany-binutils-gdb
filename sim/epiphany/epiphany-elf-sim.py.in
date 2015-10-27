@@ -32,8 +32,13 @@ import traceback
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 
+TARGET_PREFIX='@TARGET_PREFIX@'
 EXEC_DIR = os.path.dirname(os.path.realpath(__file__))
-DUMMY_PROGRAM = os.path.join(EXEC_DIR, '..', 'epiphany-elf', 'libexec', 'epiphany-elf-sim-dummy')
+DUMMY_PROGRAM = os.path.join(TARGET_PREFIX, 'libexec', 'epiphany-elf-sim-dummy')
+EPIPHANY_ELF_RUN='epiphany-elf-run'
+
+if not os.path.isfile(DUMMY_PROGRAM):
+    DUMMY_PROGRAM = os.path.join(EXEC_DIR, '..', 'epiphany-elf', 'libexec', 'epiphany-elf-sim-dummy')
 
 SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) \
     for n in dir(signal) if n.startswith('SIG') and '_' not in n)
@@ -350,7 +355,7 @@ def spawn(args, i, j):
                 os.kill(os.getppid(), signal.SIGTERM)
                 os._exit(1)
 
-            os.execlp('epiphany-elf-run', 'epiphany-elf-run', *sim_args)
+            os.execlp(EPIPHANY_ELF_RUN, EPIPHANY_ELF_RUN, *sim_args)
 
         except Exception as e:
             print_stderr('[ERR ] core-0x%03x: ' % coreid)
@@ -385,11 +390,31 @@ def which(command):
             return full_path
     return None
 
-
+def in_build_tree():
+    end = os.path.join(*(EXEC_DIR.split(os.path.sep)[-2:]))
+    return end == os.path.join('sim', 'epiphany')
 
 def main():
+    global EPIPHANY_ELF_RUN
+    found_run = False
 
-    if not which('epiphany-elf-run'):
+    # Look in build tree first (for simulator testsuite support)
+    if in_build_tree() and os.path.exists(os.path.join(EXEC_DIR, 'run')):
+        EPIPHANY_ELF_RUN = os.path.join(EXEC_DIR, 'run')
+        found_run = True
+
+    # Check if it's in PATH
+    if not found_run:
+        if which(EPIPHANY_ELF_RUN):
+            found_run = True
+
+    # Finally, try in script dir
+    if not found_run:
+        if os.path.exists(os.path.join(EXEC_DIR, EPIPHANY_ELF_RUN)):
+            EPIPHANY_ELF_RUN = os.path.join(EXEC_DIR, EPIPHANY_ELF_RUN)
+            found_run = True
+
+    if not found_run:
         print_stderr('[ERR ] epiphany-elf-run must be in path')
         exit(1)
 

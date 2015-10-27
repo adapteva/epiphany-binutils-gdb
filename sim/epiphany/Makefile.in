@@ -138,8 +138,9 @@ sem.o: sem.c $(EPIPHANYBF_INCLUDE_DEPS)
 model.o: model.c $(EPIPHANYBF_INCLUDE_DEPS)
 
 epiphany-elf-sim.py: $(srcdir)/epiphany-elf-sim.py.in
-	sed 's,@TARGET_PREFIX@,$(DESTDIR)$(exec_prefix)/$(target_alias),g' \
+	sed 's,@TARGET_PREFIX@,$(exec_prefix)/$(target_alias),g' \
 		$(srcdir)/epiphany-elf-sim.py.in > epiphany-elf-sim.py
+	chmod +x $@
 
 # Delay building dummy until install. This way will be an assembler when doing
 # a unified source tree toolchain build.

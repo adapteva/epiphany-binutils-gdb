@@ -1,5 +1,10 @@
 2015-10-28  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in: Fix path handling.
+	* Makefile.in: Update rule for epiphany-elf-sim.py.in.
+
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-elf-sim.py.in: Change default environment to virtual.
 
 2015-10-28  Ola Jeppsson  <ola@adapteva.com>
