@@ -1598,17 +1598,17 @@
 
 
 ;; Semantics helper pmacros for instructions with 64-bit operands
-(define-pmacro (sem-dword-regs-1 xrd)
+(define-pmacro (sem-dword-regs-or-exc-1 xrd)
   (and xrd 1)
 )
-(define-pmacro (sem-dword-regs-2 xrd xrn)
-  (or (and xrn 1) (sem-dword-regs-1 xrd))
+(define-pmacro (sem-dword-regs-or-exc-2 xrd xrn)
+  (or (and xrn 1) (sem-dword-regs-or-exc-1 xrd))
 )
-(define-pmacro (sem-dword-regs-3 xrd xrn xrm)
-  (or (and xrm 1) (sem-dword-regs-2 xrd xrn))
+(define-pmacro (sem-dword-regs-or-exc-3 xrd xrn xrm)
+  (or (and xrm 1) (sem-dword-regs-or-exc-2 xrd xrn))
 )
-(define-pmacro (sem-dword-regs xregs sem-op)
-  (if (not (%apply (%sym sem-dword-regs- (%length xregs)) xregs))
+(define-pmacro (sem-dword-regs-or-exc xregs sem-op)
+  (if (not (%apply (%sym sem-dword-regs-or-exc- (%length xregs)) xregs))
     sem-op
     (schedule-exception (enum H-SCR-STATUS-EXCAUSE-UNALIGNED))
   )
@@ -1619,7 +1619,7 @@
   (not (eq 0 (and (hcr-config) (sll WI 1 (enum H-SCR-CONFIG-64BMODE)))))
 )
 (define-pmacro (sem-if-64bmode xregs xthen xelse)
-  (if (sem-64bmode-p) (sem-dword-regs xregs xthen) xelse)
+  (if (sem-64bmode-p) (sem-dword-regs-or-exc xregs xthen) xelse)
 )
 
 
@@ -1628,7 +1628,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(define-pmacro (sem-memop-or-exception sel addr mem-op)
+(define-pmacro (sem-memop-or-exc sel addr mem-op)
   (sequence ((BI isAligned))
     (set isAligned
       (case BI sel
@@ -1656,15 +1656,15 @@
 
 ;; common load macros from effective address, handling 8/16/32/64 bits
 (define-pmacro (load-double-from-ea regnum eff-addr mode sel)
-  (sem-dword-regs ((regno regnum))
-    (sem-memop-or-exception sel (zext DI eff-addr)
+  (sem-dword-regs-or-exc ((regno regnum))
+    (sem-memop-or-exc sel (zext DI eff-addr)
       (set regnum (mem mode (zext DI eff-addr)))
     )
   )
 )
 
 (define-pmacro (load-from-ea regnum eff-addr mode sel)
-  (sem-memop-or-exception sel (zext DI eff-addr)
+  (sem-memop-or-exc sel (zext DI eff-addr)
     (set regnum (zext SI (mem mode (zext DI eff-addr))))
   )
 ) ;; 8/16/32 bit cases
@@ -1672,15 +1672,15 @@
 
 ;; common store to effective address, handling 8/16/32/64 bit data
 (define-pmacro (store-double-to-ea eff-addr regnum mode sel)
-  (sem-dword-regs ((regno regnum))
-    (sem-memop-or-exception sel (zext DI eff-addr)
+  (sem-dword-regs-or-exc ((regno regnum))
+    (sem-memop-or-exc sel (zext DI eff-addr)
       (set (mem mode (zext DI eff-addr)) regnum)
     )
   )
 )
 
 (define-pmacro (store-to-ea eff-addr regnum mode sel)
-  (sem-memop-or-exception sel (zext DI eff-addr)
+  (sem-memop-or-exc sel (zext DI eff-addr)
     (set (mem mode (zext DI eff-addr)) regnum)
   )
 ) ;8/16/32 bit cases
@@ -1908,7 +1908,7 @@
 			(set  eff-addr  (sub rn6 rm6))
 			(set  eff-addr  (add rn6 rm6))
 		  )
-		  (sem-memop-or-exception sel eff-addr
+		  (sem-memop-or-exc sel eff-addr
 		    (set rd6 (c-call SI c-fun eff-addr rd6))
 		  )
 		)
@@ -1931,8 +1931,102 @@
 ;;no double mode support, since we have to send the src address, data
 ;;(testset-insn testsetd DI OPW_DOUBLE load-double-from-ea)
 
+(define-pmacro (sem-atomic-dw-load-op size ctrlmode cfun)
+  (sem-dword-regs-or-exc ((regno rd6))
+    (sem-if-64bmode ((regno rn6) (regno rm6))
+      (sem-dword-regs-or-exc ((regno rn6) (regno rm6))
+        (sequence ((UDI addr))
+          (set addr (add DI rn-di rm-di))
+          (sem-memop-or-exc size addr
+            (set rd6-di (c-call UDI cfun ctrlmode addr size))
+          )
+        )
+      )
+      (sequence ((UDI addr))
+        (set addr (zext DI (add SI rn rm)))
+        (sem-memop-or-exc size addr
+          (set rd6-di (c-call UDI cfun ctrlmode addr size))
+        )
+      )
+    )
+  )
+)
+
+(define-pmacro (sem-atomic-load-op size ctrlmode cfun)
+  (sem-if-64bmode ((regno rn6) (regno rm6))
+    (sem-dword-regs-or-exc ((regno rn6-di) (regno rm6-di))
+      (sequence ((UDI addr))
+        (set addr (add DI rn-di rm-di))
+        (sem-memop-or-exc size addr
+          (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size)))
+        )
+      )
+    )
+    (sequence ((UDI addr))
+      (set addr (zext DI (add SI rn rm)))
+      (sem-memop-or-exc size addr
+        (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size)))
+      )
+    )
+  )
+)
+
+(define-pmacro (sem-atomic-dw-store-op size ctrlmode cfun)
+  (sem-dword-regs-or-exc ((regno rd6))
+    (sem-if-64bmode ((regno rn6) (regno rm6))
+      (sequence ((UDI addr))
+        (set addr (add DI rn-di rm-di))
+        (sem-dword-regs-or-exc ((regno rn6-di) (regno rm6-di))
+          (sem-memop-or-exc size addr
+            (c-call VOID cfun ctrlmode addr size rd6-di)
+          )
+        )
+      )
+      (sequence ((UDI addr))
+        (set addr (zext DI (add SI rn rm)))
+        (sem-memop-or-exc size addr
+          (c-call VOID cfun ctrlmode addr size rd6-di)
+        )
+      )
+    )
+  )
+)
+
+(define-pmacro (sem-atomic-store-op size ctrlmode cfun)
+  (sem-if-64bmode (rn6 rm6)
+    (sequence ((UDI addr))
+      (set addr (add DI rn-di rm-di))
+      (sem-dword-regs-or-exc ((regno rn6) (regno rm6))
+        (sem-memop-or-exc size addr
+          (c-call VOID cfun ctrlmode addr size (zext DI rd6))
+        )
+      )
+    )
+    (sequence ((UDI addr))
+      (set addr (zext DI (add SI rn rm)))
+      (sem-memop-or-exc size addr
+        (c-call VOID cfun ctrlmode addr size (zext DI rd6))
+      )
+    )
+  )
+)
+
+(define-pmacro (sem-atomic-op store size ctrlmode)
+  (%if (%equal? (%sym store) OP_STORE)
+    (%if (%equal? (%sym size) OPW_DWORD)
+      (sem-atomic-dw-store-op size ctrlmode "epiphany_atomic_store")
+      (sem-atomic-store-op    size ctrlmode "epiphany_atomic_store")
+    )
+    (%if (%equal? (%sym size) OPW_DWORD)
+      (sem-atomic-dw-load-op  size ctrlmode "epiphany_atomic_load")
+      (sem-atomic-load-op     size ctrlmode "epiphany_atomic_load")
+    )
+  )
+)
 
 (define-pmacro (op-atomic-atomic-helper name store ins-sfx op-sfx size)
+  (%let (
+    (rd6-op (%sym rd6 op-sfx)))
   (begin
     (dni
       (%sym name ins-sfx)
@@ -1940,7 +2034,7 @@
       () ;; TODO Epiphany-5 attr
       (%str name ins-sfx " ${rd6" op-sfx "},[$rn6,$rm6],$ctrlmode5")
       (+ OP4_LDSTRX store size OPA_ATOMIC rd6 rn6 rm6 ctrlmode5)
-      (nop) ;; TODO: Implement
+      (sem-atomic-op store size ctrlmode5)
       ()
     )
     (dnmi
@@ -1950,7 +2044,7 @@
       (%str name ins-sfx ".l ${rd6" op-sfx "},[$rn6,$rm6],$ctrlmode5")
       (emit (%sym name ins-sfx) rd6 rn6 rm6 ctrlmode5)
     )
-  )
+  ))
 )
 (define-pmacro (op-atomic-atomic name store)
   (begin
@@ -1962,6 +2056,8 @@
 )
 
 (define-pmacro (op-atomic-helper name store ctrlmode ins-sfx op-sfx size)
+  (%let (
+    (rd6-op (%sym rd6 op-sfx)))
   (begin
     (dni
       (%sym name ins-sfx)
@@ -1970,7 +2066,7 @@
       ;(%str name ins-sfx " ${rd6" op-sfx ",[$rn,$rm]")
       (%str name ins-sfx " ${rd6" op-sfx "},[$rn6,$rm6]")
       (+ OP4_LDSTRX store size OPA_ATOMIC rd6 rn6 rm6 ctrlmode)
-      (nop) ;; TODO: Implement
+      (sem-atomic-op store size ctrlmode)
       ()
     )
     (dnmi
@@ -1980,7 +2076,7 @@
       (%str name ins-sfx ".l ${rd6" op-sfx "},[$rn6,$rm6]")
       (emit (%sym name ins-sfx) rd6 rn6 rm6)
     )
-  )
+  ))
 )
 (define-pmacro (op-atomic name store ctrlmode)
   (begin
@@ -2798,7 +2894,7 @@
       ;; N.B: Shift register (rm) is a 32-bit register
       (%str name "64 ${rd6-di},${rn6-di},${rm6-di}")
       (+ OP4_MISC (%sym "OPB_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0) (f-dc-20-1 #x1) rd6-di rn6-di rm6-di)
-      (sem-dword-regs ((regno rd6-di) (regno rn6-di) (regno rm6-di))
+      (sem-dword-regs-or-exc ((regno rd6-di) (regno rn6-di) (regno rm6-di))
         (sequence ()
           (cond-op mode rn6-di rm6-di)
           (set rd6-di (sem-op mode rn6-di rm6-di))
@@ -2834,7 +2930,7 @@
       ;; N.B: Shift register (rm) is a 32-bit register
       (%str name "64 ${rd6-di},${rn6-di},$rm6")
       (+ OP4_MISC (%sym "OPB_" (%upcase (%str name))) (f-opc-19-4 #xa) (f-dc-22-2 #x0) (f-dc-20-1 #x1) rd6-di rn6-di rm6)
-      (sem-dword-regs ((regno rd6-di) (regno rn6-di))
+      (sem-dword-regs-or-exc ((regno rd6-di) (regno rn6-di))
         (sequence ()
           (logic-vc mode rn6-di rm6)
           (set rd6-di (sem-op mode rn6-di (and rm6 (const 63))))
@@ -3031,7 +3127,7 @@
 )
 (%if SF_P
     ((eq arithmode ARITHMODE-SF-SIMD)
-      (sem-dword-regs (%splice xrd (%unsplice xargs))
+      (sem-dword-regs-or-exc (%splice xrd (%unsplice xargs))
         (sem-fpu-float #t SI xname "" h-registers xrd xargs)
       )
     )
@@ -3039,7 +3135,7 @@
 )
 (%if DF_P
     ((eq arithmode ARITHMODE-DF)
-      (sem-dword-regs (%splice xrd (%unsplice xargs))
+      (sem-dword-regs-or-exc (%splice xrd (%unsplice xargs))
         (sem-fpu-float #f DI xname "64" h-registers-di xrd xargs)
       )
     )

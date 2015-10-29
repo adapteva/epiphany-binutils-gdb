@@ -1,3 +1,16 @@
+2015-10-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (sem-dword-regs-or-exc): Rename from
+	sem-dword-regs.
+	(sem-memop-or-exc): Rename from sem-memop-or-exc.
+	(sem-atomic-dw-load-op): New.
+	(sem-atomic-load-op): New.
+	(sem-atomic-dw-store-op): New.
+	(sem-atomic-store-op): New.
+	(sem-atomic-op store): New.
+	(op-atomic-atomic-helper): Add semantics.
+	(op-atomic-helper): Likewise.
+
 2015-10-28  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (enum e-interrupts): Add.
