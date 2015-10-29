@@ -577,6 +577,19 @@ epiphany_testset_QI(SIM_CPU* current_cpu, address_word addr, UQI newval)
   return epiphany_testset(current_cpu, addr, newval, 1);
 }
 
+UDI epiphany_atomic_load (SIM_CPU *current_cpu, INSN_ATOMIC_CTRLMODE ctrlmode,
+			  address_word addr, INSN_WORDSIZE size)
+{
+  abort ();
+}
+
+void epiphany_atomic_store (SIM_CPU *current_cpu, INSN_ATOMIC_CTRLMODE ctrlmode,
+			    address_word addr, INSN_WORDSIZE size, UDI rd)
+{
+  abort ();
+}
+
+
 void
 epiphanybf_model_insn_before (SIM_CPU * cpu ATTRIBUTE_UNUSED,
 			      int first_p ATTRIBUTE_UNUSED)
