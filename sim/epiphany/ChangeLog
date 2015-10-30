@@ -1,3 +1,23 @@
+2015-10-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphany_atomic_load): Implement.
+	(epiphany_atomic_store): Implement.
+	* epiphany-sim.h (epiphany_atomic_load): Update prototype.
+	* esim/esim-int.h (es_req_t): Add ES_REQ_ATOMIC_LOAD and
+	ES_REQ_ATOMIC_STORE request types to enum.
+	(es_transl): Add ctrlmode member.
+	* esim/esim.c (es_shm_mmr_write): New function.
+	(es_tx_one_shm_atomic_op): New function.
+	(es_tx_one_shm_mmr): Use es_shm_mmr_write.
+	(es_tx_one): Add hooks for ES_REQ_ATOMIC_LOAD and ES_REQ_ATOMIC_STORE.
+	(es_mem_store): Add ctrlmode to transaction.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	(es_mem_atomic_load): New function.
+	(es_mem_atomic_store): New function.
+	* esim/esim.h (es_mem_atomic_load): Add function prototype.
+	(es_mem_atomic_store): Likewise.
+
 2015-10-29  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.c (epiphany_atomic_load): Add empty function.

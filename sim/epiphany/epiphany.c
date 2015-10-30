@@ -578,15 +578,31 @@ epiphany_testset_QI(SIM_CPU* current_cpu, address_word addr, UQI newval)
 }
 
 UDI epiphany_atomic_load (SIM_CPU *current_cpu, INSN_ATOMIC_CTRLMODE ctrlmode,
-			  address_word addr, INSN_WORDSIZE size)
+			  address_word addr, INSN_WORDSIZE size, UDI rd)
 {
-  abort ();
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  es_state *esim = STATE_ESIM (sd);
+
+  if (es_mem_atomic_load (esim, ctrlmode, addr, (1 << size), (uint8_t *) &rd))
+    /* TODO: More detailed errors. */
+    sim_core_signal (sd, current_cpu, CPU_PC_GET(current_cpu), read_map,
+		     (1 << size), addr, read_transfer,
+		     sim_core_unmapped_signal);
+
+  return rd;
 }
 
 void epiphany_atomic_store (SIM_CPU *current_cpu, INSN_ATOMIC_CTRLMODE ctrlmode,
 			    address_word addr, INSN_WORDSIZE size, UDI rd)
 {
-  abort ();
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  es_state *esim = STATE_ESIM (sd);
+
+  if (es_mem_atomic_store (esim, ctrlmode, addr, (1 << size), (uint8_t *) &rd))
+    /* TODO: More detailed errors. */
+    sim_core_signal (sd, current_cpu, CPU_PC_GET(current_cpu), write_map,
+		     (1 << size), addr, write_transfer,
+		     sim_core_unmapped_signal);
 }
 
 

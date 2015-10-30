@@ -1,3 +1,8 @@
+2015-10-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* atomics/allinsn.exp: New file.
+	* atomics/testset.cgs: New test.
+	* atomics/testutils.inc: New test.
 
 2015-10-28  Ola Jeppsson  <ola@adapteva.com>
 

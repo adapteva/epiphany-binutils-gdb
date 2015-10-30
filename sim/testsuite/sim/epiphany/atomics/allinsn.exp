@@ -1,0 +1,31 @@
+# EPIPHANY simulator testsuite.
+
+if [istarget epiphany*-*-*] {
+    global global_ld_options
+
+    # load support procs (none yet)
+    # load_lib cgen.exp
+
+    # all machines
+    set all_machs "epiphany32"
+
+    set board [target_info name]
+
+    if {[board_info $board sim,ldflags] != ""} {
+	set global_ld_options [board_info $board sim,ldflags]
+    } else {
+	set global_ld_options "-Ttext=0 --defsym=__stack=0x7ff0"
+    }
+
+    # The .cgs suffix is for "cgen .s".
+    foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.cgs \
+					 $srcdir/$subdir/*.s]] {
+	# If we're only testing specific files and this isn't one of them,
+	# skip it.
+	if ![runtest_file_p $runtests $src] {
+	    continue
+	}
+
+	run_sim_test $src $all_machs
+    }
+}

@@ -74,6 +74,11 @@ int es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
 int es_mem_testset(es_state *esim, uint64_t addr, uint64_t size,
 		   uint8_t *dst);
 
+int es_mem_atomic_load (es_state *esim, int ctrlmode, uint64_t addr,
+		        uint64_t size, uint8_t *dst);
+int es_mem_atomic_store (es_state *esim, int ctrlmode, uint64_t addr,
+			 uint64_t size, uint8_t *src);
+
 void es_wait_run(es_state *esim);
 void es_wait_exit(es_state *esim);
 

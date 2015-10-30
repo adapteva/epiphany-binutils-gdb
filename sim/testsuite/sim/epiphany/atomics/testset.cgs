@@ -1,0 +1,39 @@
+# epiphany testcase for testset $rd6,[$rn6,$rm6] -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+testset:
+	;; constants
+	movfs	r1,coreid
+	lsl	r1,r1,20
+	mov	r2,0x7000
+	mov	r3,0
+	mov	r4,1
+	mova	r5,0xacce55ed
+	mova	r6,0xbaadc0de
+
+	str	r3,[r2]
+	mov	r7,r5
+	testset	r7,[r1,r2]
+	and	r7,r7,r7
+	bne	1f
+	ldr	r7,[r2]
+	sub	r7,r7,r5
+	bne	1f
+
+	mov	r7,r6
+	testset	r7,[r2,r1]
+	sub	r7,r7,r5
+	bne	1f
+	ldr	r7,[r2]
+	sub	r8,r7,r6
+	beq	1f
+	sub	r8,r7,r5
+	bne	1f
+
+	pass
+1:
+	fail

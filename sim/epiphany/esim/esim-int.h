@@ -197,6 +197,8 @@ typedef enum es_req_t {
   ES_REQ_LOAD,
   ES_REQ_STORE,
   ES_REQ_TESTSET,
+  ES_REQ_ATOMIC_LOAD,
+  ES_REQ_ATOMIC_STORE,
 } es_req_t;
 
 
@@ -229,6 +231,7 @@ typedef struct es_transl_ {
 typedef struct es_transaction_ {
   es_req_t	type;       /*!< Type of request */
   uint8_t	*target;    /*!< Pointer to target buffer */
+  int           ctrlmode;   /*!< Control mode */
   address_word  addr;       /*!< Target (Epiphany) base address */
   address_word  size;       /*!< Total number of bytes requested.
 				 @todo not used? remove? */

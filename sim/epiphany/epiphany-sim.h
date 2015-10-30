@@ -188,7 +188,7 @@ extern USI epiphany_testset_HI(SIM_CPU *, address_word, UHI);
 extern USI epiphany_testset_QI(SIM_CPU *, address_word, UQI);
 
 extern UDI epiphany_atomic_load (SIM_CPU *, INSN_ATOMIC_CTRLMODE, address_word,
-				 INSN_WORDSIZE);
+				 INSN_WORDSIZE, UDI);
 extern void epiphany_atomic_store (SIM_CPU *, INSN_ATOMIC_CTRLMODE,
 				   address_word, INSN_WORDSIZE, UDI);
 

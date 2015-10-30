@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 /** @todo Standard errnos should be sufficient for now */
 /* Errors are returned as negative numbers. */
@@ -51,6 +52,8 @@
 
 #include "esim.h"
 #include "esim-int.h"
+
+#include "epiphany-desc.h"
 
 /*! Get core index in shared memory
  *
@@ -362,6 +365,133 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
   return ES_OK;
 }
 
+static void
+es_shm_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
+{
+  sim_cpu *current_cpu = tx->sim_addr.cpu;
+
+  /* If target cpu is local cpu, we can do the write immediately,
+   * otherwise we need to serialize it on the target */
+  if (tx->sim_addr.coreid == esim->coreid)
+    epiphanybf_h_all_registers_set (current_cpu, reg, val);
+  else
+  {
+    CPU_SCR_WRITESLOT_LOCK ();
+    while (!CPU_SCR_WRITESLOT_EMPTY ())
+      CPU_SCR_WRITESLOT_WAIT ();
+    current_cpu->scr_remote_write_reg = reg;
+    current_cpu->scr_remote_write_val = val;
+    CPU_SCR_WAKEUP_SIGNAL ();
+    CPU_SCR_WRITESLOT_RELEASE ();
+  }
+}
+
+static int
+es_tx_one_shm_atomic_op(es_state *esim, es_transaction *tx)
+{
+  union acme_ptr {
+    uint8_t  *u8;
+    uint16_t *u16;
+    uint32_t *u32;
+    uint64_t *u64;
+  };
+
+  sim_cpu *this_cpu = (sim_cpu *) esim->this_core_cpu_state;
+
+  union acme_ptr rd  = { .u8 = tx->target };
+  union acme_ptr mem = { .u8 = tx->sim_addr.mem };
+  UDI rdnew = 0;
+
+  /* Atomic OPS require that requested addr is global */
+  if (!tx->sim_addr.addr_was_global)
+    return -EINVAL;
+
+  /* addr cannot reside in RAM, must be in on-chip memory  */
+  if (tx->sim_addr.location != ES_LOC_SHM)
+    return -EINVAL;
+
+/* Macros for different atomic op types */
+#define atomic_load(Op) \
+  ({ \
+    UDI _tmp;\
+    switch (tx->remaining) \
+    { \
+    case 1: \
+      _tmp = Op(mem.u8, __ATOMIC_SEQ_CST); \
+      break; \
+    case 2: \
+      _tmp = Op(mem.u16, __ATOMIC_SEQ_CST); \
+      break; \
+    case 4: \
+      _tmp = Op(mem.u32, __ATOMIC_SEQ_CST); \
+      break; \
+    case 8: \
+      _tmp = Op(mem.u64, __ATOMIC_SEQ_CST); \
+      break; \
+    default: \
+      return -EINVAL; \
+    } \
+    _tmp; \
+  })
+
+#define atomic_store(Op) \
+  switch (tx->remaining) \
+  { \
+  case 1: \
+    Op(mem.u8, *rd.u8, __ATOMIC_SEQ_CST); \
+    break; \
+  case 2: \
+    Op(mem.u16, *rd.u16, __ATOMIC_SEQ_CST); \
+    break; \
+  case 4: \
+    Op(mem.u32, *rd.u32, __ATOMIC_SEQ_CST); \
+    break; \
+  case 8: \
+    Op(mem.u64, *rd.u64, __ATOMIC_SEQ_CST); \
+    break; \
+  default: \
+    return -EINVAL; \
+  }
+
+  switch (tx->ctrlmode)
+    {
+    default:
+      return -EINVAL;
+    }
+#undef atomic_load
+#undef atomic_store
+
+  if (tx->type == ES_REQ_ATOMIC_LOAD)
+    {
+    switch (tx->remaining)
+      {
+      case 1: *rd.u8  = (uint8_t)  rdnew; break;
+      case 2: *rd.u16 = (uint16_t) rdnew; break;
+      case 4: *rd.u32 = (uint32_t) rdnew; break;
+      case 8: *rd.u64 = (uint64_t) rdnew; break;
+      default:
+	abort ();
+      }
+    }
+
+  /* Signal other CPU simulator a write from another core did occur so that
+   * it can invalidate its scache.
+   */
+  if (tx->sim_addr.coreid != esim->coreid)
+    {
+      /* Signal other CPU simulator a write from another core did occur so that
+       * it can flush its scache.
+       */
+      MEM_BARRIER();
+      tx->sim_addr.cpu->external_write = 1;
+    }
+
+  tx->target += tx->remaining;
+  tx->remaining -= tx->remaining;
+
+  return ES_OK;
+}
+
 /*! Perform one load or store to MMR, and advance transaction state
  *
  * @param[in]     esim   ESIM handle
@@ -415,23 +545,8 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 	}
       break;
     case ES_REQ_STORE:
-      /* If target cpu is local cpu, we can do the write immediately,
-       * otherwise we need to serialize it on the target */
-      if (tx->sim_addr.coreid == esim->coreid)
-	epiphanybf_h_all_registers_set(current_cpu, reg, *target);
-      else
-	{
-	  CPU_SCR_WRITESLOT_LOCK();
-	  while (!CPU_SCR_WRITESLOT_EMPTY())
-	    CPU_SCR_WRITESLOT_WAIT();
-	  current_cpu->scr_remote_write_reg = reg;
-	  current_cpu->scr_remote_write_val = *target;
-	  CPU_SCR_WAKEUP_SIGNAL();
-	  CPU_SCR_WRITESLOT_RELEASE();
-	}
+      es_shm_mmr_write(esim, tx, reg, *target);
 
-      n = 4;
-      break;
     /*! @todo Implement (if supported by hardware?) */
     /* case ES_REQ_TESTSET: */
     default:
@@ -471,6 +586,9 @@ es_tx_one(es_state *esim, es_transaction *tx)
 	  return es_tx_one_shm_store(esim, tx);
 	case ES_REQ_TESTSET:
 	  return es_tx_one_shm_testset(esim, tx);
+	case ES_REQ_ATOMIC_LOAD:
+	case ES_REQ_ATOMIC_STORE:
+	  return es_tx_one_shm_atomic_op(esim, tx);
 	default:
 #ifdef ES_DEBUG
 	  fprintf(stderr, "es_tx_one: BUG\n");
@@ -491,6 +609,10 @@ es_tx_one(es_state *esim, es_transaction *tx)
       return es_net_tx_one(esim, tx);
       break;
 #endif
+
+    case ES_LOC_INVALID:
+      return -ENOENT;
+      break;
 
     default:
 #ifdef ES_DEBUG
@@ -545,6 +667,7 @@ es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
   es_transaction tx = {
     ES_REQ_STORE,
     src,
+    0,
     (address_word) addr,
     (address_word) size,
     (address_word) size,
@@ -569,6 +692,7 @@ es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
   es_transaction tx = {
     ES_REQ_LOAD,
     dst,
+    0,
     (address_word) addr,
     (address_word) size,
     (address_word) size,
@@ -593,6 +717,7 @@ es_mem_testset(es_state *esim, uint64_t addr, uint64_t size,
   es_transaction tx = {
     ES_REQ_TESTSET,
     dst,
+    0,
     (address_word) addr,
     (address_word) size,
     (address_word) size,
@@ -600,6 +725,39 @@ es_mem_testset(es_state *esim, uint64_t addr, uint64_t size,
   };
   return es_tx_run(esim, &tx);
 }
+
+int
+es_mem_atomic_load(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
+		   uint8_t *dst)
+{
+  es_transaction tx = {
+    ES_REQ_ATOMIC_LOAD,
+    dst,
+    ctrlmode,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
+    ES_TRANSL_INIT
+  };
+  return es_tx_run(esim, &tx);
+}
+
+int
+es_mem_atomic_store(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
+		    uint8_t *src)
+{
+  es_transaction tx = {
+    ES_REQ_ATOMIC_STORE,
+    src,
+    ctrlmode,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
+    ES_TRANSL_INIT
+  };
+  return es_tx_run(esim, &tx);
+}
+
 
 /*! Validate cluster configuration
  *
