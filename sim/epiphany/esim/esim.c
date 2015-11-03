@@ -524,6 +524,8 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
       break;
     case ES_REQ_STORE:
       es_shm_mmr_write(esim, tx, reg, *target);
+      n = 4;
+      break;
 
     /*! @todo Implement (if supported by hardware?) */
     /* case ES_REQ_TESTSET: */

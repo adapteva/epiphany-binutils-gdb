@@ -1,5 +1,10 @@
 2015-11-03  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim/esim.c (es_tx_one_shm_mmr): Fix bug that caused EINVAL on
+	all writes to the mmr region.
+
+2015-11-03  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-main.h: Add long64 and ulong64 typedefs.
 	* dv-epiphany_mem.c (epiphany_mem_finish): Use ULL rather than UL for
 	64-bit literals.
