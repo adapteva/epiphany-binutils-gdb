@@ -397,6 +397,8 @@ def in_build_tree():
 def main():
     global EPIPHANY_ELF_RUN
     found_run = False
+    my_exit_status = 0
+    first_fail_core = -1
 
     # Look in build tree first (for simulator testsuite support)
     if in_build_tree() and os.path.exists(os.path.join(EXEC_DIR, 'run')):
@@ -416,7 +418,7 @@ def main():
 
     if not found_run:
         print_stderr('[ERR ] epiphany-elf-run must be in path')
-        exit(1)
+        sys.exit(1)
 
     args = parse_or_die()
 
@@ -432,11 +434,11 @@ def main():
             if e.errno == os.errno.EEXIST:
                 print_stderr('[ERR ] Specified redirect directory `%s\' already '
                 'exists but is not a directory' % args.redirect_dir)
-                exit(8)
+                sys.exit(8)
             if e.errno == os.errno.EACCES:
                 print_stderr('[ERR ] Permission denied to access specified '
                 'redirect directory `%s\'' % args.redirect_dir)
-                exit(9)
+                sys.exit(9)
             else:
                 raise
 
@@ -460,8 +462,20 @@ def main():
                 print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
                           (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
             else:
-                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
-                          (coreid, coreid/64, coreid%64, sim_rc))
+                if args.verbose or sim_rc != 0:
+                    print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
+                                 (coreid, coreid/64, coreid%64, sim_rc))
+
+            # Set exit status to first non-zero core simulator exit status.
+            # Unfortunately, it doesn't seem possible to return an exit code
+            # higher than 127 in Python, so we must choose one of sim_signal or
+            # sim_rc. Use sim_signal when.
+            if status != 0 and \
+               ((first_fail_core == -1 or first_fail_core > coreid) or \
+                 (status < 256 and my_exit_status >= 256)):
+                first_fail_core = coreid
+                my_exit_status = status
+
         except OSError as e:
             if e.errno == os.errno.ECHILD:
                 """ All children done """
@@ -469,7 +483,13 @@ def main():
             else:
                 raise
 
-    return 0
+    if my_exit_status % 256:
+        # We're returning a signal
+        return my_exit_status % 256
+    else:
+        # We're returning a return code
+        return my_exit_status / 256
+
 
 def sigterm_handler(sig, frame):
     """ Kill all children on SIGTERM """
@@ -481,13 +501,14 @@ def sigterm_handler(sig, frame):
     print_stderr('[INFO] Got SIGTERM. Terminating all children...')
     time.sleep(1)
     os.kill(0, signal.SIGTERM)
-    exit(6)
+    sys.exit(6)
 
 
 if __name__ == "__main__":
+    status = 0
     signal.signal(signal.SIGTERM, sigterm_handler)
     try:
-        main()
+        status = main()
     except KeyboardInterrupt:
         """ Ctrl-C """
         # Catch SIGTERM/SIGINT (will exit immediately anyways)
@@ -497,7 +518,7 @@ if __name__ == "__main__":
         print_stderr('\n[INFO] Keyboard interrupt. Terminating all children...')
         time.sleep(1)
         os.kill(0, signal.SIGTERM)
-        exit(4)
+        sys.exit(4)
     except Exception:
         # Catch SIGTERM/SIGINT (will exit immediately anyways)
         signal.signal(signal.SIGTERM, (lambda sig, frame : 0))
@@ -507,5 +528,5 @@ if __name__ == "__main__":
         print_stderr('[ERR ] Terminating all children...')
         time.sleep(1)
         os.kill(0, signal.SIGTERM)
-        exit(5)
-
+        sys.exit(5)
+    exit(status)

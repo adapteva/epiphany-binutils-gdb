@@ -1,5 +1,10 @@
 2015-11-03  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in: Return with simulator error code. Don't
+	print successful exit status unless --verbose is toggled.
+
+2015-11-03  Ola Jeppsson  <ola@adapteva.com>
+
 	* esim/esim.c (es_tx_one_shm_mmr): Fix bug that caused EINVAL on
 	all writes to the mmr region.
 
