@@ -6,20 +6,28 @@ if ![istarget epiphany*-*-*] {
 
 global global_ld_options
 
+# load support procs (none yet)
+# load_lib cgen.exp
+
+
+if ![info exists global_sim_options] {
+    set global_sim_options ""
+}
+set orig_global_sim_options "$global_sim_options"
+
 if ![info exists global_ld_options] {
     set global_ld_options ""
 }
 set orig_global_ld_options "$global_ld_options"
 
 
-# load support procs (none yet)
-# load_lib cgen.exp
-
 # all machines
 set all_machs "epiphany32"
 
-if {[board_info target sim,ldflags] != ""} {
-    set global_ld_options [board_info target sim,ldflags]
+set board [target_info name]
+
+if {[board_info $board sim,ldflags] != ""} {
+    set global_ld_options [board_info $board sim,ldflags]
 } else {
     set global_ld_options "-Ttext=0 --defsym=__stack=0x7ff0"
 }
@@ -36,5 +44,5 @@ foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.cgs \
     run_sim_test $src $all_machs
 }
 
-
+set global_sim_options "$orig_global_sim_options"
 set global_ld_options "$orig_global_ld_options"
