@@ -1,0 +1,70 @@
+# EPIPHANY multiple cores tests.
+
+if ![istarget epiphany*-*-*] {
+    return
+}
+
+global objdir
+global arch
+global sim
+global global_cc_options
+global global_sim_options
+
+
+if ![info exists sim] {
+    set sim ""
+}
+set orig_sim "$sim"
+
+if ![info exists global_sim_options] {
+    set global_sim_options ""
+}
+set orig_global_sim_options "$global_sim_options"
+
+if ![info exists global_cc_options] {
+    set global_cc_options ""
+}
+set orig_global_cc_options "$global_cc_options"
+
+set orig_target_sim [board_info target sim]
+set orig_target_sim_options [board_info target sim,options]
+set orig_target_sim_ldflags [board_info target ldflags]
+
+
+# all machines
+set all_machs "epiphany32"
+
+
+set global_cc_options "-fno-diagnostics-color"
+set global_sim_options "--ext-ram-size 0 --ext-ram-base 0"
+
+# Use simulator frontend for these tests.
+set sim "$objdir/../$arch/epiphany-elf-sim.py"
+set board_info([target_info name],sim) $sim
+set board_info([target_info name],sim,options) ""
+
+# Use local SRAM for code and data
+set board_info([target_info name],ldflags) "\
+    [libgloss_link_flags] [newlib_link_flags] \
+    -Wl,--section-start=IVT_RESET=0,--section-start=RESERVED_CRT0_DATA=0x80 \
+    -Wl,--section-start=RESERVED_CRT0=0x100,--section-start=.init=0x300 \
+    -Wl,-Ttext=0x400,-Tdata=0x40000,--defsym=__heap_start=0x80000 \
+    -Wl,--defsym=__heap_end=0xb0000,--defsym=__stack=0xffff0"
+
+foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.c]] {
+    # If we're only testing specific files and this isn't one of them,
+    # skip it.
+    if ![runtest_file_p $runtests $src] {
+	continue
+    }
+
+    run_sim_test $src $all_machs
+}
+
+# Restore
+set sim "$orig_sim"
+set global_sim_options "$orig_global_sim_options"
+set global_cc_options "$orig_global_cc_options"
+set board_info([target_info name],sim]           "$orig_target_sim"
+set board_info([target_info name],sim,options]   "$orig_target_sim_options"
+set board_info([target_info name],ldflags]       "$orig_target_sim_ldflags"
