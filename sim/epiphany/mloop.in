@@ -287,6 +287,10 @@ cat <<EOF
    *  (see ../common/cgen-run.c) the scache is flushed.
    */
   vpc = epiphany_handle_oob_events(current_cpu, prev_vpc, vpc);
+  /* If the slot is not empty that means we should delay OOB handling by
+   * one insn. */
+  if (current_cpu->oob_event != 0)
+    goto delay_oob_one_insn;
 
   if (!CPU_SCR_WRITESLOT_EMPTY())
     {
@@ -303,6 +307,7 @@ wakeup_from_idle:
 
   vpc = epiphany_handle_oob_events(current_cpu, prev_vpc, vpc);
 
+delay_oob_one_insn:
 
   /*
    * Invalidate vpc in scache if not core-local memory.

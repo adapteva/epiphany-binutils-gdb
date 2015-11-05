@@ -5,6 +5,7 @@ typedef enum oob_event_t_ {
   OOB_EVT_NONE = 0,
   OOB_EVT_RESET_DEASSERT,
   OOB_EVT_INTERRUPT,
+  OOB_EVT_INTERRUPT_DELAYED, /* Might trigger INTERRUPT after next insn */
 
   OOB_EVT_NUM_EVENTS
 } oob_event_t;

@@ -349,15 +349,34 @@ epiphany_break (SIM_CPU * current_cpu, PCADDR brkaddr)
 void
 epiphany_gie(SIM_CPU *current_cpu)
 {
-  USI gidbit;
+  uint16_t next_insn;
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  const USI gidbit = (1 << H_SCR_STATUS_GIDISABLEBIT);
+  PCADDR vpc = CPU_PC_GET(current_cpu);
+  const uint16_t idle_opcode = 0x01b2;
+  oob_event_t event = OOB_EVT_INTERRUPT;
 
-  gidbit = (1 << H_SCR_STATUS_GIDISABLEBIT);
+  /* Try to emulate hardware behaviour: when there is a GIE/IDLE pair in the
+   * instruction stream, and the first instruction is 64-bit aligned, skip
+   * interrupt handling by one instruction so no interrupt can sneak in between
+   * the two instructions.  */
+  if ((vpc & 7) == 0)
+    {
+      if (2 != sim_core_read_buffer (sd, current_cpu, read_map, &next_insn,
+				     vpc + 2, 2))
+	sim_engine_abort (sd, current_cpu, vpc,
+			  "error: failed reading next instruction at 0x%llx\n",
+			  (ulong64) vpc);
+
+      if (next_insn == idle_opcode)
+	event = OOB_EVT_INTERRUPT_DELAYED;
+    }
 
   /* Clear GID bit */
   AND_REG_ATOMIC(H_REG_SCR_STATUS, ~gidbit);
 
   /* Might trigger interrupt */
-  OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
+  OOB_EMIT_EVENT(event);
 }
 
 int

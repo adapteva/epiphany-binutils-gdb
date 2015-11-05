@@ -209,6 +209,10 @@ inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu,
       vpc = interrupt_handler(current_cpu, prev_vpc, vpc);
       break;
 
+    case OOB_EVT_INTERRUPT_DELAYED:
+      OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
+      return vpc;
+
     default:
       fprintf(stderr, "ESIM: Unknown OOB event: %d\n", current_cpu->oob_event);
     }
