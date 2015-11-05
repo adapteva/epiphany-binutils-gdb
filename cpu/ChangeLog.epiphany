@@ -1,3 +1,9 @@
+2015-11-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-int-idlebit): New hardware.
+	(dni idle): Set h-int-idlebit.
+	(h-pc): Don't show write to h-hwloop-next in trace.
+
 2015-11-02  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (op-atomic-testset): Rename from testset-insn.

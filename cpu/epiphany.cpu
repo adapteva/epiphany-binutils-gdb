@@ -897,7 +897,7 @@
       (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
       (if (reg h-hwloop-next)
         (sequence ((USI lc))
-          (set (reg h-hwloop-next) 0)
+          (set-quiet (reg h-hwloop-next) 0)
           (set (reg h-all-registers (enum USI H-REG-SCR-PC))
                (reg h-all-registers (enum USI H-REG-SCR-LS)))
           (set lc (reg h-all-registers (enum USI H-REG-SCR-LC)))
@@ -924,7 +924,7 @@
           )
           (if (eq globpc le)
             ;; ???: TODO: Throw unaligned exception if (addr % 8 != 0)
-            (set (reg h-hwloop-next) 1)
+            (set-quiet (reg h-hwloop-next) 1)
           )
           (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
         )
@@ -2496,15 +2496,22 @@
 ;; IDLE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; hint to rti that we're returning from idle
+(define-hardware
+  (name h-int-idlebit)
+  (type register BI)
+)
+
 (dni idle
   "idle until interrupt"
   (SHORT-INSN)
   "idle"
   (+ OP4_FLOW16 (f-opc-8-5 #x1b) (f-dc-15-7 #x0))
   (sequence ((USI tmpPC))
-	(set caibit 0)
-	(set tmpPC pc)
-	(set pc tmpPC)
+    (set-quiet (reg h-int-idlebit) 1)
+    (set caibit 0)
+    (set tmpPC pc)
+    (set pc tmpPC)
   )
   ()
 )
