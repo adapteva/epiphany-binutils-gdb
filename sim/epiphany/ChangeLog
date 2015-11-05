@@ -1,3 +1,9 @@
+2015-11-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* traps.c (epiphany_rti): If the core was idle because
+	of an 'idle' instruction, adjust return address to the next
+	instruction.
+
 2015-11-03  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-elf-sim.py.in: Return with simulator error code. Don't
