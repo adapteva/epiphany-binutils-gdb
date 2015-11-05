@@ -78,24 +78,20 @@ int main ()
 
   e_idle ();
 
-  // Unreachable
-  return 1;
+  /* will block until return from interrupt handler (triggered by message from
+   * other core). */
+
+  if (e_get_coreid () == LEADER)
+    print_route ();  /* Print route message took */
+  else
+    pass_message (); /* Pass message to next core in path */
+
+  return 0;
 }
 
 void interrupt_handler ()
 {
-  if (e_get_coreid () == LEADER)
-    {
-      /* Print route message took */
-      print_route ();
-      exit (0);
-    }
-  else
-    {
-      /* Pass message to next core in path */
-      pass_message ();
-      _exit (0); // Normal exit seems to close other processes stdout ???
-    }
+  /* Do nothing, returning from the interrupt is enough. */
 }
 
 uint32_t next_hop ()
