@@ -1,3 +1,8 @@
+2015-11-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers): Add special case for
+	FSTATUS.
+
 2015-11-05  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (h-int-idlebit): New hardware.
