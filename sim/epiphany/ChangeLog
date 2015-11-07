@@ -1,3 +1,8 @@
+2015-11-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_set_status): Add special case for FSTATUS.
+	* epiphany-sim.h: Update prototype for epiphanybf_set_status.
+
 2015-11-05  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.c (epiphany_gie): Detect and handle GIE/IDLE instruction

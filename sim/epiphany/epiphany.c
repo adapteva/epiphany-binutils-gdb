@@ -223,14 +223,21 @@ epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
 }
 
 void
-epiphanybf_set_status(SIM_CPU *current_cpu, USI val)
+epiphanybf_set_status (SIM_CPU *current_cpu, USI val, BI fstatus)
 {
   USI old, new;
 
   old = CPU(h_all_registers[H_REG_SCR_STATUS]);
-  /* First 3 bits are sticky */
-  new = (old & 7) | (val & (~7));
+
+  if (fstatus)
+    new = val;
+  else /* First 3 bits are sticky */
+    new = (old & 7) | (val & (~7));
+
   CPU(h_all_registers[H_REG_SCR_STATUS]) = new;
+
+  if (fstatus && !(val & (1 << H_SCR_STATUS_GIDISABLEBIT)))
+    OOB_EMIT_EVENT(OOB_EVT_INTERRUPT); /* Might trigger interrupt */
 }
 
 void
