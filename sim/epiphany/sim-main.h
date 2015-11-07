@@ -100,7 +100,8 @@ struct _sim_cpu {
 #define CPU_SCR_WRITESLOT_SIGNAL()
 #endif
 
-  oob_event_t oob_event; /* Out of band event (There can be only one) */
+  /* Out of band events. No locking, must be serialized on local core */
+  unsigned oob_events;
 
   volatile unsigned external_write; /* Write from other core (for scache) */
 

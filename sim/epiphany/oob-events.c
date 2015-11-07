@@ -194,29 +194,43 @@ update_ilatcl:
 inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu,
 					IADDR prev_vpc, IADDR vpc)
 {
+  unsigned event;
 
-  if (!current_cpu->oob_event)
+  if (!current_cpu->oob_events)
     return vpc;
 
-  switch (current_cpu->oob_event)
+  if (current_cpu->oob_events & (1 << OOB_EVT_INTERRUPT_DELAYED))
     {
-    case OOB_EVT_RESET_DEASSERT:
-      epiphanybf_cpu_reset(current_cpu);
-      vpc = 0;
-      break;
-
-    case OOB_EVT_INTERRUPT:
-      vpc = interrupt_handler(current_cpu, prev_vpc, vpc);
-      break;
-
-    case OOB_EVT_INTERRUPT_DELAYED:
+      OOB_UNTOGGLE_EVENT(OOB_EVT_INTERRUPT_DELAYED);
       OOB_EMIT_EVENT(OOB_EVT_INTERRUPT);
       return vpc;
-
-    default:
-      fprintf(stderr, "ESIM: Unknown OOB event: %d\n", current_cpu->oob_event);
     }
 
-  current_cpu->oob_event = 0;
+  for (event = 0; current_cpu->oob_events; event++)
+    {
+      if (!(current_cpu->oob_events & (1 << event)))
+	continue;
+
+      switch (event)
+	{
+	case OOB_EVT_RESET_DEASSERT:
+	  epiphanybf_cpu_reset(current_cpu);
+	  vpc = 0;
+	  break;
+
+	case OOB_EVT_INTERRUPT:
+	  vpc = interrupt_handler(current_cpu, prev_vpc, vpc);
+	  break;
+
+	default:
+	  fprintf(stderr, "ESIM: Unknown OOB event: %d\n", event);
+	  abort ();
+	}
+
+      OOB_UNTOGGLE_EVENT(event);
+
+      assert (event <= OOB_EVT_NUM_EVENTS);
+    }
+
   return vpc;
 }

@@ -1,5 +1,15 @@
 2015-11-07  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim-main.h (struct _sim_cpu): Rename member oob_event to oob_events.
+	* oob-events.h (OOB_EMIT_EVENT): Switch to flags instead of numbers to
+	support more than one emitted event.
+	(OOB_UNTOGGLE_EVENT): Add.
+	* oob-events.c (epiphany_handle_oob_events): Switch to flags instead
+	of numbers to support more than one emitted event.
+	* mloop.in: Adjust for above name change to oob_events.
+
+2015-11-07  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.c (epiphanybf_set_status): Add special case for FSTATUS.
 	* epiphany-sim.h: Update prototype for epiphanybf_set_status.
 

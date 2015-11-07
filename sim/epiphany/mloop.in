@@ -289,7 +289,7 @@ cat <<EOF
   vpc = epiphany_handle_oob_events(current_cpu, prev_vpc, vpc);
   /* If the slot is not empty that means we should delay OOB handling by
    * one insn. */
-  if (current_cpu->oob_event != 0)
+  if (current_cpu->oob_events != 0)
     goto delay_oob_one_insn;
 
   if (!CPU_SCR_WRITESLOT_EMPTY())

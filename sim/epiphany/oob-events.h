@@ -12,10 +12,19 @@ typedef enum oob_event_t_ {
 
 #define OOB_EMIT_EVENT(Event)\
   do\
-  {\
-    current_cpu->oob_event = Event;\
-  }\
-while (0)
+    {\
+      current_cpu->oob_events |= (1 << Event);\
+    }\
+  while (0)
+
+#define OOB_UNTOGGLE_EVENT(Event)\
+  do\
+    {\
+      current_cpu->oob_events &= ~(1 << Event);\
+    }\
+  while (0)
+
+
 
 IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu,
 				 IADDR prev_vpc, IADDR vpc);
