@@ -2566,13 +2566,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WAND is a wired flag that runs around the chip
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni wand     "wand"
-	     (SHORT-INSN)
-	     "wand"
-	     (+ OP4_FLOW16 (f-opc-8-5 #x18) (f-dc-15-7 #x0))
-	     (set sflagbit 1)
-	     ()
-	     )
+(dni wand "wand"
+          (SHORT-INSN)
+          "wand"
+          (+ OP4_FLOW16 (f-opc-8-5 #x18) (f-dc-15-7 #x0))
+          (sequence ()
+            (set sflagbit 1)
+            (c-call VOID "epiphanybf_wand")
+          )
+          ()
+          )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sync likes wand, but wired OR

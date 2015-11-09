@@ -1,3 +1,7 @@
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (dni wand): Call epiphanybf_wand().
+
 2015-11-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (h-all-registers): Add special case for
