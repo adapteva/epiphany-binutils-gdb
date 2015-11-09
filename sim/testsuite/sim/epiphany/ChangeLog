@@ -1,3 +1,13 @@
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/e-lib-inl.h (pass): New function.
+	(fail): New function.
+	(e_wait): New function.
+	* multicore/lib.S: New library file.
+	(wand_isr): New interrupt service routine for WAND.
+	* multicore/multicore.exp: Add lib.S to global_cc_options.
+	* multicore/wand.c: New test.
+
 2015-11-05  Ola Jeppsson  <ola@adapteva.com>
 
 	* multicore/domino.c (main): Move

@@ -69,9 +69,12 @@ uint32_t __loader_flags = LOADER_BSS_CLEARED_FLAG;
 #define E_MESSAGE_INT   5
 #define E_DMA0_INT      6
 #define E_DMA1_INT      7
+#define E_WAND_INT      8
 #define E_USER_INT      9
-typedef void (*sighandler_t)(int);
+typedef void (*sighandler_t)(void);
 
+void pass();
+void fail();
 
 static inline void e_irq_global_mask (bool state);
 void e_irq_mask (uint32_t irq, bool state);
@@ -82,6 +85,21 @@ void e_irq_set (uint32_t row, uint32_t col, uint32_t irq);
 static inline uint32_t e_get_coreid (void);
 void *e_get_global_address (unsigned row, unsigned col, const void *ptr);
 static inline void e_idle (void); /*not in e-lib */
+void e_wait (int timer, uint32_t value);
+
+void
+pass ()
+{
+  puts ("pass");
+  exit (0);
+}
+
+void
+fail ()
+{
+  puts ("fail");
+  exit (1);
+}
 
 static inline void
 e_irq_global_mask (bool state)
@@ -225,6 +243,16 @@ static inline void e_idle (void)
   /* nop opcode = 0x01a2 */
   __asm__ __volatile__ (".balignw 8,0x01a2`gie`idle");
 #endif
+}
+
+
+void
+e_wait (int timer, uint32_t value)
+{
+  /*! @todo: Timers not implemented yet so just loop */
+
+  while (value--)
+    __asm__ __volatile__ ("nop");
 }
 
 #endif /* _E_LIB_INT_H */

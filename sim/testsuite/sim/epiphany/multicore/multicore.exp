@@ -35,7 +35,7 @@ set orig_target_sim_ldflags [board_info target ldflags]
 set all_machs "epiphany32"
 
 
-set global_cc_options "-fno-diagnostics-color"
+set global_cc_options "-fno-diagnostics-color $srcdir/$subdir/lib.S"
 set global_sim_options "--ext-ram-size 0 --ext-ram-base 0"
 
 # Use simulator frontend for these tests.
