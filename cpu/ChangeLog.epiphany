@@ -1,5 +1,14 @@
 2015-11-09  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (sem-atomic-dw-load-op): Calculate 64-bit address from
+	rn6-di and rm6-di, not rn-di and rm-di. Calculate 32-bit address from
+	rn6 and rm6, not rn and rm.
+	(sem-atomic-load-op): Likewise.
+	(sem-atomic-dw-store-op): Likewise.
+	(sem-atomic-store-op): Likewise.
+
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (dni wand): Call epiphanybf_wand().
 
 2015-11-07  Ola Jeppsson  <ola@adapteva.com>

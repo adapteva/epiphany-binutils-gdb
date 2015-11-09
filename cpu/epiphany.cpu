@@ -1910,14 +1910,14 @@
     (sem-if-64bmode ((regno rn6) (regno rm6))
       (sem-dword-regs-or-exc ((regno rn6) (regno rm6))
         (sequence ((UDI addr))
-          (set addr (add DI rn-di rm-di))
+          (set addr (add DI rn6-di rm6-di))
           (sem-atomic-memop-or-exc size addr
             (set rd6-di (c-call UDI cfun ctrlmode addr size rd6-di))
           )
         )
       )
       (sequence ((UDI addr))
-        (set addr (zext DI (add SI rn rm)))
+        (set addr (zext DI (add SI rn6 rm6)))
         (sem-atomic-memop-or-exc size addr
           (set rd6-di (c-call UDI cfun ctrlmode addr size rd6-di))
         )
@@ -1930,14 +1930,14 @@
   (sem-if-64bmode ((regno rn6) (regno rm6))
     (sem-dword-regs-or-exc ((regno rn6-di) (regno rm6-di))
       (sequence ((UDI addr))
-        (set addr (add DI rn-di rm-di))
+        (set addr (add DI rn6-di rm6-di))
         (sem-atomic-memop-or-exc size addr
           (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size (zext DI rd6))))
         )
       )
     )
     (sequence ((UDI addr))
-      (set addr (zext DI (add SI rn rm)))
+      (set addr (zext DI (add SI rn6 rm6)))
       (sem-atomic-memop-or-exc size addr
         (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size (zext DI rd6))))
       )
@@ -1949,7 +1949,7 @@
   (sem-dword-regs-or-exc ((regno rd6))
     (sem-if-64bmode ((regno rn6) (regno rm6))
       (sequence ((UDI addr))
-        (set addr (add DI rn-di rm-di))
+        (set addr (add DI rn6-di rm6-di))
         (sem-dword-regs-or-exc ((regno rn6-di) (regno rm6-di))
           (sem-atomic-memop-or-exc size addr
             (c-call VOID cfun ctrlmode addr size rd6-di)
@@ -1957,7 +1957,7 @@
         )
       )
       (sequence ((UDI addr))
-        (set addr (zext DI (add SI rn rm)))
+        (set addr (zext DI (add SI rn6 rm6)))
         (sem-atomic-memop-or-exc size addr
           (c-call VOID cfun ctrlmode addr size rd6-di)
         )
@@ -1969,7 +1969,7 @@
 (define-pmacro (sem-atomic-store-op size ctrlmode cfun)
   (sem-if-64bmode (rn6 rm6)
     (sequence ((UDI addr))
-      (set addr (add DI rn-di rm-di))
+      (set addr (add DI rn6-di rm6-di))
       (sem-dword-regs-or-exc ((regno rn6) (regno rm6))
         (sem-atomic-memop-or-exc size addr
           (c-call VOID cfun ctrlmode addr size (zext DI rd6))
@@ -1977,7 +1977,7 @@
       )
     )
     (sequence ((UDI addr))
-      (set addr (zext DI (add SI rn rm)))
+      (set addr (zext DI (add SI rn6 rm6)))
       (sem-atomic-memop-or-exc size addr
         (c-call VOID cfun ctrlmode addr size (zext DI rd6))
       )
