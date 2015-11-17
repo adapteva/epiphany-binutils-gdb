@@ -557,6 +557,11 @@
       ((eq index (enum USI H-REG-MESH-RESETCORE))
         (c-call "epiphanybf_set_resetcore" val)
       )
+      ((and (ge index (enum H-REG-DMA0-CONFIG))
+            (le index (enum H-REG-DMA1-STATUS)))
+        (c-call "epiphanybf_set_dmareg" index val)
+      )
+
       (else (set (raw-reg h-all-registers index) val))
     )
   )

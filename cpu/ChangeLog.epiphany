@@ -1,3 +1,8 @@
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers): Route all writes to dma registers
+	through epiphanybf_set_dmareg.
+
 2015-11-09  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (sem-atomic-dw-load-op): Calculate 64-bit address from
