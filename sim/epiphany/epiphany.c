@@ -26,6 +26,9 @@
 #include "cgen-mem.h"
 #include "cgen-ops.h"
 #include "epiphany-desc.h"
+#if (WITH_HW)
+#include "sim-hw.h"
+#endif
 
 #include "cpu.h"
 
@@ -311,6 +314,31 @@ epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val)
     {
       OOB_EMIT_EVENT(OOB_EVT_RESET_DEASSERT);
     }
+}
+
+void
+epiphanybf_set_dmareg(SIM_CPU *current_cpu, UINT regno, USI val)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  struct hw *dma0 = sim_hw_parse(sd, "/epiphany_dma@0");
+  struct hw *dma1 = sim_hw_parse(sd, "/epiphany_dma@1");
+
+  assert (H_REG_DMA0_CONFIG <= regno && regno <= H_REG_DMA1_STATUS);
+
+  /* Forward to DMA controller device */
+  if (regno < H_REG_DMA1_CONFIG)
+    epiphany_dma_set_reg(dma0, regno - H_REG_DMA0_CONFIG, val);
+  else
+    epiphany_dma_set_reg(dma1, regno - H_REG_DMA1_CONFIG, val);
+}
+
+bool
+epiphany_any_periphal_active_p (SIM_CPU *current_cpu)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  struct hw *dma0 = sim_hw_parse(sd, "/epiphany_dma@0");
+  struct hw *dma1 = sim_hw_parse(sd, "/epiphany_dma@1");
+  return epiphany_dma_active_p (dma0) || epiphany_dma_active_p (dma1);
 }
 
 /* Backdoor access for e.g read-only register */

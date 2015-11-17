@@ -23,7 +23,7 @@ SIM_AC_OPTION_INLINE()
 SIM_AC_OPTION_CGEN_MAINT
 
 # Hardware support
-SIM_AC_OPTION_HARDWARE(yes,"","epiphany_mem")
+SIM_AC_OPTION_HARDWARE(yes,"",epiphany_mem epiphany_dma)
 
 
 dnl --enable-emesh-sim

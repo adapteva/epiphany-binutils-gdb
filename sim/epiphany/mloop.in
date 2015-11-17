@@ -268,7 +268,8 @@ cat <<EOF
 #else
   if (epiphany_cpu_is_active(current_cpu))
     vpc = execute (current_cpu, sc, FAST_P);
-  else
+  else if (!epiphany_any_periphal_active_p (current_cpu)
+	   && !current_cpu->oob_events)
     {
       if (env == ALL_ENVIRONMENT || env == USER_ENVIRONMENT)
 	epiphany_halt_on_inactive(current_cpu, prev_vpc);

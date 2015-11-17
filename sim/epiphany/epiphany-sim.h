@@ -22,6 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "cgen-atomic.h"
 
+#include <stdint.h>
+#include <stdbool.h>
+
 /* GDB register numbers.  */
 /* TBS */
 
@@ -69,6 +72,13 @@ void epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_dmareg(SIM_CPU *current_cpu, UINT regno, USI val);
+
+/* epiphany_dma */
+struct hw;
+
+extern void epiphany_dma_set_reg (struct hw *me, int regno, uint32_t val);
+extern bool epiphany_dma_active_p (struct hw *me);
 
 void epiphanybf_cpu_reset(SIM_CPU *current_cpu);
 void epiphanybf_wand(SIM_CPU *current_cpu);
@@ -172,6 +182,9 @@ extern USI epiphany_post_isn_callback (SIM_CPU *cpu , PCADDR pc) ;
 
 /* Check if core is active */
 extern int epiphany_cpu_is_active(SIM_CPU *current_cpu);
+
+/* Check if any periphal is active */
+extern bool epiphany_any_periphal_active_p (SIM_CPU *current_cpu);
 
 /* Halt simulation (for user environment) */
 extern void  epiphany_halt_on_inactive(SIM_CPU *current_cpu, PCADDR vpc);
