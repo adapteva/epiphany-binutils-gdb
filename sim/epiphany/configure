@@ -13678,7 +13678,7 @@ if test """"; then
 else
   hardware="cfi core pal glue"
 fi
-hardware="$hardware "epiphany_mem""
+hardware="$hardware epiphany_mem epiphany_dma"
 
 sim_hw_cflags="-DWITH_HW=1"
 sim_hw="$hardware"
