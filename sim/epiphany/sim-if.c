@@ -578,23 +578,6 @@ sim_open (SIM_OPEN_KIND kind,
     }
 #endif
 
-#if 0
-  /* Allocate a handler for the control registers and other devices
-     if no memory for that range has been allocated by the user.
-     All are allocated in one chunk to keep things from being
-     unnecessarily complicated.  */
-  if (sim_core_read_buffer (sd, NULL, read_map, &c, EPIPHANY_DEVICE_ADDR, 1) == 0)
-    sim_core_attach (sd, NULL,
-		     0 /*level*/,
-		     access_read_write,
-		     0 /*space ???*/,
-		     EPIPHANY_DEVICE_ADDR, EPIPHANY_DEVICE_LEN /*nr_bytes*/,
-		     0 /*modulo*/,
-		     &epiphany_devices,
-		     NULL /*buffer*/);
-
-#endif
-
   /* Allocate core managed memory if none specified by user.  */
 
 #if (WITH_HW)
@@ -737,13 +720,6 @@ sim_create_inferior (SIM_DESC sd,
   else
     addr = 0;
   sim_pc_set (current_cpu, addr);
-
-#ifdef EPIPHANY_LINUX
-  epiphanybf_h_cr_set (current_cpu,
-		       epiphany_decode_gdb_ctrl_regnum(SPI_REGNUM), 0x1f00000);
-  epiphanybf_h_cr_set (current_cpu,
-		       epiphany_decode_gdb_ctrl_regnum(SPU_REGNUM), 0x1f00000);
-#endif
 
 #if 0
   STATE_ARGV (sd) = sim_copy_argv (argv);

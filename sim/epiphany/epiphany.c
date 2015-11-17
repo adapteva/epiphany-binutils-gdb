@@ -22,6 +22,7 @@
 #define WANT_CPU epiphanybf
 #define WANT_CPU_EPIPHANYBF
 
+#include "libiberty.h"
 #include "sim-main.h"
 #include "cgen-mem.h"
 #include "cgen-ops.h"
@@ -43,20 +44,7 @@
 #include "targ-vals.h"
 
 
-/* Decode gdb ctrl register number.  */
-
-int
-epiphany_decode_gdb_ctrl_regnum (int gdb_regnum)
-{
-  switch (gdb_regnum)
-    {
-    default:
-      break;
-    }
-  abort ();
-}
-
-static int epiphanybf_scr_gdb_regmap[42] =
+static int epiphanybf_scr_gdb_regmap[] =
 {
   H_REG_SCR_CONFIG,
   H_REG_SCR_STATUS,
@@ -101,45 +89,17 @@ static int epiphanybf_scr_gdb_regmap[42] =
   H_REG_MESH_XMESHROUTE,
   H_REG_MESH_RMESHROUTE
 };
-static size_t epiphanybf_scr_gdb_regmap_num_regs =
-  sizeof(epiphanybf_scr_gdb_regmap) / sizeof(epiphanybf_scr_gdb_regmap[0]);
-
-
 
 /* Number of general purpose registers (GPRs).  */
 #define EPIPHANY_NUM_GPRS   64
 /* Number of Special Core Registers (SCRs).  */
-#define EPIPHANY_NUM_SCRS_0 16
-#define EPIPHANY_NUM_SCRS   (epiphanybf_scr_gdb_regmap_num_regs)
-
+#define EPIPHANY_NUM_SCRS   (ARRAY_SIZE (epiphanybf_scr_gdb_regmap))
 /* Number of raw registers used.  */
 #define  EPIPHANY_NUM_REGS   (EPIPHANY_NUM_GPRS + EPIPHANY_NUM_SCRS)
 /* Total number of pseudo registers (none in this implementation).  */
 #define EPIPHANY_NUM_PSEUDO_REGS 0
 /* Total of registers used.  */
 #define EPIPHANY_TOTAL_NUM_REGS (EPIPHANY_NUM_REGS + EPIPHANY_NUM_PSEUDO_REGS)
-
-/* The contents of BUF are in target byte order.  */
-/* Offsets into SCRs.  */
-#define EPIPHANY_SCR_CONFIG  0	/* Offset to config register.  */
-#define EPIPHANY_SCR_STATUS  1	/* Offset to status register.  */
-#define EPIPHANY_SCR_PC      2	/* Offset to program counter reg.  */
-#define EPIPHANY_SCR_DEBUG   3	/* Offset to debug register.  */
-#define EPIPHANY_SCR_IAB     4
-#define EPIPHANY_SCR_LC      5
-#define EPIPHANY_SCR_LS      6
-#define EPIPHANY_SCR_LE      7
-#define EPIPHANY_SCR_IRET    8	/* Offset to interrupt return reg.  */
-#define EPIPHANY_SCR_IMASK   9
-#define EPIPHANY_SCR_ILAT    10
-#define EPIPHANY_SCR_ILATST  11
-#define EPIPHANY_SCR_ILATCL  12
-#define EPIPHANY_SCR_IPEND   13
-#define EPIPHANY_SCR_CTIMER0 14
-#define EPIPHANY_SCR_CTIMER1 15
-#define EPIPHANY_SCR_HSTATUS 16
-#define EPIPHANY_SCR_HSCONFIG 17
-#define EPIPHANY_SCR_DEBUGCMD 18
 
 /** @todo Reg fetch/store can be simplified ((reg mmr offset - mmr base) / 4 )
    ... but then we have to modify gdb/epiphany-tdep.c
@@ -347,22 +307,6 @@ epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
 				    USI newval)
 {
   (CPU (h_all_registers)[regno] = (newval));
-}
-
-SI
-epiphanybf_h_cr_get_handler (SIM_CPU * current_cpu, UINT cr)
-{
-  if (cr <= 8)
-    return epiphanybf_h_core_registers_get (current_cpu, cr);
-  else
-    return 0;
-}
-
-void
-epiphanybf_h_cr_set_handler (SIM_CPU * current_cpu, UINT cr, USI newval)
-{
-  if (cr <= 8)
-    epiphanybf_h_core_registers_set (current_cpu, cr, newval);
 }
 
 void

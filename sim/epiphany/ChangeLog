@@ -1,5 +1,17 @@
 2015-11-17  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-sim.h (GET_H_SM) (GET_H_CR) (GET_H_PSW)
+	(GET_H_ACCUM): Remove macros.
+	* epiphany.c (epiphany_decode_gdb_ctrl_regnum): Remove
+	function.
+	(epiphanybf_h_cr_get_handler): Remove function.
+	(epiphanybf_h_cr_set_handler): Remove function.
+	* sim-if.c (sim_open): Remove dead code.
+	* traps.c (syscall_read_mem): Remove function.
+	(syscall_write_mem): Remove function.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
 	* dv-epiphany_dma.c (epiphany_dma_load_desc): Set curr_ptr in
 	status to current descriptor.
 	(epiphany_dma_hw_event_callback): After loading a descriptor, set

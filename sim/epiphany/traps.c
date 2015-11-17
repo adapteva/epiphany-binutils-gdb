@@ -57,30 +57,6 @@ epiphany_core_signal (SIM_DESC sd, SIM_CPU *current_cpu, sim_cia cia,
 		   transfer, sig);
 }
 
-/* Read/write functions for system call interface.  */
-
-static int
-syscall_read_mem (host_callback *cb, struct cb_syscall *sc,
-		  unsigned long taddr, char *buf, int bytes)
-{
-  SIM_DESC sd = (SIM_DESC) sc->p1;
-  SIM_CPU *cpu = (SIM_CPU *) sc->p2;
-
-  return sim_core_read_buffer (sd, cpu, read_map, buf, taddr, bytes);
-}
-
-static int
-syscall_write_mem (host_callback *cb, struct cb_syscall *sc,
-		   unsigned long taddr, const char *buf, int bytes)
-{
-
-  SIM_DESC sd = (SIM_DESC) sc->p1;
-  SIM_CPU *cpu = (SIM_CPU *) sc->p2;
-
-  return sim_core_write_buffer (sd, cpu, write_map, buf, taddr, bytes);
-}
-
-
 /*! @todo Rewrite this and interrupt_handler in oob_events */
 USI epiphany_rti(SIM_CPU *current_cpu)
 {

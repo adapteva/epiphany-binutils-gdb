@@ -30,40 +30,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 extern int epiphany_decode_gdb_ctrl_regnum (int);
 
-/* Cover macros for hardware accesses.
-   FIXME: Eventually move to cgen.  */
-#define GET_H_SM() ((CPU (h_psw) & 0x80) != 0)
-
-#ifndef GET_H_CR
-extern SI  epiphanybf_h_cr_get_handler (SIM_CPU *, UINT);
-extern void epiphanybf_h_cr_set_handler (SIM_CPU *, UINT, USI);
-
-#define GET_H_CR(regno) \
-  XCONCAT2 (WANT_CPU,_h_cr_get_handler) (current_cpu, (regno))
-#define SET_H_CR(regno, val) \
-  XCONCAT2 (WANT_CPU,_h_cr_set_handler) (current_cpu, (regno), (val))
-#endif
-
-#ifndef  GET_H_PSW
-extern UQI  epiphanybf_h_psw_get_handler (SIM_CPU *);
-extern void epiphanybf_h_psw_set_handler (SIM_CPU *, UQI);
-
-#define GET_H_PSW() \
-  XCONCAT2 (WANT_CPU,_h_psw_get_handler) (current_cpu)
-#define SET_H_PSW(val) \
-  XCONCAT2 (WANT_CPU,_h_psw_set_handler) (current_cpu, (val))
-#endif
-
-#ifndef  GET_H_ACCUM
-extern DI   epiphanybf_h_accum_get_handler (SIM_CPU *);
-extern void epiphanybf_h_accum_set_handler (SIM_CPU *, DI);
-
-#define GET_H_ACCUM() \
-  XCONCAT2 (WANT_CPU,_h_accum_get_handler) (current_cpu)
-#define SET_H_ACCUM(val) \
-  XCONCAT2 (WANT_CPU,_h_accum_set_handler) (current_cpu, (val))
-#endif
-
 /* Custom reg getters/setters */
 void epiphanybf_set_config(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_status(SIM_CPU *current_cpu, USI val, BI fstatus);
