@@ -1,5 +1,13 @@
 2015-11-17  Ola Jeppsson  <ola@adapteva.com>
 
+	* dv-epiphany_dma.c (epiphany_dma_load_desc): Set curr_ptr in
+	status to current descriptor.
+	(epiphany_dma_hw_event_callback): After loading a descriptor, set
+	state to either DMA_STATE_ACTIVE, or DMA_STATE_SLAVE, according
+	descriptor configuration.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
 	* dv-epiphany_dma.c (epiphany_dma_signal): Remove.
 	(epiphany_dma_io_read_buffer): Remove.
 	(epiphany_dma_io_write_buffer): Remove.

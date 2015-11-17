@@ -214,6 +214,7 @@ epiphany_dma_load_desc(struct hw *me, struct epiphany_dma_regs *regs)
   if (ret != sizeof(dma->desc))
     return false;
 
+  regs->status.curr_ptr = regs->config.next_ptr;
   regs->config = dma->desc.config;
   regs->stride = dma->desc.inner_stride;
   regs->count = dma->desc.count;
@@ -258,7 +259,8 @@ epiphany_dma_hw_event_callback (struct hw *me, void *data)
 	  goto error;
 	}
 
-      regs->status.dmastate = DMA_STATE_ACTIVE;
+      regs->status.dmastate = regs->config.master ? DMA_STATE_ACTIVE
+						  : DMA_STATE_SLAVE;
 
       epiphany_dma_reschedule (me, 1 + sizeof(dma->desc) / 8);
       return;
@@ -308,6 +310,9 @@ epiphany_dma_hw_event_callback (struct hw *me, void *data)
 		  reason = "failed loading dma descriptor";
 		  goto error;
 		}
+
+	      regs->status.dmastate = regs->config.master ? DMA_STATE_ACTIVE
+							  : DMA_STATE_SLAVE;
 
 	      epiphany_dma_reschedule (me, 1 + sizeof(dma->desc) / 8);
 	      return;
