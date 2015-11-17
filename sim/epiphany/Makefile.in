@@ -144,6 +144,13 @@ epiphany-elf-sim.py: $(srcdir)/epiphany-elf-sim.py.in
 
 # Delay building dummy until install. This way will be an assembler when doing
 # a unified source tree toolchain build.
+AS_FOR_TARGET = `\
+  if [ -x ../../gas/as-new ]; then \
+    echo ../../gas/as-new ; \
+  else \
+    echo $(target_alias)-as ; \
+  fi`
+
 esim-install: installdirs
 	$(INSTALL_PROGRAM) epiphany-elf-sim.py \
 		$(DESTDIR)$(bindir)/epiphany-elf-sim

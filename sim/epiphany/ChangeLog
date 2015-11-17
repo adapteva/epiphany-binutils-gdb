@@ -1,3 +1,7 @@
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in: Add missing AS_FOR_TARGET.
+
 2015-11-09  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-sim.h: Add prototype for epiphanybf_wand.
