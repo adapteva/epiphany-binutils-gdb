@@ -1,5 +1,11 @@
 2015-11-17  Ola Jeppsson  <ola@adapteva.com>
 
+	* dv-epiphany_dma.c (epiphany_dma_signal): Remove.
+	(epiphany_dma_io_read_buffer): Remove.
+	(epiphany_dma_io_write_buffer): Remove.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
 	* configure: Regenerate.
 
 2015-11-17  Ola Jeppsson  <ola@adapteva.com>

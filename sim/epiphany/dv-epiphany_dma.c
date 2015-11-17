@@ -389,10 +389,6 @@ error:
 /* Finish off the partially created hw device.  Attach our local
    callbacks.  Wire up our port names etc */
 
-#if 0
-static hw_io_read_buffer_method epiphany_dma_io_read_buffer;
-static hw_io_write_buffer_method epiphany_dma_io_write_buffer;
-#endif
 static hw_port_event_method epiphany_dma_port_event;
 
 static const struct hw_port_descriptor epiphany_dma_ports[] = {
@@ -421,10 +417,6 @@ epiphany_dma_finish (struct hw *me)
 
   set_hw_data (me, dma);
 
-#if 0
-  set_hw_io_read_buffer (me, epiphany_dma_io_read_buffer);
-  set_hw_io_write_buffer (me, epiphany_dma_io_write_buffer);
-#endif
   set_hw_ports (me, epiphany_dma_ports);
   set_hw_port_event (me, epiphany_dma_port_event);
 }
@@ -439,98 +431,6 @@ epiphany_dma_port_event (struct hw *me,
   struct epiphany_dma *controller = hw_data (me);
   hw_abort (me, "epiphany_dma_port_event: not implemented");
 }
-
-#if 0
-static void
-epiphany_dma_signal(struct hw *me, address_word addr,
-		    address_word nr_bytes, char *transfer, int sigrc)
-{
-  SIM_CPU *cpu;
-  sim_cia cia;
-  address_word ip;
-
-  cpu = hw_system_cpu (me);
-  cia = cpu ? CPU_PC_GET (cpu) : NULL_CIA;
-  ip = CIA_ADDR (cia);
-
-  switch (sigrc)
-    {
-    case SIM_SIGSEGV:
-      sim_io_eprintf(hw_system(me),
-		     "%s: %d byte %s to unmapped address 0x%llx at 0x%llx\n",
-		     hw_path(me), (int) nr_bytes, transfer,
-		     (ulong64) addr, (ulong64) ip);
-      break;
-    case SIM_SIGBUS:
-      sim_io_eprintf(hw_system(me),
-		     "%s: %d byte misaligned %s to unmapped address 0x%llx at "
-		     "0x%llx\n",
-		     hw_path(me), (int) nr_bytes, transfer,
-		     (ulong64) addr, (ulong64) ip);
-      break;
-    default:
-      sim_io_eprintf(hw_system(me),
-		     "%s: %d byte %s to address 0x%llx at 0x%llx\n",
-		     hw_path(me), (int) nr_bytes, transfer,
-		     (ulong64) addr, (ulong64) ip);
-      break;
-    }
-  hw_halt (me, sim_stopped, sigrc);
-}
-#endif
-
-#if 0
-static address_word
-epiphany_dma_io_read_buffer (struct hw *me,
-			 void *dest,
-			 int space,
-			 address_word base,
-			 address_word nr_bytes)
-{
-  es_state *esim;
-
-  esim = STATE_ESIM(hw_system(me));
-#if (WITH_TARGET_ADDRESS_BITSIZE == 64)
-  HW_TRACE ((me, "read 0x%16llx %llu", (ulong64) base, (ulong64) nr_bytes));
-#else
-  HW_TRACE ((me, "read 0x%08lx %u", (long) base, (unsigned int) nr_bytes));
-#endif
-  if (es_mem_load(esim, base, nr_bytes, (uint8_t *) dest) != ES_OK)
-    {
-      /** @todo What about SIGBUS (unaligned access) */
-      epiphany_dma_signal(me, base, nr_bytes, "read", SIM_SIGSEGV);
-      return 0;
-    }
-  else
-    return nr_bytes;
-}
-
-static address_word
-epiphany_dma_io_write_buffer (struct hw *me,
-			  const void *source,
-			  int space,
-			  address_word base,
-			  address_word nr_bytes)
-{
-  es_state *esim;
-
-  esim = STATE_ESIM(hw_system(me));
-#if (WITH_TARGET_ADDRESS_BITSIZE == 64)
-  HW_TRACE ((me, "write 0x%16llx %llu", (ulong64) base, (ulong64) nr_bytes));
-#else
-  HW_TRACE ((me, "write 0x%08lx %u", (long) base, (unsigned int) nr_bytes));
-#endif
-  if (es_mem_store(esim, base, nr_bytes, (uint8_t *) source) != ES_OK)
-    {
-      /** @todo What about SIGBUS (unaligned access) */
-      epiphany_dma_signal(me, base, nr_bytes, "write", SIM_SIGSEGV);
-      return 0;
-    }
-  else
-    return nr_bytes;
-}
-#endif
-
 
 const struct hw_descriptor dv_epiphany_dma_descriptor[] = {
   { "epiphany_dma", epiphany_dma_finish, },
