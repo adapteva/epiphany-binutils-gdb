@@ -1,5 +1,9 @@
 2015-11-18  Ola Jeppsson  <ola@adapteva.com>
 
+	* configure: Regenerate.
+
+2015-11-18  Ola Jeppsson  <ola@adapteva.com>
+
 	* configure.ac (SIM_AC_OPTION_HARDWARE): Add
 	"epiphany_dma" to hardware list.
 	* dv-epiphany_timer.c: New file.
