@@ -1,3 +1,15 @@
+2015-11-18  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure.ac (SIM_AC_OPTION_HARDWARE): Add
+	"epiphany_dma" to hardware list.
+	* dv-epiphany_timer.c: New file.
+	* epiphany-sim.h: Add function prototypes for
+	epiphany_timer_set_cfg and epiphany_timer_active_p.
+	* epiphany.c (epiphanybf_set_config): Call
+	epiphany_timer_set_cfg.
+	(epiphany_any_periphal_active_p): Call epiphany_timer_active_p.
+	* sim-if.c (sim_open): Add timer hardware.
+
 2015-11-17  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-sim.h (GET_H_SM) (GET_H_CR) (GET_H_PSW)

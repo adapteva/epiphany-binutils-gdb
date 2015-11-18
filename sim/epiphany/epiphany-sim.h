@@ -46,6 +46,11 @@ struct hw;
 extern void epiphany_dma_set_reg (struct hw *me, int regno, uint32_t val);
 extern bool epiphany_dma_active_p (struct hw *me);
 
+/* timer */
+extern void epiphany_timer_set_cfg (struct hw *me, uint32_t val);
+extern bool epiphany_timer_active_p (struct hw *me);
+
+
 void epiphanybf_cpu_reset(SIM_CPU *current_cpu);
 void epiphanybf_wand(SIM_CPU *current_cpu);
 

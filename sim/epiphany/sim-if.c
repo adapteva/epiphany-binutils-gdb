@@ -584,6 +584,7 @@ sim_open (SIM_OPEN_KIND kind,
   sim_hw_parse (sd, "/epiphany_mem");
   sim_hw_parse (sd, "/epiphany_dma@0");
   sim_hw_parse (sd, "/epiphany_dma@1");
+  sim_hw_parse (sd, "/epiphany_timer");
   /** @todo Need to be able to map external mem */
 #else
   if (sim_core_read_buffer (sd, NULL, read_map, &c, 0, 1) == 0)

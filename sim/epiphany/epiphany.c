@@ -178,11 +178,17 @@ epiphanybf_store_register (SIM_CPU * current_cpu, int rn, unsigned char *buf,
 void
 epiphanybf_set_config(SIM_CPU *current_cpu, USI val)
 {
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  struct hw *timer = sim_hw_parse(sd, "/epiphany_timer");
+
   /** @todo Any sticky bits? */
   CPU(h_all_registers[H_REG_SCR_CONFIG]) = val;
 
   /* Rounding mode might have changed */
   epiphany_set_rounding_mode(current_cpu, val);
+
+  /* Timer configuration might have changed */
+  epiphany_timer_set_cfg (timer, val);
 }
 
 void
@@ -296,9 +302,12 @@ bool
 epiphany_any_periphal_active_p (SIM_CPU *current_cpu)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
-  struct hw *dma0 = sim_hw_parse(sd, "/epiphany_dma@0");
-  struct hw *dma1 = sim_hw_parse(sd, "/epiphany_dma@1");
-  return epiphany_dma_active_p (dma0) || epiphany_dma_active_p (dma1);
+  struct hw *dma0  = sim_hw_parse(sd, "/epiphany_dma@0");
+  struct hw *dma1  = sim_hw_parse(sd, "/epiphany_dma@1");
+  struct hw *timer = sim_hw_parse(sd, "/epiphany_timer");
+  return epiphany_dma_active_p (dma0) ||
+	 epiphany_dma_active_p (dma1) ||
+	 epiphany_timer_active_p (timer);
 }
 
 /* Backdoor access for e.g read-only register */
