@@ -5,12 +5,35 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /* Flags for newlib crt0.s */
 #define LOADER_BSS_CLEARED_FLAG (1 << 0)
 #define LOADER_CUSTOM_ARGS_FLAG (1 << 1)
 /* without this flag crt0.s will clear bss at runtime = race condition. */
 uint32_t __loader_flags = LOADER_BSS_CLEARED_FLAG;
+
+void pass();
+void fail();
+
+void
+pass ()
+{
+  puts ("pass");
+  exit (0);
+}
+
+void
+fail ()
+{
+  puts ("fail");
+  exit (1);
+}
+
+
+#define E_ERR 1
+#define E_OK 0
 
 /* MMR register locations */
 #define E_REG_CONFIG           0xf0400
@@ -73,9 +96,6 @@ uint32_t __loader_flags = LOADER_BSS_CLEARED_FLAG;
 #define E_USER_INT      9
 typedef void (*sighandler_t)(void);
 
-void pass();
-void fail();
-
 static inline void e_irq_global_mask (bool state);
 void e_irq_mask (uint32_t irq, bool state);
 void e_reg_write (uint32_t reg_id, register uint32_t val);
@@ -85,21 +105,8 @@ void e_irq_set (uint32_t row, uint32_t col, uint32_t irq);
 static inline uint32_t e_get_coreid (void);
 void *e_get_global_address (unsigned row, unsigned col, const void *ptr);
 static inline void e_idle (void); /*not in e-lib */
-void e_wait (int timer, uint32_t value);
 
-void
-pass ()
-{
-  puts ("pass");
-  exit (0);
-}
 
-void
-fail ()
-{
-  puts ("fail");
-  exit (1);
-}
 
 static inline void
 e_irq_global_mask (bool state)
@@ -229,7 +236,8 @@ e_get_global_address (unsigned row, unsigned col, const void *ptr)
 }
 
 /* Not in e-lib (but should be) */
-static inline void e_idle (void)
+static inline void
+e_idle (void)
 {
 #ifdef __EPIPHANY_ARCH_5__ /* (not in compiler yet) */
   /* epiphany-5+ idle clears gidisablebit */
@@ -246,13 +254,258 @@ static inline void e_idle (void)
 }
 
 
-void
-e_wait (int timer, uint32_t value)
-{
-  /*! @todo: Timers not implemented yet so just loop */
+/* DMA stuff */
+typedef enum {
+  E_DMA_ENABLE        = (1<<0),
+  E_DMA_MASTER        = (1<<1),
+  E_DMA_CHAIN         = (1<<2),
+  E_DMA_STARTUP       = (1<<3),
+  E_DMA_IRQEN         = (1<<4),
+  E_DMA_BYTE          = (0<<5),
+  E_DMA_HWORD         = (1<<5),
+  E_DMA_WORD          = (2<<5),
+  E_DMA_DWORD         = (3<<5),
+  E_DMA_MSGMODE       = (1<<10),
+  E_DMA_SHIFT_SRC_IN  = (1<<12),
+  E_DMA_SHIFT_DST_IN  = (1<<13),
+  E_DMA_SHIFT_SRC_OUT = (1<<14),
+  E_DMA_SHIFT_DST_OUT = (1<<15),
+} e_dma_config_t;
 
-  while (value--)
-    __asm__ __volatile__ ("nop");
+typedef enum {
+  E_DMA_0 = 0,
+  E_DMA_1 = 1,
+} e_dma_id_t;
+
+typedef struct {
+  uint32_t config;
+  uint32_t inner_stride;
+  uint32_t count;
+  uint32_t outer_stride;
+  void     *src_addr;
+  void     *dst_addr;
+} __attribute__((packed)) __attribute__((aligned(8))) e_dma_desc_t;
+
+int
+e_dma_busy(e_dma_id_t chan)
+{
+  switch (chan)
+    {
+      case E_DMA_0:
+	return e_reg_read(E_REG_DMA0STATUS) & 0xf;
+      case E_DMA_1:
+	return e_reg_read(E_REG_DMA1STATUS) & 0xf;
+      default:
+	return -1;
+    }
+}
+
+int
+e_dma_start(e_dma_desc_t *descriptor, e_dma_id_t chan)
+{
+  uintptr_t start;
+  int       ret_val;
+
+  ret_val = E_ERR;
+
+  if ((chan | 1) != 1)
+    return E_ERR;
+
+  /* wait for the DMA engine to be idle */
+  while (e_dma_busy(chan));
+
+  start = ((uintptr_t)(descriptor) << 16) | E_DMA_STARTUP;
+
+  switch (chan)
+    {
+    case E_DMA_0:
+      e_reg_write(E_REG_DMA0CONFIG, start);
+      ret_val = E_OK;
+      break;
+    case E_DMA_1:
+      e_reg_write(E_REG_DMA1CONFIG, start);
+      ret_val = E_OK;
+      break;
+    }
+
+  return ret_val;
+}
+
+e_dma_desc_t _dma_copy_descriptor_ __attribute__((section(".data_bank0")));
+
+int e_dma_copy(void *dst, void *src, size_t n)
+{
+  const uintptr_t local_mask = 0xfff00000;
+  e_dma_id_t chan;
+  unsigned   index;
+  unsigned   shift;
+  unsigned   stride;
+  unsigned   config;
+  int        ret_val;
+
+  const unsigned dma_data_size[8] = {
+    E_DMA_DWORD,
+    E_DMA_BYTE,
+    E_DMA_HWORD,
+    E_DMA_BYTE,
+    E_DMA_WORD,
+    E_DMA_BYTE,
+    E_DMA_HWORD,
+    E_DMA_BYTE,
+  };
+
+  chan  = E_DMA_1;
+
+  index = (((uintptr_t) dst) | ((uintptr_t) src) | ((unsigned) n)) & 7;
+
+  config = E_DMA_MASTER | E_DMA_ENABLE | dma_data_size[index];
+  if ((((uintptr_t) dst) & local_mask) == 0)
+    config = config | E_DMA_MSGMODE;
+  shift = dma_data_size[index] >> 5;
+  stride = 0x10001 << shift;
+
+  _dma_copy_descriptor_.config       = config;
+  _dma_copy_descriptor_.inner_stride = stride;
+  _dma_copy_descriptor_.count        = 0x10000 | (n >> shift);
+  _dma_copy_descriptor_.outer_stride = stride;
+  _dma_copy_descriptor_.src_addr     = src;
+  _dma_copy_descriptor_.dst_addr     = dst;
+
+  ret_val = e_dma_start(&_dma_copy_descriptor_, chan);
+
+  while (e_dma_busy(chan));
+
+  return ret_val;
+}
+
+/* CTIMERS */
+typedef enum {
+  E_CTIMER_0 = 0,
+  E_CTIMER_1 = 1
+} e_ctimer_id_t;
+
+/** @enum e_ctimer_config_t
+ * The supported ctimer event
+ */
+typedef enum {
+  E_CTIMER_OFF              = 0x0,
+  E_CTIMER_CLK              = 0x1,
+  E_CTIMER_IDLE             = 0x2,
+  E_CTIMER_IALU_INST        = 0x4,
+  E_CTIMER_FPU_INST         = 0x5,
+  E_CTIMER_DUAL_INST        = 0x6,
+  E_CTIMER_E1_STALLS        = 0x7,
+  E_CTIMER_RA_STALLS        = 0x8,
+  E_CTIMER_EXT_FETCH_STALLS = 0xc,
+  E_CTIMER_EXT_LOAD_STALLS  = 0xd,
+  /* Only on Epiphany-IV+ */
+  E_CTIMER_64BIT            = 0x3,
+} e_ctimer_config_t;
+
+/** @def MAX_CTIMER_VALUE 0xffffffff
+ * Defines the maximum timer value  (MAX_UINT)
+*/
+#define E_CTIMER_MAX (~0)
+
+unsigned
+e_ctimer_start(e_ctimer_id_t timer, uint32_t config)
+{
+  uint32_t mask;
+
+  switch (timer)
+    {
+    case E_CTIMER_0:
+      mask = 0xffffff0f;
+      config = config << 4;
+      break;
+    case E_CTIMER_1:
+      mask = 0xfffff0ff;
+      config = config << 8;
+      break;
+    default:
+      return 0;
+    }
+
+  __asm__ __volatile__ (
+    "movfs	r16, config\n\t"   /* load config        */
+    "and	r16, r16, %0\n\t"  /* apply mask         */
+    "orr	r16, r16, %1\n\t"  /* tmp = config | val */
+    "movts	config, r16"       /* config = tmp       */
+    : : "r" (mask), "r" (config) : "r16", "config" /*, "ctimer0", "ctimer1" */);
+  return config;
+
+}
+
+unsigned
+e_ctimer_stop(e_ctimer_id_t timer)
+{
+  // TODO convert to assembly to eliminate 2 function calls.
+  uint32_t shift;
+  uint32_t mask;
+  uint32_t config;
+  uint32_t count;
+
+  shift = (timer) ? 8:4;
+  mask = 0xf << shift;
+  config = e_reg_read(E_REG_CONFIG);
+  // stop the timer
+  e_reg_write(E_REG_CONFIG, config & (~mask));
+
+  count = e_reg_read(timer ? E_REG_CTIMER1 : E_REG_CTIMER0);
+
+  return count;
+}
+
+uint32_t
+e_ctimer_set (uint32_t timer_id, uint32_t val)
+{
+  switch (timer_id)
+    {
+    case E_CTIMER_0:
+      __asm__ __volatile__ ("movts ctimer0, %0" : :"r" (val) : /*"ctimer0"*/);
+      break;
+    case E_CTIMER_1:
+      __asm__ __volatile__ ("movts ctimer1, %0" : :"r" (val) : /*"ctimer1"*/);
+      break;
+    default:
+      val = 0;
+      break;
+    }
+  return val;
+}
+
+uint32_t
+e_ctimer_get (uint32_t timer_id)
+{
+  uint32_t val;
+
+  switch (timer_id)
+    {
+    case E_CTIMER_0:
+      __asm__ __volatile__ ("movfs %0, ctimer0" : "=r" (val) : : /*"ctimer0"*/);
+      break;
+    case E_CTIMER_1:
+      __asm__ __volatile__ ("movfs %0, ctimer1" : "=r" (val) : : /*"ctimer1"*/);
+      break;
+    default:
+      val = 0;
+      break;
+    }
+  return val;
+}
+
+void
+e_wait(e_ctimer_id_t timer, unsigned int clicks)
+{
+  // Program ctimer and start counting
+  e_ctimer_stop(timer);
+  e_ctimer_set(timer, clicks);
+  e_ctimer_start(timer, E_CTIMER_CLK);
+
+  // Wait until ctimer is idle
+  while (e_ctimer_get(timer)) { };
+
+  return;
 }
 
 #endif /* _E_LIB_INT_H */

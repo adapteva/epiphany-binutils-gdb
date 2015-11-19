@@ -1,3 +1,16 @@
+2015-11-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/e-lib-inl.h (int e_dma_busy): New function.
+	(int e_dma_start): New function.
+	(int e_dma_copy): New function.
+	(e_ctimer_start): New function.
+	(e_ctimer_stop): New function.
+	(e_ctimer_set): New function.
+	(e_ctimer_get): New function.
+	(e_wait): New function.
+	* multicore/lib.S (wand_isr): sp should always be 64-bit aligned.
+	* multicore/multicore.exp (board_info ldflags): Add .data_bank0
+
 2015-11-09  Ola Jeppsson  <ola@adapteva.com>
 
 	* multicore/e-lib-inl.h (pass): New function.

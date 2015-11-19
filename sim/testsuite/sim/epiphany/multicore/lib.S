@@ -3,14 +3,12 @@
 	.global		wand_isr
 	.balign	8
 wand_isr:
-	str	r0,[sp,#-1]
-	str	r1,[sp,#-2]
+	strd	r0,[sp,#-1]
 	movfs	r0,status
 	mov	r1,%low(WAND_MASK)
 	movt	r1,%high(WAND_MASK)
 	and	r0,r0,r1
 	movts	status,r0
-	ldr	r0,[sp,#-1]
-	ldr	r1,[sp,#-2]
+	ldrd	r0,[sp,#-1]
 	rti
 .size wand_isr, .-wand_isr
