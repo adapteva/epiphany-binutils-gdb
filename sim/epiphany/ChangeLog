@@ -1,3 +1,10 @@
+2015-11-20  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_dma.c (epiphany_dma_hw_event_callback): Add raised
+	interrupts to trace.
+	* sim-main.h (SIM_ENGINE_HALT_HOOK): Warn if an peripheral is still
+	active.
+
 2015-11-18  Ola Jeppsson  <ola@adapteva.com>
 
 	* configure: Regenerate.

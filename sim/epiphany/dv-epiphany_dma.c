@@ -276,6 +276,8 @@ epiphany_dma_hw_event_callback (struct hw *me, void *data)
 
 	      if (regs->config.irqen)
 		{
+		  HW_TRACE ((me, "raising interrupt"));
+
 		  ilatst_val = 1 << (H_INTERRUPT_DMA0 + dma->channel);
 		  epiphanybf_h_all_registers_set (current_cpu, H_REG_SCR_ILATST,
 						  ilatst_val);
@@ -287,6 +289,10 @@ epiphany_dma_hw_event_callback (struct hw *me, void *data)
 		    (regs->dst_addr & ~0xfffffULL) |
 		    (0xf0000 + (H_REG_SCR_ILATST << 2));
 		  ilatst_val = 1 << H_INTERRUPT_MESSAGE;
+
+		  HW_TRACE ((me, "sending MSG interrupt to %#x",
+			     ilatst_addr >> 20));
+
 		  ret = sim_write (hw_system (me), ilatst_addr,
 				   (unsigned char *) &ilatst_val, 4);
 		  if (ret != 4)
