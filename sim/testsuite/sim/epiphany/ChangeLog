@@ -1,3 +1,7 @@
+2015-11-20  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/domino-dma.c: New test.
+
 2015-11-19  Ola Jeppsson  <ola@adapteva.com>
 
 	* multicore/dma.c: New test.
