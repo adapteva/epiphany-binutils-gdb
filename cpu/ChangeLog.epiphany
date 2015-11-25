@@ -1,3 +1,8 @@
+2015-11-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (dni idle): Call epiphany_gie ().
+	(dni gien): Adjust for API change in epiphany_gie ().
+
 2015-11-17  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (h-all-registers): Route all writes to dma registers
