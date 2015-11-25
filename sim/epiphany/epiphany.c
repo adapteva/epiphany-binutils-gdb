@@ -334,8 +334,10 @@ epiphany_break (SIM_CPU * current_cpu, PCADDR brkaddr)
   return;
 }
 
+/* The insn_is_idle arguments indicates if the current instruction is IDLE.
+ * In Epiphany-V the IDLE instruction also clears the gidisablebit */
 void
-epiphany_gie(SIM_CPU *current_cpu)
+epiphany_gie(SIM_CPU *current_cpu, int insn_is_idle)
 {
   uint16_t next_insn;
   SIM_DESC sd = CPU_STATE (current_cpu);
@@ -348,7 +350,7 @@ epiphany_gie(SIM_CPU *current_cpu)
    * instruction stream, and the first instruction is 64-bit aligned, skip
    * interrupt handling by one instruction so no interrupt can sneak in between
    * the two instructions.  */
-  if ((vpc & 7) == 0)
+  if ((vpc & 7) == 0 && !insn_is_idle)
     {
       if (2 != sim_core_read_buffer (sd, current_cpu, read_map, &next_insn,
 				     vpc + 2, 2))

@@ -146,7 +146,7 @@ extern void epiphany_fpu_error (CGEN_FPU *, int);
 extern USI epiphany_rti (SIM_CPU *);
 
 /* Handle the gie insn.  */
-extern void epiphany_gie( SIM_CPU * );
+extern void epiphany_gie(SIM_CPU *, int);
 
 /* Call back after every instruction.  */
 extern USI epiphany_post_isn_callback (SIM_CPU *cpu , PCADDR pc) ;
