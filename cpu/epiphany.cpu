@@ -880,6 +880,15 @@
 )
 
 
+;; call exception macro - no check for imask
+(define-pmacro (schedule-exception reason)
+  (sequence ()
+	(set (reg h-scr-status-excause) reason) ;; STATUS bits alias.
+	(set (reg h-all-registers (enum UINT H-REG-SCR-ILATST)) 2) ;; Exception interrupt bit
+  )
+)
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					; PC is a byte-addressed register
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -899,41 +908,44 @@
   ;; Forward get/set to h-all-registers handlers
   (get () (reg h-all-registers (enum USI H-REG-SCR-PC)))
   (set (newpc)
-    (if (eq (reg h-all-registers (enum USI H-REG-SCR-LC)) 0)
-      (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
-      (if (reg h-hwloop-next)
-        (sequence ((USI lc))
-          (set-quiet (reg h-hwloop-next) 0)
-          (set (reg h-all-registers (enum USI H-REG-SCR-PC))
-               (reg h-all-registers (enum USI H-REG-SCR-LS)))
-          (set lc (reg h-all-registers (enum USI H-REG-SCR-LC)))
-          (set (reg h-all-registers (enum USI H-REG-SCR-LC)) (sub lc 1))
-        )
-        (sequence ((USI lc) (USI ls) (USI le) (USI corebase) (USI globpc))
-          (set corebase
-               (sll (reg h-all-registers (enum USI H-REG-MESH-COREID)) 20))
+    (if (eq (const 0) (c-call BI "epiphanybf_fetchable_p" newpc))
+      (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-ILLEGAL))
+      (if (eq (reg h-all-registers (enum USI H-REG-SCR-LC)) 0)
+	(set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
+	(if (reg h-hwloop-next)
+	  (sequence ((USI lc))
+	    (set-quiet (reg h-hwloop-next) 0)
+	    (set (reg h-all-registers (enum USI H-REG-SCR-PC))
+		 (reg h-all-registers (enum USI H-REG-SCR-LS)))
+	    (set lc (reg h-all-registers (enum USI H-REG-SCR-LC)))
+	    (set (reg h-all-registers (enum USI H-REG-SCR-LC)) (sub lc 1))
+	  )
+	  (sequence ((USI lc) (USI ls) (USI le) (USI corebase) (USI globpc))
+	    (set corebase
+		 (sll (reg h-all-registers (enum USI H-REG-MESH-COREID)) 20))
 
-          (set lc (reg h-all-registers (enum USI H-REG-SCR-LC)))
+	    (set lc (reg h-all-registers (enum USI H-REG-SCR-LC)))
 
-          (set ls (reg h-all-registers (enum USI H-REG-SCR-LS)))
-          (if (lt ls #x100000) (set ls (or ls corebase)))
-          (set le (reg h-all-registers (enum USI H-REG-SCR-LE)))
-          (if (lt le #x100000) (set le (or le corebase)))
+	    (set ls (reg h-all-registers (enum USI H-REG-SCR-LS)))
+	    (if (lt ls #x100000) (set ls (or ls corebase)))
+	    (set le (reg h-all-registers (enum USI H-REG-SCR-LE)))
+	    (if (lt le #x100000) (set le (or le corebase)))
 
-          (if (lt newpc #x100000)
-            (set globpc (or newpc corebase))
-            (set globpc newpc)
-          )
+	    (if (lt newpc #x100000)
+	      (set globpc (or newpc corebase))
+	      (set globpc newpc)
+	    )
 
-          (if (eq globpc ls)
-            (set (reg h-all-registers (enum USI H-REG-SCR-LC)) (sub lc 1))
-          )
-          (if (eq globpc le)
-            ;; ???: TODO: Throw unaligned exception if (addr % 8 != 0)
-            (set-quiet (reg h-hwloop-next) 1)
-          )
-          (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
-        )
+	    (if (eq globpc ls)
+	      (set (reg h-all-registers (enum USI H-REG-SCR-LC)) (sub lc 1))
+	    )
+	    (if (eq globpc le)
+	      ;; ???: TODO: Throw unaligned exception if (addr % 8 != 0)
+	      (set-quiet (reg h-hwloop-next) 1)
+	    )
+	    (set (reg h-all-registers (enum USI H-REG-SCR-PC)) newpc)
+	  )
+	)
       )
     )
   )
@@ -1394,14 +1406,6 @@
 	    (print "postindex")))
 
 
-
-;; call exception macro - no check for imask
-(define-pmacro (schedule-exception reason)
-  (sequence ()
-	(set (reg h-scr-status-excause) reason) ;; STATUS bits alias.
-	(set (hcr-ilatst) 2) ;; Exception interrupt bit
-  )
-)
 
 ;; Some handy macros
 ;;

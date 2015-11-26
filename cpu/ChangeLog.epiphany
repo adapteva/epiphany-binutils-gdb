@@ -1,3 +1,8 @@
+2015-11-26  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-pc): Call epiphanybf_fetchable_p to verify that newval
+	is a valid instruction address.
+
 2015-11-25  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (dni idle): Call epiphany_gie ().
