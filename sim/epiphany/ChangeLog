@@ -1,3 +1,12 @@
+2015-11-26  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h (epiphanybf_fetchable_p): New function.
+	* epiphany.c (epiphanybf_external_fetch_allowed_p): New function.
+	* sim-if.c (enum epiphany_options): Add E_OPTION_EXTERNAL_FETCH.
+	(options_epiphany): Add E_OPTION_EXTERNAL_FETCH entry.
+	(epiphany_option_handler): Handle E_OPTION_EXTERNAL_FETCH,
+	* sim-main.h (struct sim_state): Add external_fetch boolean.
+
 2015-11-25  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.c (epiphany_gie): Add insn_is_idle parameter.

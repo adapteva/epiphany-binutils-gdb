@@ -299,6 +299,14 @@ epiphanybf_set_dmareg(SIM_CPU *current_cpu, UINT regno, USI val)
 }
 
 bool
+epiphanybf_external_fetch_allowed_p (SIM_CPU *current_cpu)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+
+  return sd->external_fetch;
+}
+
+bool
 epiphany_any_periphal_active_p (SIM_CPU *current_cpu)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);

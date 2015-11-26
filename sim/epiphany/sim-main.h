@@ -12,6 +12,7 @@
 #include "config.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "symcat.h"
 #include "sim-basics.h"
@@ -143,6 +144,7 @@ struct sim_state {
   sim_state_base base;
 
 #if WITH_EMESH_SIM
+  bool external_fetch; /* True if external instruction fetch is supported */
   es_state *esim;
 #define STATE_ESIM(sd) (sd->esim)
 #endif

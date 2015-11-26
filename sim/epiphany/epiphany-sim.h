@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef EPIPHANY_SIM_H
 #define EPIPHANY_SIM_H
 
+#include "cgen-types.h"
 #include "cgen-atomic.h"
 
 #include <stdint.h>
@@ -39,6 +40,20 @@ void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_dmareg(SIM_CPU *current_cpu, UINT regno, USI val);
+
+bool epiphanybf_external_fetch_allowed_p(SIM_CPU *current_cpu);
+/* This function is called for every instruction fetch, so it better be fast */
+inline static BI
+epiphanybf_fetchable_p (SIM_CPU *current_cpu, address_word addr)
+{
+  static bool initialized = false;
+  static bool external_fetch_allowed;
+
+  if (!initialized)
+    external_fetch_allowed = epiphanybf_external_fetch_allowed_p (current_cpu);
+
+  return (addr < 0x100000 || external_fetch_allowed);
+}
 
 /* epiphany_dma */
 struct hw;

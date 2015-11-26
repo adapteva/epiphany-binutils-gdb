@@ -68,6 +68,7 @@ typedef enum {
   E_OPTION_EXT_RAM_BASE,
   E_OPTION_EXT_RAM_SIZE,
   E_OPTION_SESSION_NAME,
+  E_OPTION_EXTERNAL_FETCH,
   /** @todo Add more options:
    * Check es_cluster_cfg in esim.h
    */
@@ -151,6 +152,9 @@ static const OPTION options_epiphany[] =
       epiphany_option_handler  },
   { {"e-session-name", required_argument, NULL, E_OPTION_SESSION_NAME},
       '\0', "NAME", "Set the session name. Use this option when you want to run separate simulations concurrently without clashing, or if you want to connect clients to a one-core simulation.",
+      epiphany_option_handler  },
+  { {"e-external-fetch", no_argument, NULL, E_OPTION_EXTERNAL_FETCH},
+      '\0', NULL, "Allow instruction fetch from off-core memory. Default is off.",
       epiphany_option_handler  },
 #endif
   { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL, NULL }
@@ -241,6 +245,9 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
       break;
     case E_OPTION_SESSION_NAME:
       emesh_params.session_name = arg;
+      break;
+    case E_OPTION_EXTERNAL_FETCH:
+      sd->external_fetch = true;
       break;
 #undef SET_OR_FAIL
 #endif
