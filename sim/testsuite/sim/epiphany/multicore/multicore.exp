@@ -36,7 +36,7 @@ set all_machs "epiphany32"
 
 
 set global_cc_options "-fno-diagnostics-color $srcdir/$subdir/lib.S"
-set global_sim_options "--ext-ram-size 0 --ext-ram-base 0"
+set global_sim_options "--ext-ram-size 0 --ext-ram-base 0 --core-mem 1024kB"
 
 # Use simulator frontend for these tests.
 set sim "$objdir/../$arch/epiphany-elf-sim.py"

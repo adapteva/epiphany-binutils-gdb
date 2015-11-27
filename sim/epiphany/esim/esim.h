@@ -33,7 +33,7 @@ typedef struct es_cluster_cfg_ {
     unsigned rows;                    /*!< Number of rows                  */
     unsigned cols;                    /*!< Number of cols                  */
     size_t   core_mem_region;         /*!< Core memory region size         */
-    /* signed   core_phys_mem; */     /* Allocate entire region for now    */
+    size_t   core_phys_mem;           /*!< Size of core SRAM               */
     unsigned ext_ram_node;            /*!< Let this be rank '0' for now    */
     uint64_t ext_ram_base;            /*!< core_mem_region must be divisor */
     uint64_t ext_ram_size;            /*!< Size of external memory         */
@@ -89,6 +89,7 @@ unsigned es_get_coreid(const es_state *esim);
 
 void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
 size_t es_get_core_mem_region_size(const es_state *esim);
+size_t es_get_core_phys_mem_size(const es_state *esim);
 
 void es_dump_config(const es_state *esim);
 

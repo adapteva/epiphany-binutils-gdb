@@ -94,12 +94,13 @@ def parse_size(x):
             return True, num
 
         # Just look at one character, (emulates sim-options.c)
-        fn = switch.get(sfx.lower()[0], (lambda: False, -1))
-
-        return fn()
+        return switch.get(sfx.lower()[0], (lambda: False, -1))
 
     except ValueError:
         return False, -1
+
+def pow_of_two_p(n):
+    return (n != 0)  and (n & (n-1) == 0)
 
 
 def parse_or_die():
@@ -153,6 +154,10 @@ Press Ctrl-C at any time to abort the simulation.
             help='External RAM base address')
 
     parser.add_argument(
+            '--core-mem', type=str, default='64kB',
+            help='Core memory size (SRAM). Allowed suffixes: KB, MB, GB. No spaces. Default: 64kB.')
+
+    parser.add_argument(
             '--redirect-dir', type=str,
             help="""Redirect stdin, stdout, and stderr to per process files in
             REDIRECT_DIR. REDIRECT_DIR will be created if it does not exist.
@@ -179,6 +184,10 @@ Press Ctrl-C at any time to abort the simulation.
     parser.add_argument('--profile', action='store_true',
             help='Enable profiling')
 
+    parser.add_argument('--trace', action='store_true',
+            help='Enable tracing')
+
+
     parser.add_argument('--extra-args', type=str, metavar='ARGS', default='',
             help="""Pass ARGS to epiphany-elf-run. Enclose in quotes, e.g
             --extra-args="--foo --bar" """)
@@ -200,6 +209,11 @@ Press Ctrl-C at any time to abort the simulation.
     if (not issize) or size < 0 or 4095 * 1024 * 1024 < size:
         parser.error('External RAM size must be within range [0..4095] MB')
 
+    issize, size = parse_size(args.core_mem)
+    if (not issize) or size < 32768 or 0x100000 < size:
+        parser.error('Core memory size must be within range [32KB..1MB]')
+    if not pow_of_two_p(size):
+        parser.error('Core memory size must be power of two')
 
     if not {args.environment} & {'user', 'virtual', 'operating'}:
         parser.error('Environment must be `user\', `environment\', or `operating\'')
@@ -375,11 +389,15 @@ def spawn(args, i, j):
         '--e-cols'        , args.cols,
         '--e-ext-ram-size', args.ext_ram_size,
         '--e-ext-ram-base', args.ext_ram_base,
+        '--e-core-mem'    , args.core_mem,
         '--environment'   , args.environment
         ])
 
     if args.profile:
         sim_args.append('-pon')
+
+    if args.trace:
+        sim_args.append('--trace')
 
     sim_args.extend(args.extra_args.split())
 

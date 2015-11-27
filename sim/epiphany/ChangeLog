@@ -1,5 +1,21 @@
 2015-11-27  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim/esim.h (es_cluster_cfg): Add core_phys_mem member.
+	(es_get_core_phys_mem_size): Add prototype.
+	* esim/esim.c (es_addr_translate): Check that address is backed by
+	physical memory.
+	(es_validate_cluster_cfg): Validate core_phys_mem field in es_cluster.
+	(es_dump_config): Print core_phys_mem.
+	(es_get_core_phys_mem_size): New function.
+	* sim-if.c (struct emesh_params): Add core_mem.
+	(options_epiphany): Add '--e-core-mem' flag.
+	(epiphany_mem_size_option_handler): Add case for E_OPTION_CORE_MEM.
+	(sim_esim_init): Set core_phys_mem in cluster.
+	* epiphany-elf-sim.py.in (pow_of_two): New function.
+	(parse_or_die): Add '--core-mem' argument.
+
+2015-11-27  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-if.c (epiphany_mem_size_option_handler): New
 	function. Supports 'K', 'M', and 'G' suffixes.
 	(epiphany_option_handler): Remove E_OPTION_EXT_RAM_SIZE case.

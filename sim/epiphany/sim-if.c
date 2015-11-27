@@ -69,6 +69,7 @@ typedef enum {
   E_OPTION_EXT_RAM_SIZE,
   E_OPTION_SESSION_NAME,
   E_OPTION_EXTERNAL_FETCH,
+  E_OPTION_CORE_MEM,
   /** @todo Add more options:
    * Check es_cluster_cfg in esim.h
    */
@@ -86,6 +87,7 @@ struct emesh_params {
   uint64_t ext_ram_base;
   /* Don't allow crazy large ext ram size for now */
   int64_t ext_ram_size;
+  int64_t core_mem;
 
   char *xml_hdf_file;
 
@@ -100,6 +102,7 @@ static struct emesh_params emesh_params = {
   .mesh_add_ext_ram =  1,
   .ext_ram_base     =  0,
   .ext_ram_size     = -1,
+  .core_mem        = -1,
 
   .xml_hdf_file     = NULL,
   .session_name     = NULL,
@@ -158,6 +161,9 @@ static const OPTION options_epiphany[] =
   { {"e-external-fetch", no_argument, NULL, E_OPTION_EXTERNAL_FETCH},
       '\0', NULL, "Allow instruction fetch from off-core memory. Default is off.",
       epiphany_option_handler  },
+  { {"e-core-mem", required_argument, NULL, E_OPTION_CORE_MEM},
+      '\0', "SIZE", "Core memory size. Default is `64KB'.",
+      epiphany_mem_size_option_handler  },
 #endif
   { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL, NULL }
 };
@@ -222,6 +228,9 @@ epiphany_mem_size_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
     {
     case E_OPTION_EXT_RAM_SIZE:
       SET_OR_FAIL(ext_ram_size, "e-ext-ram-size");
+      break;
+    case E_OPTION_CORE_MEM:
+      SET_OR_FAIL (core_mem, "e-core-mem");
       break;
     default:
       sim_io_eprintf (sd, "Unknown option %d `%s'\n", opt, arg);
@@ -476,7 +485,7 @@ sim_esim_init(SIM_DESC sd)
 {
   es_cluster_cfg cluster;
   struct emesh_params *p;
-  uint64_t ext_ram_size, ext_ram_base;
+  uint64_t ext_ram_size, ext_ram_base, core_mem;
 
   if (es_initialized(STATE_ESIM(sd)) == ES_OK)
     return SIM_RC_OK;
@@ -486,8 +495,10 @@ sim_esim_init(SIM_DESC sd)
 
   p = &emesh_params;
 
+  /* Default values */
   ext_ram_size = 32*1024*1024;
   ext_ram_base = 0x8e000000;
+  core_mem    = 65536; /*!< @todo: derive from model */
 
 #if HAVE_E_XML
   /* Parse XML file, if specified */
@@ -516,9 +527,13 @@ sim_esim_init(SIM_DESC sd)
       ext_ram_size = 0;
       ext_ram_base = 0xffffffff;
     }
+
+  core_mem = (0 <= p->core_mem) ? p->core_mem : core_mem;
+
   cluster.ext_ram_size = ext_ram_size;
   cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
+  cluster.core_phys_mem = core_mem;
 
   if (es_init(&STATE_ESIM(sd), cluster, p->coreid, p->session_name) != ES_OK)
     {

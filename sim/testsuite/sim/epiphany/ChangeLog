@@ -1,3 +1,7 @@
+2015-11-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/multicore.exp: Pass --core-mem 1024kb to simulator.
+
 2015-11-20  Ola Jeppsson  <ola@adapteva.com>
 
 	* multicore/domino-dma.c: New test.

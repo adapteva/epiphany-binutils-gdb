@@ -152,6 +152,7 @@ es_addr_translate(const es_state *esim, es_transl *transl,
 {
   uint8_t *tmp_ptr;
   signed node;
+  address_word offset;
 
   if (es_initialized(esim) != ES_OK)
     {
@@ -212,6 +213,12 @@ es_addr_translate(const es_state *esim, es_transl *transl,
 	    }
 	  else
 	    {
+	      offset = addr & (ES_CLUSTER_CFG.core_mem_region - 1);
+	      if (offset >= ES_CLUSTER_CFG.core_phys_mem)
+		{
+		  transl->location = ES_LOC_INVALID;
+		  return;
+		}
 	      transl->location = ES_LOC_SHM;
 	      transl->mem =
 	       ((uint8_t *) esim->cores_mem) +
@@ -946,6 +953,13 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "Core memory region size is zero");
   FAIL_IF(c->core_mem_region & (c->core_mem_region-1),
 			    "Core memory region size must be power of two");
+
+  FAIL_IF(c->core_phys_mem < 32768,
+			    "Core SRAM size must be at least 32KB");
+  FAIL_IF(c->core_phys_mem > c->core_mem_region,
+			    "Core SRAM size cannot be larger than core memory region");
+  FAIL_IF(c->core_phys_mem & (c->core_phys_mem-1),
+			    "Core SRAM size must be power of two");
 
   /* Only support up to 4GB for now */
   FAIL_IF((uint64_t) c->ext_ram_size > (1ULL<<32ULL),
@@ -1887,6 +1901,7 @@ es_dump_config(const es_state *esim)
 	  "  .rows            = %d\n"
 	  "  .cols            = %d\n"
 	  "  .core_mem_region = %zu\n"
+	  "  .core_phys_mem   = %zu\n"
 	  "  .ext_ram_node    = %d\n"
 	  "  .ext_ram_base    = 0x%.16llx\n"
 	  "  .ext_ram_size    = %llu\n"
@@ -1902,6 +1917,7 @@ es_dump_config(const es_state *esim)
 	  ES_CLUSTER_CFG.rows,
 	  ES_CLUSTER_CFG.cols,
 	  ES_CLUSTER_CFG.core_mem_region,
+	  ES_CLUSTER_CFG.core_phys_mem,
 	  ES_CLUSTER_CFG.ext_ram_node,
 	  (ulong64) ES_CLUSTER_CFG.ext_ram_base,
 	  (ulong64) ES_CLUSTER_CFG.ext_ram_size,
@@ -1955,6 +1971,11 @@ inline size_t
 es_get_core_mem_region_size(const es_state *esim)
 {
   return ES_CLUSTER_CFG.core_mem_region;
+}
+inline size_t
+es_get_core_phys_mem_size(const es_state *esim)
+{
+  return ES_CLUSTER_CFG.core_phys_mem;
 }
 inline unsigned
 es_get_coreid(const es_state *esim)
