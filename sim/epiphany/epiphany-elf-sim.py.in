@@ -56,6 +56,52 @@ def auto_int(x):
     return int(x,0)
 
 
+# From:
+# https://stackoverflow.com/questions/6679641/how-to-split-a-list-in-two-at-the-point-where-predicate-is-first-false
+# Why isn't there a break in itertools? Gah!
+def breakwhen(pred, seq):
+    # if seq is not already an iterator, make it one
+    if not hasattr(seq,'next'):
+        seq = iter(seq)
+
+    fst, snd = [], []
+    for item in seq:
+        if pred(item):
+            snd.append(item)
+            break
+        fst.append(item)
+
+    snd.extend(seq)
+
+    return fst, snd
+
+def not_number_part(x):
+    return not x in (map(str, range(0,10)) + ['x', 'X'])
+
+def parse_size(x):
+    """ Support size argument w/ "K,M,G" suffix. """
+    try:
+        num, sfx = map(''.join, breakwhen(not_number_part, x))
+        num = auto_int(num)
+        switch = {
+            ' ' : (lambda: True, num),
+            '\t': (lambda: True, num),
+            'k' : (lambda: True, num << 10),
+            'm' : (lambda: True, num << 20),
+            'g' : (lambda: True, num << 30),
+        }
+        if not sfx:
+            return True, num
+
+        # Just look at one character, (emulates sim-options.c)
+        fn = switch.get(sfx.lower()[0], (lambda: False, -1))
+
+        return fn()
+
+    except ValueError:
+        return False, -1
+
+
 def parse_or_die():
     """ Parse command line arguments """
     parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter)
@@ -100,8 +146,8 @@ Press Ctrl-C at any time to abort the simulation.
             where the default environment setting is `user'""")
 
     parser.add_argument(
-            '--ext-ram-size', type=auto_int, default=32,
-            help='External RAM size in MB')
+            '--ext-ram-size', type=str, default='32MB',
+            help='External RAM size. Allowed suffixes: KB, MB, GB. No spaces. Default: 32MB.')
     parser.add_argument(
             '--ext-ram-base', type=auto_int, default=0x8e000000,
             help='External RAM base address')
@@ -150,8 +196,10 @@ Press Ctrl-C at any time to abort the simulation.
     if args.cols < 1 or 64 < args.cols:
         parser.error('Columns must be within range [1..64]')
 
-    if args.ext_ram_size < 0 or 4095 < args.ext_ram_size:
-        parser.error('External RAM size must be within range [0..4095]')
+    issize, size = parse_size(args.ext_ram_size)
+    if (not issize) or size < 0 or 4095 * 1024 * 1024 < size:
+        parser.error('External RAM size must be within range [0..4095] MB')
+
 
     if not {args.environment} & {'user', 'virtual', 'operating'}:
         parser.error('Environment must be `user\', `environment\', or `operating\'')

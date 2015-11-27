@@ -107,6 +107,8 @@ static struct emesh_params emesh_params = {
 
 static void free_state (SIM_DESC);
 static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
+static SIM_RC epiphany_mem_size_option_handler (SIM_DESC, sim_cpu *, int,
+						char *, int);
 static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
 
 #ifdef WITH_EMESH_SIM
@@ -148,8 +150,8 @@ static const OPTION options_epiphany[] =
       '\0', "address", "Base address of external RAM. Default is 0x8e000000.",
       epiphany_option_handler  },
   { {"e-ext-ram-size", required_argument, NULL, E_OPTION_EXT_RAM_SIZE},
-      '\0', "MB", "Size of external RAM in MB. Default is 32 MB.",
-      epiphany_option_handler  },
+      '\0', "MB", "Size of external RAM. Default is `32MB'.",
+      epiphany_mem_size_option_handler  },
   { {"e-session-name", required_argument, NULL, E_OPTION_SESSION_NAME},
       '\0', "NAME", "Set the session name. Use this option when you want to run separate simulations concurrently without clashing, or if you want to connect clients to a one-core simulation.",
       epiphany_option_handler  },
@@ -173,12 +175,72 @@ free_state (SIM_DESC sd)
   sim_state_free (sd);
 }
 
+
+#define SET_OR_FAIL(Param, Name)\
+  do \
+    {\
+      if (valid)\
+	{\
+	  emesh_params.Param = (sizeof(emesh_params.Param) < 8 ? (unsigned) ul : ul);\
+	}\
+      else\
+	{\
+	  sim_io_eprintf(sd, "%s: Invalid parameter `%s'\n", Name, arg);\
+	  return SIM_RC_FAIL;\
+	}\
+    }\
+  while (0)
+
+static SIM_RC
+epiphany_mem_size_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
+				  int is_command)
+{
+  char *endp;
+  ulong64 ul = 0;
+  int valid = 0;
+
+  if (arg)
+    {
+      ul = strtoull (arg, &endp, 0);
+      valid = ((isdigit (arg[0]) && endp != arg));
+
+      switch (*endp)
+	{
+	case 'k': case 'K': ul <<= 10; break;
+	case 'm': case 'M': ul <<= 20; break;
+	case 'g': case 'G': ul <<= 30; break;
+	case ' ': case '\0': case '\t':  break;
+	default:
+	  if (ul > 0)
+	    sim_io_eprintf (sd, "Ignoring strange character at end of memory size: %c\n",
+			    *endp);
+	  break;
+	}
+    }
+
+  switch ((EPIPHANY_OPTIONS) opt)
+    {
+    case E_OPTION_EXT_RAM_SIZE:
+      SET_OR_FAIL(ext_ram_size, "e-ext-ram-size");
+      break;
+    default:
+      sim_io_eprintf (sd, "Unknown option %d `%s'\n", opt, arg);
+      return SIM_RC_FAIL;
+    }
+
+  /* Update options */
+  if (STATE_OPEN_KIND (sd) == SIM_OPEN_DEBUG)
+    return sim_esim_set_options(sd, cpu);
+  else
+    return SIM_RC_OK;
+}
+
 static SIM_RC
 epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 			 int is_command)
 {
   char *endp;
-  ulong64 ul;
+  ulong64 ul = 0;
   int valid = 0;
 
   if (arg)
@@ -204,20 +266,6 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
       break;
 #if WITH_EMESH_SIM
 
-#define SET_OR_FAIL(Param, Name)\
-  do \
-    {\
-      if (valid)\
-	{\
-	  emesh_params.Param = (sizeof(emesh_params.Param) < 8 ? (unsigned) ul : ul);\
-	}\
-      else\
-	{\
-	  sim_io_eprintf(sd, "%s: Invalid parameter `%s'\n", Name, arg);\
-	  return SIM_RC_FAIL;\
-	}\
-    }\
-  while (0)
 #if HAVE_E_XML
     case E_OPTION_XML_HDF:
       emesh_params.xml_hdf_file = arg;
@@ -238,18 +286,12 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
     case E_OPTION_EXT_RAM_BASE:
       SET_OR_FAIL(ext_ram_base, "e-ext-ram-base");
       break;
-    case E_OPTION_EXT_RAM_SIZE:
-      SET_OR_FAIL(ext_ram_size, "e-ext-ram-size");
-      /* Specified in MB */
-      emesh_params.ext_ram_size = emesh_params.ext_ram_size << 20;
-      break;
     case E_OPTION_SESSION_NAME:
       emesh_params.session_name = arg;
       break;
     case E_OPTION_EXTERNAL_FETCH:
       sd->external_fetch = true;
       break;
-#undef SET_OR_FAIL
 #endif
     default:
       sim_io_eprintf (sd, "Unknown option %d `%s'\n", opt, arg);
@@ -266,6 +308,7 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 #endif
     return SIM_RC_OK;
 }
+#undef SET_OR_FAIL
 
 #if WITH_EMESH_SIM
 /* Custom sim cpu alloc for emesh sim */

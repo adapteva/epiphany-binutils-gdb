@@ -1,3 +1,15 @@
+2015-11-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-if.c (epiphany_mem_size_option_handler): New
+	function. Supports 'K', 'M', and 'G' suffixes.
+	(epiphany_option_handler): Remove E_OPTION_EXT_RAM_SIZE case.
+	(options_epiphany): Use epiphany_mem_size_option_handler for
+	E_OPTION_EXT_RAM_SIZE.
+	* epiphany-elf-sim.py.in (breakwhen): New function.
+	(not_number_part): Ditto.
+	(parse_size): New function that can parse size arguments.
+	(parse_or_die): Parse ext_ram_size with parse_size.
+
 2015-11-26  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-sim.h (epiphanybf_fetchable_p): New function.
