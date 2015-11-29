@@ -1,3 +1,9 @@
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_mem.c (epiphany_mem_io_read_buffer): Fix trace output
+	formatting.
+	(epiphany_mem_io_write_buffer): Likewise.
+
 2015-11-29  Ola Jeppsson  <ola@adapteva.com>
 
 	* ert-workgroup.h: New file.

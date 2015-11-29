@@ -162,9 +162,9 @@ epiphany_mem_io_read_buffer (struct hw *me,
 
   esim = STATE_ESIM(hw_system(me));
 #if (WITH_TARGET_ADDRESS_BITSIZE == 64)
-  HW_TRACE ((me, "read 0x%16llx %llu", (ulong64) base, (ulong64) nr_bytes));
+  HW_TRACE ((me, "read  0x%016llx %llu", (ulong64) base, (ulong64) nr_bytes));
 #else
-  HW_TRACE ((me, "read 0x%08lx %u", (long) base, (unsigned int) nr_bytes));
+  HW_TRACE ((me, "read  0x%08lx %u", (long) base, (unsigned int) nr_bytes));
 #endif
   if (es_mem_load(esim, base, nr_bytes, (uint8_t *) dest) != ES_OK)
     {
@@ -187,7 +187,7 @@ epiphany_mem_io_write_buffer (struct hw *me,
 
   esim = STATE_ESIM(hw_system(me));
 #if (WITH_TARGET_ADDRESS_BITSIZE == 64)
-  HW_TRACE ((me, "write 0x%16llx %llu", (ulong64) base, (ulong64) nr_bytes));
+  HW_TRACE ((me, "write 0x%016llx %llu", (ulong64) base, (ulong64) nr_bytes));
 #else
   HW_TRACE ((me, "write 0x%08lx %u", (long) base, (unsigned int) nr_bytes));
 #endif
