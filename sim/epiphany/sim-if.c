@@ -50,6 +50,8 @@
 #endif
 #endif
 
+#include "ert-workgroup.h"
+
 /* Records simulator descriptor so utilities like epiphany_dump_regs can be
    called from gdb.  */
 SIM_DESC current_state=0;
@@ -759,6 +761,58 @@ sim_close (SIM_DESC sd,
   free_state(sd);
 }
 
+static SIM_RC
+setup_workgroup_cfg (SIM_DESC sd)
+{
+  asection *s;
+  address_word addr;
+  es_cluster_cfg cluster;
+  e_group_config_t workgroup_cfg = { 0, };
+  unsigned coreid;
+  SIM_CPU *current_cpu = STATE_CPU (sd, 0);
+  es_state *esim = STATE_ESIM (sd);
+  bfd *prog_bfd = STATE_PROG_BFD (sd);
+  bool found = false;
+
+  if (!prog_bfd)
+    return SIM_RC_OK;
+
+  for (s = prog_bfd->sections; s; s = s->next)
+    if (strcmp (bfd_get_section_name (prog_bfd, s), "workgroup_cfg") == 0)
+      {
+	found = true;
+	break;
+      }
+
+  if (!found)
+    return SIM_RC_OK;
+
+  if (STATE_VERBOSE_P (sd))
+    sim_io_eprintf(sd, "setting workgroup configuration\n");
+
+  addr = bfd_get_section_vma (prog_bfd, s);
+
+  es_get_cluster_cfg(esim, &cluster);
+  coreid = es_get_coreid(esim);
+
+  workgroup_cfg.objtype    = E_EPI_GROUP;
+  workgroup_cfg.chiptype   = E_E1KG501;   /* TODO: Derive from model */
+  workgroup_cfg.group_id   = cluster.row_base * 0x40 + cluster.col_base;
+  workgroup_cfg.group_row  = cluster.row_base;
+  workgroup_cfg.group_col  = cluster.col_base;
+  workgroup_cfg.group_rows = cluster.rows;
+  workgroup_cfg.group_cols = cluster.cols;
+  workgroup_cfg.core_row   = coreid / 0x40 - cluster.row_base;
+  workgroup_cfg.core_col   = coreid % 0x40 - cluster.col_base;
+
+  if (sizeof(workgroup_cfg) !=
+      sim_core_write_buffer (sd, current_cpu, write_map, &workgroup_cfg, addr,
+			     sizeof(workgroup_cfg)))
+    return SIM_RC_FAIL;
+
+  return SIM_RC_OK;
+}
+
 SIM_RC
 sim_create_inferior (SIM_DESC sd,
 		     struct bfd *abfd,
@@ -793,6 +847,17 @@ sim_create_inferior (SIM_DESC sd,
 #endif
 
 #if WITH_EMESH_SIM
+
+  if (STATE_ENVIRONMENT (sd) != OPERATING_ENVIRONMENT)
+    {
+      /* Operating environment is intended host connect throug esim client api
+       * It's responsibility for host application to set workgroup_cfg */
+
+      /* set up workgroup configuration according to mesh properties */
+      if (setup_workgroup_cfg (sd) != SIM_RC_OK)
+	return SIM_RC_FAIL;
+    }
+
   /* Set coreid in cpu register. Do it via backdoor since it is (should be)
    * read only.
    */

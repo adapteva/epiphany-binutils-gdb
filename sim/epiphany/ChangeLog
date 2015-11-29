@@ -1,3 +1,13 @@
+2015-11-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* ert-workgroup.h: New file.
+	* esim/esim.c (es_get_cluster_cfg): New function.
+	* esim/esim.h (es_get_cluster_cfg: Add function prototype.
+	* sim-if.c (setup_workgroup_cfg): New function. If workgroup_cfg
+	section is present in binary, fill in mesh properties.
+	(sim_create_inferior): Call setup_workgroup_cfg (), unless in
+	operating environment.
+
 2015-11-27  Ola Jeppsson  <ola@adapteva.com>
 
 	* esim/esim.h (es_cluster_cfg): Add core_phys_mem member.

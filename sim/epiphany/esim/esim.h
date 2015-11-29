@@ -90,7 +90,10 @@ unsigned es_get_coreid(const es_state *esim);
 void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
 size_t es_get_core_mem_region_size(const es_state *esim);
 size_t es_get_core_phys_mem_size(const es_state *esim);
+/* Get copy of cluster configuration */
+void es_get_cluster_cfg(const es_state *esim, es_cluster_cfg *cfg);
 
 void es_dump_config(const es_state *esim);
+
 
 #endif /* __emesh_h__ */

@@ -1887,6 +1887,17 @@ es_set_cpu_state(es_state *esim, void *cpu, size_t size)
   return (void *) esim->this_core_cpu_state;
 }
 
+/*! Get copy of cluster configuration
+ *
+ * @param[in]  esim     ESIM handle
+ * @param[out] cfg      target configuration
+ */
+void
+es_get_cluster_cfg(const es_state *esim, es_cluster_cfg *cfg)
+{
+  memcpy((void *) cfg, (void *) &ES_CLUSTER_CFG, sizeof(*cfg));
+}
+
 /*! Dump node and cluster configuration
  *
  * @param[in] esim     ESIM handle
