@@ -111,10 +111,10 @@ def parse_or_die():
 Epiphany simulator frontend.
 Helps spawning simulator processes.
 
-Default configuration is Parallella-16 Epiphany-III.
-Rows: 4 Columns: 4
+Default configuration is DRAFT Parallella-2 Epiphany-V.
+Rows: 32 Columns: 32
 External RAM size: 32 MB External RAM base: 0x8e000000
-First core: 0x808 (32, 8)
+First core: 0x020 (0, 32)
 
 Press Ctrl-C at any time to abort the simulation.
 """
@@ -123,9 +123,9 @@ Press Ctrl-C at any time to abort the simulation.
             '--verbose', action='store_true', help='Verbose output')
 
     parser.add_argument(
-            '-r', '--rows', type=auto_int, default=4, help='Number of rows')
+            '-r', '--rows', type=auto_int, default=32, help='Number of rows')
     parser.add_argument(
-            '-c', '--cols', type=auto_int, default=4, help='Number of columns')
+            '-c', '--cols', type=auto_int, default=32, help='Number of columns')
 
 
     parser.add_argument(
@@ -233,7 +233,7 @@ Press Ctrl-C at any time to abort the simulation.
     # Adjust/check first_core argument
     if args.first_core == None:
         if args.first_row == None and args.first_col == None:
-            args.first_core = 0x808
+            args.first_core = 0x020
         elif args.first_row != None and args.first_col != None:
             if args.first_row < 0 or 63 < args.first_row:
                 parser.error('First row must be within range [0..63]')

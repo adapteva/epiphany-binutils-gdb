@@ -139,7 +139,7 @@ static const OPTION options_epiphany[] =
   /* coreid is determined from MPI rank */
 #else
   { {"e-coreid", required_argument, NULL, E_OPTION_COREID},
-      '\0', "COREID", "Set coreid. Default is 0x808.",
+      '\0', "COREID", "Set coreid. Default is 0x020.",
       epiphany_option_handler  },
 #endif
   { {"e-cols", required_argument, NULL, E_OPTION_NUM_COLS},
@@ -367,7 +367,7 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
     {
       emesh_params.num_rows = 1;
       emesh_params.num_cols = 1;
-      emesh_params.coreid = 0x808;
+      emesh_params.coreid = 0x020;
     }
 
 #if WITH_EMESH_NET
