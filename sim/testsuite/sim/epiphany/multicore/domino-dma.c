@@ -225,7 +225,12 @@ uint32_t next_hop ()
 
     case RIGHT:
       if (myrow == lastrow && mycol == lastcol)
-	return e_group_rank (myrow, 0);
+	{
+	  if (lastrow == 0)
+	    return e_group_leader_rank ();
+	  else
+	    return e_group_rank (myrow, 0);
+	}
       else if (mycol == lastcol)
 	return e_group_rank (myrow+1, mycol);
       else
@@ -319,6 +324,8 @@ void print_route ()
   uint32_t rank1; /* rank + 1 */
   uint16_t path[e_group_size ()];
   uint16_t *msgbox = (uint16_t *) MSG_BOX;
+
+  path[0] = 0;
 
   printf ("Got %d messages\n", msgbox[0]);
   printf ("Message path:\n");
