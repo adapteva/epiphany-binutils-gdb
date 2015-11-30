@@ -1,5 +1,10 @@
 2015-11-30  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim/esim.c (es_addr_translate): Make access to area above end of
+	memory mapped registers illegal.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
 	* esim/esim.c (es_validate_cluster_cfg): Relax constraints: allow
 	uneven number of cores and uneven base column.
 	Fix coreid range check.

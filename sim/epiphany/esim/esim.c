@@ -152,7 +152,7 @@ es_addr_translate(const es_state *esim, es_transl *transl,
 {
   uint8_t *tmp_ptr;
   signed node;
-  address_word offset;
+  address_word offset, top;
 
   if (es_initialized(esim) != ES_OK)
     {
@@ -214,7 +214,8 @@ es_addr_translate(const es_state *esim, es_transl *transl,
 	  else
 	    {
 	      offset = addr & (ES_CLUSTER_CFG.core_mem_region - 1);
-	      if (offset >= ES_CLUSTER_CFG.core_phys_mem)
+	      top = min (ES_CLUSTER_CFG.core_phys_mem, ES_CORE_MMR_BASE);
+	      if (offset >= top)
 		{
 		  transl->location = ES_LOC_INVALID;
 		  return;
@@ -227,11 +228,7 @@ es_addr_translate(const es_state *esim, es_transl *transl,
 		  ES_SHM_CORE_STATE_SIZE +
 		  (addr % ES_CLUSTER_CFG.core_mem_region);
 
-	      /** @todo We have to check on which side of the memory mapped
-	       * register we are and take that into account.
-	       */
-	      transl->in_region = (ES_CLUSTER_CFG.core_mem_region) -
-		(addr % ES_CLUSTER_CFG.core_mem_region);
+	      transl->in_region = top - offset;
 	    }
 	}
     }

@@ -1,5 +1,10 @@
 2015-11-30  Ola Jeppsson  <ola@adapteva.com>
 
+	* multicore/multicore.exp (ldflags): Adjust __stack to 0xefff0, which
+	is just below the MMR area.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
 	* multicore/domino-dma.c (next_hop): Add case for when groupid=0 and
 	number of rows is 1.
 	(print_route): Eliminate possibility for uninitialized value in path.
