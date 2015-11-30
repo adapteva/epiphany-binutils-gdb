@@ -1,5 +1,11 @@
 2015-11-30  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim/esim.c (es_validate_cluster_cfg): Relax constraints: allow
+	uneven number of cores and uneven base column.
+	Fix coreid range check.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
 	* dv-epiphany_mem.c (epiphany_mem_io_read_buffer): Fix trace output
 	formatting.
 	(epiphany_mem_io_write_buffer): Likewise.
