@@ -1,3 +1,7 @@
+2015-12-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/domino.c: Set rows and cols to 4 in sim flags.
+
 2015-11-30  Ola Jeppsson  <ola@adapteva.com>
 
 	* multicore/multicore.exp (ldflags): Adjust __stack to 0xefff0, which

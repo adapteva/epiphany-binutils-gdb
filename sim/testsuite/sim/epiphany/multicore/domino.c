@@ -1,6 +1,6 @@
 /*
 # mach: all
-# sim: --ext-ram-size 0 --ext-ram-base 0
+# sim: -r 4 -c 4 --ext-ram-size 0 --ext-ram-base 0
 # output: Got 16 messages\nMessage path:\n○——▼\n⚫▼—◀\n|▶—▼\n▲——◀\n
 */
 #include <stdio.h>
