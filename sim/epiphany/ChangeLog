@@ -1,3 +1,11 @@
+2015-12-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (install-esim): Rename from esim-install. Install
+	libesim.so.
+	(SIM_EXTRA_CFLAGS): Append -fPIC.
+	(SIM_EXTRA_ALL): Build libesim.so.
+	(SIM_EXTRA_INSTALL): Append libesim.so.
+
 2015-11-30  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-elf-sim.py.in: Change default paramters.
