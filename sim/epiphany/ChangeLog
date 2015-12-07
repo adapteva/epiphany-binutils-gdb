@@ -1,3 +1,7 @@
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (AS_FOR_TARGET): Add missing definition.
+
 2015-09-25  Ola Jeppsson  <ola@adapteva.com>
 
 	* configure: Regenerated.
