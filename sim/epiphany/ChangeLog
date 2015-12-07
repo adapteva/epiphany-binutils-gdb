@@ -1,3 +1,7 @@
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (install-esim): Install esim/esim.h.
+
 2015-12-04  Ola Jeppsson  <ola@adapteva.com>
 
 	* Makefile.in (install-esim): Rename from esim-install. Install

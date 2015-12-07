@@ -157,6 +157,7 @@ install-esim: installdirs
 		$(DESTDIR)$(bindir)/epiphany-elf-sim
 	$(INSTALL) -d libexec $(DESTDIR)$(exec_prefix)/$(target_alias)/libexec
 	$(INSTALL) libesim.so $(DESTDIR)$(libdir)
+	$(INSTALL_DATA) $(srcdir)/esim/esim.h $(DESTDIR)$(includedir)
 ifneq (, $(shell which $(AS_FOR_TARGET)))
 	$(AS_FOR_TARGET) $(srcdir)/epiphany-elf-sim-dummy.s -o \
 		epiphany-elf-sim-dummy
