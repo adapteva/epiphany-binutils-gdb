@@ -1,5 +1,10 @@
 2015-12-07  Ola Jeppsson  <ola@adapteva.com>
 
+	* Makefile.in (AS_FOR_TARGET): Don't use in-build-tree host
+	assembler when building a Canadian cross.
+
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
 	* Makefile.in (install-esim): Install esim/esim.h.
 
 2015-12-04  Ola Jeppsson  <ola@adapteva.com>

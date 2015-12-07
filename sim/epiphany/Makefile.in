@@ -18,6 +18,8 @@
 
 ## COMMON_PRE_CONFIG_FRAG
 
+build_alias = @build_alias@
+
 EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o \
                 oob-events.o
 
@@ -146,7 +148,7 @@ epiphany-elf-sim.py: $(srcdir)/epiphany-elf-sim.py.in
 # Delay building dummy until install. This way will be an assembler when doing
 # a unified source tree toolchain build.
 AS_FOR_TARGET = `\
-  if [ -x ../../gas/as-new ]; then \
+  if [ x$(host_alias) = x$(build_alias) -a -x ../../gas/as-new ]; then \
     echo ../../gas/as-new ; \
   else \
     echo $(target_alias)-as ; \
