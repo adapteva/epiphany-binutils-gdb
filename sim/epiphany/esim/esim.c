@@ -1635,15 +1635,44 @@ es_client_connect(es_state **handle, const char *session_name)
   return ES_OK;
 }
 
+static void
+es_client_stop_cores (es_state *esim)
+{
+  unsigned i, j;
+  uint64_t addr, coreid;
+  uint32_t stopcmd = 1;
+
+  for (i = ES_CLUSTER_CFG.row_base;
+       i < ES_CLUSTER_CFG.row_base + ES_CLUSTER_CFG.rows;
+       i++)
+    {
+      for (j = ES_CLUSTER_CFG.col_base;
+	   j < ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols;
+	   j++)
+	{
+	  coreid = ES_COREID(i, j);
+	  if (coreid == 0)
+	    continue;
+
+	  addr = (coreid << 20) | 0xf0000 | (H_REG_SCR_SIMCMD << 2);
+	  es_mem_store (esim, addr, 4, (uint8_t *) &stopcmd);
+	}
+    }
+}
+
 /*! Disconnect client from eMesh simulator
  *
  * @param[in,out] esim          pointer to ESIM handle
+ * @param[in]     stop          true if simulation should be stopped
  */
 void
-es_client_disconnect(es_state *esim)
+es_client_disconnect(es_state *esim, bool stop)
 {
   if (!esim)
     return;
+
+  if (stop)
+    es_client_stop_cores (esim);
 
   es_wait_exit(esim);
   es_fini(esim);

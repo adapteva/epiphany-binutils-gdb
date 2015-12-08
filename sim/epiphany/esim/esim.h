@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 /** @todo We use standard errnos now but we need more specific, e.g. EALIGN */
 
@@ -65,7 +66,7 @@ void es_fini(es_state *esim);
 
 /* Get access to eMesh simulator address space */
 int es_client_connect(es_state **esim, const char *session_name);
-void es_client_disconnect(es_state *esim);
+void es_client_disconnect(es_state *esim, bool stop);
 
 int es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
 		 uint8_t *src);

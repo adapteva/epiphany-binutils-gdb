@@ -298,6 +298,17 @@ epiphanybf_set_dmareg(SIM_CPU *current_cpu, UINT regno, USI val)
     epiphany_dma_set_reg(dma1, regno - H_REG_DMA1_CONFIG, val);
 }
 
+void
+epiphanybf_set_simcmd (SIM_CPU *current_cpu, USI val)
+{
+  /* This register is intended for an external host, aka client, in full system
+   * simulation */
+  SIM_DESC sd = CPU_STATE (current_cpu);
+
+  if (val == 1)
+    sim_engine_halt (sd, current_cpu, NULL, NULL_CIA, sim_stopped, SIM_SIGINT);
+}
+
 bool
 epiphanybf_external_fetch_allowed_p (SIM_CPU *current_cpu)
 {

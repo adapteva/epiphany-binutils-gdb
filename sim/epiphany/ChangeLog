@@ -1,3 +1,12 @@
+2015-12-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_set_simcmd): Implemented. Writing a 'one'
+	to the register will stop the simulation.
+	* epiphany-sim.h (epiphanybf_set_simcmd): Add function prototype.
+	* esim/esim.c (es_client_stop_cores): Implemented.
+	(es_client_disconnect): Add stop parameter.
+	* esim/esim.h (es_client_disconnect): Update function prototype.
+
 2015-12-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* Makefile.in (AS_FOR_TARGET): Don't use in-build-tree host

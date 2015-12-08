@@ -40,6 +40,7 @@ void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_dmareg(SIM_CPU *current_cpu, UINT regno, USI val);
+void epiphanybf_set_simcmd(SIM_CPU *current_cpu, USI val);
 
 bool epiphanybf_external_fetch_allowed_p(SIM_CPU *current_cpu);
 /* This function is called for every instruction fetch, so it better be fast */
