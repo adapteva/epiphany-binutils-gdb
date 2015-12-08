@@ -80,6 +80,8 @@ int es_mem_atomic_store (es_state *esim, int ctrlmode, uint64_t addr,
 
 int es_wand (es_state *esim);
 
+int es_send_interrupt (es_state *esim, unsigned coreid, unsigned irq);
+
 void es_wait_run(es_state *esim);
 void es_wait_exit(es_state *esim);
 

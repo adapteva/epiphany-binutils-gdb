@@ -909,6 +909,31 @@ es_wand (es_state *esim)
   return 0;
 }
 
+
+/*! Send interrupt to other core.
+ *
+ * If coreid is external ram the operation is a no-op.
+ *
+ * @param[in]  esim   ESIM handle
+ * @param[in]  coreid remote core
+ * @param[in]  irq    interrupt to raise
+ *
+ * @return ES_OK on success
+ */
+int
+es_send_interrupt (es_state *esim, unsigned coreid, unsigned irq)
+{
+  uint64_t addr;
+  uint32_t val;
+
+  val = 1 << irq;
+  addr = (coreid << 20) | 0xf0000 | (H_REG_SCR_ILATST << 2);
+
+  return ES_ADDR_IS_EXT_RAM(addr)
+    ? ES_OK
+    : es_mem_store (esim, addr, 4, (uint8_t *) &val);
+}
+
 /*! Validate cluster configuration
  *
  * @param[in] c Cluster configuration

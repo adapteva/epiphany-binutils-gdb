@@ -232,9 +232,9 @@ epiphany_dma_hw_event_callback (struct hw *me, void *data)
   struct epiphany_dma *dma = (struct epiphany_dma *) data;
   struct epiphany_dma_regs *regs = get_regs (me);
   SIM_CPU *current_cpu = STATE_CPU (hw_system (me), 0);
+  es_state *esim = STATE_ESIM (hw_system (me));
   const unsigned datasize = 1 << regs->config.datasize;
-  address_word ilatst_addr;
-  address_word shift_src, shift_dst;
+  address_word shift_src, shift_dst, coreid;
   unsigned char buf[8];
   uint32_t ilatst_val;
   int ret;
@@ -285,17 +285,11 @@ epiphany_dma_hw_event_callback (struct hw *me, void *data)
 
 	      if (regs->config.msgmode && regs->dst_addr >= 0x100000)
 		{
-		  ilatst_addr =
-		    (regs->dst_addr & ~0xfffffULL) |
-		    (0xf0000 + (H_REG_SCR_ILATST << 2));
-		  ilatst_val = 1 << H_INTERRUPT_MESSAGE;
-
-		  HW_TRACE ((me, "sending MSG interrupt to %#x",
-			     ilatst_addr >> 20));
-
-		  ret = sim_write (hw_system (me), ilatst_addr,
-				   (unsigned char *) &ilatst_val, 4);
-		  if (ret != 4)
+		  coreid = regs->dst_addr >> 20;
+		  HW_TRACE ((me, "sending MSG interrupt to %#llx",
+			     (ulong64) coreid));
+		  if (ES_OK !=
+		      es_send_interrupt (esim, coreid, H_INTERRUPT_MESSAGE))
 		    {
 		      reason = "failed sending MSG interrupt";
 		      goto error;

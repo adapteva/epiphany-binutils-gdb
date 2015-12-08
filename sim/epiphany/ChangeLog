@@ -1,5 +1,13 @@
 2015-12-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* dv-epiphany_dma.c (epiphany_dma_hw_event_callback): Use
+	es_send_interrupt () to raise interrupt on remote core in dma message
+	mode.
+	* esim/esim.c (es_send_interrupt): Implemented.
+	* esim/esim.h (es_send_interrupt): Add function prototype.
+
+2015-12-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.c (epiphanybf_set_simcmd): Implemented. Writing a 'one'
 	to the register will stop the simulation.
 	* epiphany-sim.h (epiphanybf_set_simcmd): Add function prototype.
