@@ -427,6 +427,7 @@
 	(SCR-FSTATUS     #x110) ;; ?? flush status register (raw access?) CORE  WR
 	(SCR-FCONFIG     #x111) ;; ?? flush config register (raw access?)
 	(SCR-DEBUGCMD    #x112) ;; debug command register                 CORE  WR
+	(SCR-SIMCMD      #x113) ;; simulator command register             SIM   WR
 
 	;; DMA group
 	(DMA0-CONFIG    #x140) ;; configuration register                 DMA   RD/WR
@@ -561,7 +562,9 @@
             (le index (enum H-REG-DMA1-STATUS)))
         (c-call "epiphanybf_set_dmareg" index val)
       )
-
+      ((eq index (enum USI H-REG-SCR-SIMCMD))
+        (c-call "epiphanybf_set_simcmd" val)
+      )
       (else (set (raw-reg h-all-registers index) val))
     )
   )
