@@ -187,6 +187,8 @@ Press Ctrl-C at any time to abort the simulation.
     parser.add_argument('--trace', action='store_true',
             help='Enable tracing')
 
+    parser.add_argument('--external-fetch', action='store_true',
+            help='Enable external fetch')
 
     parser.add_argument('--extra-args', type=str, metavar='ARGS', default='',
             help="""Pass ARGS to epiphany-elf-run. Enclose in quotes, e.g
@@ -398,6 +400,9 @@ def spawn(args, i, j):
 
     if args.trace:
         sim_args.append('--trace')
+
+    if args.external_fetch:
+        sim_args.append('--e-external-fetch')
 
     sim_args.extend(args.extra_args.split())
 

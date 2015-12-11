@@ -1,5 +1,9 @@
 2015-12-11  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in: Add --external-fetch flag.
+
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.c (epiphanybf_cpu_reset): Don't reset H_REG_MESH_COREID.
 
 2015-12-08  Ola Jeppsson  <ola@adapteva.com>
