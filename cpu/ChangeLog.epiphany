@@ -1,3 +1,8 @@
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers): Make writing to H-REG-MESH-COREID
+	a no-operation.
+
 2015-12-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (h-all-registers): Add H-REG-SRC-SIMCMD.

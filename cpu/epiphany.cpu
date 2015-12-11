@@ -565,6 +565,11 @@
       ((eq index (enum USI H-REG-SCR-SIMCMD))
         (c-call "epiphanybf_set_simcmd" val)
       )
+      ((eq index (enum USI H-REG-MESH-COREID))
+        ;; coreid is read-only. make operation no-op
+        (set (raw-reg h-all-registers (enum USI H-REG-MESH-COREID))
+             (reg h-all-registers (enum USI H-REG-MESH-COREID)))
+      )
       (else (set (raw-reg h-all-registers index) val))
     )
   )
