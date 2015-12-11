@@ -1,5 +1,10 @@
 2015-12-11  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in: Fix exception when checking if host argument
+	is present.
+
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-elf-sim.py.in: Add --host flag.
 
 2015-12-11  Ola Jeppsson  <ola@adapteva.com>

@@ -191,7 +191,7 @@ Press Ctrl-C at any time to abort the simulation.
     parser.add_argument('--external-fetch', action='store_true',
             help='Enable external fetch')
 
-    parser.add_argument('--host', nargs='*', metavar='HOST_PROGRAM',
+    parser.add_argument('--host', nargs='+', metavar=('PROGRAM','ARG'),
             help="""Start simulation with host program. First argument is the
             native program to spawn. The following arguments are arguments to
             the host program.""")
@@ -223,7 +223,7 @@ Press Ctrl-C at any time to abort the simulation.
     if not pow_of_two_p(size):
         parser.error('Core memory size must be power of two')
 
-    if args.host[0]:
+    if args.host:
         args.environment = 'operating'
         if not os.path.isfile(args.host[0]):
             parser.error("Host program `%s' not found" % args.host[0])
@@ -530,7 +530,7 @@ def main():
     if args.verbose:
         print_stderr('[INFO] All core simulators started')
 
-    if args.host[0]:
+    if args.host:
         if args.verbose:
             print_stderr('[INFO] Starting host program')
         os.environ["EHAL_TARGET"] = "esim"
