@@ -1,3 +1,7 @@
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_cpu_reset): Don't reset H_REG_MESH_COREID.
+
 2015-12-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* dv-epiphany_dma.c (epiphany_dma_hw_event_callback): Use

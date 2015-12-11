@@ -655,6 +655,8 @@ epiphanybf_cpu_reset(SIM_CPU *current_cpu)
 	case H_REG_DMA1_DSTADDR:
 	case H_REG_DMA1_AUTO0:
 	case H_REG_DMA1_AUTO1:
+	/* coreid  is read-only */
+	case H_REG_MESH_COREID:
 	  continue;
 	}
       CPU(h_all_registers[i]) = 0;
