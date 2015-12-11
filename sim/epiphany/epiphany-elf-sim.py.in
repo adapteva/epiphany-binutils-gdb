@@ -30,6 +30,7 @@ import os
 import time
 import traceback
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from subprocess import call
 
 
 TARGET_PREFIX='@TARGET_PREFIX@'
@@ -190,6 +191,11 @@ Press Ctrl-C at any time to abort the simulation.
     parser.add_argument('--external-fetch', action='store_true',
             help='Enable external fetch')
 
+    parser.add_argument('--host', nargs='*', metavar='HOST_PROGRAM',
+            help="""Start simulation with host program. First argument is the
+            native program to spawn. The following arguments are arguments to
+            the host program.""")
+
     parser.add_argument('--extra-args', type=str, metavar='ARGS', default='',
             help="""Pass ARGS to epiphany-elf-run. Enclose in quotes, e.g
             --extra-args="--foo --bar" """)
@@ -216,6 +222,11 @@ Press Ctrl-C at any time to abort the simulation.
         parser.error('Core memory size must be within range [32KB..1MB]')
     if not pow_of_two_p(size):
         parser.error('Core memory size must be power of two')
+
+    if args.host[0]:
+        args.environment = 'operating'
+        if not os.path.isfile(args.host[0]):
+            parser.error("Host program `%s' not found" % args.host[0])
 
     if not {args.environment} & {'user', 'virtual', 'operating'}:
         parser.error('Environment must be `user\', `environment\', or `operating\'')
@@ -518,6 +529,15 @@ def main():
     pid_core_map = spawn_sim_processes(args)
     if args.verbose:
         print_stderr('[INFO] All core simulators started')
+
+    if args.host[0]:
+        if args.verbose:
+            print_stderr('[INFO] Starting host program')
+        os.environ["EHAL_TARGET"] = "esim"
+        call(args.host)
+        if args.verbose:
+            print_stderr('[INFO] Host program exited')
+
 
     while True:
         """ Wait for children """
