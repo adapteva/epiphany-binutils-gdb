@@ -1,5 +1,13 @@
 2015-12-12  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in (main): Call run_inferior or run_standalone
+	depending on if host flag is set.
+	(run_inferior): Factor out from main. Kill simulator processes when
+	host application exits.
+	(run_standalone): Factor out from main.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
 	* esim/esim.c (es_wait_run): Let process that created shm file
 	wake up client(s).
 

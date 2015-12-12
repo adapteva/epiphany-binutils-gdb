@@ -459,7 +459,7 @@ def spawn_sim_processes(args):
         for j in range(args.cols):
             pid, coreid = spawn(args, i, j)
             if pid != () and coreid != ():
-                pid_core_map[pid] = coreid
+                pid_core_map[pid] = (coreid, True)
 
     return pid_core_map
 
@@ -476,11 +476,110 @@ def in_build_tree():
     end = os.path.join(*(EXEC_DIR.split(os.path.sep)[-2:]))
     return end == os.path.join('sim', 'epiphany')
 
+
+def run_inferior(args, pid_core_map):
+    if args.verbose:
+        print_stderr('[INFO] Starting host program')
+
+    # Tell e-hal we want to use the simulator target
+    os.environ["EHAL_TARGET"] = "esim"
+    # We only report the host app's exit status
+    retval = call(args.host)
+    if args.verbose:
+        print_stderr('[INFO] Host program exited')
+
+    grace_start = time.time()
+    while any((lambda (_, alive) : alive) for p in pid_core_map):
+
+        """ Wait for children """
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+            if (pid, status) == (0, 0):
+                if (time.time() - grace_start < 2.0):
+                    time.sleep(0.1)
+                    continue
+
+                for p in pid_core_map:
+                    _, alive = pid_core_map[p]
+                    if alive:
+                        os.kill(p, signal.SIGTERM)
+
+                continue
+
+            coreid, _ = pid_core_map[pid]
+            pid_core_map[pid] = coreid, False
+
+            # Lowest byte signal, second byte return code
+            sim_rc     = status / 256
+            sim_signal = status % 256
+
+            if sim_signal:
+                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
+                          (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
+            else:
+                if args.verbose or sim_rc != 0:
+                    print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
+                                 (coreid, coreid/64, coreid%64, sim_rc))
+
+        except OSError as e:
+            if e.errno == os.errno.ECHILD:
+                """ All children done """
+                break
+            else:
+                raise
+
+    return retval
+
+def run_standalone(args, pid_core_map):
+    my_exit_status = 0
+    first_fail_core = -1
+    while True:
+        """ Wait for children """
+        try:
+            pid, status = os.wait()
+
+            # Lowest byte signal, second byte return code
+            sim_rc     = status / 256
+            sim_signal = status % 256
+
+            coreid, _ = pid_core_map[pid]
+            pid_core_map[pid] = (coreid, False)
+            if sim_signal:
+                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
+                          (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
+            else:
+                if args.verbose or sim_rc != 0:
+                    print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
+                                 (coreid, coreid/64, coreid%64, sim_rc))
+
+            # Set exit status to first non-zero core simulator exit status.
+            # Unfortunately, it doesn't seem possible to return an exit code
+            # higher than 127 in Python, so we must choose one of sim_signal or
+            # sim_rc. Use sim_signal when.
+            if status != 0 and \
+               ((first_fail_core == -1 or first_fail_core > coreid) or \
+                 (status < 256 and my_exit_status >= 256)):
+                first_fail_core = coreid
+                my_exit_status = status
+
+        except OSError as e:
+            if e.errno == os.errno.ECHILD:
+                """ All children done """
+                break
+            else:
+                raise
+
+    if my_exit_status % 256:
+        # We're returning a signal
+        return my_exit_status % 256
+    else:
+        # We're returning a return code
+        return my_exit_status / 256
+
+
 def main():
     global EPIPHANY_ELF_RUN
     found_run = False
-    my_exit_status = 0
-    first_fail_core = -1
 
     # Look in build tree first (for simulator testsuite support)
     if in_build_tree() and os.path.exists(os.path.join(EXEC_DIR, 'run')):
@@ -531,55 +630,9 @@ def main():
         print_stderr('[INFO] All core simulators started')
 
     if args.host:
-        if args.verbose:
-            print_stderr('[INFO] Starting host program')
-        os.environ["EHAL_TARGET"] = "esim"
-        call(args.host)
-        if args.verbose:
-            print_stderr('[INFO] Host program exited')
-
-
-    while True:
-        """ Wait for children """
-        try:
-            pid, status = os.wait()
-
-            # Lowest byte signal, second byte return code
-            sim_rc     = status / 256
-            sim_signal = status % 256
-
-            coreid = pid_core_map[pid]
-            if sim_signal:
-                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
-                          (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
-            else:
-                if args.verbose or sim_rc != 0:
-                    print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
-                                 (coreid, coreid/64, coreid%64, sim_rc))
-
-            # Set exit status to first non-zero core simulator exit status.
-            # Unfortunately, it doesn't seem possible to return an exit code
-            # higher than 127 in Python, so we must choose one of sim_signal or
-            # sim_rc. Use sim_signal when.
-            if status != 0 and \
-               ((first_fail_core == -1 or first_fail_core > coreid) or \
-                 (status < 256 and my_exit_status >= 256)):
-                first_fail_core = coreid
-                my_exit_status = status
-
-        except OSError as e:
-            if e.errno == os.errno.ECHILD:
-                """ All children done """
-                break
-            else:
-                raise
-
-    if my_exit_status % 256:
-        # We're returning a signal
-        return my_exit_status % 256
+        return run_inferior(args, pid_core_map)
     else:
-        # We're returning a return code
-        return my_exit_status / 256
+        return run_standalone(args, pid_core_map)
 
 
 def sigterm_handler(sig, frame):
