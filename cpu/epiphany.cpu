@@ -1705,7 +1705,7 @@
 
 (define-pmacro (store-to-ea eff-addr regnum mode sel)
   (sem-memop-or-exc sel (zext DI eff-addr)
-    (set (mem mode (zext DI eff-addr)) regnum)
+    (set (mem mode (zext DI eff-addr)) (trunc mode regnum))
   )
 ) ;8/16/32 bit cases
 

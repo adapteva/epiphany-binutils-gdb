@@ -1,3 +1,8 @@
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (store-to-ea): Truncate register value to mode, don't
+	sign extend it.
+
 2015-12-11  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (h-all-registers): Make writing to H-REG-MESH-COREID
