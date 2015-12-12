@@ -1,3 +1,8 @@
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_wait_run): Let process that created shm file
+	wake up client(s).
+
 2015-12-11  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-elf-sim.py.in: Fix exception when checking if host argument

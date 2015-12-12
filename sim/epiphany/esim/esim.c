@@ -1781,7 +1781,7 @@ es_wait_run(es_state *esim)
   if (!esim->is_client)
     {
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
-      if (!(esim->coreid % ES_CLUSTER_CFG.cores_per_node))
+      if (esim->creator)
 	{
 	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->client_mtx);
 	  pthread_cond_broadcast((pthread_cond_t *) &esim->shm->client_run_cond);
