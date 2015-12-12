@@ -123,6 +123,18 @@ Press Ctrl-C at any time to abort the simulation.
     parser.add_argument(
             '--verbose', action='store_true', help='Verbose output')
 
+    parser.add_argument('-p', '--preset',
+            choices=['parallella16', 'parallella64', 'parallella1k'],
+            help=
+            """
+            parallella16: '--rows 4  --cols  4 --first-core 0x808 --external-fetch --core-mem 32k'
+            parallella64: '--rows 8  --cols  8 --first-core 0x808 --external-fetch --core-mem 32k'
+            parallella1k: '--rows 32 --cols 32 --first-core 0x020 --core-mem 64k'
+
+            All presets also implies:
+            '--ext-ram-size 32M --ext-ram-base 0x8e000000'
+            """)
+
     parser.add_argument(
             '-r', '--rows', type=auto_int, default=32, help='Number of rows')
     parser.add_argument(
@@ -205,6 +217,27 @@ Press Ctrl-C at any time to abort the simulation.
     # Flatten list
     args.wait_attach = sum(args.wait_attach, [])
 
+
+    if args.preset:
+        args.ext_ram_size = '32M'
+        args.ext_ram_base = 0x8e000000
+        if args.preset == 'parallella16':
+            args.rows = 4
+            args.cols = 4
+            args.first_core = 0x808
+            args.core_mem = '32k'
+            args.external_fetch = True
+        if args.preset == 'parallella64':
+            args.rows = 8
+            args.cols = 8
+            args.first_core = 0x808
+            args.core_mem = '32k'
+            args.external_fetch = True
+        if args.preset == 'parallella1k':
+            args.rows = 32
+            args.cols = 32
+            args.first_core = 0x020
+            args.core_mem = '64k'
 
     # Check arguments
     if args.rows < 1 or 64 < args.rows:

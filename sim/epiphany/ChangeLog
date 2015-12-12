@@ -1,5 +1,10 @@
 2015-12-12  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in (parse_or_die): Add --preset argument.
+	Current presets: parallella16, parallella64, and parallella1k.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-elf-sim.py.in (run_inferior): Handle host binary failure
 	more gracefully.
 
