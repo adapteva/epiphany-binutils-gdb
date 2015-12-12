@@ -1,5 +1,10 @@
 2015-12-12  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in (run_inferior): Handle host binary failure
+	more gracefully.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-elf-sim.py.in (main): Call run_inferior or run_standalone
 	depending on if host flag is set.
 	(run_inferior): Factor out from main. Kill simulator processes when

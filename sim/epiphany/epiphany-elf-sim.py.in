@@ -484,9 +484,15 @@ def run_inferior(args, pid_core_map):
     # Tell e-hal we want to use the simulator target
     os.environ["EHAL_TARGET"] = "esim"
     # We only report the host app's exit status
-    retval = call(args.host)
-    if args.verbose:
-        print_stderr('[INFO] Host program exited')
+    retval = 0
+    try:
+        retval = call(args.host)
+    except OSError as e:
+        retval = 127
+        print_stderr('[INFO] Failed to start host program. Reason: %s' % e.strerror)
+
+    if args.verbose or retval != 0:
+        print_stderr('[INFO] Host program exited with status %d' % retval)
 
     grace_start = time.time()
     while any((lambda (_, alive) : alive) for p in pid_core_map):
