@@ -1,3 +1,8 @@
+2015-12-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_client_get_raw_pointer): Implemented.
+	* esim/esim.h (es_client_get_raw_pounter): Add function prototype.
+
 2015-12-12  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-elf-sim.py.in (parse_or_die): Add --preset argument.

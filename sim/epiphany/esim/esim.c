@@ -1703,6 +1703,34 @@ es_client_disconnect(es_state *esim, bool stop)
   es_fini(esim);
 }
 
+/*! Get raw pointer to a memory region
+ *
+ * @param[in]     esim          pointer to ESIM handle
+ * @param[in]     addr          address
+ * @param[in]     size          size
+ *
+ * @return NULL on failure, base pointer on success.
+ */
+volatile void
+*es_client_get_raw_pointer (es_state *esim, uint64_t addr, uint64_t size)
+{
+  es_transl transl;
+
+  if (!esim || !esim->ready)
+    return NULL;
+
+  es_addr_translate(esim, &transl, addr);
+
+  /* Due to instruction caching we must not return a pointer to core memory */
+  if (transl.location != ES_LOC_RAM)
+    return NULL;
+
+  if (transl.in_region < size)
+    return NULL;
+
+  return (volatile void *) transl.mem;
+}
+
 
 /*! Check if ESIM is initialized
  *

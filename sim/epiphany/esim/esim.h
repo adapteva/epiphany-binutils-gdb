@@ -67,6 +67,11 @@ void es_fini(es_state *esim);
 /* Get access to eMesh simulator address space */
 int es_client_connect(es_state **esim, const char *session_name);
 void es_client_disconnect(es_state *esim, bool stop);
+/* Get raw pointer to external RAM, which is needed for e-hal's SHM interface.
+ * WARNING: This function might be removed from the client API in the future.
+ */
+volatile void *es_client_get_raw_pointer (es_state *esim, uint64_t addr,
+					  uint64_t size);
 
 int es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
 		 uint8_t *src);
