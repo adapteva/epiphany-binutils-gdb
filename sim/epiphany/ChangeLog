@@ -1,3 +1,8 @@
+2015-12-14  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_cpu_reset): Reset H_INT_IDLE_BIT and
+	H_HWLOOP_NEXT.
+
 2015-12-13  Ola Jeppsson  <ola@adapteva.com>
 
 	* esim/esim.c (es_client_get_raw_pointer): Implemented.
