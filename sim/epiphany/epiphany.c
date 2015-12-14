@@ -304,9 +304,26 @@ epiphanybf_set_simcmd (SIM_CPU *current_cpu, USI val)
   /* This register is intended for an external host, aka client, in full system
    * simulation */
   SIM_DESC sd = CPU_STATE (current_cpu);
+  USI haltbit = GET_H_ALL_REGISTERS (H_REG_SCR_DEBUGSTATUS) & 1;
 
-  if (val == 1)
-    sim_engine_halt (sd, current_cpu, NULL, NULL_CIA, sim_stopped, SIM_SIGINT);
+  switch (val)
+    {
+    case 1:
+      if (epiphany_cpu_is_active (current_cpu))
+	{
+	  sim_io_eprintf (sd,
+			  "simulator stopped while CPU was still active.\n");
+	  sim_engine_halt (sd, current_cpu, NULL, GET_H_PC (), sim_stopped,
+			   SIM_SIGINT);
+	}
+      else
+	sim_engine_halt (sd, current_cpu, NULL, GET_H_PC (), sim_exited, 0);
+
+      break;
+
+    default:
+      sim_io_eprintf(sd, "unknown SIMCMD value: %u.\n", val);
+    }
 }
 
 bool
@@ -473,6 +490,13 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
 
     case TRAP_EXIT:
       /*void exit (int status);  */
+
+      if (STATE_ENVIRONMENT (CPU_STATE(current_cpu)) == OPERATING_ENVIRONMENT)
+	{
+	  /* Don't exit, just set haltbit and return. */
+	  SET_REG_BIT_ATOMIC(H_REG_SCR_DEBUGSTATUS, 0, 1);
+	  return PARM0;
+	}
 
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_exited, PARM0);
       break;

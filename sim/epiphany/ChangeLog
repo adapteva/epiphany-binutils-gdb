@@ -1,5 +1,13 @@
 2015-12-14  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.c (epiphanybf_set_simcmd): Exit silently when called if
+	core is inactive.
+	(epiphany_trap): In operating environment, don't call sim_halt() on
+	exit (trap #3). Instead, set halt bit in debugstatus and
+	return.
+
+2015-12-14  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.c (epiphanybf_cpu_reset): Reset H_INT_IDLE_BIT and
 	H_HWLOOP_NEXT.
 
