@@ -1,0 +1,60 @@
+# epiphany testcase for mul $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global mul
+mul:
+	mova	r33,#0x80000000
+	mul	r34,r33,r33
+	bbne	fail
+
+	mov	r34,#1
+	mul	r35,r34,r33
+	bbeq	fail
+	bblt	1f
+	b	fail
+1:
+	mova	r34,#-1
+	mul	r35,r33,r34
+	bbeq	fail
+	sub	r36,r35,r33
+	bne	fail
+
+	mova	r34,#-2
+	mul	r35,r33,r34
+	bbne	fail
+	sub	r36,r35,r35
+	bne	fail
+
+	mova	r34,#1
+	mul	r35,r33,r34
+	bbeq	fail
+	sub	r36,r35,r33
+	bne	fail
+
+	mova	r34,#0xffff
+	mul	r35,r34,r34
+	bblt	1f
+	b	fail
+1:
+	mova	r36,#0xfffe0001
+	sub	r36,r36,r35
+	bne	fail
+
+	mova	r34,#0x123
+	mova	r35,#0x321
+	mul	r36,r34,r35
+	bbeq	fail
+	bblt	fail
+
+	mova	r37,#0x38e83
+	sub	r37,r36,r37
+	bne	fail
+
+	pass
+
+fail:
+	fail

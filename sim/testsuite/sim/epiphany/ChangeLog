@@ -1,5 +1,9 @@
 2015-12-15  Ola Jeppsson  <ola@adapteva.com>
 
+	* mul.cgs: New test.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
 	* bitr.cgs: Test that negative flag is set correctly.
 	* bitr16.cgs: Likewise.
 
