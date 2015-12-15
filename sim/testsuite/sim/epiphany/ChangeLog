@@ -1,3 +1,8 @@
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* bitr.cgs: Test that negative flag is set correctly.
+	* bitr16.cgs: Likewise.
+
 2015-12-04  Ola Jeppsson  <ola@adapteva.com>
 
 	* multicore/domino.c: Set rows and cols to 4 in sim flags.

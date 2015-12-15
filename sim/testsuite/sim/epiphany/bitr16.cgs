@@ -6,7 +6,7 @@
 	start
 
 	.global bitr16
-lsl:
+bitr16:
 	mov	r3,1
         bitr    r2,r3
         mova    r0,0x80000000
@@ -26,5 +26,13 @@ lsl:
         bitr    r2,r2
         add     r2,r2,1
         bne     1f
+
+	;; test negative flag
+	mova	r3,0x80000000
+	bitr	r2,r3
+	blt	1f
+	bitr	r2,r2
+	bgte	1f
+
         pass
 1:      fail

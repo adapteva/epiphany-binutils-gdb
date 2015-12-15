@@ -1,4 +1,4 @@
-# epiphany testcase for bir $rd6,$rn6 -*- Asm -*-
+# epiphany testcase for bitr $rd6,$rn6 -*- Asm -*-
 # mach: all
 
 	.include "testutils.inc"
@@ -13,5 +13,13 @@ bitr:
         sub     r9,r9,r8
         sub     r9,r9,r8
 	bne     1f
+
+	;; test negative flag
+	mova	r33,0x80000000
+	bitr	r22,r33
+	blt	1f
+	bitr	r22,r22
+	bgte	1f
+
         pass
 1:      fail
