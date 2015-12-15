@@ -1,5 +1,13 @@
 2015-12-15  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (dni bitr16): Use explicit SI type for calculating
+	zflag and nflag.
+	(dni bitr): Likewise.
+	(sem-fpu): Likewise, but for bzflag and bnflag, when FPU is in
+	integer mode.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (define-operand pos-direction): Add no-op operand.
 	(op-atomic-testset): Add pos-direction to syntax.
 	* epiphany.opc (parse_pos_direction): Implemented. Support '+'
