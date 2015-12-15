@@ -413,6 +413,25 @@ parse_branch_addr (CGEN_CPU_DESC cd,
     }
   return errmsg;
 }
+
+static const char *
+parse_pos_direction (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+		     const char ** strp,
+		     int opindex ATTRIBUTE_UNUSED,
+		     unsigned long *valuep)
+{
+  if (**strp == '-')
+    return _("negative direction not supported");
+  else if (**strp == '+')
+    {
+      *valuep = 0;
+      ++*strp;
+    }
+  else
+    *valuep = 0;
+
+  return NULL;
+}
 
 /* -- dis.c */
 
@@ -486,6 +505,17 @@ print_uimm_not_reg (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 
   value &= 0x7ff;
   print_address (cd, dis_info, value, attrs, pc, length);
+}
+
+static void
+print_pos_direction (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+		     void * dis_info ATTRIBUTE_UNUSED,
+		     long value ATTRIBUTE_UNUSED,
+		     unsigned int attrs ATTRIBUTE_UNUSED,
+		     bfd_vma pc ATTRIBUTE_UNUSED,
+		     int length ATTRIBUTE_UNUSED)
+{
+  /* no-op */
 }
 
 

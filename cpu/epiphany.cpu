@@ -1279,6 +1279,14 @@
   (index f-simm8)
   (handlers (parse "branch_addr")))
 
+(define-operand
+  (name pos-direction)
+  (comment "positive direction")
+  (attrs)
+  (type h-uint)
+  (index f-nil)
+  (handlers (parse "pos_direction") (print "pos_direction")))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					; Register operands
@@ -2083,7 +2091,7 @@
   (dni (%sym name "t")
        (%str "testset " mode " indexed")
        ()
-       (%str name " $rd6,[$rn6,$rm6]")
+       (%str name " $rd6,[$rn6,${pos-direction}$rm6]")
        (+ OP4_LDSTRX size OP_LOAD OPA_TESTSET (f-opc-19-4 #x0) (f-dc-20-1 #x0) rd6 rn6 rm6)
        (sem-atomic-op OP_LOAD size OP_CTRLMODE_TESTSET)
        ()
@@ -2091,7 +2099,7 @@
   (dnmi (%sym name "t.l")
         (%str "testset " mode ".l indexed")
         (NO-DIS)
-        (%str name ".l $rd6,[$rn6,$rm6]")
+        (%str name ".l $rd6,[$rn6,${pos-direction}$rm6]")
         (emit (%sym name "t") rd6 rn6 rm6)
         )
   )
