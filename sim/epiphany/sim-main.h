@@ -80,27 +80,27 @@ struct _sim_cpu {
   pthread_cond_t scr_writeslot_cond; /* When core acks SCR write (and write slot becomes free) */
   volatile int scr_remote_write_reg; /* Set to -1 by core when a write is acked */
   volatile uint32_t scr_remote_write_val;
-#define CPU_SCR_WRITESLOT_LOCK() pthread_mutex_lock(&current_cpu->scr_lock)
-#define CPU_SCR_WRITESLOT_RELEASE() pthread_mutex_unlock(&current_cpu->scr_lock)
-#define CPU_WAKEUP_WAIT() \
-  pthread_cond_wait(&current_cpu->scr_wakeup_cond, &current_cpu->scr_lock)
-#define CPU_SCR_WAKEUP_SIGNAL() \
-  pthread_cond_signal(&current_cpu->scr_wakeup_cond)
-#define CPU_SCR_WRITESLOT_EMPTY() (current_cpu->scr_remote_write_reg == -1)
-#define CPU_SCR_WRITESLOT_WAIT() \
-  pthread_cond_wait(&current_cpu->scr_writeslot_cond, &current_cpu->scr_lock)
-#define CPU_SCR_WRITESLOT_SIGNAL() \
-  pthread_cond_signal(&current_cpu->scr_writeslot_cond)
+#define CPU_SCR_WRITESLOT_LOCK(cpu) pthread_mutex_lock(&(cpu)->scr_lock)
+#define CPU_SCR_WRITESLOT_RELEASE(cpu) pthread_mutex_unlock(&(cpu)->scr_lock)
+#define CPU_WAKEUP_WAIT(cpu) \
+  pthread_cond_wait(&(cpu)->scr_wakeup_cond, &(cpu)->scr_lock)
+#define CPU_SCR_WAKEUP_SIGNAL(cpu) \
+  pthread_cond_signal(&(cpu)->scr_wakeup_cond)
+#define CPU_SCR_WRITESLOT_EMPTY(cpu) ((cpu)->scr_remote_write_reg == -1)
+#define CPU_SCR_WRITESLOT_WAIT(cpu) \
+  pthread_cond_wait(&(cpu)->scr_writeslot_cond, &(cpu)->scr_lock)
+#define CPU_SCR_WRITESLOT_SIGNAL(cpu) \
+  pthread_cond_signal(&(cpu)->scr_writeslot_cond)
 #else
-#define CPU_SCR_WRITESLOT_LOCK()
-#define CPU_SCR_WRITESLOT_RELEASE()
-#define CPU_SCR_WAKEUP_SIGNAL()
-#define CPU_SCR_WAKEUP_WAIT()\
-      sim_engine_halt (current_state, current_cpu, NULL, \
+#define CPU_SCR_WRITESLOT_LOCK(cpu)
+#define CPU_SCR_WRITESLOT_RELEASE(cpu)
+#define CPU_SCR_WAKEUP_SIGNAL(cpu)
+#define CPU_SCR_WAKEUP_WAIT(cpu)\
+      sim_engine_halt (current_state, (cpu), NULL, \
 		       sim_pc_get(current_cpu), sim_stopped, SIM_SIGTRAP)
-#define CPU_SCR_WRITESLOT_EMPTY() (1)
-#define CPU_SCR_WRITESLOT_WAIT()
-#define CPU_SCR_WRITESLOT_SIGNAL()
+#define CPU_SCR_WRITESLOT_EMPTY(cpu) (1)
+#define CPU_SCR_WRITESLOT_WAIT(cpu)
+#define CPU_SCR_WRITESLOT_SIGNAL(cpu)
 #endif
 
   /* Out of band events. No locking, must be serialized on local core */

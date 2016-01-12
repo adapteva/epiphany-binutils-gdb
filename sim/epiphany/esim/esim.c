@@ -317,31 +317,67 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 }
 
 static void
-es_shm_mmr_write (sim_cpu *current_cpu, bool to_self, int reg, USI val)
+es_shm_mmr_write (es_state *esim, sim_cpu *target_cpu, int reg, USI val)
 {
+  bool to_self;
+
+  sim_cpu *my_cpu = ES_CPU;
+  to_self = my_cpu == target_cpu;
+
   /* If target cpu is local cpu, we can do the write immediately,
    * otherwise we need to serialize it on the target */
   if (to_self)
-    epiphanybf_h_all_registers_set (current_cpu, reg, val);
+    epiphanybf_h_all_registers_set (my_cpu, reg, val);
   else
-  {
-    CPU_SCR_WRITESLOT_LOCK ();
-    while (!CPU_SCR_WRITESLOT_EMPTY ())
-      CPU_SCR_WRITESLOT_WAIT ();
-    current_cpu->scr_remote_write_reg = reg;
-    current_cpu->scr_remote_write_val = val;
-    CPU_SCR_WAKEUP_SIGNAL ();
-    CPU_SCR_WRITESLOT_RELEASE ();
-  }
+    {
+      /* Busy-waiting seems to give best performance (compared to
+       * pthread_cond_timedwait), even with a large number (1024) of simulated
+       * cores.  */
+
+      while (true)
+	{
+	  /* take remote writeslot lock */
+	  CPU_SCR_WRITESLOT_LOCK (target_cpu);
+
+	  if (CPU_SCR_WRITESLOT_EMPTY (target_cpu))
+	    break;
+
+	  /* need to release remote cpu lock to get some global progress */
+	  CPU_SCR_WRITESLOT_RELEASE (target_cpu);
+
+	  /* Empty local writeslot to break cyclic deadlocks */
+	  if (!CPU_SCR_WRITESLOT_EMPTY (my_cpu))
+	    {
+	      CPU_SCR_WRITESLOT_LOCK (my_cpu);
+	      epiphanybf_h_all_registers_set (
+		  my_cpu,
+		  my_cpu->scr_remote_write_reg,
+		  my_cpu->scr_remote_write_val);
+	      my_cpu->scr_remote_write_reg = -1;
+	      my_cpu->scr_remote_write_val = 0xbaadbeef;
+	      CPU_SCR_WRITESLOT_SIGNAL (my_cpu);
+	      CPU_SCR_WRITESLOT_RELEASE (my_cpu);
+	    }
+	  else
+	    {
+	      /* "Punish" processes that don't contribute to global
+	       * progress */
+	      sched_yield ();
+	    }
+	}
+      target_cpu->scr_remote_write_reg = reg;
+      target_cpu->scr_remote_write_val = val;
+      CPU_SCR_WAKEUP_SIGNAL (target_cpu);
+      CPU_SCR_WRITESLOT_RELEASE (target_cpu);
+    }
 }
 
 static void
 es_shm_tx_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
 {
-  sim_cpu *current_cpu = tx->sim_addr.cpu;
-  bool to_self = tx->sim_addr.coreid == esim->coreid;
+  sim_cpu *target_cpu = tx->sim_addr.cpu;
 
-  es_shm_mmr_write(current_cpu, to_self, reg, val);
+  es_shm_mmr_write(esim, target_cpu, reg, val);
 }
 
 /*! Perform one atomic operation to SHM, and advance transaction state
@@ -777,8 +813,8 @@ es_wand_propagate_se (es_state *esim)
 	  current_cpu->wand_self  = 0;
 	  current_cpu->wand_east  = 0;
 	  current_cpu->wand_south = 0;
-	  es_shm_mmr_write (current_cpu, coreid == esim->coreid,
-			    H_REG_SCR_ILATST, 1 << H_INTERRUPT_WAND);
+	  es_shm_mmr_write (esim, current_cpu, H_REG_SCR_ILATST,
+			    1 << H_INTERRUPT_WAND);
 	  CPU_WAND_RELEASE (current_cpu);
 	}
     }

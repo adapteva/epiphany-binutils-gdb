@@ -115,6 +115,9 @@ ES_ATOMIC_INCR_DEF(64)
 
 typedef struct _sim_cpu sim_cpu;
 
+#define ES_CPU ((sim_cpu *) esim->this_core_cpu_state)
+
+
 /*! ESIM node configuration */
 typedef struct es_node_cfg_ {
     /*! @privatesection */

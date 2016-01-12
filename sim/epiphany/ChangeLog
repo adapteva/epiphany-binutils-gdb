@@ -1,3 +1,16 @@
+2016-01-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-main.h (CPU_SCR_WRITESLOT_LOCK) (CPU_SCR_WRITESLOT_RELEASE)
+	(CPU_WAKEUP_WAIT) (CPU_SCR_WAKEUP_SIGNAL) (CPU_SCR_WRITESLOT_EMPTY)
+	(CPU_SCR_WRITESLOT_WAIT) (CPU_SCR_WRITESLOT_SIGNAL): Add cpu argument
+	to macros.
+	* mloop.in: Provide cpu argument to above macros.
+	* esim/esim-int.h: Add ES_CPU helper macro.
+	* esim/esim.c (es_shm_mmr_write): Break cyclic deadlocks. Update
+	function arguments.
+	(es_shm_tx_mmr_write): Update to match es_shm_mmr_write() arguments.
+	(es_wand_propagate_se): Likewise.
+
 2015-12-14  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.c (epiphanybf_set_simcmd): Exit silently when called if

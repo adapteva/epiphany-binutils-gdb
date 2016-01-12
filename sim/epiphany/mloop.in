@@ -272,11 +272,11 @@ cat <<EOF
 	   && !current_cpu->oob_events)
     {
       if (env == ALL_ENVIRONMENT || env == USER_ENVIRONMENT)
-	epiphany_halt_on_inactive(current_cpu, prev_vpc);
+	epiphany_halt_on_inactive (current_cpu, prev_vpc);
 
-      CPU_SCR_WRITESLOT_LOCK();
-      if (CPU_SCR_WRITESLOT_EMPTY())
-	CPU_WAKEUP_WAIT();
+      CPU_SCR_WRITESLOT_LOCK (current_cpu);
+      if (CPU_SCR_WRITESLOT_EMPTY (current_cpu))
+	CPU_WAKEUP_WAIT (current_cpu);
       /* No point in releasing lock in between */
       goto wakeup_from_idle;
     }
@@ -293,17 +293,17 @@ cat <<EOF
   if (current_cpu->oob_events != 0)
     goto delay_oob_one_insn;
 
-  if (!CPU_SCR_WRITESLOT_EMPTY())
+  if (!CPU_SCR_WRITESLOT_EMPTY (current_cpu))
     {
-      CPU_SCR_WRITESLOT_LOCK();
+      CPU_SCR_WRITESLOT_LOCK (current_cpu);
 wakeup_from_idle:
       epiphanybf_h_all_registers_set(current_cpu,
 				     current_cpu->scr_remote_write_reg,
 				     current_cpu->scr_remote_write_val);
       current_cpu->scr_remote_write_reg = -1;
       current_cpu->scr_remote_write_val = 0xbaadbeef;
-      CPU_SCR_WRITESLOT_SIGNAL();
-      CPU_SCR_WRITESLOT_RELEASE();
+      CPU_SCR_WRITESLOT_SIGNAL (current_cpu);
+      CPU_SCR_WRITESLOT_RELEASE (current_cpu);
     }
 
   vpc = epiphany_handle_oob_events(current_cpu, prev_vpc, vpc);
