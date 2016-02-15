@@ -1,3 +1,8 @@
+2016-02-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_validate_cluster_cfg): Use ULL postfix for
+	comparing 64 bit values.
+
 2015-12-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* Makefile.in: Add missing esim dependencies.

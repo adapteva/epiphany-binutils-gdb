@@ -640,7 +640,7 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "Core memory region size must be power of two");
 
   /* Only support up to 4GB for now */
-  FAIL_IF((uint64_t) c->ext_ram_size > (1UL<<32UL),
+  FAIL_IF((uint64_t) c->ext_ram_size > (1ULL<<32ULL),
 			    "External RAM size too large. Max is 4GB");
 
   FAIL_IF((address_word)
