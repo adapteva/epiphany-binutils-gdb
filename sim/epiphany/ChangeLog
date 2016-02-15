@@ -1,3 +1,8 @@
+2016-02-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_validate_cluster_cfg): Use ULL postfix for
+	comparing 64 bit values.
+
 2016-01-12  Ola Jeppsson  <ola@adapteva.com>
 
 	* sim-main.h (CPU_SCR_WRITESLOT_LOCK) (CPU_SCR_WRITESLOT_RELEASE)
