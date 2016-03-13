@@ -41,79 +41,79 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "cpu.h"
 
 
-inline USI
+static inline USI
 extract_mant (USI x)
 {
   return (x & 0x7fffff);
 }
 
-inline USI
+static inline USI
 extract_exp (USI x)
 {
   return (x >> 23) & 0xff;
 }
 
-inline USI
+static inline USI
 extract_sign (USI x)
 {
   return (x >> 31) & 0x1;
 }
 
-inline USI
+static inline USI
 isDenormalOrZero (USI x)
 {
   return (extract_exp (x) == 0);
 }
 
-inline USI
+static inline USI
 isDenormal (USI x)
 {
   return ((extract_exp (x) == 0) && (extract_mant (x) != 0));
 }
 
-inline USI
+static inline USI
 makeZero (USI x)
 {
   return (x & 0x80000000);
 }
 
-inline USI
+static inline USI
 makeNegative (USI x)
 {
   return (x | 0x80000000);
 }
 
-inline USI
+static inline USI
 makePositive (USI x)
 {
   return (x & 0x7fffffff);
 }
 
-inline USI
+static inline USI
 isZero (USI x)
 {
   return ((extract_exp (x) == 0) && (extract_mant (x) == 0));
 }
 
-inline USI
+static inline USI
 isNegative (USI x)
 {
   return ((0x80000000 & x) != 0);
 }
 
-inline USI
+static inline USI
 isInf (USI x)
 {
   return (extract_exp (x) == 0xff) && (extract_mant (x) == 0);
 }
 
-inline USI
+static inline USI
 isNAN (USI x)
 {
   return (extract_exp (x) == 0xff) && (extract_mant (x) != 0);
 }
 
-inline USI
+static inline USI
 makeNAN (USI x)
 {
   return ((1 << 23) | (1 << 22) | (x));

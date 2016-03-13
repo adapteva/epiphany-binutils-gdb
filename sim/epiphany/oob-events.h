@@ -16,6 +16,6 @@ typedef enum oob_event_t_ {
   }\
 while (0)
 
-inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc);
+IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc);
 
 #endif

@@ -92,7 +92,7 @@ update_ilatcl:
   return vpc;
 }
 
-inline IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
+IADDR epiphany_handle_oob_events(SIM_CPU *current_cpu, IADDR vpc)
 {
 
   if (!current_cpu->oob_event)
