@@ -2821,7 +2821,7 @@ epiphany_gdbarch_init (struct gdbarch_info  info,
      placed anywhere. */
   /* Default implementations of memory_insert_breakpoint and
      memory_remove_breakpoint are sufficient. */
-  /* No need for decr_pc_after_break, since BKPT does not advance the PC */
+  set_gdbarch_decr_pc_after_break (gdbarch, EPIPHANY_BKPT_INSTLEN);
   /* No gdbarch_deprecated_function_start_offset for since we fully support
      function pointers and entry points (they are the same at present */
   /* No need for remote_register_number, default identity mapping suffices. */
