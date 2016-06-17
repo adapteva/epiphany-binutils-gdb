@@ -1,5 +1,10 @@
 2016-06-17  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim/esim.c (es_shm_mmr_write): Fix SEGFAULT when connected as
+	client.
+
+2016-06-17  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-elf-sim.py.in: Check for --host argument in
 	PATH, not just in the current working directory.
 

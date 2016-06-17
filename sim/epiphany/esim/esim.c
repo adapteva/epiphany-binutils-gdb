@@ -322,11 +322,11 @@ es_shm_mmr_write (es_state *esim, sim_cpu *target_cpu, int reg, USI val)
   bool to_self;
 
   sim_cpu *my_cpu = ES_CPU;
-  to_self = my_cpu == target_cpu;
+  to_self = !esim->is_client && my_cpu == target_cpu;
 
   /* If target cpu is local cpu, we can do the write immediately,
    * otherwise we need to serialize it on the target */
-  if (to_self)
+  if (!esim->is_client && to_self)
     epiphanybf_h_all_registers_set (my_cpu, reg, val);
   else
     {
@@ -346,7 +346,7 @@ es_shm_mmr_write (es_state *esim, sim_cpu *target_cpu, int reg, USI val)
 	  CPU_SCR_WRITESLOT_RELEASE (target_cpu);
 
 	  /* Empty local writeslot to break cyclic deadlocks */
-	  if (!CPU_SCR_WRITESLOT_EMPTY (my_cpu))
+	  if (!esim->is_client && !CPU_SCR_WRITESLOT_EMPTY (my_cpu))
 	    {
 	      CPU_SCR_WRITESLOT_LOCK (my_cpu);
 	      epiphanybf_h_all_registers_set (
