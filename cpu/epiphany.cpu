@@ -2531,22 +2531,15 @@
 ;; IDLE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; hint to rti that we're returning from idle
-(define-hardware
-  (name h-int-idlebit)
-  (type register BI)
-)
-
 (dni idle
   "idle until interrupt"
   (SHORT-INSN)
   "idle"
   (+ OP4_FLOW16 (f-opc-8-5 #x1b) (f-dc-15-7 #x0))
   (sequence ((USI tmpPC))
-    (set-quiet (reg h-int-idlebit) 1)
     (set caibit 0)
     (set tmpPC pc)
-    (set pc tmpPC)
+    (set pc (add tmpPC (const 2)))
     ;; (%if (mach == epiphany-5)
       (c-call VOID "epiphany_gie" (const 1))
     ;; )
