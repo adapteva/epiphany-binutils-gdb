@@ -1,5 +1,10 @@
 2016-07-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* traps.c (epiphany_rti): Do not adjust iret when returning from
+	idle here, let the 'idle' semantics in epiphany.cpu handle that.
+
+2016-07-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-elf-sim.py.in: Add back support for relative/absolute
 	path for --host argument.
 

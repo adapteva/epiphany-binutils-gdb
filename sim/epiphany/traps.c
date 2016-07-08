@@ -98,11 +98,6 @@ USI epiphany_rti(SIM_CPU *current_cpu)
       SET_H_GIDISABLEBIT(0);
       SET_H_KMBIT(0);
 
-      /* Adjust address to next instruction if we're returning from idle */
-      if (GET_H_INT_IDLEBIT ())
-	iret += 2;
-      SET_H_INT_IDLEBIT (0);
-
       return iret;
     }
 }
