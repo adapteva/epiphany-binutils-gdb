@@ -1,3 +1,8 @@
+2016-07-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Add back support for relative/absolute
+	path for --host argument.
+
 2016-06-17  Ola Jeppsson  <ola@adapteva.com>
 
 	* esim/esim.c (es_shm_mmr_write): Fix SEGFAULT when connected as

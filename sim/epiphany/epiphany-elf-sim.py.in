@@ -258,7 +258,7 @@ Press Ctrl-C at any time to abort the simulation.
 
     if args.host:
         args.environment = 'operating'
-        if not which(args.host[0]):
+        if not (os.path.isfile(args.host[0]) or which(args.host[0])):
             parser.error("Host program `%s' not found" % args.host[0])
 
     if not {args.environment} & {'user', 'virtual', 'operating'}:
