@@ -1,3 +1,8 @@
+2016-07-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_cpu_reset): Don't call SET_H_INT_IDLEBIT.
+	Hardware is removed in cpu definition file.
+
 2016-07-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* traps.c (epiphany_rti): Do not adjust iret when returning from

@@ -687,7 +687,6 @@ epiphanybf_cpu_reset(SIM_CPU *current_cpu)
     }
 
   /* Reset internal hardware state */
-  SET_H_INT_IDLEBIT (0);
   SET_H_HWLOOP_NEXT (0);
 }
 
