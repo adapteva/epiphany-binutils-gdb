@@ -40,7 +40,7 @@ do { \
   if (cpu) /* null if ctrl-c.  */ \
     { \
       sim_pc_set ((cpu), (cia)); \
-      if (epiphany_any_periphal_active_p (cpu)) \
+      if (epiphany_any_peripheral_active_p (cpu)) \
 	  sim_io_eprintf(sd, "WARNING: Simulation stopped while there were still active peripherals.\n"); \
     } \
 } while (0)

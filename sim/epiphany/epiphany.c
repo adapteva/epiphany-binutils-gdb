@@ -335,7 +335,7 @@ epiphanybf_external_fetch_allowed_p (SIM_CPU *current_cpu)
 }
 
 bool
-epiphany_any_periphal_active_p (SIM_CPU *current_cpu)
+epiphany_any_peripheral_active_p (SIM_CPU *current_cpu)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
   struct hw *dma0  = sim_hw_parse(sd, "/epiphany_dma@0");

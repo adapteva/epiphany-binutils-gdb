@@ -1,5 +1,16 @@
 2016-07-13  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.c (epiphany_any_periphal_active_p): Rename to ...
+	(epiphany_any_peripheral_active_p): ... this.
+	* epiphany-sim.h (epiphany_any_periphal_active_p): Rename to ...
+	(epiphany_any_peripheral_active_p): ... this.
+	* mloop.in: Change epiphany_any_periphal_active_p to
+	epiphany_any_peripheral_active_p.
+	* sim-main.h ((SIM_ENGINE_HALT_HOOK): Change
+	epiphany_any_periphal_active_p to epiphany_any_peripheral_active_p.
+
+2016-07-13  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-main.h (SIM_ENGINE_HALT_HOOK): Null check cpu before calling
 	epiphany_any_periphal_active_p ().
 
