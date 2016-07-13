@@ -37,10 +37,12 @@ typedef USI sim_cia;
 
 #define SIM_ENGINE_HALT_HOOK(sd, cpu, cia) \
 do { \
-  if (epiphany_any_periphal_active_p (cpu)) \
-	sim_io_eprintf(sd, "WARNING: Simulation stopped while there were still active peripherals.\n"); \
   if (cpu) /* null if ctrl-c.  */ \
-    sim_pc_set ((cpu), (cia)); \
+    { \
+      sim_pc_set ((cpu), (cia)); \
+      if (epiphany_any_periphal_active_p (cpu)) \
+	  sim_io_eprintf(sd, "WARNING: Simulation stopped while there were still active peripherals.\n"); \
+    } \
 } while (0)
 #define SIM_ENGINE_RESTART_HOOK(sd, cpu, cia) \
 do { \
