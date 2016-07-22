@@ -515,7 +515,13 @@ def run_inferior(args, pid_core_map):
         print_stderr('[INFO] Starting host program')
 
     # Tell e-hal we want to use the simulator target
-    os.environ["EHAL_TARGET"] = "esim"
+    if not "EHAL_TARGET" in os.environ:
+        os.environ["EHAL_TARGET"] = "sim"
+
+    # Tell pal we want to use the simulator target
+    if not "PAL_EPIPHANY_TARGET" in os.environ:
+        os.environ["PAL_EPIPHANY_TARGET"] = "sim"
+
     # We only report the host app's exit status
     retval = 0
     try:
