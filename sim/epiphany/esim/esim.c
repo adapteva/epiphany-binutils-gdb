@@ -687,11 +687,11 @@ es_tx_run(es_state *esim, es_transaction *tx)
  */
 int
 es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
-	     uint8_t *src)
+	     const void *src)
 {
   es_transaction tx = {
     ES_REQ_STORE,
-    src,
+    (uint8_t *) src,
     -1,
     (address_word) addr,
     (address_word) size,
@@ -712,11 +712,11 @@ es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
  */
 int
 es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
-	    uint8_t *dst)
+	    void *dst)
 {
   es_transaction tx = {
     ES_REQ_LOAD,
-    dst,
+    (uint8_t *) dst,
     -1,
     (address_word) addr,
     (address_word) size,
@@ -736,12 +736,12 @@ es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
  * @return ES_OK on success
  */
 int
-es_mem_atomic_load(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
-		   uint8_t *dst)
+es_mem_atomic_load (es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
+		    void *dst)
 {
   es_transaction tx = {
     ES_REQ_ATOMIC_LOAD,
-    dst,
+    (uint8_t *) dst,
     ctrlmode,
     (address_word) addr,
     (address_word) size,
@@ -761,12 +761,12 @@ es_mem_atomic_load(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
  * @return ES_OK on success
  */
 int
-es_mem_atomic_store(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
-		    uint8_t *src)
+es_mem_atomic_store (es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
+		     const void *src)
 {
   es_transaction tx = {
     ES_REQ_ATOMIC_STORE,
-    src,
+    (uint8_t *) src,
     ctrlmode,
     (address_word) addr,
     (address_word) size,

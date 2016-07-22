@@ -1,5 +1,13 @@
 2016-07-22  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim.c (es_mem_store): Make arguments more library-like.
+	(es_mem_load): Likewise.
+	(es_mem_atomic_load): Likewise.
+	(es_mem_atomic_store): Likewise.
+	* esim/esim.h: Update function prototypes.
+
+2016-07-22  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-elf-sim.py.in (run_inferior): Add PAL support. Don't
 	override environment variables that are already present.
 

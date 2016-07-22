@@ -73,15 +73,14 @@ void es_client_disconnect(es_state *esim, bool stop);
 volatile void *es_client_get_raw_pointer (es_state *esim, uint64_t addr,
 					  uint64_t size);
 
-int es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
-		 uint8_t *src);
-int es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
-		uint8_t *dst);
+int es_mem_store (es_state *esim, uint64_t addr, uint64_t size,
+		  const void *src);
+int es_mem_load (es_state *esim, uint64_t addr, uint64_t size, void *dst);
 
-int es_mem_atomic_load (es_state *esim, int ctrlmode, uint64_t addr,
-		        uint64_t size, uint8_t *dst);
 int es_mem_atomic_store (es_state *esim, int ctrlmode, uint64_t addr,
-			 uint64_t size, uint8_t *src);
+			 uint64_t size, const void *src);
+int es_mem_atomic_load (es_state *esim, int ctrlmode, uint64_t addr,
+		        uint64_t size, void *dst);
 
 int es_wand (es_state *esim);
 
