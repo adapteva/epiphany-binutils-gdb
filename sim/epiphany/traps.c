@@ -41,6 +41,20 @@ sim_engine_invalid_insn (SIM_CPU *current_cpu, IADDR cia, SEM_PC pc)
   fprintf (stderr, "----------- sim_engine_invalid_insn at pc 0x%llx\n",
 	   (ulong64) pc);
 
+  /* Contribute to global progress */
+  if (!CPU_SCR_WRITESLOT_EMPTY (current_cpu))
+    {
+      CPU_SCR_WRITESLOT_LOCK (current_cpu);
+      epiphanybf_h_all_registers_set (current_cpu,
+				      current_cpu->scr_remote_write_reg,
+				      current_cpu->scr_remote_write_val);
+      current_cpu->scr_remote_write_reg = -1;
+      current_cpu->scr_remote_write_val = 0xbaadbeef;
+      CPU_SCR_WRITESLOT_SIGNAL (current_cpu);
+      CPU_SCR_WRITESLOT_RELEASE (current_cpu);
+    }
+  pc = epiphany_handle_oob_events (current_cpu, cia, pc);
+
   sim_engine_halt (sd, current_cpu, NULL, cia, sim_stopped, SIM_SIGILL);
 
   return pc;
