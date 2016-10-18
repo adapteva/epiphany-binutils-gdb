@@ -1288,13 +1288,6 @@
   )
 )
 
-
-(define-pmacro (dni_wrapper isnid stdrdesc attr_ strassembl iopcode proceed null_b)
-  (begin
-    (dni isnid stdrdesc attr_ strassembl iopcode proceed null_b)
-  )
-)
-
 ;; Some handy macros
 ;;
 
@@ -1601,7 +1594,7 @@
 
 (define-pmacro (load-insn name mode sel sem-op)
   (begin
-    (dni_wrapper (%sym name "x16.s")
+    (dni (%sym name "x16.s")
 		 (%str "load " mode " indexed")
 		 (SHORT-INSN)
 		 (%str name " $rd,[$rn,$rm]")
@@ -1612,7 +1605,7 @@
 		 )
 
 
-    (dni_wrapper (%sym name "p16.s")
+    (dni (%sym name "p16.s")
 		 (%str "load " mode " postmodify")
 		 (SHORT-INSN)
 		 (%str name " $rd,[$rn],$rm")
@@ -1625,7 +1618,7 @@
 		 )
 
 
-    (dni_wrapper (%sym name "x.l")
+    (dni (%sym name "x.l")
 		 (%str "load " mode " indexed")
 		 ()
 		 (%str name " $rd6,[$rn6,$direction$rm6]")
@@ -1646,7 +1639,7 @@
 
 
 
-    (dni_wrapper (%sym name "p.l")
+    (dni (%sym name "p.l")
 		 (%str "load " mode " postmodify")
 		 ()
 		 (%str name " $rd6,[$rn6],$direction$rm6")
@@ -1671,7 +1664,7 @@
 
 
     ;;immediate modes last so reg forms found first.
-    (dni_wrapper (%sym name "d16.s")
+    (dni (%sym name "d16.s")
 		 (%str "load " mode " displacement")
 		 (SHORT-INSN IMM3)
 		 (%str name " $rd,[$rn,$disp3]")
@@ -1686,7 +1679,7 @@
 		 )
 
 
-    (dni_wrapper (%sym name "d.l")
+    (dni (%sym name "d.l")
 		 (%str "load " mode " displacement")
 		 ()
 		 (%str name " $rd6,[$rn6,$dpmi$disp11]")
@@ -1712,7 +1705,7 @@
 
 
 
-    (dni_wrapper (%sym name "dpm.l")
+    (dni (%sym name "dpm.l")
 		 (%str "load " mode " displacement post-modify")
 		 ()
 		 (%str name " $rd6,[$rn6],$dpmi$disp11")
@@ -1775,7 +1768,7 @@
   (%let
 	( (c-fun (%str "epiphany_testset_" mode) ) )
 	(begin
-	  (dni_wrapper (%sym name "t")
+	  (dni (%sym name "t")
 		(%str "testset " mode " indexed")
 		()
 		(%str name " $rd6,[$rn6,$direction$rm6]")
@@ -1813,7 +1806,7 @@
 
 (define-pmacro (op-atomic-atomic-helper name store sfx size)
   (begin
-    (dni_wrapper
+    (dni
       (%sym name sfx)
       (%str name sfx)
       () ;; TODO Epiphany-5 attr
@@ -1842,7 +1835,7 @@
 
 (define-pmacro (op-atomic-helper name store ctrlmode sfx size)
   (begin
-    (dni_wrapper
+    (dni
       (%sym name sfx)
       (%str name sfx)
       () ;; TODO Epiphany-5 attr
@@ -1872,7 +1865,7 @@
 ;; need 16 bit forms too
 (define-pmacro (store-insn name mode sel sem-op)
   (begin
-    (dni_wrapper (%sym name "x16")
+    (dni (%sym name "x16")
 		 (%str "store" mode " indexed")
 		 (SHORT-INSN)
 		 (%str name " $rd,[$rn,$rm]")
@@ -1883,7 +1876,7 @@
 		 ()
 		 )
 
-    (dni_wrapper (%sym name "x")
+    (dni (%sym name "x")
 		 (%str "store" mode " indexed")
 		 ()
 		 (%str name " $rd6,[$rn6,$direction$rm6]")
@@ -1907,7 +1900,7 @@
 
 
 
-    (dni_wrapper (%sym name "p16")
+    (dni (%sym name "p16")
 		 (%str "store " mode " postmodify")
 		 (SHORT-INSN)
 		 (%str name " $rd,[$rn],$rm")
@@ -1919,7 +1912,7 @@
 		 ()
 		 )
 
-    (dni_wrapper (%sym name "p")
+    (dni (%sym name "p")
 		 (%str "store " mode " postmodify")
 		 ()
 		 (%str name " $rd6,[$rn6],$direction$rm6")
@@ -1939,7 +1932,7 @@
 	  (emit (%sym name "p") rd6 rn6 direction rm6)
 	  )
 
-    (dni_wrapper (%sym name "d16")
+    (dni (%sym name "d16")
 		 (%str "store " mode " displacement")
 		 (SHORT-INSN IMM3)
 		 (%str name " $rd,[$rn,$disp3]")
@@ -1953,7 +1946,7 @@
 		 ()
 		 )
 
-    (dni_wrapper (%sym name "d")
+    (dni (%sym name "d")
 		 (%str "store " mode " displacement")
 		 ()
 		 (%str name " $rd6,[$rn6,$dpmi$disp11]")
@@ -1978,7 +1971,7 @@
 	  )
 
 
-    (dni_wrapper (%sym name "dpm")
+    (dni (%sym name "dpm")
 		 (%str "store " mode " displacement post-modify")
 		 ()
 		 (%str name " $rd6,[$rn6],$dpmi$disp11")
@@ -2035,7 +2028,7 @@
 
 (define-pmacro (move-insns name cond g-op)
   (begin
-    (dni_wrapper (%sym "cmov16" cond)
+    (dni (%sym "cmov16" cond)
 		 (%str "move register " cond)
 		 (SHORT-INSN)
 		 (%str "mov" name " $rd,$rn")
@@ -2045,7 +2038,7 @@
 		 ()
 		 )
 
-    (dni_wrapper (%sym "cmov" cond)
+    (dni (%sym "cmov" cond)
 		 (%str "move register " cond)
 		 ()
 		 (%str "mov" name " $rd6,$rn6")
@@ -2094,7 +2087,7 @@
 
 ;; 16 bits form exists for group zero ( M1 and M0 equals to zero ) only
 
-(dni_wrapper movts16
+(dni movts16
 	     "move to special reg"
 	     (SHORT-INSN)
 	     "movts $sn,$rd"
@@ -2106,7 +2099,7 @@
 (define-pmacro (op-mmr-movts name sdreg code)
   (begin
 
-    (dni_wrapper (%sym "movts" name)
+    (dni (%sym "movts" name)
 		 (%str "move to " name)
 		 ()
 		 (%str "movts $" sdreg ",$rd6")
@@ -2137,7 +2130,7 @@
 ;; MODE imm6; arithmetic mode switch
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(dni_wrapper
+(dni
   mode
   "mode"
   () ;; TODO: (attr (MACH epiphany-v))
@@ -2157,7 +2150,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MOVFS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper movfs16
+(dni movfs16
 	     "move from special register"
 	     (SHORT-INSN)
 	     "movfs $rd,$sn"
@@ -2171,7 +2164,7 @@
 (define-pmacro (op-mmr-movfs name snreg code)
   (begin
 
-    (dni_wrapper (%sym "movfs" name)
+    (dni (%sym "movfs" name)
 		 (%str "move from " name)
 		 ()
 		 (%str "movfs $rd6,$" snreg)
@@ -2204,7 +2197,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; NOP 0x1a2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper nop
+(dni nop
 	     "no-operation"
 	     (SHORT-INSN)
 	     "nop"
@@ -2217,7 +2210,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SNOP 0x3a2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper snop
+(dni snop
 	     "no-operation"
 	     (SHORT-INSN)
 	     "snop"
@@ -2230,7 +2223,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; UNIMPL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper unimpl
+(dni unimpl
 	     "not-implemented"
 	     ()
 	     "unimpl"
@@ -2305,7 +2298,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WAND is a wired flag that runs around the chip
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper wand     "wand"
+(dni wand     "wand"
 	     (SHORT-INSN)
 	     "wand"
 	     (+ OP4_FLOW16 (f-opc-8-5 #x18) (f-dc-15-7 #x0))
@@ -2316,7 +2309,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sync likes wand, but wired OR
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper sync     "sync"
+(dni sync     "sync"
 	     (SHORT-INSN)
 	     "sync"
 	     (+ OP4_FLOW16 (f-opc-8-5 #x1f) (f-dc-15-7 #x0))
@@ -2327,7 +2320,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; GIE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper gien     "global interrupt enable"
+(dni gien     "global interrupt enable"
 	     (SHORT-INSN)
 	     "gie"
 	     (+ OP4_FLOW16 (f-gien-gidis-9-1 #x0) (f-opc-8-5 #x19) (f-dc-15-6 #x0))
@@ -2339,7 +2332,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; GIDIS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(dni_wrapper gidis     "global interrupt disable"
+(dni gidis     "global interrupt disable"
 	     (SHORT-INSN)
 	     "gid"
 	     (+ OP4_FLOW16 (f-gien-gidis-9-1 #x1) (f-opc-8-5 #x19) (f-dc-15-6 #x0))
@@ -2401,7 +2394,7 @@
 
 (define-pmacro (op-rrr name sem-op cond-op)
   (begin
-    (dni_wrapper (%sym name "16")
+    (dni (%sym name "16")
 		 (%str name)
 		 (SHORT-INSN)
 		 (%str name " $rd,$rn,$rm")
@@ -2415,7 +2408,7 @@
 		 ()
 		 )
 
-    (dni_wrapper (%sym name)
+    (dni (%sym name)
 		 (%str name)
 		 ()
 		 (%str name " $rd6,$rn6,$rm6")
@@ -2471,7 +2464,7 @@
 
 (define-pmacro (op-rri name code cond-op)
   (begin
-    (dni_wrapper (%sym name "i16")
+    (dni (%sym name "i16")
 		 (%str name)
 		 (SHORT-INSN IMM3)
 		 (%str name ".s $rd,$rn,$simm3")
@@ -2486,7 +2479,7 @@
 		 )
 
 
-    (dni_wrapper (%sym name "i")
+    (dni (%sym name "i")
 		 (%str name)
 		 ()
 		 (%str name ".l $rd6,$rn6,$simm11")
@@ -2543,7 +2536,7 @@
 
 (define-pmacro (shift-rrr name sem-op)
   (begin
-    (dni_wrapper (%sym name "16")
+    (dni (%sym name "16")
 		 (%str name)
 		 (SHORT-INSN)
 		 (%str name " $rd,$rn,$rm")
@@ -2557,7 +2550,7 @@
 		 ()
 		 )
 
-    (dni_wrapper (%sym name)
+    (dni (%sym name)
 		 (%str name)
 		 ()
 		 (%str name " $rd6,$rn6,$rm6")
@@ -2586,7 +2579,7 @@
 
 (define-pmacro (op-shift-rri name shortcode f5 longcode sem-op)
   (begin
-    (dni_wrapper (%sym name "i16")
+    (dni (%sym name "i16")
 		 (%str name)
 		 (SHORT-INSN)
 		 (%str name " $rd,$rn,$shift")
@@ -2599,7 +2592,7 @@
 			   )
 		 ()
 		 )
-    (dni_wrapper (%sym name "i32")
+    (dni (%sym name "i32")
 		 (%str name)
 		 ()
 		 (%str name " $rd6,$rn6,$shift")
@@ -2631,7 +2624,7 @@
 ;; 64 bit integer ops
 (define-pmacro (op64-rrr name sem-op cond-op)
   (begin
-    (dni_wrapper
+    (dni
       (%sym name "64")
       (%str name "64")
       () ;; TODO: Add Epiphany-5 attribute
@@ -2659,7 +2652,7 @@
 ;; 64-bit shift instructions
 (define-pmacro (shift64-rrr name sem-op)
   (begin
-    (dni_wrapper
+    (dni
       (%sym name "64")
       (%str name "64")
       () ;; TODO: Epiphany-5 attr
@@ -2703,7 +2696,7 @@
 	    (set dest v)
 	    ))
 
-(dni_wrapper bitr16 "bit reverse short"
+(dni bitr16 "bit reverse short"
 	     (SHORT-INSN)
 	     ("bitr $rd,$rn")
 	     (+ OP4_ASHIFT16 (f-opc-4-1 1) rd rn (f-shift 0))
@@ -2717,7 +2710,7 @@
 	     ()
 	     )
 
-(dni_wrapper bitr "bit reverse"
+(dni bitr "bit reverse"
 	     ()
 	     ("bitr $rd6,$rn6")
 	     (+ OP4_MISC (f-opc-4-1 1) (f-opc-19-4 #xe) (f-dc-25-6 0) rd6 rn6 (f-shift 0))
@@ -2739,7 +2732,7 @@
 
 ;; Immediate moves.  The 8 bit form is relaxed if it doesn't fit or is external
 ;; Move RD,#IMM
-(dni_wrapper mov8
+(dni mov8
 	     "mov imm8"
 	     (SHORT-INSN)
 	     "mov.b $rd,$imm8"
@@ -2753,7 +2746,7 @@
       "mov $rd,$imm8"
       (emit mov8 rd imm8))
 
-(dni_wrapper mov16
+(dni mov16
 	     "mov imm16"
 	     ()
 	     "mov.l $rd6,$imm16"
@@ -2768,7 +2761,7 @@
       (emit mov16 rd6 imm16))
 
 ;; MOVE TO HIGH WORD
-(dni_wrapper movt
+(dni movt
 	     "movt imm16"
 	     ()
 	     "movt $rd6,$imm16"
@@ -2790,7 +2783,7 @@
 ;; TWO operands
 (define-pmacro (op-two_operands-float name code)
   (begin
-    (dni_wrapper
+    (dni
       (%sym "f_" name "f16")
       (%str "f_" name)
       (SHORT-INSN)
@@ -2837,7 +2830,7 @@
     )
 
 
-    (dni_wrapper
+    (dni
       (%sym "f_" name "f32")
       (%str "f_" name)
       ()
@@ -2927,7 +2920,7 @@
 ;; FABS
 (define-pmacro (op-fabs-float name code)
   (begin
-    (dni_wrapper (%sym "f_" name "f16")
+    (dni (%sym "f_" name "f16")
 		 (%str "f_" name)
 		 (SHORT-INSN)
 		 (%str "f" name " rd,rn")
@@ -2951,7 +2944,7 @@
 		 ()
 		 )
 
-    (dni_wrapper (%sym "f_" name "f32")
+    (dni (%sym "f_" name "f32")
 		 (%str "f_" name)
 		 ()
 		 (%str "f" name " $rd6,$rn6")
@@ -2993,7 +2986,7 @@
 
 (define-pmacro (op-fix2float-float name code)
   (begin
-    (dni_wrapper (%sym "f_" name "f16")
+    (dni (%sym "f_" name "f16")
 		 (%str "f_" name)
 		 (SHORT-INSN)
 		 (%str "f" name " $rd,$rn")
@@ -3015,7 +3008,7 @@
 		 )
 
 
-    (dni_wrapper (%sym "f_" name "f32")
+    (dni (%sym "f_" name "f32")
 		 (%str "f_" name)
 		 ()
 		 (%str "f" name " $rd6,$rn6")
@@ -3050,7 +3043,7 @@
 
 (define-pmacro (op-float2fix-float name code)
   (begin
-    (dni_wrapper (%sym "f_" name "f16")
+    (dni (%sym "f_" name "f16")
 		 (%str "f_" name)
 		 (SHORT-INSN)
 		 (%str "f" name " $rd,$rn")
@@ -3084,7 +3077,7 @@
 
 
 
-    (dni_wrapper (%sym "f_" name "f32")
+    (dni (%sym "f_" name "f32")
 		 (%str "f_" name)
 		 ()
 		 (%str "f" name " $rd6,$rn6")
@@ -3133,7 +3126,7 @@
 (op-float2fix-float ix OPF_FIX)
 
 ;; FMAX
-(dni_wrapper
+(dni
   fmax
   "fmax"
   () ;; TODO: Epiphany-5 attrib
@@ -3155,7 +3148,7 @@
 )
 
 ;; UMUL
-(dni_wrapper
+(dni
   umul
   "umul"
   () ;; TODO: (attr (MACH epiphany-v))

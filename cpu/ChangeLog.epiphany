@@ -1,5 +1,10 @@
 2015-10-01  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu: Remove dni_wrapper pmacro. Use dni
+	directly instead.
+
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (h-pc): Implement support for hardware loops in
 	setter.
 	(dni_wrapper): Remove incorrect hardware-loops
