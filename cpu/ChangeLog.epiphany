@@ -1,5 +1,13 @@
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (h-scr-config-arithmode): New hardware, alias
+	for arith mode bits in config register.
+	(e-arithmode): Arithmetic mode enum.
+	(arithmode): New operand.
+	(sem-fpu): Use arithmode and e-arithmode.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (sem-fpu): New pmacro. One common semantics
 	pmacro for all fpu instructions.
 	(op-two_operands-float): Use sem-fpu.

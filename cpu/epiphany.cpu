@@ -722,9 +722,9 @@
 	  ("MESHROUTEBIT3"       14) ;; UNDOCUMENTED/RESERVED
 	  ("MESHROUTEBIT4"       15) ;; UNDOCUMENTED/RESERVED
 	  ("SPLITBIT"            16) ;; UNDOCUMENTED/RESERVED
-	  ("ARITHMETIC-MODEBIT0" 17)
-	  ("ARITHMETIC-MODEBIT1" 18)
-	  ("ARITHMETIC-MODEBIT2" 19)
+	  ("ARITH-MODEBIT0"      17)
+	  ("ARITH-MODEBIT1"      18)
+	  ("ARITH-MODEBIT2"      19)
 	  ("EMULMODEBIT"         20) ;; UNDOCUMENTED/RESERVED
 	  ("SINGLEISSUEBIT"      21) ;; UNDOCUMENTED/RESERVED
 	  ("CLOCKGATEENBIT"      22)
@@ -1111,13 +1111,58 @@
 (psw-bit-cr-config timer1bit2          "timer 1 mode selection 2"       )
 (psw-bit-cr-config timer1bit3          "timer 1 mode selection 3"       )
 
-(psw-bit-cr-config arithmetic-modebit0 "arithmetic mode bit0"           )
-(psw-bit-cr-config arithmetic-modebit1 "arithmetic mode bit1"           )
-(psw-bit-cr-config arithmetic-modebit2 "arithmetic mode bit2"           )
+(psw-bit-cr-config arith-modebit0      "arithmetic mode bit0"           )
+(psw-bit-cr-config arith-modebit1      "arithmetic mode bit1"           )
+(psw-bit-cr-config arith-modebit2      "arithmetic mode bit2"           )
 
 (psw-bit-cr-config clockgateenbit      "clock gating enable bkpt enable")
 (psw-bit-cr-config mbkptenbit          "multicore bkpt enable"          )
 
+
+;; arithmode hardware
+(define-hardware
+  (name h-scr-config-arithmode)
+  (comment "Arithmetic mode")
+  (type register UQI) ;; Not really, just 3 bits
+  (attrs VIRTUAL)
+  ;; Forward get/set to h-all-registers handlers
+  (get ()
+    (sequence ((USI mode))
+       (set mode (reg h-all-registers (enum USI H-REG-SCR-CONFIG)))
+       (and (srl mode H-SCR-CONFIG-ARITH-MODEBIT0) #x7)
+    )
+  )
+  ;; Two steps: clear bits, then set value
+  (set (newval)
+    (sequence ((USI mask) (USI shifted))
+      (set mask #xfff1ffff)  ;; bit 17-19
+      (set shifted (sll (and newval #xf)
+                        (enum UINT H-SCR-CONFIG-ARITH-MODEBIT0)))
+      (c-raw-call VOID "AND_REG_ATOMIC"  (enum UINT H-REG-SCR-CONFIG) mask)
+      (c-raw-call VOID "OR_REG_ATOMIC"   (enum UINT H-REG-SCR-CONFIG) shifted)
+    )
+  )
+)
+(define-enum
+  (name e-arithmode)
+  (comment "arithmetic mode")
+  ;;(attrs)
+  (prefix ARITHMODE-)
+  (values
+    (
+      ("SF"    0) ;; single float
+      ("DF"    1) ;; double float
+      ("SI"    4) ;; single integer
+    )
+  )
+)
+(dnop
+  arithmode
+  "arithmetic mode operand"
+  (SEM-ONLY)
+  h-scr-config-arithmode
+  f-nil
+)
 
 ;; DMA registers in MMR space
 (define-hardware
@@ -2810,7 +2855,7 @@
 (define-pmacro (sem-fpu SF_P DF_P SI_P PLACEHOLDER xname xrd xargs)
   (cond VOID
 (%if SF_P
-    ((eq arithmetic-modebit2 0)
+    ((eq arithmode ARITHMODE-SF)
       (sequence ((SF fptemp) (SI sdtmp) (BI bubit) (BI bibit))
         (set sdtmp
           (%splice c-call SI (%str "epiphany_f" xname) xrd (%unsplice xargs)))
@@ -2834,7 +2879,7 @@
     ((eq 1 0) (error "unreachable"))
 )
 (%if SI_P
-    ((eq arithmetic-modebit2 1)
+    ((eq arithmode ARITHMODE-SI)
         (sequence ((SI sdtmp))
           (set sdtmp
             (%splice c-call SI (%str "epiphany_i" xname) xrd (%unsplice xargs)))
