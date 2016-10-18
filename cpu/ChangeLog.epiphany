@@ -1,3 +1,9 @@
+2015-12-18  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro load-insn): Fix post modify when rd and rm
+	are the same register.
+	(pmacro store-insn): Likewise.
+
 2015-12-15  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (dni umul): Add semantics.
