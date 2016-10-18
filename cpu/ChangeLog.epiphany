@@ -1,5 +1,19 @@
 2015-12-18  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (sem-fpu-float-default-flags): Add default FPU flags
+	pmacro.
+	(sem-fpu-float): Add xflags-sem argument so instructions can
+	override when needed. Empty list means default flags semantics.
+	(sem-fpu): Add xflags-sem argument. Forward to sem-fpu-float.
+	(op-two_operands-float): Use default flags semantics.
+	(op-fabs-float): Likewise.
+	(op-fix2float): Likewise.
+	(dni fmax): Likewise.
+	(sem-float2fix-flags): Added pmacro.
+	(op-float2fix-float): Use sem-float2fix-flags.
+
+2015-12-18  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (pmacro load-insn): Fix post modify when rd and rm
 	are the same register.
 	(pmacro store-insn): Likewise.
