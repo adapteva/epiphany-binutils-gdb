@@ -1,3 +1,8 @@
+2015-10-16  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro sem-fpu-float): OR all flags in SIMD
+	mode.
+
 2015-10-13  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (pmacro shift64-rrr): rm operand is a 32-bit

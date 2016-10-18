@@ -2901,27 +2901,34 @@
     (set bubit  (c-call BI (%str "get_epiphany_funderflowflag" xsfx) sdtmp))
     (set bibit  (c-call BI (%str "get_epiphany_finvalidflag"   xsfx) sdtmp))
 
-
 (%if SIMD_P
-    (sequence ((xtype sdtmp2) (BI bubit2) (BI bibit2) (BI bvbit2))
+    (sequence ((xtype sdtmp2)
+               (BI bzbit2) (BI bnbit2) (BI bvbit2) (BI bubit2) (BI bibit2))
       (set sdtmp2
         (sem-fpu-apply
           (c-call xtype (%str "epiphany_f" xname xsfx))
           xregs (add xrd 1) (%map (%pmacro (idx) (add idx 1)) xargs)
         )
       )
-      ;; TODO: Need to know which bits are affected by second tuple.
-      ;; For now assume it's only the sticky bits.
+
+      (set bzbit2 (c-call BI (%str "get_epiphany_fzeroflag"      xsfx) sdtmp2))
+      (set bnbit2 (c-call BI (%str "get_epiphany_fnegativeflag"  xsfx) sdtmp2))
       (set bvbit2 (c-call BI (%str "get_epiphany_foverflowflag"  xsfx) sdtmp2))
       (set bubit2 (c-call BI (%str "get_epiphany_funderflowflag" xsfx) sdtmp2))
       (set bibit2 (c-call BI (%str "get_epiphany_finvalidflag"   xsfx) sdtmp2))
+
+      ;; All bits are ORed in SIMD mode
+      (set bzbit (or bzbit bzbit2))
+      (set bnbit (or bnbit bnbit2))
       (set bvbit (or bvbit bvbit2))
       (set bubit (or bubit bubit2))
       (set bibit (or bibit bibit2))
+
       (set rd6-di (join DI SI sdtmp2 sdtmp))
     )
     (set (reg xregs xrd) sdtmp)
 )
+    ;; Set sticky bits
     (set bvsbit (or bvsbit bvbit))
     (set busbit (or busbit bubit))
     (set bisbit (or bisbit bibit))
