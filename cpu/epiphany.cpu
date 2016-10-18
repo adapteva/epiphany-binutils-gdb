@@ -1130,19 +1130,19 @@
 (define-hardware
   (name h-scr-config-arithmode)
   (comment "Arithmetic mode")
-  (type register UQI) ;; Not really, just 3 bits
+  (type register QI) ;; Not really, just 4 bits
   (attrs VIRTUAL)
   ;; Forward get/set to h-all-registers handlers
   (get ()
     (sequence ((SI mode))
        (set mode (reg h-all-registers (enum USI H-REG-SCR-CONFIG)))
-       (and (srl mode H-SCR-CONFIG-ARITH-MODEBIT0) #x7)
+       (and (srl mode H-SCR-CONFIG-ARITH-MODEBIT0) #xf)
     )
   )
   ;; Two steps: clear bits, then set value
   (set (newval)
     (sequence ((USI mask) (USI shifted))
-      (set mask #xfff1ffff)  ;; bit 17-19
+      (set mask #xffe1ffff)  ;; bit 17-20
       (set shifted (sll (and newval #xf)
                         (enum UINT H-SCR-CONFIG-ARITH-MODEBIT0)))
       (c-raw-call VOID "AND_REG_ATOMIC"  (enum UINT H-REG-SCR-CONFIG) mask)
@@ -1157,9 +1157,10 @@
   (prefix ARITHMODE-)
   (values
     (
-      ("SF"    0) ;; single float
-      ("DF"    1) ;; double float
-      ("SI"    4) ;; single integer
+      ("SF"      0) ;; single float
+      ("DF"      1) ;; double float
+      ("SI"      4) ;; single integer
+      ("SF-SIMD" 8) ;; single float SIMD mode
     )
   )
 )
@@ -2206,7 +2207,7 @@
   () ;; TODO: (attr (MACH epiphany-v))
   "mode $mode4"
   (+ OP4_MISC (f-opc-9-6 #x30) (f-dc-21-2 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) mode4 (f-sn #x0) (f-sn-x #x0) (f-dc-31-2 #x0))
-  (set (hcr-config) (or (and (hcr-config) #xffe1ffff) (sll mode4 17))) ;; TODO: Test
+  (set arithmode mode4)
   ()
 )
 (dnmi

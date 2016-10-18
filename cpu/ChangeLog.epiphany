@@ -1,3 +1,8 @@
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (arithmode): Include SIMD bit.
+	(dni mode): Use arithmode operand.
+
 2015-10-12  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (op-atomic-helper): Fix operands for '.l' alias.
