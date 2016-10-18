@@ -940,6 +940,12 @@
 (dnh h-memaddr "memory effective address" (PROFILE) (register DI) () () ())
 (dnop memaddr  "memory effective address" (SEM-ONLY) h-memaddr f-nil)
 
+;; For tracing atomic memory operations
+(dnh h-memory-atomic "atomic memory access" (PROFILE) (register DI) () () ())
+(dnh h-memory-atomic-flag "atomic memory access flag" () (register BI) () () ())
+(dnop memory-atomic  "atomic memory access" (SEM-ONLY) h-memory-atomic f-nil)
+(dnop memory-atomic-flag  "atomic memory access flag" (SEM-ONLY) h-memory-atomic-flag f-nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					; Special Core Registers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1903,10 +1909,10 @@
 		(%str name " $rd6,[$rn6,$direction$rm6]")
 		(+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x1)
 		   rd6 rn6 direction rm6)
-		(sequence ((SI eff-addr))
+		(sequence ((DI eff-addr))
 		  (if (ifield f-addsubx)
-			(set  eff-addr  (sub rn6 rm6))
-			(set  eff-addr  (add rn6 rm6))
+			(set  eff-addr  (zext DI (sub SI rn6 rm6)))
+			(set  eff-addr  (zext DI (add SI rn6 rm6)))
 		  )
 		  (sem-memop-or-exc sel eff-addr
 		    (set rd6 (c-call SI c-fun eff-addr rd6))
@@ -1931,21 +1937,32 @@
 ;;no double mode support, since we have to send the src address, data
 ;;(testset-insn testsetd DI OPW_DOUBLE load-double-from-ea)
 
+;; Wrapper around sem-memop-or-exc that adds the memory write to the trace
+(define-pmacro (sem-atomic-memop-or-exc sel addr mem-op)
+  (sem-memop-or-exc sel addr
+    (sequence ()
+      (set-quiet memory-atomic-flag 0)
+      mem-op
+      (if (eq memory-atomic-flag 1) (set memory-atomic memory-atomic))
+    )
+  )
+)
+
 (define-pmacro (sem-atomic-dw-load-op size ctrlmode cfun)
   (sem-dword-regs-or-exc ((regno rd6))
     (sem-if-64bmode ((regno rn6) (regno rm6))
       (sem-dword-regs-or-exc ((regno rn6) (regno rm6))
         (sequence ((UDI addr))
           (set addr (add DI rn-di rm-di))
-          (sem-memop-or-exc size addr
-            (set rd6-di (c-call UDI cfun ctrlmode addr size))
+          (sem-atomic-memop-or-exc size addr
+            (set rd6-di (c-call UDI cfun ctrlmode addr size rd6-di))
           )
         )
       )
       (sequence ((UDI addr))
         (set addr (zext DI (add SI rn rm)))
-        (sem-memop-or-exc size addr
-          (set rd6-di (c-call UDI cfun ctrlmode addr size))
+        (sem-atomic-memop-or-exc size addr
+          (set rd6-di (c-call UDI cfun ctrlmode addr size rd6-di))
         )
       )
     )
@@ -1957,15 +1974,15 @@
     (sem-dword-regs-or-exc ((regno rn6-di) (regno rm6-di))
       (sequence ((UDI addr))
         (set addr (add DI rn-di rm-di))
-        (sem-memop-or-exc size addr
-          (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size)))
+        (sem-atomic-memop-or-exc size addr
+          (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size (zext DI rd6))))
         )
       )
     )
     (sequence ((UDI addr))
       (set addr (zext DI (add SI rn rm)))
-      (sem-memop-or-exc size addr
-        (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size)))
+      (sem-atomic-memop-or-exc size addr
+        (set rd6 (trunc SI (c-call UDI cfun ctrlmode addr size (zext DI rd6))))
       )
     )
   )
@@ -1977,14 +1994,14 @@
       (sequence ((UDI addr))
         (set addr (add DI rn-di rm-di))
         (sem-dword-regs-or-exc ((regno rn6-di) (regno rm6-di))
-          (sem-memop-or-exc size addr
+          (sem-atomic-memop-or-exc size addr
             (c-call VOID cfun ctrlmode addr size rd6-di)
           )
         )
       )
       (sequence ((UDI addr))
         (set addr (zext DI (add SI rn rm)))
-        (sem-memop-or-exc size addr
+        (sem-atomic-memop-or-exc size addr
           (c-call VOID cfun ctrlmode addr size rd6-di)
         )
       )
@@ -1997,14 +2014,14 @@
     (sequence ((UDI addr))
       (set addr (add DI rn-di rm-di))
       (sem-dword-regs-or-exc ((regno rn6) (regno rm6))
-        (sem-memop-or-exc size addr
+        (sem-atomic-memop-or-exc size addr
           (c-call VOID cfun ctrlmode addr size (zext DI rd6))
         )
       )
     )
     (sequence ((UDI addr))
       (set addr (zext DI (add SI rn rm)))
-      (sem-memop-or-exc size addr
+      (sem-atomic-memop-or-exc size addr
         (c-call VOID cfun ctrlmode addr size (zext DI rd6))
       )
     )
@@ -2013,18 +2030,18 @@
 
 (define-pmacro (sem-atomic-op store size ctrlmode)
   (%if (%equal? (%sym store) OP_STORE)
-    (%if (%equal? (%sym size) OPW_DWORD)
+    (%if (%equal? (%sym size) OPW_DOUBLE)
       (sem-atomic-dw-store-op size ctrlmode "epiphany_atomic_store")
       (sem-atomic-store-op    size ctrlmode "epiphany_atomic_store")
     )
-    (%if (%equal? (%sym size) OPW_DWORD)
+    (%if (%equal? (%sym size) OPW_DOUBLE)
       (sem-atomic-dw-load-op  size ctrlmode "epiphany_atomic_load")
       (sem-atomic-load-op     size ctrlmode "epiphany_atomic_load")
     )
   )
 )
 
-(define-pmacro (op-atomic-atomic-helper name store ins-sfx op-sfx size)
+(define-pmacro (op-atomic-atomic-size name store ins-sfx op-sfx size)
   (%let (
     (rd6-op (%sym rd6 op-sfx)))
   (begin
@@ -2048,14 +2065,14 @@
 )
 (define-pmacro (op-atomic-atomic name store)
   (begin
-    (op-atomic-atomic-helper name store "b" ""    OPW_BYTE)
-    (op-atomic-atomic-helper name store "h" ""    OPW_SHORT)
-    (op-atomic-atomic-helper name store ""  ""    OPW_WORD)
-    (op-atomic-atomic-helper name store "d" "-di" OPW_DOUBLE)
+    (op-atomic-atomic-size name store "b" ""    OPW_BYTE)
+    (op-atomic-atomic-size name store "h" ""    OPW_SHORT)
+    (op-atomic-atomic-size name store ""  ""    OPW_WORD)
+    (op-atomic-atomic-size name store "d" "-di" OPW_DOUBLE)
   )
 )
 
-(define-pmacro (op-atomic-helper name store ctrlmode ins-sfx op-sfx size)
+(define-pmacro (op-atomic-size name store ctrlmode ins-sfx op-sfx size)
   (%let (
     (rd6-op (%sym rd6 op-sfx)))
   (begin
@@ -2063,7 +2080,6 @@
       (%sym name ins-sfx)
       (%str name ins-sfx)
       () ;; TODO Epiphany-5 attr
-      ;(%str name ins-sfx " ${rd6" op-sfx ",[$rn,$rm]")
       (%str name ins-sfx " ${rd6" op-sfx "},[$rn6,$rm6]")
       (+ OP4_LDSTRX store size OPA_ATOMIC rd6 rn6 rm6 ctrlmode)
       (sem-atomic-op store size ctrlmode)
@@ -2078,12 +2094,12 @@
     )
   ))
 )
-(define-pmacro (op-atomic name store ctrlmode)
+(define-pmacro (op-atomic-all name store ctrlmode)
   (begin
-    (op-atomic-helper name store ctrlmode "b" ""    OPW_BYTE)
-    (op-atomic-helper name store ctrlmode "h" ""    OPW_SHORT)
-    (op-atomic-helper name store ctrlmode ""  ""    OPW_WORD)
-    (op-atomic-helper name store ctrlmode "d" "-di" OPW_DOUBLE)
+    (op-atomic-size name store ctrlmode "b" ""    OPW_BYTE)
+    (op-atomic-size name store ctrlmode "h" ""    OPW_SHORT)
+    (op-atomic-size name store ctrlmode ""  ""    OPW_WORD)
+    (op-atomic-size name store ctrlmode "d" "-di" OPW_DOUBLE)
   )
 )
 

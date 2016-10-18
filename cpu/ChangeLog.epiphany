@@ -1,3 +1,21 @@
+2015-10-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Fix bugs for atomic semantics. Add
+	restrictions on which modes to support for each instruction.
+	(h-memory-atomic) (h-memory-atomic-flag): New
+	dummy hardware for tracing.
+	(memory-atomic) (memory-atomic-flag): New operands for
+	tracing.
+	(sem-atomic-memop-or-exc): New pmacro.
+	(sem-atomic-dw-load-op): Use sem-atomic-memop-or-exc. Pass in
+	rd6 to c-call.
+	(sem-atomic-load-op): Likewise.
+	(sem-atomic-dw-store-op): Use sem-atomic-memop-or-exc.
+	(sem-atomic-dw-load-op): Likewise.
+	(op-atomic-atomic-size): Rename from op-atomic-atomic-helper.
+	(op-atomic-size): Rename from op-atomic-helper.
+	(op-atomic-all): Rename from op-atomic.
+
 2015-10-29  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (sem-dword-regs-or-exc): Rename from
