@@ -1,3 +1,7 @@
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/testset-err-sign.s: New test.
+
 2015-10-13  Ola Jeppsson  <ola@adapteva.com>
 
 	* gas/epiphany/64bit-err-uneven-regs.s: 64-bit shift
