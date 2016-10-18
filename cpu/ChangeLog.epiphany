@@ -1,5 +1,14 @@
 2015-12-15  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (insn-iopmul): Add instruction field enum for
+	multiply instuctions. Move UMUL here from insn-iopexn. Add MUL.
+	Update to follow specification.
+	(insn-iopexn): Remove.
+	(dni mul): Add. Semantics unimplemented.
+	(dni fmax): Update opcode.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (dni bitr16): Use explicit SI type for calculating
 	zflag and nflag.
 	(dni bitr): Likewise.

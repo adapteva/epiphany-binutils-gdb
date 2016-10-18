@@ -364,12 +364,13 @@
   (- - - - - - - FMAX))
 
 (define-normal-insn-enum
-  insn-iopexn
-  "extended integer operators"
+  insn-iopmul
+  "multiply integer operators"
   ()
-  OPBE_ f-opc-6-3
+  OPBM_ f-opc-6-3
   (
-    (UMUL     4)
+    (MUL      2)
+    (UMUL     3)
   )
 )
 
@@ -3362,7 +3363,7 @@
   "fmax"
   () ;; TODO: Epiphany-5 attrib
   ("fmax $rd6,$rn6,$rm6")
-  (+ OP4_MISC OPF_FMAX (f-opc-19-4 #x7) (f-dc-20-1 #x1) (f-dc-22-2 #x0) rd6 rn6 rm6)
+  (+ OP4_MISC OPF_FMAX (f-opc-21-6 #x17) (f-dc-22-1 #x0) rd6 rn6 rm6)
   (sem-fpu #t #t #f #f max f-rd6 (f-rn6 f-rm6))
   ()
 )
@@ -3384,7 +3385,7 @@
   "umul"
   () ;; TODO: (attr (MACH epiphany-v))
   "umul $rd6,$rn6,$rm6"
-  (+ OP4_MISC OPBE_UMUL (f-opc-19-4 #x7) (f-dc-20-1 #x1) (f-dc-22-2 #x0) rd6 rn6 rm6)
+  (+ OP4_MISC OPBM_UMUL (f-opc-21-6 #x17) (f-dc-22-1 #x0) rd6 rn6 rm6)
   (nop) ;; TODO: implement
   ()
 )
