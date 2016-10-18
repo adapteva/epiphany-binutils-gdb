@@ -1,5 +1,10 @@
 2015-09-30  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu: Add Epiphany-5 instructions: fmax,
+	and umul.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu: Add Epiphany-5 aliases for double float
 	instructions.
 

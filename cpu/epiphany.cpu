@@ -360,6 +360,19 @@
 (define-normal-insn-enum insn-fop "floating operators" () OPF_ f-opc-6-3
   (ADD SUB MUL MADD MSUB FLOAT FIX FABS))
 
+(define-normal-insn-enum insn-fopexn "extended floating operators" () OPF_ f-opc-6-3
+  (- - - - - - - FMAX))
+
+(define-normal-insn-enum
+  insn-iopexn
+  "extended integer operators"
+  ()
+  OPBE_ f-opc-6-3
+  (
+    (UMUL     4)
+  )
+)
+
 ; Immediate operation secondary opcodes
 (define-normal-insn-enum insn-immop "immediate operators" () OPI_ f-opc-6-3
   (- ADD - SUB - - - TRAP) ; TRAP is special extension for simulator
@@ -3042,7 +3055,42 @@
 
 (op-float2fix-float ix OPF_FIX)
 
+;; FMAX
+(dni_wrapper
+  fmax
+  "fmax"
+  () ;; TODO: Epiphany-5 attrib
+  ("fmax $frd6,$frn6,$frm6")
+  (+ OP4_MISC OPF_FMAX (f-opc-19-4 #x7) (f-dc-20-1 #x1) (f-dc-22-2 #x0) frd6 frn6 frm6)
+  (nop) ;; TODO: Implement
+  ()
+)
+(%for-each (%pmacro (name) (%exec
+    (dnmi
+      (%sym name)
+      (%str name)
+      (NO-DIS)
+      (%str name " $frd6,$frn6,$frm6")
+      (emit fmax frd6 frn6 frm6)
+    )
+  ))
+  (fmax.l fmax64 fmax64.l)
+)
 
-
-
-
+;; UMUL
+(dni_wrapper
+  umul
+  "umul"
+  () ;; TODO: (attr (MACH epiphany-v))
+  "umul $rd6,$rn6,$rm6"
+  (+ OP4_MISC OPBE_UMUL (f-opc-19-4 #x7) (f-dc-20-1 #x1) (f-dc-22-2 #x0) rd6 rn6 rm6)
+  (nop) ;; TODO: implement
+  ()
+)
+(dnmi
+  (%sym "umul.l")
+  (%str "umul.l")
+  (NO-DIS)
+  "umul.l $rd6,$rn6,$rm6"
+  (emit umul rd6 rn6 rm6)
+)
