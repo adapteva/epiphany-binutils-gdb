@@ -1,3 +1,9 @@
+2015-11-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (op-atomic-testset): Rename from testset-insn.
+	Deprecate direction-bit for rm. Only support word access. Use
+	sem-atomic-op for semantics.
+
 2015-10-30  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu: Fix bugs for atomic semantics. Add

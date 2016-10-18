@@ -1893,50 +1893,6 @@
 (load-insn ldr  SI OPW_WORD   load-from-ea "")
 (load-insn ldrd DI OPW_DOUBLE load-double-from-ea "-di")
 
-
-;; TMP = MEM[RD+RM];    /* Copy content of memory to tmp.  */
-;; if (~TMP)            /* Check if memory location is zero.  */
-;;   MEM[RD+RM] = RD;   /* If zero, write RD to memory.  */
-;; RD = TMP;            /* Always write tmp into RD (NOTE it's destructive).  */
-
-(define-pmacro (testset-insn name mode sel)
-  (%let
-	( (c-fun (%str "epiphany_testset_" mode) ) )
-	(begin
-	  (dni (%sym name "t")
-		(%str "testset " mode " indexed")
-		()
-		(%str name " $rd6,[$rn6,$direction$rm6]")
-		(+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x1)
-		   rd6 rn6 direction rm6)
-		(sequence ((DI eff-addr))
-		  (if (ifield f-addsubx)
-			(set  eff-addr  (zext DI (sub SI rn6 rm6)))
-			(set  eff-addr  (zext DI (add SI rn6 rm6)))
-		  )
-		  (sem-memop-or-exc sel eff-addr
-		    (set rd6 (c-call SI c-fun eff-addr rd6))
-		  )
-		)
-		()
-	  )
-
-	  (dnmi  (%sym name "t.l")
-		(%str "testset " mode ".l indexed")
-		(NO-DIS)
-		(%str name ".l $rd6,[$rn6,$direction$rm6]")
-		(emit (%sym name "t") rd6 rn6 direction rm6)
-	  )
-	)
-  )
-)
-
-(testset-insn testsetb QI OPW_BYTE)
-(testset-insn testseth HI OPW_SHORT)
-(testset-insn testset  SI OPW_WORD)
-;;no double mode support, since we have to send the src address, data
-;;(testset-insn testsetd DI OPW_DOUBLE load-double-from-ea)
-
 ;; Wrapper around sem-memop-or-exc that adds the memory write to the trace
 (define-pmacro (sem-atomic-memop-or-exc sel addr mem-op)
   (sem-memop-or-exc sel addr
@@ -2102,6 +2058,28 @@
     (op-atomic-size name store ctrlmode "d" "-di" OPW_DOUBLE)
   )
 )
+
+;; Test-set is in its own group: OPA_TESTSET
+(define-pmacro (op-atomic-testset name mode size)
+  (begin
+  (dni (%sym name "t")
+       (%str "testset " mode " indexed")
+       ()
+       (%str name " $rd6,[$rn6,$rm6]")
+       (+ OP4_LDSTRX size OP_LOAD OPA_TESTSET (f-opc-19-4 #x0) (f-dc-20-1 #x0) rd6 rn6 rm6)
+       (sem-atomic-op OP_LOAD size OP_CTRLMODE_TESTSET)
+       ()
+       )
+  (dnmi (%sym name "t.l")
+        (%str "testset " mode ".l indexed")
+        (NO-DIS)
+        (%str name ".l $rd6,[$rn6,$rm6]")
+        (emit (%sym name "t") rd6 rn6 rm6)
+        )
+  )
+)
+(op-atomic-testset testset SI OPW_WORD)
+
 
 ;; need 16 bit forms too
 (define-pmacro (store-insn name mode sel sem-op sfx)
