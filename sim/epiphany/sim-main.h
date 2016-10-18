@@ -105,6 +105,14 @@ struct _sim_cpu {
 
   volatile unsigned external_write; /* Write from other core (for scache) */
 
+  /* WAND support */
+  pthread_mutex_t wand_lock;
+  volatile uint32_t wand_self;
+  volatile uint32_t wand_east;
+  volatile uint32_t wand_south;
+#define CPU_WAND_LOCK(cpu) pthread_mutex_lock (&(cpu)->wand_lock)
+#define CPU_WAND_RELEASE(cpu) pthread_mutex_unlock (&(cpu)->wand_lock)
+
   EPIPHANY_MISC_PROFILE epiphany_misc_profile;
 #define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
 

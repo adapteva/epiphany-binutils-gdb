@@ -313,13 +313,11 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 }
 
 static void
-es_shm_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
+es_shm_mmr_write (sim_cpu *current_cpu, bool to_self, int reg, USI val)
 {
-  sim_cpu *current_cpu = tx->sim_addr.cpu;
-
   /* If target cpu is local cpu, we can do the write immediately,
    * otherwise we need to serialize it on the target */
-  if (tx->sim_addr.coreid == esim->coreid)
+  if (to_self)
     epiphanybf_h_all_registers_set (current_cpu, reg, val);
   else
   {
@@ -331,6 +329,15 @@ es_shm_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
     CPU_SCR_WAKEUP_SIGNAL ();
     CPU_SCR_WRITESLOT_RELEASE ();
   }
+}
+
+static void
+es_shm_tx_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
+{
+  sim_cpu *current_cpu = tx->sim_addr.cpu;
+  bool to_self = tx->sim_addr.coreid == esim->coreid;
+
+  es_shm_mmr_write(current_cpu, to_self, reg, val);
 }
 
 /*! Perform one atomic operation to SHM, and advance transaction state
@@ -523,7 +530,7 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 	}
       break;
     case ES_REQ_STORE:
-      es_shm_mmr_write(esim, tx, reg, *target);
+      es_shm_tx_mmr_write(esim, tx, reg, *target);
       n = 4;
       break;
 
@@ -729,6 +736,174 @@ es_mem_atomic_store(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
   return es_tx_run(esim, &tx);
 }
 
+
+/*! Raise WAND interrupt on all cores in south-east direction
+ *
+ * This function manages locking by itself,
+ *
+ * @param[in]  esim          ESIM handle
+ *
+ * @return true if WAND did propagate (is high) to all nodes in mesh.
+ */
+static void
+es_wand_propagate_se (es_state *esim)
+{
+  sim_cpu *current_cpu;
+  uint32_t coreid;
+  uint32_t i, j;
+  es_transl transl;
+
+  /* Keep it simple, use a for loop, no radial propagation. */
+
+  for (i = ES_CLUSTER_CFG.row_base;
+       i < ES_CLUSTER_CFG.row_base + ES_CLUSTER_CFG.rows; i++)
+    {
+      for (j = ES_CLUSTER_CFG.col_base;
+	   j < ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols; j++)
+	{
+	  coreid = ES_COREID (i, j);
+	  current_cpu =
+	    ({ es_addr_translate(esim, &transl, coreid << 20); transl.cpu; });
+	  CPU_WAND_LOCK (current_cpu);
+
+	  assert (   current_cpu->wand_self
+		  && current_cpu->wand_east
+		  && current_cpu->wand_south);
+
+	  current_cpu->wand_self  = 0;
+	  current_cpu->wand_east  = 0;
+	  current_cpu->wand_south = 0;
+	  es_shm_mmr_write (current_cpu, coreid == esim->coreid,
+			    H_REG_SCR_ILATST, 1 << H_INTERRUPT_WAND);
+	  CPU_WAND_RELEASE (current_cpu);
+	}
+    }
+}
+
+/*! Propagate WAND in north-west direction
+ *
+ * It is the responsibility of the caller to lock/unlock the WAND lock for
+ * current_cpu upon entering / after the function returns. Returns true iff
+ * the WAND have propagated to all cores.
+ *
+ * @param[in]  esim          ESIM handle
+ * @param[in]  coreid        coreid of current cpu
+ * @param[in]  current_cpu   sim_cpu struct for current cpu
+ *
+ * @return true if WAND did propagate (is high) to all nodes in mesh.
+ */
+static bool
+es_wand_propagate_nw (es_state *esim, uint32_t coreid, sim_cpu *current_cpu)
+{
+  bool northmost, westmost;
+  es_transl transl;
+  bool propagated_north = false, propagated_west = false;
+  uint32_t north_coreid, west_coreid;
+  uint32_t row, col;
+  sim_cpu *north_cpu, *west_cpu;
+
+  row = ES_CORE_ROW(coreid);
+  col = ES_CORE_COL(coreid);
+
+  northmost = row == ES_CLUSTER_CFG.row_base;
+  westmost  = col == ES_CLUSTER_CFG.col_base;
+
+  north_coreid = northmost ? 0 : ES_COREID(row - 1, col    );
+  west_coreid  = westmost  ? 0 : ES_COREID(row    , col - 1);
+
+  north_cpu = northmost ? NULL :
+    ({ es_addr_translate(esim, &transl, north_coreid << 20); transl.cpu; });
+  west_cpu  = westmost ?  NULL :
+    ({ es_addr_translate(esim, &transl, west_coreid  << 20); transl.cpu; });
+
+  /* Special case when coreid == 0 (which cannot exist),
+   * Make wand_self always go 'high'. */
+  if (coreid == 0)
+    current_cpu->wand_self = 1;
+
+  if (   !current_cpu->wand_self
+      || !current_cpu->wand_south
+      || !current_cpu->wand_east)
+    return false;
+
+  /* This will break if the neighbour core is resided on a different node */
+  assert ((!northmost && north_coreid) || (northmost && !north_coreid));
+  assert ((!westmost  && west_coreid)  || (westmost  && !west_coreid));
+
+  if (!northmost)
+    {
+      CPU_WAND_LOCK (north_cpu);
+      if (!north_cpu->wand_south) /* check if already propagated */
+	{
+	  north_cpu->wand_south = 1;
+	  propagated_north =
+	    es_wand_propagate_nw (esim, north_coreid, north_cpu);
+	}
+      CPU_WAND_RELEASE (north_cpu);
+    }
+
+  if (!westmost)
+    {
+      CPU_WAND_LOCK (west_cpu);
+      if (!west_cpu->wand_east) /* check if already propagated */
+	{
+	  west_cpu->wand_east = 1;
+	  propagated_west =
+	    es_wand_propagate_nw (esim, west_coreid, west_cpu);
+	}
+      CPU_WAND_RELEASE (west_cpu);
+    }
+
+  return (westmost && northmost) || (propagated_north || propagated_west);
+}
+
+/*! Issue WAND throughout mesh
+ *
+ * @param[in]  esim   ESIM handle
+ *
+ * @return ES_OK on success
+ */
+int
+es_wand (es_state *esim)
+{
+  bool eastmost, southmost;
+  uint32_t coreid, row, col;
+  sim_cpu *cpu;
+  bool propagated_nw = false;
+
+  es_transl transl;
+
+  cpu = (sim_cpu *) esim->this_core_cpu_state;
+  coreid = esim->coreid;
+
+  row = ES_CORE_ROW(coreid);
+  col = ES_CORE_COL(coreid);
+
+  eastmost  = col == ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols - 1;
+  southmost = row == ES_CLUSTER_CFG.row_base + ES_CLUSTER_CFG.rows - 1;
+
+  CPU_WAND_LOCK (cpu);
+  if (cpu->wand_self)
+    {
+      CPU_WAND_RELEASE (cpu);
+      return 0;
+    }
+  else
+    cpu->wand_self = 1;
+
+  if (southmost)
+    cpu->wand_south = 1;
+  if (eastmost)
+    cpu->wand_east = 1;
+
+  propagated_nw = es_wand_propagate_nw (esim, coreid, cpu);
+  CPU_WAND_RELEASE (cpu);
+
+  if (propagated_nw)
+    es_wand_propagate_se (esim);
+
+  return 0;
+}
 
 /*! Validate cluster configuration
  *

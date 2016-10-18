@@ -500,6 +500,8 @@ sim_esim_init(SIM_DESC sd)
     pthread_cond_init(&current_cpu->scr_wakeup_cond, &condattr);
     pthread_cond_init(&current_cpu->scr_writeslot_cond, &condattr);
 
+    pthread_mutex_init(&current_cpu->wand_lock, &mutexattr);
+
     current_cpu->scr_remote_write_reg = -1;
     current_cpu->scr_remote_write_val = 0xbaadbeef;
 

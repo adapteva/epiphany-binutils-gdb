@@ -1,3 +1,20 @@
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h: Add prototype for epiphanybf_wand.
+	* epiphany.c (epiphanybf_wand): Implement. Calls es_wand.
+	* esim/esim.c (es_shm_mmr_write): Replace tx argument with to_self.
+	(es_shm_tx_mmr_write): Implemented.
+	(es_tx_one_shm_atomic_op): Replace call to es_shm_mmr_write with call
+	to es_shm_tx_mmr_write.
+	(es_tx_one_shm_mmr): Likewise.
+	(es_wand_propagate_se): Implement.
+	(es_wand_propagate_nw): Implement.
+	(es_wand): Implement.
+	* esim/esim.h: Add function prototype for es_wand.
+	* sim-if.c (sim_esim_init): Initialize current_cpu->wand_lock.
+	* sim-main.h (struct _sim_cpu): Add wand_lock mutex, wand_self,
+	wand_east, wand_south.
+
 2015-11-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* sim-main.h (struct _sim_cpu): Rename member oob_event to oob_events.

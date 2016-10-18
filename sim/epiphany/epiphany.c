@@ -659,6 +659,16 @@ epiphanybf_cpu_reset(SIM_CPU *current_cpu)
     }
 }
 
+void
+epiphanybf_wand (SIM_CPU *current_cpu)
+{
+  SIM_DESC sd = CPU_STATE (current_cpu);
+  es_state *esim = STATE_ESIM (sd);
+
+  if (es_wand (esim))
+    printf("es wand error\n");
+}
+
 USI
 epiphany_post_isn_callback (SIM_CPU * current_cpu, PCADDR pc)
 {
