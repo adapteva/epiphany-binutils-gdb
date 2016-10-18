@@ -41,79 +41,79 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "cpu.h"
 
 
-inline SI
+static inline SI
 extract_mant (SI x)
 {
   return (x & 0x7fffff);
 }
 
-inline SI
+static inline SI
 extract_exp (SI x)
 {
   return (x >> 23) & 0xff;
 }
 
-inline SI
+static inline SI
 extract_sign (SI x)
 {
   return (x >> 31) & 0x1;
 }
 
-inline SI
+static inline SI
 isDenormalOrZero (SI x)
 {
   return (extract_exp (x) == 0);
 }
 
-inline SI
+static inline SI
 isDenormal (SI x)
 {
   return ((extract_exp (x) == 0) && (extract_mant (x) != 0));
 }
 
-inline SI
+static inline SI
 makeZero (SI x)
 {
   return (x & 0x80000000);
 }
 
-inline SI
+static inline SI
 makeNegative (SI x)
 {
   return (x | 0x80000000);
 }
 
-inline SI
+static inline SI
 makePositive (SI x)
 {
   return (x & 0x7fffffff);
 }
 
-inline SI
+static inline SI
 isZero (SI x)
 {
   return ((extract_exp (x) == 0) && (extract_mant (x) == 0));
 }
 
-inline SI
+static inline SI
 isNegative (SI x)
 {
   return ((0x80000000 & x) != 0);
 }
 
-inline SI
+static inline SI
 isInf (SI x)
 {
   return (extract_exp (x) == 0xff) && (extract_mant (x) == 0);
 }
 
-inline SI
+static inline SI
 isNAN (SI x)
 {
   return (extract_exp (x) == 0xff) && (extract_mant (x) != 0);
 }
 
-inline SI
+static inline SI
 makeNAN (SI x)
 {
   return ((1 << 23) | (1 << 22) | (x));
