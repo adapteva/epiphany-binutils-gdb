@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <stdint.h>
 
+#include "epiphany-desc.h"
 
 /* Communicator to be used. */
 #define ES_NET_COMM_WORLD esim->net.comm
@@ -1049,8 +1050,9 @@ es_net_tx_one_mmr(es_state *esim, es_transaction *tx)
       req.type = ES_NET_MMR_REQ_STORE;
       req.value = *target;
       break;
-    case ES_REQ_TESTSET:
-      fprintf(stderr, "ESIM:NET: MMR TESTSET not implemented.\n");
+    case ES_REQ_ATOMIC_LOAD:
+    case ES_REQ_ATOMIC_STORE:
+      fprintf(stderr, "ESIM:NET: MMR atomic ops not implemented.\n");
       /* fall through */
     default:
       return -EINVAL;
@@ -1097,8 +1099,13 @@ es_net_tx_one(es_state *esim, es_transaction *tx)
 	    return es_net_tx_one_mem_load(esim, tx);
 	  case ES_REQ_STORE:
 	    return es_net_tx_one_mem_store(esim, tx);
-	  case ES_REQ_TESTSET:
-	    return es_net_tx_one_mem_testset(esim, tx);
+	  case ES_REQ_ATOMIC_LOAD:
+	    if (tx->ctrlmode = OP_CTRLMODE_TESTSET)
+	      return es_net_tx_one_mem_testset(esim, tx);
+	  default:
+	    fprintf(stderr, "es_net_tx_one: Atomic op not implemented\n");
+	    return -EINVAL;
+	    break;
 	}
 
     case ES_LOC_NET_MMR:

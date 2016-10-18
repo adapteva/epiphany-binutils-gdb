@@ -160,7 +160,7 @@ es_addr_translate(const es_state *esim, es_transl *transl,
       return;
     }
 
-  /* TESTSET instruction requires requested address to be global */
+  /* Atomic instructions requires requested address to be global */
   transl->addr_was_global = ES_ADDR_IS_GLOBAL(addr);
 
   addr = ES_ADDR_TO_GLOBAL(addr);
@@ -312,59 +312,6 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
   return ES_OK;
 }
 
-
-/*! Perform one TESTSET to SHM, and advance transaction state
- *
- * @param[in]     esim   ESIM handle
- * @param[in,out] tx     Transaction
- *
- * @return ES_OK on success
- */
-static int
-es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
-{
-  uint32_t tmp;
-  uint32_t *target;
-
-  target = (uint32_t *) tx->target;
-
-  /* TESTSET requires that requested addr is global */
-  if (!tx->sim_addr.addr_was_global)
-    return -EINVAL;
-
-  /* Only word size is supported */
-  if (tx->remaining != 4)
-    return -EINVAL;
-
-  /* Must be word aligned */
-  if (tx->sim_addr.addr % 4)
-    return -EINVAL;
-
-  /* addr cannot reside in RAM, must be in on-chip memory  */
-  if (tx->sim_addr.location != ES_LOC_SHM)
-    return -EINVAL;
-
-  tmp = es_cas32((uint32_t *) tx->sim_addr.mem, 0, *target);
-  *target = tmp;
-
-  tx->target += 4;
-  tx->remaining -= 4;
-
-  /* Signal other CPU simulator a write from another core did occur so that
-   * it can invalidate its scache.
-   */
-  if (tx->sim_addr.coreid != esim->coreid)
-    {
-      /* Signal other CPU simulator a write from another core did occur so that
-       * it can flush its scache.
-       */
-      MEM_BARRIER();
-      tx->sim_addr.cpu->external_write = 1;
-    }
-
-  return ES_OK;
-}
-
 static void
 es_shm_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
 {
@@ -386,6 +333,13 @@ es_shm_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
   }
 }
 
+/*! Perform one atomic operation to SHM, and advance transaction state
+ *
+ * @param[in]     esim   ESIM handle
+ * @param[in,out] tx     Transaction
+ *
+ * @return ES_OK on success
+ */
 static int
 es_tx_one_shm_atomic_op(es_state *esim, es_transaction *tx)
 {
@@ -453,13 +407,37 @@ es_tx_one_shm_atomic_op(es_state *esim, es_transaction *tx)
     return -EINVAL; \
   }
 
+#define atomic_testset(Op) \
+  ({ \
+    USI _expected = 0; \
+    USI _tmp = *rd.u32; \
+    switch (tx->remaining) \
+    { \
+    case 4: \
+      Op(mem.u32, &_expected, _tmp, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+      break; \
+    default: \
+      return -EINVAL; \
+    } \
+    _expected; \
+  })
+
   switch (tx->ctrlmode)
     {
+    case OP_CTRLMODE_TESTSET:
+      rdnew = atomic_testset(__atomic_compare_exchange_n);
+      if (!rdnew)
+	{
+	  epiphanybf_h_memory_atomic_set (this_cpu, *rd.u32);
+	  epiphanybf_h_memory_atomic_flag_set (this_cpu, 1);
+	}
+      break;
     default:
       return -EINVAL;
     }
 #undef atomic_load
 #undef atomic_store
+#undef atomic_testset
 
   if (tx->type == ES_REQ_ATOMIC_LOAD)
     {
@@ -584,8 +562,6 @@ es_tx_one(es_state *esim, es_transaction *tx)
 	  return es_tx_one_shm_load(esim, tx);
 	case ES_REQ_STORE:
 	  return es_tx_one_shm_store(esim, tx);
-	case ES_REQ_TESTSET:
-	  return es_tx_one_shm_testset(esim, tx);
 	case ES_REQ_ATOMIC_LOAD:
 	case ES_REQ_ATOMIC_STORE:
 	  return es_tx_one_shm_atomic_op(esim, tx);
@@ -667,7 +643,7 @@ es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
   es_transaction tx = {
     ES_REQ_STORE,
     src,
-    0,
+    -1,
     (address_word) addr,
     (address_word) size,
     (address_word) size,
@@ -692,7 +668,7 @@ es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
   es_transaction tx = {
     ES_REQ_LOAD,
     dst,
-    0,
+    -1,
     (address_word) addr,
     (address_word) size,
     (address_word) size,
@@ -701,7 +677,7 @@ es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
   return es_tx_run(esim, &tx);
 }
 
-/*! Perform TESTSET on memory address
+/*! Perform atomic load access
  *
  * @param[in]  esim   ESIM handle
  * @param[in]  addr   Target (Epiphany) address
@@ -710,22 +686,6 @@ es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
  *
  * @return ES_OK on success
  */
-int
-es_mem_testset(es_state *esim, uint64_t addr, uint64_t size,
-	       uint8_t *dst)
-{
-  es_transaction tx = {
-    ES_REQ_TESTSET,
-    dst,
-    0,
-    (address_word) addr,
-    (address_word) size,
-    (address_word) size,
-    ES_TRANSL_INIT
-  };
-  return es_tx_run(esim, &tx);
-}
-
 int
 es_mem_atomic_load(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
 		   uint8_t *dst)
@@ -742,6 +702,15 @@ es_mem_atomic_load(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
   return es_tx_run(esim, &tx);
 }
 
+/*! Perform atomic store access
+ *
+ * @param[in]  esim   ESIM handle
+ * @param[in]  addr   Target (Epiphany) address
+ * @param[in]  size   Number of bytes
+ * @param[out] src    Source buffer
+ *
+ * @return ES_OK on success
+ */
 int
 es_mem_atomic_store(es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
 		    uint8_t *src)

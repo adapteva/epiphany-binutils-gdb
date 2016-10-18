@@ -196,7 +196,6 @@ typedef enum es_loc_t_ {
 typedef enum es_req_t {
   ES_REQ_LOAD,
   ES_REQ_STORE,
-  ES_REQ_TESTSET,
   ES_REQ_ATOMIC_LOAD,
   ES_REQ_ATOMIC_STORE,
 } es_req_t;

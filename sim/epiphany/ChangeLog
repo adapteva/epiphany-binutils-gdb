@@ -1,3 +1,23 @@
+2015-11-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim/epiphany/epiphany.c (epiphany_testset): Delete.
+	(epiphany_testset_SI): Delete.
+	(epiphany_testset_HI): Delete.
+	(epiphany_testset_QI): Delete.
+	* sim/epiphany/epiphany-sim.h: Remove above prototypes.
+	* sim/epiphany/esim/esim-int.h (es_req_t): Remove ES_REQ_TESTSET enum
+	value.
+	* sim/epiphany/esim/esim-net.c (es_net_tx_one_mmr): Replace
+	ES_REQ_TESTSET case with ES_REQ_ATOMIC_LOAD / ES_REQ_ATOMIC_STORE.
+	(es_net_tx_one):
+	* sim/epiphany/esim/esim.c (es_addr_translate): Likewise.
+	(es_tx_one_shm_testset): Delete.
+	(es_tx_one): Remove ES_REQ_TESTSET case.
+	(es_mem_store): Use -1 for 'normal' ctrlmode for now.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	* sim/epiphany/esim/esim.h: Remove es_tx_one_shm_testset prototype.
+
 2015-10-30  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.c (epiphany_atomic_load): Implement.

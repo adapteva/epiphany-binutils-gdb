@@ -182,11 +182,6 @@ extern void epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu,
 extern void epiphanybf_h_all_registers_set (SIM_CPU *current_cpu, UINT regno,
 					    USI newval);
 
-extern USI epiphany_testset(SIM_CPU *, address_word, USI, int);
-extern USI epiphany_testset_SI(SIM_CPU *, address_word, USI);
-extern USI epiphany_testset_HI(SIM_CPU *, address_word, UHI);
-extern USI epiphany_testset_QI(SIM_CPU *, address_word, UQI);
-
 extern UDI epiphany_atomic_load (SIM_CPU *, INSN_ATOMIC_CTRLMODE, address_word,
 				 INSN_WORDSIZE, UDI);
 extern void epiphany_atomic_store (SIM_CPU *, INSN_ATOMIC_CTRLMODE,

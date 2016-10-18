@@ -529,54 +529,6 @@ epiphany_trap (SIM_CPU * current_cpu, PCADDR pc, int num)
   return (USI) result;
 }
 
-
-USI
-epiphany_testset(SIM_CPU *current_cpu, address_word addr, USI newval, int bytes)
-{
-  SIM_DESC sd = CPU_STATE (current_cpu);
-  USI tmpval = newval;
-#if WITH_EMESH_SIM
-  if (es_mem_testset(STATE_ESIM(sd), addr, bytes, (uint8_t *) &tmpval) != ES_OK)
-    goto fail;
-#else
-  if (bytes != 4)
-    goto fail;
-
-  tmpval = sim_core_read_unaligned_4 (current_cpu, GET_H_PC(), read_map, addr);
-  if (!tmpval)
-    sim_core_write_unaligned_4 (current_cpu, GET_H_PC(), write_map, addr,
-				newval);
-#endif
-
-  return tmpval;
-
-fail:
-  /* SIM framework has no concept of test and set so this is the closest
-     we can get */
-  epiphany_core_signal(sd, current_cpu, CPU_PC_GET(current_cpu), read_map,
-		       bytes, addr, read_transfer,
-		       sim_core_unmapped_signal);
-return tmpval;
-}
-
-USI
-epiphany_testset_SI(SIM_CPU* current_cpu, address_word addr, USI newval)
-{
-  return epiphany_testset(current_cpu, addr, newval, 4);
-}
-
-USI
-epiphany_testset_HI(SIM_CPU* current_cpu, address_word addr, UHI newval)
-{
-  return epiphany_testset(current_cpu, addr, newval, 2);
-}
-
-USI
-epiphany_testset_QI(SIM_CPU* current_cpu, address_word addr, UQI newval)
-{
-  return epiphany_testset(current_cpu, addr, newval, 1);
-}
-
 UDI epiphany_atomic_load (SIM_CPU *current_cpu, INSN_ATOMIC_CTRLMODE ctrlmode,
 			  address_word addr, INSN_WORDSIZE size, UDI rd)
 {
