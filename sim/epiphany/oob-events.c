@@ -18,27 +18,27 @@ halt_on_excause(SIM_CPU *current_cpu, IADDR vpc)
   switch (excause)
     {
     case H_SCR_STATUS_EXCAUSE_UNIMPLEMENTED:
-      sim_io_eprintf (sd, "unimplemented instruction at 0x%lx\n",
-		      (unsigned long) vpc);
+      sim_io_eprintf (sd, "unimplemented instruction at 0x%llx\n",
+		      (ulong64) vpc);
       sim_engine_halt (sd, current_cpu, NULL, vpc, sim_stopped, SIM_SIGILL);
       break;
     case H_SCR_STATUS_EXCAUSE_ILLEGAL:
-      sim_io_eprintf (sd, "illegal instruction at 0x%lx\n",
-		      (unsigned long) vpc);
+      sim_io_eprintf (sd, "illegal instruction at 0x%llx\n",
+		      (ulong64) vpc);
       sim_engine_halt (sd, current_cpu, NULL, vpc, sim_stopped, SIM_SIGILL);
       break;
     case H_SCR_STATUS_EXCAUSE_UNALIGNED:
-      sim_io_eprintf (sd, "misaligned access to address 0x%lx at 0x%lx\n",
-		      (unsigned long) GET_H_MEMADDR (), (unsigned long) vpc);
+      sim_io_eprintf (sd, "misaligned access to address 0x%llx at 0x%llx\n",
+		      (ulong64) GET_H_MEMADDR (), (ulong64) vpc);
       sim_engine_halt (sd, current_cpu, NULL, vpc, sim_stopped, SIM_SIGBUS);
       break;
     case H_SCR_STATUS_EXCAUSE_FPU:
-      sim_io_eprintf (sd, "fpu exception at 0x%lx\n", (unsigned long) vpc);
+      sim_io_eprintf (sd, "fpu exception at 0x%llx\n", (ulong64) vpc);
       sim_engine_halt (sd, current_cpu, NULL, vpc, sim_stopped, SIM_SIGFPE);
       break;
     case H_SCR_STATUS_EXCAUSE_SWI:
-      sim_io_eprintf (sd, "software interrupt at 0x%lx\n",
-		      (unsigned long) vpc);
+      sim_io_eprintf (sd, "software interrupt at 0x%llx\n",
+		      (ulong64) vpc);
       sim_engine_halt (sd, current_cpu, NULL, vpc, sim_stopped, SIM_SIGTRAP);
       break;
     default:
@@ -84,15 +84,15 @@ halt_on_interrupt(SIM_CPU *current_cpu, IADDR vpc, int interrupt)
   switch (interrupt)
     {
     case H_INTERRUPT_MEMFAULT:
-      sim_io_eprintf (sd, "memory fault to address 0x%lx at 0x%lx\n",
-		      (unsigned long) GET_H_MEMADDR (), (unsigned long) vpc);
+      sim_io_eprintf (sd, "memory fault to address 0x%llx at 0x%llx\n",
+		      (ulong64) GET_H_MEMADDR (), (ulong64) vpc);
       break;
     default:
       break;
     }
 
-    sim_io_eprintf (sd, "Interrupt %s (%d) at 0x%lx\n",
-		    description[interrupt], interrupt, (unsigned long) vpc);
+    sim_io_eprintf (sd, "Interrupt %s (%d) at 0x%llx\n",
+		    description[interrupt], interrupt, (ulong64) vpc);
 
     sim_engine_halt (sd, current_cpu, NULL, vpc, sim_stopped,
 		     signal[interrupt]);

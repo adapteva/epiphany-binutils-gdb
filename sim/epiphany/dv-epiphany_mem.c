@@ -93,8 +93,8 @@ epiphany_mem_finish (struct hw *me)
   /* Shadow map entire address space to this device at lowest (INT_MAX) level.
    * User defined mappings will always take precedence. */
 #if (WITH_TARGET_ADDRESS_BITSIZE == 64)
-  hw_attach_address (parent, bottom, 0, 0, 0xfffffffffffffff0UL, me);
-  hw_attach_address (parent, bottom, 0, 0xfffffffffffffff0UL, 0x10, me);
+  hw_attach_address (parent, bottom, 0, 0, 0xfffffffffffffff0ULL, me);
+  hw_attach_address (parent, bottom, 0, 0xfffffffffffffff0ULL, 0x10, me);
 #elif (WITH_TARGET_ADDRESS_BITSIZE == 32)
   hw_attach_address (parent, bottom, 0, 0, 0xfffffff0, me);
   hw_attach_address (parent, bottom, 0, 0xfffffff0, 0x10, me);
@@ -130,22 +130,22 @@ epiphany_mem_signal(struct hw *me, address_word addr,
     {
     case SIM_SIGSEGV:
       sim_io_eprintf(hw_system(me),
-		     "%s: %d byte %s to unmapped address 0x%lx at 0x%lx\n",
+		     "%s: %d byte %s to unmapped address 0x%llx at 0x%llx\n",
 		     hw_path(me), (int) nr_bytes, transfer,
-		     (unsigned long) addr, (unsigned long) ip);
+		     (ulong64) addr, (ulong64) ip);
       break;
     case SIM_SIGBUS:
       sim_io_eprintf(hw_system(me),
-		     "%s: %d byte misaligned %s to unmapped address 0x%lx at "
-		     "0x%lx\n",
+		     "%s: %d byte misaligned %s to unmapped address 0x%llx at "
+		     "0x%llx\n",
 		     hw_path(me), (int) nr_bytes, transfer,
-		     (unsigned long) addr, (unsigned long) ip);
+		     (ulong64) addr, (ulong64) ip);
       break;
     default:
       sim_io_eprintf(hw_system(me),
-		     "%s: %d byte %s to address 0x%lx at 0x%lx\n",
+		     "%s: %d byte %s to address 0x%llx at 0x%llx\n",
 		     hw_path(me), (int) nr_bytes, transfer,
-		     (unsigned long) addr, (unsigned long) ip);
+		     (ulong64) addr, (ulong64) ip);
       break;
     }
   hw_halt (me, sim_stopped, sigrc);
@@ -161,7 +161,11 @@ epiphany_mem_io_read_buffer (struct hw *me,
   es_state *esim;
 
   esim = STATE_ESIM(hw_system(me));
-  HW_TRACE ((me, "read 0x%08lx %d", (long) base, (int) nr_bytes));
+#if (WITH_TARGET_ADDRESS_BITSIZE == 64)
+  HW_TRACE ((me, "read 0x%16llx %llu", (ulong64) base, (ulong64) nr_bytes));
+#else
+  HW_TRACE ((me, "read 0x%08lx %u", (long) base, (unsigned int) nr_bytes));
+#endif
   if (es_mem_load(esim, base, nr_bytes, (uint8_t *) dest) != ES_OK)
     {
       /** @todo What about SIGBUS (unaligned access) */
@@ -182,7 +186,11 @@ epiphany_mem_io_write_buffer (struct hw *me,
   es_state *esim;
 
   esim = STATE_ESIM(hw_system(me));
-  HW_TRACE ((me, "write 0x%08lx %d", (long) base, (int) nr_bytes));
+#if (WITH_TARGET_ADDRESS_BITSIZE == 64)
+  HW_TRACE ((me, "write 0x%16llx %llu", (ulong64) base, (ulong64) nr_bytes));
+#else
+  HW_TRACE ((me, "write 0x%08lx %u", (long) base, (unsigned int) nr_bytes));
+#endif
   if (es_mem_store(esim, base, nr_bytes, (uint8_t *) source) != ES_OK)
     {
       /** @todo What about SIGBUS (unaligned access) */

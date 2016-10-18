@@ -771,7 +771,7 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "Core memory region size must be power of two");
 
   /* Only support up to 4GB for now */
-  FAIL_IF((uint64_t) c->ext_ram_size > (1UL<<32UL),
+  FAIL_IF((uint64_t) c->ext_ram_size > (1ULL<<32ULL),
 			    "External RAM size too large. Max is 4GB");
 
   FAIL_IF((address_word)
@@ -1395,8 +1395,8 @@ es_init_impl(es_state **handle,
 
 #ifdef ES_DEBUG
   fprintf(stderr,
-	  "es_init: shm=0x%lx shm_size=%ld fd=%d coreid=%d shm_name=\"%s\"\n",
-	  (unsigned long int) esim->shm, esim->shm_size, esim->fd,
+	  "es_init: shm=0x%llx shm_size=%lld fd=%d coreid=%d shm_name=\"%s\"\n",
+	  (ulong64) esim->shm, (ulong64) esim->shm_size, esim->fd,
 	  esim->coreid, esim->shm_name);
 #endif
 
@@ -1711,8 +1711,8 @@ es_dump_config(const es_state *esim)
 	  "  .cols            = %d\n"
 	  "  .core_mem_region = %zu\n"
 	  "  .ext_ram_node    = %d\n"
-	  "  .ext_ram_base    = 0x%.8lx\n"
-	  "  .ext_ram_size    = %zu\n"
+	  "  .ext_ram_base    = 0x%.16llx\n"
+	  "  .ext_ram_size    = %llu\n"
 	  "  .cores           = %d\n"
 	  "  .nodes           = %d\n"
 	  "  .cores_per_node  = %d\n"
@@ -1726,8 +1726,8 @@ es_dump_config(const es_state *esim)
 	  ES_CLUSTER_CFG.cols,
 	  ES_CLUSTER_CFG.core_mem_region,
 	  ES_CLUSTER_CFG.ext_ram_node,
-	  ES_CLUSTER_CFG.ext_ram_base,
-	  ES_CLUSTER_CFG.ext_ram_size,
+	  (ulong64) ES_CLUSTER_CFG.ext_ram_base,
+	  (ulong64) ES_CLUSTER_CFG.ext_ram_size,
 	  ES_CLUSTER_CFG.cores,
 	  ES_CLUSTER_CFG.nodes,
 	  ES_CLUSTER_CFG.cores_per_node,
@@ -1751,7 +1751,7 @@ es_dump_config(const es_state *esim)
 	  "  .fd                     = %d\n"
 	  "  .creator                = %d\n"
 	  "  .shm_name               = %s\n"
-	  "  .shm_size               = %lu\n"
+	  "  .shm_size               = %llu\n"
 	  "  .shm                    = 0x%p\n"
 	  "  .cores_mem              = 0x%p\n"
 	  "  .this_core_mem          = 0x%p\n"
@@ -1765,7 +1765,7 @@ es_dump_config(const es_state *esim)
 	  esim->fd,
 	  esim->creator,
 	  esim->shm_name,
-	  esim->shm_size,
+	  (ulong64) esim->shm_size,
 	  esim->shm,
 	  esim->cores_mem,
 	  esim->this_core_mem,

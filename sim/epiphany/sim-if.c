@@ -174,12 +174,12 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 			 int is_command)
 {
   char *endp;
-  unsigned long ul;
+  ulong64 ul;
   int valid = 0;
 
   if (arg)
     {
-      ul = strtoul (arg, &endp, 0);
+      ul = strtoull (arg, &endp, 0);
       valid = ((isdigit (arg[0]) && endp != arg));
     }
 

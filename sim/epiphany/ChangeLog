@@ -1,3 +1,22 @@
+2015-11-03  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-main.h: Add long64 and ulong64 typedefs.
+	* dv-epiphany_mem.c (epiphany_mem_finish): Use ULL rather than UL for
+	64-bit literals.
+	(epiphany_mem_signal): Cast to ulong64 when printing address and size.
+	(epiphany_mem_io_read_buffer): Likewise.
+	(epiphany_mem_io_write_buffer): Likewise.
+	* epiphany.c (epiphany_halt_on_inactive): Likewise.
+	* esim/esim.c (es_validate_cluster_cfg): Use ULL rather than UL for
+	64-bit literals.
+	(es_dump_config): Cast to ulong64 when printing address and size.
+	* oob-events.c (halt_on_excause): Likewise.
+	(halt_on_interrupt): Likewise.
+	* sim-if.c (epiphany_option_handler): Use long long type for parsing
+	64-bit values.
+	* traps.c (sim_engine_invalid_insn): Cast to ulong64 when printing
+	address and size.
+
 2015-11-02  Ola Jeppsson  <ola@adapteva.com>
 
 	* sim/epiphany/epiphany.c (epiphany_testset): Delete.

@@ -20,6 +20,10 @@
 #include "epiphany-opc.h"
 #include "arch.h"
 
+/* Portable types for printing 64-bit integers */
+typedef long long		long64;
+typedef unsigned long long	ulong64;
+
 #if WITH_EMESH_SIM
 #include <pthread.h>
 #include "esim/esim.h"
