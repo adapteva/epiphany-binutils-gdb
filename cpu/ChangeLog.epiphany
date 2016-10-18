@@ -1,5 +1,10 @@
 2015-10-07  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.cpu (op-two_operands-float): Add missing short
+	instructions for double precision floats.
+
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany.cpu (h-memaddr) (memaddr): Removed.
 	(callMisalignmentExceptionIfNeeded): Rename isAlignedAccess to
 	isAligned.

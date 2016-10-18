@@ -2852,13 +2852,21 @@
       ()
       )
     (dnmi (%sym "i_" name "f16")
-	  (%str "i_" name)
-	  (SHORT-INSN NO-DIS)
-	  (%str "i" name " $rd,$rn,$rm")
-	  (emit (%sym "f_" name "f16") rd rn rm)
+          (%str "i_" name)
+          (SHORT-INSN NO-DIS)
+          (%str "i" name " $rd,$rn,$rm")
+          (emit (%sym "f_" name "f16") rd rn rm)
     )
 
+    ;; 64-bit float
+    (dnmi (%sym "f64_" name ".s")
+          (%str "f64_" name ".s")
+          (SHORT-INSN NO-DIS)
+          (%str "f" name "64 $rd,$rn,$rm")
+          (emit (%sym "f_" name "f16") rd rn rm)
+    )
 
+    ;; long insns
     (dni
       (%sym "f_" name "f32")
       (%str "f_" name)
