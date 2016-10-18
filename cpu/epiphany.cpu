@@ -926,6 +926,13 @@
   )
 )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                     ; Memory Effective Address wants to be visible for tracing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(dnh h-memaddr "memory effective address" (PROFILE) (register SI) () () ())
+(dnop memaddr  "memory effective address" (SEM-ONLY) h-memaddr f-nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					; Special Core Registers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1594,21 +1601,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(define-pmacro (callMisalignmentExceptionIfNeeded sel addr isAligned)
-  (sequence ((BI scale))
+(define-pmacro (sem-memop-or-exception sel addr mem-op)
+  (sequence ((BI isAligned))
     (set isAligned
-	 (case BI sel
-	   ((OPW_BYTE)	(eq (and addr #x0) #x0))
-	   ((OPW_SHORT)	(eq (and addr #x1) #x0))
-	   ((OPW_WORD)	(eq (and addr #x3) #x0))
-	   (else	(eq (and addr #x7) #x0))))
-    (if (not BI isAligned)
-	  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-UNALIGNED))
-	)
+      (case BI sel
+        ((OPW_BYTE)   (eq (and addr #x0) #x0))
+        ((OPW_SHORT)  (eq (and addr #x1) #x0))
+        ((OPW_WORD)   (eq (and addr #x3) #x0))
+        (else         (eq (and addr #x7) #x0))))
+    (if isAligned
+      (sequence () (set memaddr addr) mem-op)
+      (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-UNALIGNED))
+    )
   )
 )
-
-
 
 ;; helper to convert size selector OPW_<mode> into a literal scale factor
 (define-pmacro (ConvertSelectorToShift sel scale)
@@ -1622,32 +1628,28 @@
 
 ;; common load macros from effective address, handling 8/16/32/64 bits
 (define-pmacro (load-double-from-ea regnum eff-addr mode sel)
-  (sequence ((BI isAligned))
-    (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
-    (if isAligned (set regnum (mem DI eff-addr)))
+  (sem-memop-or-exception sel eff-addr
+    (set regnum (mem DI eff-addr))
   )
 )
 
 (define-pmacro (load-from-ea regnum eff-addr mode sel)
-  (sequence ((BI isAligned))
-    (callMisalignmentExceptionIfNeeded sel eff-addr   isAligned)
-    (if isAligned (set regnum (zext SI (mem mode eff-addr))))
+  (sem-memop-or-exception sel eff-addr
+    (set regnum (zext SI (mem mode eff-addr)))
   )
 ) ;; 8/16/32 bit cases
 
 
 ;; common store to effective address, handling 8/16/32/64 bit data
 (define-pmacro (store-double-to-ea eff-addr regnum mode sel)
-  (sequence ((BI isAligned))
-    (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
-    (if isAligned (set (mem DI eff-addr) regnum))
+  (sem-memop-or-exception sel eff-addr
+    (set (mem DI eff-addr) regnum)
   )
 )
 
 (define-pmacro (store-to-ea eff-addr regnum mode sel)
-  (sequence ((BI isAligned))
-    (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
-    (if isAligned (set (mem mode eff-addr) regnum))
+  (sem-memop-or-exception sel eff-addr
+    (set (mem mode eff-addr) regnum)
   )
 ) ;8/16/32 bit cases
 
@@ -1837,13 +1839,14 @@
 		(%str name " $rd6,[$rn6,$direction$rm6]")
 		(+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x1)
 		   rd6 rn6 direction rm6)
-		(sequence ((SI eff-addr) (BI isAligned))
+		(sequence ((SI eff-addr))
 		  (if (ifield f-addsubx)
 			(set  eff-addr  (sub rn6 rm6))
 			(set  eff-addr  (add rn6 rm6))
 		  )
-		  (callMisalignmentExceptionIfNeeded sel eff-addr isAligned)
-		  (if isAligned (set rd6 (c-call SI c-fun eff-addr rd6)))
+		  (sem-memop-or-exception sel eff-addr
+		    (set rd6 (c-call SI c-fun eff-addr rd6))
+		  )
 		)
 		()
 	  )

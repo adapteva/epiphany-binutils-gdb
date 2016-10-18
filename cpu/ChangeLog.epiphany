@@ -1,3 +1,17 @@
+2015-10-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-memaddr) (memaddr): Reinstated. Needed for
+	tracing purposes.
+	(callMisalignmentExceptionIfNeeded): Rename from ...
+	(sem-memop-or-exception): ... to. Take memory operand as
+	argument. Apply if address is aligned, otherwise schedule
+	exception as before.
+	(load-double-from-ea): Adjust for above.
+	(load-from-ea): Likewise.
+	(store-double-to-ea): Likewise.
+	(store-to-ea): Likewise.
+	(testset-insn): Likewise.
+
 2015-10-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (dni fmax): Add semantics.
