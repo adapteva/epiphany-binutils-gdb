@@ -2646,6 +2646,7 @@
       (emit bitr rd6 rn6)
       )
 
+
 ;; Immediate moves.  The 8 bit form is relaxed if it doesn't fit or is external
 ;; Move RD,#IMM
 (dni_wrapper mov8
@@ -2786,6 +2787,7 @@
 	      )
 	    )
 	)
+	;; TODO: double / simd
       ()
       )
 
@@ -2808,10 +2810,22 @@
 	  (emit  (%sym "f_" name "f32") rd6  rn6 rm6)
 	  )
 
-
-
+    ;; 64-bit float (double)
+    (dnmi (%sym "f64_" name)
+          (%str "f64_" name)
+          (NO-DIS)
+          (%str "f" name "64 $rd6,$rn6,$rm6")
+          (emit (%sym "f_" name "f32") rd6  rn6 rm6)
+    )
+    ;; 64-bit float (double) ".l"
+    (dnmi (%sym "f64_" name ".l")
+          (%str "f64_" name ".l")
+          (NO-DIS)
+          (%str "f" name "64.l $rd6,$rn6,$rm6")
+          (emit (%sym "f_" name "f32") rd6  rn6 rm6)
     )
   )
+)
 
 (op-two_operands-float add OPF_ADD)
 (op-two_operands-float sub OPF_SUB)
