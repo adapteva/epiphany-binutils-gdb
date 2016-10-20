@@ -69,6 +69,46 @@ parse_shortregs (CGEN_CPU_DESC cd,
   return errmsg;
 }
 
+const char *
+parse_dword_shortregs (CGEN_CPU_DESC cd,
+		       const char ** strp,
+		       CGEN_KEYWORD * keywords,
+		       long * regno)
+{
+  const char * errmsg;
+
+  /* Parse register.  */
+  errmsg = parse_shortregs (cd, strp, keywords, regno);
+
+  if (errmsg)
+    return errmsg;
+
+  if (*regno & 1)
+    errmsg = _("instruction requires even:odd register pair(s)");
+
+  return errmsg;
+}
+
+const char *
+parse_dword_regs (CGEN_CPU_DESC cd,
+		  const char ** strp,
+		  CGEN_KEYWORD * keywords,
+		  long * regno)
+{
+  const char * errmsg;
+
+  /* Parse register.  */
+  errmsg = cgen_parse_keyword (cd, strp, keywords, regno);
+
+  if (errmsg)
+    return errmsg;
+
+  if (*regno & 1)
+    errmsg = _("instruction requires even:odd register pair(s)");
+
+  return errmsg;
+}
+
 static const char * parse_simm_not_reg (CGEN_CPU_DESC, const char **, int,
 					long *);
 
@@ -323,6 +363,25 @@ parse_branch_addr (CGEN_CPU_DESC cd,
     }
   return errmsg;
 }
+
+static const char *
+parse_pos_direction (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+		     const char ** strp,
+		     int opindex ATTRIBUTE_UNUSED,
+		     unsigned long *valuep)
+{
+  if (**strp == '-')
+    return _("negative direction not supported");
+  else if (**strp == '+')
+    {
+      *valuep = 0;
+      ++*strp;
+    }
+  else
+    *valuep = 0;
+
+  return NULL;
+}
 
 /* -- dis.c */
 
@@ -354,6 +413,9 @@ epiphany_cgen_parse_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      errmsg = cgen_parse_unsigned_integer (cd, strp, EPIPHANY_OPERAND_CTRLMODE5, (unsigned long *) (& fields->f_ctrlmode5));
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       errmsg = parse_postindex (cd, strp, EPIPHANY_OPERAND_DIRECTION, (unsigned long *) (& fields->f_addsubx));
       break;
@@ -365,24 +427,6 @@ epiphany_cgen_parse_operand (CGEN_CPU_DESC cd,
       break;
     case EPIPHANY_OPERAND_DPMI :
       errmsg = parse_postindex (cd, strp, EPIPHANY_OPERAND_DPMI, (unsigned long *) (& fields->f_subd));
-      break;
-    case EPIPHANY_OPERAND_FRD :
-      errmsg = parse_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rd);
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      errmsg = cgen_parse_keyword (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rd6);
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      errmsg = parse_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rm);
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      errmsg = cgen_parse_keyword (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rm6);
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      errmsg = parse_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rn);
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      errmsg = cgen_parse_keyword (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rn6);
       break;
     case EPIPHANY_OPERAND_IMM16 :
       {
@@ -398,23 +442,47 @@ epiphany_cgen_parse_operand (CGEN_CPU_DESC cd,
         fields->f_imm8 = value;
       }
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      errmsg = cgen_parse_unsigned_integer (cd, strp, EPIPHANY_OPERAND_MODE4, (unsigned long *) (& fields->f_mode4));
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      errmsg = parse_pos_direction (cd, strp, EPIPHANY_OPERAND_POS_DIRECTION, (unsigned long *) (& junk));
+      break;
     case EPIPHANY_OPERAND_RD :
       errmsg = parse_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rd);
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
+      errmsg = parse_dword_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rd);
       break;
     case EPIPHANY_OPERAND_RD6 :
       errmsg = cgen_parse_keyword (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rd6);
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      errmsg = parse_dword_regs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rd6);
+      break;
     case EPIPHANY_OPERAND_RM :
       errmsg = parse_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rm);
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
+      errmsg = parse_dword_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rm);
       break;
     case EPIPHANY_OPERAND_RM6 :
       errmsg = cgen_parse_keyword (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rm6);
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      errmsg = parse_dword_regs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rm6);
+      break;
     case EPIPHANY_OPERAND_RN :
       errmsg = parse_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rn);
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      errmsg = parse_dword_shortregs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rn);
+      break;
     case EPIPHANY_OPERAND_RN6 :
       errmsg = cgen_parse_keyword (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rn6);
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
+      errmsg = parse_dword_regs (cd, strp, & epiphany_cgen_opval_gr_names, & fields->f_rn6);
       break;
     case EPIPHANY_OPERAND_SD :
       errmsg = parse_shortregs (cd, strp, & epiphany_cgen_opval_cr_names, & fields->f_sd);
