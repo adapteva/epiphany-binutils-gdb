@@ -1,3 +1,13 @@
+2016-10-20  Ola Jeppsson  <ola@adapteva.com>
+
+	* cpu.c: Regenerated.
+	* cpu.h: Regenerated.
+	* decode.c: Regenerated.
+	* decode.h: Regenerated.
+	* model.c: Regenerated.
+	* sem-switch.c: Regenerated.
+	* sem.c: Regenerated.
+
 2016-07-24  Ola Jeppsson  <ola@adapteva.com>
 
 	* traps.c (sim_engine_invalid_insn): Handle remote register writes
