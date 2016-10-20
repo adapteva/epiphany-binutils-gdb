@@ -4,7 +4,7 @@
    THIS FILE IS MACHINE GENERATED WITH CGEN.
    - the resultant file is machine generated, cgen-dis.in isn't
 
-   Copyright (C) 1996-2015 Free Software Foundation, Inc.
+   Copyright (C) 1996-2014 Free Software Foundation, Inc.
 
    This file is part of libopcodes.
 
@@ -131,6 +131,17 @@ print_uimm_not_reg (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
   print_address (cd, dis_info, value, attrs, pc, length);
 }
 
+static void
+print_pos_direction (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+		     void * dis_info ATTRIBUTE_UNUSED,
+		     long value ATTRIBUTE_UNUSED,
+		     unsigned int attrs ATTRIBUTE_UNUSED,
+		     bfd_vma pc ATTRIBUTE_UNUSED,
+		     int length ATTRIBUTE_UNUSED)
+{
+  /* no-op */
+}
+
 
 /* -- */
 
@@ -165,6 +176,9 @@ epiphany_cgen_print_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      print_normal (cd, info, fields->f_ctrlmode5, 0, pc, length);
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       print_postindex (cd, info, fields->f_addsubx, 0, pc, length);
       break;
@@ -177,46 +191,52 @@ epiphany_cgen_print_operand (CGEN_CPU_DESC cd,
     case EPIPHANY_OPERAND_DPMI :
       print_postindex (cd, info, fields->f_subd, 0, pc, length);
       break;
-    case EPIPHANY_OPERAND_FRD :
-      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rd, 0);
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rd6, 0|(1<<CGEN_OPERAND_VIRTUAL));
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rm, 0);
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rm6, 0|(1<<CGEN_OPERAND_VIRTUAL));
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rn, 0);
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rn6, 0|(1<<CGEN_OPERAND_VIRTUAL));
-      break;
     case EPIPHANY_OPERAND_IMM16 :
       print_address (cd, info, fields->f_imm16, 0|(1<<CGEN_OPERAND_RELAX)|(1<<CGEN_OPERAND_VIRTUAL), pc, length);
       break;
     case EPIPHANY_OPERAND_IMM8 :
       print_address (cd, info, fields->f_imm8, 0|(1<<CGEN_OPERAND_RELAX), pc, length);
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      print_normal (cd, info, fields->f_mode4, 0|(1<<CGEN_OPERAND_VIRTUAL), pc, length);
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      print_pos_direction (cd, info, 0, 0, pc, length);
+      break;
     case EPIPHANY_OPERAND_RD :
+      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rd, 0);
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
       print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rd, 0);
       break;
     case EPIPHANY_OPERAND_RD6 :
       print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rd6, 0|(1<<CGEN_OPERAND_VIRTUAL));
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rd6, 0|(1<<CGEN_OPERAND_VIRTUAL));
+      break;
     case EPIPHANY_OPERAND_RM :
+      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rm, 0);
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
       print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rm, 0);
       break;
     case EPIPHANY_OPERAND_RM6 :
       print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rm6, 0|(1<<CGEN_OPERAND_VIRTUAL));
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rm6, 0|(1<<CGEN_OPERAND_VIRTUAL));
+      break;
     case EPIPHANY_OPERAND_RN :
       print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rn, 0);
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rn, 0);
+      break;
     case EPIPHANY_OPERAND_RN6 :
+      print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rn6, 0|(1<<CGEN_OPERAND_VIRTUAL));
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
       print_keyword (cd, info, & epiphany_cgen_opval_gr_names, fields->f_rn6, 0|(1<<CGEN_OPERAND_VIRTUAL));
       break;
     case EPIPHANY_OPERAND_SD :

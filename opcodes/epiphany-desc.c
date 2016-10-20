@@ -132,6 +132,7 @@ static const CGEN_MACH epiphany_cgen_mach_table[] = {
 static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_all_reg_names_entries[] =
 {
   { "NUM-REGS", 512, {0, {{{0, 0}}}}, 0, 0 },
+  { "IP", 12, {0, {{{0, 0}}}}, 0, 0 },
   { "SP", 13, {0, {{{0, 0}}}}, 0, 0 },
   { "LR", 14, {0, {{{0, 0}}}}, 0, 0 },
   { "FP", 15, {0, {{{0, 0}}}}, 0, 0 },
@@ -213,7 +214,6 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_all_reg_names_entries[] =
   { "V8", 11, {0, {{{0, 0}}}}, 0, 0 },
   { "SB", 9, {0, {{{0, 0}}}}, 0, 0 },
   { "SL", 10, {0, {{{0, 0}}}}, 0, 0 },
-  { "IP", 12, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-CONFIG", 256, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-STATUS", 257, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-PC", 258, {0, {{{0, 0}}}}, 0, 0 },
@@ -233,6 +233,7 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_all_reg_names_entries[] =
   { "SCR-FSTATUS", 272, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-FCONFIG", 273, {0, {{{0, 0}}}}, 0, 0 },
   { "SCR-DEBUGCMD", 274, {0, {{{0, 0}}}}, 0, 0 },
+  { "SCR-SIMCMD", 275, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA0-CONFIG", 320, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA0-STRIDE", 321, {0, {{{0, 0}}}}, 0, 0 },
   { "DMA0-COUNT", 322, {0, {{{0, 0}}}}, 0, 0 },
@@ -265,12 +266,13 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_all_reg_names_entries[] =
 CGEN_KEYWORD epiphany_cgen_opval_all_reg_names =
 {
   & epiphany_cgen_opval_all_reg_names_entries[0],
-  129,
+  130,
   0, 0, 0, 0, ""
 };
 
 static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_gr_names_entries[] =
 {
+  { "ip", 12, {0, {{{0, 0}}}}, 0, 0 },
   { "sp", 13, {0, {{{0, 0}}}}, 0, 0 },
   { "lr", 14, {0, {{{0, 0}}}}, 0, 0 },
   { "fp", 15, {0, {{{0, 0}}}}, 0, 0 },
@@ -351,8 +353,7 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_gr_names_entries[] =
   { "v7", 10, {0, {{{0, 0}}}}, 0, 0 },
   { "v8", 11, {0, {{{0, 0}}}}, 0, 0 },
   { "sb", 9, {0, {{{0, 0}}}}, 0, 0 },
-  { "sl", 10, {0, {{{0, 0}}}}, 0, 0 },
-  { "ip", 12, {0, {{{0, 0}}}}, 0, 0 }
+  { "sl", 10, {0, {{{0, 0}}}}, 0, 0 }
 };
 
 CGEN_KEYWORD epiphany_cgen_opval_gr_names =
@@ -367,7 +368,7 @@ static CGEN_KEYWORD_ENTRY epiphany_cgen_opval_cr_names_entries[] =
   { "config", 0, {0, {{{0, 0}}}}, 0, 0 },
   { "status", 1, {0, {{{0, 0}}}}, 0, 0 },
   { "pc", 2, {0, {{{0, 0}}}}, 0, 0 },
-  { "debugstatus", 3, {0, {{{0, 0}}}}, 0, 0 },
+  { "debug", 3, {0, {{{0, 0}}}}, 0, 0 },
   { "iab", 4, {0, {{{0, 0}}}}, 0, 0 },
   { "lc", 5, {0, {{{0, 0}}}}, 0, 0 },
   { "ls", 6, {0, {{{0, 0}}}}, 0, 0 },
@@ -461,9 +462,12 @@ const CGEN_HW_ENTRY epiphany_cgen_hw_table[] =
   { "h-iaddr", HW_H_IADDR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
   { "h-all-registers", HW_H_ALL_REGISTERS, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_all_reg_names, { 0|A(PROFILE), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-registers", HW_H_REGISTERS, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_gr_names, { 0|A(VIRTUAL)|A(PROFILE), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-fpregisters", HW_H_FPREGISTERS, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_gr_names, { 0|A(VIRTUAL)|A(PROFILE), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-registers-di", HW_H_REGISTERS_DI, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_gr_names, { 0|A(VIRTUAL)|A(PROFILE), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-hwloop-next", HW_H_HWLOOP_NEXT, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
   { "h-pc", HW_H_PC, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL)|A(PROFILE)|A(PC), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-memaddr", HW_H_MEMADDR, CGEN_ASM_NONE, 0, { 0|A(PROFILE), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-memory-atomic", HW_H_MEMORY_ATOMIC, CGEN_ASM_NONE, 0, { 0|A(PROFILE), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-memory-atomic-flag", HW_H_MEMORY_ATOMIC_FLAG, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
   { "h-core-registers", HW_H_CORE_REGISTERS, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_cr_names, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-caibit", HW_H_CAIBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-gidisablebit", HW_H_GIDISABLEBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
@@ -498,11 +502,12 @@ const CGEN_HW_ENTRY epiphany_cgen_hw_table[] =
   { "h-timer1bit1", HW_H_TIMER1BIT1, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-timer1bit2", HW_H_TIMER1BIT2, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-timer1bit3", HW_H_TIMER1BIT3, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-arithmetic-modebit0", HW_H_ARITHMETIC_MODEBIT0, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-arithmetic-modebit1", HW_H_ARITHMETIC_MODEBIT1, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-arithmetic-modebit2", HW_H_ARITHMETIC_MODEBIT2, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-arith-modebit0", HW_H_ARITH_MODEBIT0, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-arith-modebit1", HW_H_ARITH_MODEBIT1, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-arith-modebit2", HW_H_ARITH_MODEBIT2, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-clockgateenbit", HW_H_CLOCKGATEENBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-mbkptenbit", HW_H_MBKPTENBIT, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
+  { "h-scr-config-arithmode", HW_H_SCR_CONFIG_ARITHMODE, CGEN_ASM_NONE, 0, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-coredma-registers", HW_H_COREDMA_REGISTERS, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_crdma_names, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-coremem-registers", HW_H_COREMEM_REGISTERS, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_crmem_names, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
   { "h-coremesh-registers", HW_H_COREMESH_REGISTERS, CGEN_ASM_KEYWORD, (PTR) & epiphany_cgen_opval_crmesh_names, { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } } },
@@ -525,6 +530,8 @@ const CGEN_IFLD epiphany_cgen_ifld_table[] =
   { EPIPHANY_F_OPC_6_3, "f-opc-6-3", 0, 32, 6, 3, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_OPC_8_5, "f-opc-8-5", 0, 32, 8, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_OPC_19_4, "f-opc-19-4", 0, 32, 19, 4, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_OPC_9_6, "f-opc-9-6", 0, 32, 9, 6, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_OPC_21_6, "f-opc-21-6", 0, 32, 21, 6, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_CONDCODE, "f-condcode", 0, 32, 7, 4, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_SECONDARY_CCS, "f-secondary-ccs", 0, 32, 7, 1, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_SHIFT, "f-shift", 0, 32, 9, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
@@ -556,6 +563,10 @@ const CGEN_IFLD epiphany_cgen_ifld_table[] =
   { EPIPHANY_F_DC_7_4, "f-dc-7-4", 0, 32, 7, 4, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_TRAP_SWI_9_1, "f-trap-swi-9-1", 0, 32, 9, 1, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_GIEN_GIDIS_9_1, "f-gien-gidis-9-1", 0, 32, 9, 1, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_MODE4_L, "f-mode4-l", 0, 32, 15, 3, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_MODE4_H, "f-mode4-h", 0, 32, 29, 1, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_CTRLMODE5, "f-ctrlmode5", 0, 32, 20, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_ATOMIC, "f-atomic", 0, 32, 22, 2, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_DC_15_3, "f-dc-15-3", 0, 32, 15, 3, { 0|A(RESERVED), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_DC_15_7, "f-dc-15-7", 0, 32, 15, 7, { 0|A(RESERVED), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_DC_15_6, "f-dc-15-6", 0, 32, 15, 6, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
@@ -572,9 +583,11 @@ const CGEN_IFLD epiphany_cgen_ifld_table[] =
   { EPIPHANY_F_DC_25_1, "f-dc-25-1", 0, 32, 25, 1, { 0|A(RESERVED), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_DC_28_1, "f-dc-28-1", 0, 32, 28, 1, { 0|A(RESERVED), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_DC_31_3, "f-dc-31-3", 0, 32, 31, 3, { 0|A(RESERVED), { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_DC_31_2, "f-dc-31-2", 0, 32, 31, 2, { 0|A(RESERVED), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_DISP11, "f-disp11", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_SDISP11, "f-sdisp11", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_IMM16, "f-imm16", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
+  { EPIPHANY_F_MODE4, "f-mode4", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_RD6, "f-rd6", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_RN6, "f-rn6", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
   { EPIPHANY_F_RM6, "f-rm6", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
@@ -592,6 +605,7 @@ const CGEN_IFLD epiphany_cgen_ifld_table[] =
 const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_DISP11_MULTI_IFIELD [];
 const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_SDISP11_MULTI_IFIELD [];
 const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_IMM16_MULTI_IFIELD [];
+const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_MODE4_MULTI_IFIELD [];
 const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_RD6_MULTI_IFIELD [];
 const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_RN6_MULTI_IFIELD [];
 const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_RM6_MULTI_IFIELD [];
@@ -617,6 +631,12 @@ const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_IMM16_MULTI_IFIELD [] =
 {
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_IMM8] } },
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_IMM_27_8] } },
+    { 0, { (const PTR) 0 } }
+};
+const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_MODE4_MULTI_IFIELD [] =
+{
+    { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_MODE4_L] } },
+    { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_MODE4_H] } },
     { 0, { (const PTR) 0 } }
 };
 const CGEN_MAYBE_MULTI_IFLD EPIPHANY_F_RD6_MULTI_IFIELD [] =
@@ -663,6 +683,14 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
 /* memaddr: memory effective address */
   { "memaddr", EPIPHANY_OPERAND_MEMADDR, HW_H_MEMADDR, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
+/* memory-atomic: atomic memory access */
+  { "memory-atomic", EPIPHANY_OPERAND_MEMORY_ATOMIC, HW_H_MEMORY_ATOMIC, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
+/* memory-atomic-flag: atomic memory access flag */
+  { "memory-atomic-flag", EPIPHANY_OPERAND_MEMORY_ATOMIC_FLAG, HW_H_MEMORY_ATOMIC_FLAG, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
 /* caibit: cmt */
@@ -793,16 +821,16 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
   { "timer1bit3", EPIPHANY_OPERAND_TIMER1BIT3, HW_H_TIMER1BIT3, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* arithmetic-modebit0: cmt */
-  { "arithmetic-modebit0", EPIPHANY_OPERAND_ARITHMETIC_MODEBIT0, HW_H_ARITHMETIC_MODEBIT0, 0, 0,
+/* arith-modebit0: cmt */
+  { "arith-modebit0", EPIPHANY_OPERAND_ARITH_MODEBIT0, HW_H_ARITH_MODEBIT0, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* arithmetic-modebit1: cmt */
-  { "arithmetic-modebit1", EPIPHANY_OPERAND_ARITHMETIC_MODEBIT1, HW_H_ARITHMETIC_MODEBIT1, 0, 0,
+/* arith-modebit1: cmt */
+  { "arith-modebit1", EPIPHANY_OPERAND_ARITH_MODEBIT1, HW_H_ARITH_MODEBIT1, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* arithmetic-modebit2: cmt */
-  { "arithmetic-modebit2", EPIPHANY_OPERAND_ARITHMETIC_MODEBIT2, HW_H_ARITHMETIC_MODEBIT2, 0, 0,
+/* arith-modebit2: cmt */
+  { "arith-modebit2", EPIPHANY_OPERAND_ARITH_MODEBIT2, HW_H_ARITH_MODEBIT2, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
 /* clockgateenbit: cmt */
@@ -813,6 +841,10 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
   { "mbkptenbit", EPIPHANY_OPERAND_MBKPTENBIT, HW_H_MBKPTENBIT, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
+/* arithmode: arithmetic mode operand */
+  { "arithmode", EPIPHANY_OPERAND_ARITHMODE, HW_H_SCR_CONFIG_ARITHMODE, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
 /* simm24: branch address pc-relative */
   { "simm24", EPIPHANY_OPERAND_SIMM24, HW_H_IADDR, 31, 24,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_SIMM24] } }, 
@@ -821,6 +853,10 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
   { "simm8", EPIPHANY_OPERAND_SIMM8, HW_H_IADDR, 15, 8,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_SIMM8] } }, 
     { 0|A(RELAX)|A(RELOC)|A(PCREL_ADDR), { { { (1<<MACH_BASE), 0 } } } }  },
+/* pos-direction: positive direction */
+  { "pos-direction", EPIPHANY_OPERAND_POS_DIRECTION, HW_H_UINT, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
 /* rd: destination register */
   { "rd", EPIPHANY_OPERAND_RD, HW_H_REGISTERS, 15, 3,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_RD] } }, 
@@ -833,16 +869,16 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
   { "rm", EPIPHANY_OPERAND_RM, HW_H_REGISTERS, 9, 3,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_RM] } }, 
     { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-/* frd: fp destination register */
-  { "frd", EPIPHANY_OPERAND_FRD, HW_H_FPREGISTERS, 15, 3,
+/* rd-di: dword destination register */
+  { "rd-di", EPIPHANY_OPERAND_RD_DI, HW_H_REGISTERS_DI, 15, 3,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_RD] } }, 
     { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-/* frn: fp source register */
-  { "frn", EPIPHANY_OPERAND_FRN, HW_H_FPREGISTERS, 12, 3,
+/* rn-di: dword source register */
+  { "rn-di", EPIPHANY_OPERAND_RN_DI, HW_H_REGISTERS_DI, 12, 3,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_RN] } }, 
     { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-/* frm: fp source register */
-  { "frm", EPIPHANY_OPERAND_FRM, HW_H_FPREGISTERS, 9, 3,
+/* rm-di: dword source register */
+  { "rm-di", EPIPHANY_OPERAND_RM_DI, HW_H_REGISTERS_DI, 9, 3,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_RM] } }, 
     { 0, { { { (1<<MACH_BASE), 0 } } } }  },
 /* rd6: destination register */
@@ -857,16 +893,16 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
   { "rm6", EPIPHANY_OPERAND_RM6, HW_H_REGISTERS, 9, 6,
     { 2, { (const PTR) &EPIPHANY_F_RM6_MULTI_IFIELD[0] } }, 
     { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
-/* frd6: fp destination register */
-  { "frd6", EPIPHANY_OPERAND_FRD6, HW_H_FPREGISTERS, 15, 6,
+/* rd6-di: destination register */
+  { "rd6-di", EPIPHANY_OPERAND_RD6_DI, HW_H_REGISTERS_DI, 15, 6,
     { 2, { (const PTR) &EPIPHANY_F_RD6_MULTI_IFIELD[0] } }, 
     { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
-/* frn6: fp source register */
-  { "frn6", EPIPHANY_OPERAND_FRN6, HW_H_FPREGISTERS, 12, 6,
+/* rn6-di: source register */
+  { "rn6-di", EPIPHANY_OPERAND_RN6_DI, HW_H_REGISTERS_DI, 12, 6,
     { 2, { (const PTR) &EPIPHANY_F_RN6_MULTI_IFIELD[0] } }, 
     { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
-/* frm6: fp source register */
-  { "frm6", EPIPHANY_OPERAND_FRM6, HW_H_FPREGISTERS, 9, 6,
+/* rm6-di: source register */
+  { "rm6-di", EPIPHANY_OPERAND_RM6_DI, HW_H_REGISTERS_DI, 9, 6,
     { 2, { (const PTR) &EPIPHANY_F_RM6_MULTI_IFIELD[0] } }, 
     { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
 /* sd: special destination */
@@ -945,6 +981,14 @@ const CGEN_OPERAND epiphany_cgen_operand_table[] =
   { "imm8", EPIPHANY_OPERAND_IMM8, HW_H_ADDR, 12, 8,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_IMM8] } }, 
     { 0|A(RELAX), { { { (1<<MACH_BASE), 0 } } } }  },
+/* mode4: 4-bit unsigned literal */
+  { "mode4", EPIPHANY_OPERAND_MODE4, HW_H_UINT, 15, 4,
+    { 2, { (const PTR) &EPIPHANY_F_MODE4_MULTI_IFIELD[0] } }, 
+    { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
+/* ctrlmode5: atomic #imm5 ctrlmode */
+  { "ctrlmode5", EPIPHANY_OPERAND_CTRLMODE5, HW_H_UINT, 20, 5,
+    { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_CTRLMODE5] } }, 
+    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
 /* direction: +/- indexing */
   { "direction", EPIPHANY_OPERAND_DIRECTION, HW_H_UINT, 20, 1,
     { 0, { (const PTR) &epiphany_cgen_ifld_table[EPIPHANY_F_ADDSUBX] } }, 
@@ -1158,515 +1202,510 @@ static const CGEN_IBASE epiphany_cgen_insn_table[MAX_INSNS] =
     EPIPHANY_INSN_JALR, "jalr", "jalr", 32,
     { 0|A(UNCOND_CTI), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrb $rd,[$rn,$rm] */
+/* ldrb ${rd},[$rn,$rm] */
   {
     EPIPHANY_INSN_LDRBX16_S, "ldrbx16.s", "ldrb", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrb $rd,[$rn],$rm */
-  {
-    EPIPHANY_INSN_LDRBP16_S, "ldrbp16.s", "ldrb", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* ldrb $rd6,[$rn6,$direction$rm6] */
+/* ldrb ${rd6},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_LDRBX_L, "ldrbx.l", "ldrb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrb $rd6,[$rn6],$direction$rm6 */
+/* ldrb ${rd},[$rn],$rm */
+  {
+    EPIPHANY_INSN_LDRBP16_S, "ldrbp16.s", "ldrb", 16,
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* ldrb ${rd6},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_LDRBP_L, "ldrbp.l", "ldrb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrb $rd,[$rn,$disp3] */
+/* ldrb ${rd},[$rn,$disp3] */
   {
     EPIPHANY_INSN_LDRBD16_S, "ldrbd16.s", "ldrb", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrb $rd6,[$rn6,$dpmi$disp11] */
+/* ldrb ${rd6},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_LDRBD_L, "ldrbd.l", "ldrb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrb $rd6,[$rn6],$dpmi$disp11 */
+/* ldrb ${rd6},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_LDRBDPM_L, "ldrbdpm.l", "ldrb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrh $rd,[$rn,$rm] */
+/* ldrh ${rd},[$rn,$rm] */
   {
     EPIPHANY_INSN_LDRHX16_S, "ldrhx16.s", "ldrh", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrh $rd,[$rn],$rm */
-  {
-    EPIPHANY_INSN_LDRHP16_S, "ldrhp16.s", "ldrh", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* ldrh $rd6,[$rn6,$direction$rm6] */
+/* ldrh ${rd6},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_LDRHX_L, "ldrhx.l", "ldrh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrh $rd6,[$rn6],$direction$rm6 */
+/* ldrh ${rd},[$rn],$rm */
+  {
+    EPIPHANY_INSN_LDRHP16_S, "ldrhp16.s", "ldrh", 16,
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* ldrh ${rd6},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_LDRHP_L, "ldrhp.l", "ldrh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrh $rd,[$rn,$disp3] */
+/* ldrh ${rd},[$rn,$disp3] */
   {
     EPIPHANY_INSN_LDRHD16_S, "ldrhd16.s", "ldrh", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrh $rd6,[$rn6,$dpmi$disp11] */
+/* ldrh ${rd6},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_LDRHD_L, "ldrhd.l", "ldrh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrh $rd6,[$rn6],$dpmi$disp11 */
+/* ldrh ${rd6},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_LDRHDPM_L, "ldrhdpm.l", "ldrh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldr $rd,[$rn,$rm] */
+/* ldr ${rd},[$rn,$rm] */
   {
     EPIPHANY_INSN_LDRX16_S, "ldrx16.s", "ldr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldr $rd,[$rn],$rm */
-  {
-    EPIPHANY_INSN_LDRP16_S, "ldrp16.s", "ldr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* ldr $rd6,[$rn6,$direction$rm6] */
+/* ldr ${rd6},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_LDRX_L, "ldrx.l", "ldr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldr $rd6,[$rn6],$direction$rm6 */
+/* ldr ${rd},[$rn],$rm */
+  {
+    EPIPHANY_INSN_LDRP16_S, "ldrp16.s", "ldr", 16,
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* ldr ${rd6},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_LDRP_L, "ldrp.l", "ldr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldr $rd,[$rn,$disp3] */
+/* ldr ${rd},[$rn,$disp3] */
   {
     EPIPHANY_INSN_LDRD16_S, "ldrd16.s", "ldr", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldr $rd6,[$rn6,$dpmi$disp11] */
+/* ldr ${rd6},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_LDRD_L, "ldrd.l", "ldr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldr $rd6,[$rn6],$dpmi$disp11 */
+/* ldr ${rd6},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_LDRDPM_L, "ldrdpm.l", "ldr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrd $rd,[$rn,$rm] */
+/* ldrd ${rd-di},[$rn,$rm] */
   {
     EPIPHANY_INSN_LDRDX16_S, "ldrdx16.s", "ldrd", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrd $rd,[$rn],$rm */
-  {
-    EPIPHANY_INSN_LDRDP16_S, "ldrdp16.s", "ldrd", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* ldrd $rd6,[$rn6,$direction$rm6] */
+/* ldrd ${rd6-di},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_LDRDX_L, "ldrdx.l", "ldrd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrd $rd6,[$rn6],$direction$rm6 */
+/* ldrd ${rd-di},[$rn],$rm */
+  {
+    EPIPHANY_INSN_LDRDP16_S, "ldrdp16.s", "ldrd", 16,
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* ldrd ${rd6-di},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_LDRDP_L, "ldrdp.l", "ldrd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrd $rd,[$rn,$disp3] */
+/* ldrd ${rd-di},[$rn,$disp3] */
   {
     EPIPHANY_INSN_LDRDD16_S, "ldrdd16.s", "ldrd", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrd $rd6,[$rn6,$dpmi$disp11] */
+/* ldrd ${rd6-di},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_LDRDD_L, "ldrdd.l", "ldrd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* ldrd $rd6,[$rn6],$dpmi$disp11 */
+/* ldrd ${rd6-di},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_LDRDDPM_L, "ldrddpm.l", "ldrd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* testsetb $rd6,[$rn6,$direction$rm6] */
-  {
-    EPIPHANY_INSN_TESTSETBT, "testsetbt", "testsetb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* testseth $rd6,[$rn6,$direction$rm6] */
-  {
-    EPIPHANY_INSN_TESTSETHT, "testsetht", "testseth", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* testset $rd6,[$rn6,$direction$rm6] */
+/* testset $rd6,[$rn6,${pos-direction}$rm6] */
   {
     EPIPHANY_INSN_TESTSETT, "testsett", "testset", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strb $rd,[$rn,$rm] */
+/* strb ${rd},[$rn,$rm] */
   {
     EPIPHANY_INSN_STRBX16, "strbx16", "strb", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strb $rd6,[$rn6,$direction$rm6] */
+/* strb ${rd6},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_STRBX, "strbx", "strb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strb $rd,[$rn],$rm */
+/* strb ${rd},[$rn],$rm */
   {
     EPIPHANY_INSN_STRBP16, "strbp16", "strb", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strb $rd6,[$rn6],$direction$rm6 */
+/* strb ${rd6},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_STRBP, "strbp", "strb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strb $rd,[$rn,$disp3] */
+/* strb ${rd},[$rn,$disp3] */
   {
     EPIPHANY_INSN_STRBD16, "strbd16", "strb", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strb $rd6,[$rn6,$dpmi$disp11] */
+/* strb ${rd6},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_STRBD, "strbd", "strb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strb $rd6,[$rn6],$dpmi$disp11 */
+/* strb ${rd6},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_STRBDPM, "strbdpm", "strb", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strh $rd,[$rn,$rm] */
+/* strh ${rd},[$rn,$rm] */
   {
     EPIPHANY_INSN_STRHX16, "strhx16", "strh", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strh $rd6,[$rn6,$direction$rm6] */
+/* strh ${rd6},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_STRHX, "strhx", "strh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strh $rd,[$rn],$rm */
+/* strh ${rd},[$rn],$rm */
   {
     EPIPHANY_INSN_STRHP16, "strhp16", "strh", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strh $rd6,[$rn6],$direction$rm6 */
+/* strh ${rd6},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_STRHP, "strhp", "strh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strh $rd,[$rn,$disp3] */
+/* strh ${rd},[$rn,$disp3] */
   {
     EPIPHANY_INSN_STRHD16, "strhd16", "strh", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strh $rd6,[$rn6,$dpmi$disp11] */
+/* strh ${rd6},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_STRHD, "strhd", "strh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strh $rd6,[$rn6],$dpmi$disp11 */
+/* strh ${rd6},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_STRHDPM, "strhdpm", "strh", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* str $rd,[$rn,$rm] */
+/* str ${rd},[$rn,$rm] */
   {
     EPIPHANY_INSN_STRX16, "strx16", "str", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* str $rd6,[$rn6,$direction$rm6] */
+/* str ${rd6},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_STRX, "strx", "str", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* str $rd,[$rn],$rm */
+/* str ${rd},[$rn],$rm */
   {
     EPIPHANY_INSN_STRP16, "strp16", "str", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* str $rd6,[$rn6],$direction$rm6 */
+/* str ${rd6},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_STRP, "strp", "str", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* str $rd,[$rn,$disp3] */
+/* str ${rd},[$rn,$disp3] */
   {
     EPIPHANY_INSN_STRD16, "strd16", "str", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* str $rd6,[$rn6,$dpmi$disp11] */
+/* str ${rd6},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_STRD, "strd", "str", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* str $rd6,[$rn6],$dpmi$disp11 */
+/* str ${rd6},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_STRDPM, "strdpm", "str", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strd $rd,[$rn,$rm] */
+/* strd ${rd-di},[$rn,$rm] */
   {
     EPIPHANY_INSN_STRDX16, "strdx16", "strd", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strd $rd6,[$rn6,$direction$rm6] */
+/* strd ${rd6-di},[$rn6,$direction$rm6] */
   {
     EPIPHANY_INSN_STRDX, "strdx", "strd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strd $rd,[$rn],$rm */
+/* strd ${rd-di},[$rn],$rm */
   {
     EPIPHANY_INSN_STRDP16, "strdp16", "strd", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strd $rd6,[$rn6],$direction$rm6 */
+/* strd ${rd6-di},[$rn6],$direction$rm6 */
   {
     EPIPHANY_INSN_STRDP, "strdp", "strd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strd $rd,[$rn,$disp3] */
+/* strd ${rd-di},[$rn,$disp3] */
   {
     EPIPHANY_INSN_STRDD16, "strdd16", "strd", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strd $rd6,[$rn6,$dpmi$disp11] */
+/* strd ${rd6-di},[$rn6,$dpmi$disp11] */
   {
     EPIPHANY_INSN_STRDD, "strdd", "strd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* strd $rd6,[$rn6],$dpmi$disp11 */
+/* strd ${rd6-di},[$rn6],$dpmi$disp11 */
   {
     EPIPHANY_INSN_STRDDPM, "strddpm", "strd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* moveq $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16EQ, "cmov16EQ", "moveq", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* moveq $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVEQ, "cmovEQ", "moveq", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movne $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16NE, "cmov16NE", "movne", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movne $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVNE, "cmovNE", "movne", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgtu $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16GTU, "cmov16GTU", "movgtu", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgtu $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVGTU, "cmovGTU", "movgtu", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgteu $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16GTEU, "cmov16GTEU", "movgteu", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgteu $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVGTEU, "cmovGTEU", "movgteu", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movlteu $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16LTEU, "cmov16LTEU", "movlteu", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movlteu $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVLTEU, "cmovLTEU", "movlteu", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movltu $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16LTU, "cmov16LTU", "movltu", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movltu $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVLTU, "cmovLTU", "movltu", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgt $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16GT, "cmov16GT", "movgt", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgt $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVGT, "cmovGT", "movgt", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgte $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16GTE, "cmov16GTE", "movgte", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movgte $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVGTE, "cmovGTE", "movgte", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movlt $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16LT, "cmov16LT", "movlt", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movlt $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVLT, "cmovLT", "movlt", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movlte $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16LTE, "cmov16LTE", "movlte", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movlte $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVLTE, "cmovLTE", "movlte", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* mov $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16B, "cmov16B", "mov", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* mov $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVB, "cmovB", "mov", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movbeq $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16BEQ, "cmov16BEQ", "movbeq", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movbeq $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVBEQ, "cmovBEQ", "movbeq", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movbne $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16BNE, "cmov16BNE", "movbne", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movbne $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVBNE, "cmovBNE", "movbne", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movblt $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16BLT, "cmov16BLT", "movblt", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movblt $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVBLT, "cmovBLT", "movblt", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movblte $rd,$rn */
   {
     EPIPHANY_INSN_CMOV16BLTE, "cmov16BLTE", "movblte", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movblte $rd6,$rn6 */
   {
     EPIPHANY_INSN_CMOVBLTE, "cmovBLTE", "movblte", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movts $sn,$rd */
   {
     EPIPHANY_INSN_MOVTS16, "movts16", "movts", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movts $sn6,$rd6 */
   {
     EPIPHANY_INSN_MOVTS6, "movts6", "movts", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movts $sndma,$rd6 */
   {
     EPIPHANY_INSN_MOVTSDMA, "movtsdma", "movts", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movts $snmem,$rd6 */
   {
     EPIPHANY_INSN_MOVTSMEM, "movtsmem", "movts", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movts $snmesh,$rd6 */
   {
     EPIPHANY_INSN_MOVTSMESH, "movtsmesh", "movts", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* mode $mode4 */
+  {
+    EPIPHANY_INSN_MODE, "mode", "mode", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movfs $rd,$sn */
   {
     EPIPHANY_INSN_MOVFS16, "movfs16", "movfs", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movfs $rd6,$sn6 */
   {
     EPIPHANY_INSN_MOVFS6, "movfs6", "movfs", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movfs $rd6,$sndma */
   {
     EPIPHANY_INSN_MOVFSDMA, "movfsdma", "movfs", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movfs $rd6,$snmem */
   {
     EPIPHANY_INSN_MOVFSMEM, "movfsmem", "movfs", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movfs $rd6,$snmesh */
   {
     EPIPHANY_INSN_MOVFSMESH, "movfsmesh", "movfs", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* nop */
   {
     EPIPHANY_INSN_NOP, "nop", "nop", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* snop */
   {
     EPIPHANY_INSN_SNOP, "snop", "snop", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* unimpl */
   {
     EPIPHANY_INSN_UNIMPL, "unimpl", "unimpl", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* idle */
   {
@@ -1691,22 +1730,22 @@ static const CGEN_IBASE epiphany_cgen_insn_table[MAX_INSNS] =
 /* wand */
   {
     EPIPHANY_INSN_WAND, "wand", "wand", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* sync */
   {
     EPIPHANY_INSN_SYNC, "sync", "sync", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* gie */
   {
     EPIPHANY_INSN_GIEN, "gien", "gie", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* gid */
   {
     EPIPHANY_INSN_GIDIS, "gidis", "gid", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* swi $swi_num */
   {
@@ -1726,262 +1765,292 @@ static const CGEN_IBASE epiphany_cgen_insn_table[MAX_INSNS] =
 /* add $rd,$rn,$rm */
   {
     EPIPHANY_INSN_ADD16, "add16", "add", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* add $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_ADD, "add", "add", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* sub $rd,$rn,$rm */
   {
     EPIPHANY_INSN_SUB16, "sub16", "sub", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* sub $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_SUB, "sub", "sub", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* and $rd,$rn,$rm */
   {
     EPIPHANY_INSN_AND16, "and16", "and", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* and $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_AND, "and", "and", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* orr $rd,$rn,$rm */
   {
     EPIPHANY_INSN_ORR16, "orr16", "orr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* orr $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_ORR, "orr", "orr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* eor $rd,$rn,$rm */
   {
     EPIPHANY_INSN_EOR16, "eor16", "eor", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* eor $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_EOR, "eor", "eor", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* add.s $rd,$rn,$simm3 */
   {
     EPIPHANY_INSN_ADDI16, "addi16", "add.s", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* add.l $rd6,$rn6,$simm11 */
   {
     EPIPHANY_INSN_ADDI, "addi", "add.l", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* sub.s $rd,$rn,$simm3 */
   {
     EPIPHANY_INSN_SUBI16, "subi16", "sub.s", 16,
-    { 0|A(IMM3)|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(IMM3)|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* sub.l $rd6,$rn6,$simm11 */
   {
     EPIPHANY_INSN_SUBI, "subi", "sub.l", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* asr $rd,$rn,$rm */
   {
     EPIPHANY_INSN_ASR16, "asr16", "asr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* asr $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_ASR, "asr", "asr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsr $rd,$rn,$rm */
   {
     EPIPHANY_INSN_LSR16, "lsr16", "lsr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsr $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_LSR, "lsr", "lsr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsl $rd,$rn,$rm */
   {
     EPIPHANY_INSN_LSL16, "lsl16", "lsl", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsl $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_LSL, "lsl", "lsl", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsr $rd,$rn,$shift */
   {
     EPIPHANY_INSN_LSRI16, "lsri16", "lsr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsr $rd6,$rn6,$shift */
   {
     EPIPHANY_INSN_LSRI32, "lsri32", "lsr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsl $rd,$rn,$shift */
   {
     EPIPHANY_INSN_LSLI16, "lsli16", "lsl", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* lsl $rd6,$rn6,$shift */
   {
     EPIPHANY_INSN_LSLI32, "lsli32", "lsl", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* asr $rd,$rn,$shift */
   {
     EPIPHANY_INSN_ASRI16, "asri16", "asr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* asr $rd6,$rn6,$shift */
   {
     EPIPHANY_INSN_ASRI32, "asri32", "asr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* add64 ${rd6-di},${rn6-di},${rm6-di} */
+  {
+    EPIPHANY_INSN_ADD64, "add64", "add64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* sub64 ${rd6-di},${rn6-di},${rm6-di} */
+  {
+    EPIPHANY_INSN_SUB64, "sub64", "sub64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* and64 ${rd6-di},${rn6-di},${rm6-di} */
+  {
+    EPIPHANY_INSN_AND64, "and64", "and64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* orr64 ${rd6-di},${rn6-di},${rm6-di} */
+  {
+    EPIPHANY_INSN_ORR64, "orr64", "orr64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* eor64 ${rd6-di},${rn6-di},${rm6-di} */
+  {
+    EPIPHANY_INSN_EOR64, "eor64", "eor64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* asr64 ${rd6-di},${rn6-di},$rm6 */
+  {
+    EPIPHANY_INSN_ASR64, "asr64", "asr64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* lsr64 ${rd6-di},${rn6-di},$rm6 */
+  {
+    EPIPHANY_INSN_LSR64, "lsr64", "lsr64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* lsl64 ${rd6-di},${rn6-di},$rm6 */
+  {
+    EPIPHANY_INSN_LSL64, "lsl64", "lsl64", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* bitr $rd,$rn */
   {
     EPIPHANY_INSN_BITR16, "bitr16", "bitr", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* bitr $rd6,$rn6 */
   {
     EPIPHANY_INSN_BITR, "bitr", "bitr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* fext $rd6,$rn6,$rm6 */
-  {
-    EPIPHANY_INSN_FEXT, "fext", "fext", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* fdep $rd6,$rn6,$rm6 */
-  {
-    EPIPHANY_INSN_FDEP, "fdep", "fdep", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* lfsr $rd6,$rn6,$rm6 */
-  {
-    EPIPHANY_INSN_LFSR, "lfsr", "lfsr", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* mov.b $rd,$imm8 */
   {
     EPIPHANY_INSN_MOV8, "mov8", "mov.b", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* mov.l $rd6,$imm16 */
   {
     EPIPHANY_INSN_MOV16, "mov16", "mov.l", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* movt $rd6,$imm16 */
   {
     EPIPHANY_INSN_MOVT, "movt", "movt", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fadd $rd,$rn,$rm */
   {
     EPIPHANY_INSN_F_ADDF16, "f_addf16", "fadd", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fadd $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_F_ADDF32, "f_addf32", "fadd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fsub $rd,$rn,$rm */
   {
     EPIPHANY_INSN_F_SUBF16, "f_subf16", "fsub", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fsub $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_F_SUBF32, "f_subf32", "fsub", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fmul $rd,$rn,$rm */
   {
     EPIPHANY_INSN_F_MULF16, "f_mulf16", "fmul", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fmul $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_F_MULF32, "f_mulf32", "fmul", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fmadd $rd,$rn,$rm */
   {
     EPIPHANY_INSN_F_MADDF16, "f_maddf16", "fmadd", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fmadd $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_F_MADDF32, "f_maddf32", "fmadd", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fmsub $rd,$rn,$rm */
   {
     EPIPHANY_INSN_F_MSUBF16, "f_msubf16", "fmsub", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fmsub $rd6,$rn6,$rm6 */
   {
     EPIPHANY_INSN_F_MSUBF32, "f_msubf32", "fmsub", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fabs rd,rn */
   {
     EPIPHANY_INSN_F_ABSF16, "f_absf16", "fabs", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fabs $rd6,$rn6 */
   {
     EPIPHANY_INSN_F_ABSF32, "f_absf32", "fabs", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* float $rd,$rn */
   {
     EPIPHANY_INSN_F_LOATF16, "f_loatf16", "float", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* float $rd6,$rn6 */
   {
     EPIPHANY_INSN_F_LOATF32, "f_loatf32", "float", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fix $rd,$rn */
   {
     EPIPHANY_INSN_F_IXF16, "f_ixf16", "fix", 16,
-    { 0|A(SHORT_INSN)|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(SHORT_INSN), { { { (1<<MACH_BASE), 0 } } } }
   },
 /* fix $rd6,$rn6 */
   {
     EPIPHANY_INSN_F_IXF32, "f_ixf32", "fix", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* frecip $frd6,$frn6 */
+/* fmax $rd6,$rn6,$rm6 */
   {
-    EPIPHANY_INSN_F_RECIPF32, "f_recipf32", "frecip", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    EPIPHANY_INSN_FMAX, "fmax", "fmax", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
-/* fsqrt $frd6,$frn6 */
+/* umul $rd6,$rn6,$rm6 */
   {
-    EPIPHANY_INSN_F_SQRTF32, "f_sqrtf32", "fsqrt", 32,
-    { 0|A(COND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    EPIPHANY_INSN_UMUL, "umul", "umul", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
+  },
+/* mul $rd6,$rn6,$rm6 */
+  {
+    EPIPHANY_INSN_MUL, "mul", "mul", 32,
+    { 0, { { { (1<<MACH_BASE), 0 } } } }
   },
 };
 
