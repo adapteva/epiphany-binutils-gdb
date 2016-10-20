@@ -9,9 +9,18 @@
 fix:
 	mova	r20,0f7.333
 	fix	r21,r20
-	bbeq	1f
+	bbeq	fail
 	sub	r22,r21,7
-	bne	1f
-	trap	#4
+	bne	fail
+
+	;; test -2^31
+	mov	r0,%low(0f-2147483648)
+	movt	r0,%high(0f-2147483648)
+	fix	r1,r0
+	bbeq	fail
+	bblt	1f
+	b	fail
 1:
-	trap	#5
+	pass
+fail:
+	fail

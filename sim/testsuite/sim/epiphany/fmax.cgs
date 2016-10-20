@@ -13,13 +13,30 @@ fmax:
 	fmax	r30, r20, r21
 
 	sub	r40, r21, r30
-	bne	1f
+	bne	fail
 
 	fmax	r30, r21, r20
 
 	sub	r40, r21, r30
-	bne	1f
+	bne	fail
+
+	;; test flags
+	mova	r1,#0
+	mova	r21,#0
+	fmax	r30,r1,r21
+	bbne	fail
+
+	mova	r21,0f1.0
+	fmax	r30,r1,r21
+	bbeq	fail
+
+	mova	r21,0f-1.0
+	mova	r20,0f-2.0
+	fmax	r30,r20,r21
+	bblte	1f
+	b	fail
+1:
 
 	trap #4
-1:
+fail:
 	trap #5

@@ -1,3 +1,8 @@
+2015-12-21  Ola Jeppsson  <ola@adapteva.com>
+
+	* fix.cgs: Test flags for MIN_INT (-2^31).
+	* fmax.cgs: Add test for flags.
+
 2015-12-15  Ola Jeppsson  <ola@adapteva.com>
 
 	* mul.cgs: New test.
