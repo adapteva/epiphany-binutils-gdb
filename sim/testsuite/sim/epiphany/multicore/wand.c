@@ -15,43 +15,9 @@
 #include "e-lib-inl.h"
 
 
-#ifndef ROWS
-#  define ROWS 16
-#endif
-#ifndef COLS
-#  define COLS 16
-#endif
-
-
-#define E_ROW(x) ((x) >> 6)
-#define E_COL(x) ((x) & ((1<<6)-1))
-#define E_CORE(r, c) (((r) << 6) | (c))
-
-#ifndef FIRST_CORE
-#  define FIRST_CORE 0x808  // Coreid of first core in group
-#endif
-
-#define FIRST_ROW E_ROW(FIRST_CORE)    // First row in group
-#define FIRST_COL E_COL(FIRST_CORE)    // First col in group
-
-#if FIRST_CORE
-#define LEADER FIRST_CORE
-#else
-#define LEADER 0x1
-#endif
-
-static inline uint32_t
-e_rel(uint32_t coreid)
-{
-  uint32_t i, j;
-  i = E_ROW(coreid) - FIRST_ROW;
-  j = E_COL(coreid) - FIRST_COL;
-  return i * ROWS + j;
-}
-
 #define NBARRIERS 0x100
 
-uint32_t _msgbox[ROWS*COLS];
+uint32_t _msgbox[4096];
 
 /* wand isr is implemented in wand-isr.S */
 extern void wand_isr();
@@ -72,9 +38,9 @@ e_wand (bool nonblocking)
 bool
 check (int round)
 {
-  int i;
+  unsigned i;
 
-  for (i = 0; i < ROWS * COLS; i++)
+  for (i = 0; i < e_group_size (); i++)
     {
       if (_msgbox[i] == round)
 	continue;
@@ -91,41 +57,39 @@ main (void)
   int i;
   bool ok = true;
   unsigned row, col;
-  unsigned *ivt;
-  const uint32_t coreid = e_get_coreid();
-  const uint32_t me = e_rel(coreid);
-  uint32_t *msgbox =
-    e_get_global_address (FIRST_ROW, FIRST_COL, &_msgbox);
+  const uint32_t rank = e_group_my_rank ();
+  uint32_t *msgbox = (uint32_t *)
+    e_group_global_address (e_group_leader_rank (), &_msgbox);
 
   e_irq_global_mask (true);
   e_irq_attach (E_WAND_INT, wand_isr);
   e_irq_mask (E_WAND_INT, false);
 
-  msgbox[me] = 0xdeadbeef;
+  msgbox[rank] = 0xdeadbeef;
 
   for(i = 0; i <= NBARRIERS; i++)
     {
       /* 'Random' wait to increase probability of race conditions in the
        * simulator design manifesting themselves. */
-      e_wait(E_REG_CTIMER0, (coreid * (i + 1) * 50331653) % 0x400);
+      e_wait(E_REG_CTIMER0, (rank * (i + 1) * 50331653) % 0x400);
 
       /* Set value for this round */
-      msgbox[me] = i;
+      msgbox[rank] = i;
 
       e_wand (false);
 
-      if (coreid == LEADER)
+      if (e_group_leader_p ())
 	{
 	  /* 'Random' wait to increase probability of race conditions in the
 	   * simulator design manifesting themselves. */
-	  e_wait(E_REG_CTIMER0, (coreid * (i + 1) * 25165843) % 0x400);
+	  e_wait(E_REG_CTIMER0, (rank * (i + 1) * 25165843) % 0x400);
 	  ok = ok ? check (i) : false;
 	}
 
       e_wand (false);
     }
 
-  if (coreid == LEADER)
+  if (e_group_leader_p ())
     {
       if (ok)
 	pass ();

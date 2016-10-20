@@ -3,10 +3,19 @@
 
 /* Minimal implementation of e-lib. N.B: Some API differences. */
 
+/* WARNING: Here be dragons (and in e-lib). Mode-setting implementation
+ * (GID / modeset / GIE) assumes global interrupts should be enabled which is
+ * ok for normal code but not for code that manipulates hardware, interrupts
+ * WAND / IDLE etc.
+ */
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+/* compiler barrier */
+#define barrier() __asm__ __volatile__ ("":::"memory")
 
 /* Flags for newlib crt0.s */
 #define LOADER_BSS_CLEARED_FLAG (1 << 0)
@@ -96,6 +105,74 @@ fail ()
 #define E_USER_INT      9
 typedef void (*sighandler_t)(void);
 
+
+typedef uint32_t e_coreid_t;
+
+typedef enum {
+  E_NULL         = 0,
+  E_EPI_PLATFORM = 1,
+  E_EPI_CHIP     = 2,
+  E_EPI_GROUP    = 3,
+  E_EPI_CORE     = 4,
+  E_EXT_MEM      = 5,
+  E_MAPPING      = 6,
+  E_SHARED_MEM   = 7,
+} e_objtype_t;
+
+typedef enum {
+  E_E16G301 = 0,
+  E_E64G401 = 1,
+  E_E1KG501 = 2,
+} e_chiptype_t;
+
+
+/* structs */
+typedef struct {
+  union {
+    e_objtype_t  objtype;           /* 0x28 */
+    uint32_t     _fill1;
+  };
+  union {
+    e_chiptype_t chiptype;          /* 0x2c */
+    uint32_t     _fill2;
+  };
+  union {
+    e_coreid_t   group_id;          /* 0x30 */
+    uint32_t     _fill3;
+  };
+  uint32_t       group_row;         /* 0x34 */
+  uint32_t       group_col;         /* 0x38 */
+  uint32_t       group_rows;        /* 0x3c */
+  uint32_t       group_cols;        /* 0x40 */
+  uint32_t       core_row;          /* 0x44 */
+  uint32_t       core_col;          /* 0x48 */
+  uint32_t       alignment_padding; /* 0x4c */
+} __attribute__((packed)) e_group_config_t;
+
+typedef struct {
+  union {
+    e_objtype_t objtype;            /* 0x50 */
+    uint32_t    _fill1;
+  };
+  uint32_t      base;               /* 0x54 */
+} __attribute__((packed)) e_emem_config_t;
+
+
+volatile const e_group_config_t e_group_config
+		       __attribute__((section("workgroup_cfg"))) = {
+  .objtype  = E_EPI_GROUP,
+  .chiptype = E_E1KG501,
+  /* No good way of assigning rest of values at compile time. */
+};
+
+/* Used by e_write()/e_read() which we don't implement here since there is
+ * no host. So this is just a placeholder. */
+volatile const e_emem_config_t e_emem_config __attribute__((section("ext_mem_cfg"))) = {
+  .objtype = E_EXT_MEM,
+  .base    = 0x0,
+};
+
+
 static inline void e_irq_global_mask (bool state);
 void e_irq_mask (uint32_t irq, bool state);
 void e_reg_write (uint32_t reg_id, register uint32_t val);
@@ -103,7 +180,8 @@ uint32_t e_reg_read (uint32_t reg_id);
 void e_irq_attach (uint32_t irq, sighandler_t handler);
 void e_irq_set (uint32_t row, uint32_t col, uint32_t irq);
 static inline uint32_t e_get_coreid (void);
-void *e_get_global_address (unsigned row, unsigned col, const void *ptr);
+void e_coords_from_coreid(e_coreid_t coreid, uint32_t *row, uint32_t *col);
+void *e_get_global_address (uint32_t row, uint32_t col, const void *ptr);
 static inline void e_idle (void); /*not in e-lib */
 
 
@@ -111,10 +189,12 @@ static inline void e_idle (void); /*not in e-lib */
 static inline void
 e_irq_global_mask (bool state)
 {
+  barrier();
   if (state)
     __asm__ __volatile__("gid");
   else
     __asm__ __volatile__("gie");
+  barrier();
 }
 
 void
@@ -122,12 +202,14 @@ e_irq_mask (uint32_t irq, bool state)
 {
   uint32_t previous;
 
+  barrier();
   previous = e_reg_read (E_REG_IMASK);
 
   if (state)
     e_reg_write (E_REG_IMASK, previous | (  1<<(irq - E_SYNC)));
   else
     e_reg_write (E_REG_IMASK, previous & (~(1<<(irq - E_SYNC))));
+  barrier();
 }
 
 void
@@ -135,6 +217,7 @@ e_reg_write (uint32_t reg_id, register uint32_t val)
 {
   uint32_t *addr;
 
+  barrier();
   switch (reg_id)
     {
     case E_REG_CONFIG:
@@ -144,11 +227,13 @@ e_reg_write (uint32_t reg_id, register uint32_t val)
       __asm__ __volatile__ ("movts status, %0" : : "r" (val) : "status");
       break;
     default:
-      __asm__ __volatile__ ("movfs %0, coreid" : "=r" (addr) : : /*"coreid"*/);
-      addr = (uint32_t *) ((((uintptr_t) addr) << 20) | reg_id);
+      //__asm__ __volatile__ ("movfs %0, coreid" : "=r" (addr) : : /*"coreid"*/);
+      //addr = (uint32_t *) ((((uintptr_t) addr) << 20) | reg_id);
+      addr = (uint32_t *) reg_id;
       *addr = val;
       break;
     }
+  barrier();
 }
 
 uint32_t
@@ -157,6 +242,7 @@ e_reg_read (uint32_t reg_id)
   uint32_t *addr;
   uint32_t val;
 
+  barrier();
   switch (reg_id)
     {
     case E_REG_CONFIG:
@@ -166,11 +252,13 @@ e_reg_read (uint32_t reg_id)
       __asm__ __volatile__ ("movfs %0, status" : "=r" (val) : : "status");
       break;
     default:
-      __asm__ __volatile__ ("movfs %0, coreid" : "=r" (addr) : : /*"coreid"*/);
-      addr = (uint32_t *) ((((uintptr_t) addr) << 20) | reg_id);
+      //__asm__ __volatile__ ("movfs %0, coreid" : "=r" (addr) : : /*"coreid"*/);
+      //addr = (uint32_t *) ((((uintptr_t) addr) << 20) | reg_id);
+      addr = (uint32_t *) reg_id;
       val = *addr;
       break;
     }
+  barrier();
   return val;
 }
 
@@ -179,6 +267,7 @@ e_irq_attach (uint32_t irq, sighandler_t handler)
 {
   const uint32_t b_opcode = 0x000000e8; /* b.l */
 
+  barrier();
   uint32_t *ivt = (uint32_t *) (irq << 2);
 
   /* Create branch insn with the relative branch offset. */
@@ -187,6 +276,7 @@ e_irq_attach (uint32_t irq, sighandler_t handler)
 
   /* Fill in IVT entry */
   *ivt = insn;
+  barrier();
 }
 
 void
@@ -194,12 +284,14 @@ e_irq_set (uint32_t row, uint32_t col, uint32_t irq)
 {
   uint32_t *ilatst;
 
+  barrier();
   //	if ((row == E_SELF) || (col == E_SELF))
   //		ilatst = (unsigned *) E_ILATST;
   //	else
   ilatst = (uint32_t *) e_get_global_address (row, col, (void *) E_REG_ILATST);
 
   *ilatst = 1 << (irq - E_SYNC);
+  barrier();
 }
 
 static inline uint32_t
@@ -211,11 +303,115 @@ e_get_coreid (void)
   return coreid;
 }
 
-/* N.B: This function differs from e-lib. The e-lib implementation calculates
- * the address relative to workgroup base. Here we use absolute row and column.
- */
+/* e_group_* API not in e-lib */
+
+inline static uint32_t
+e_group_rows ()
+{
+  return e_group_config.group_rows;
+}
+
+inline static uint32_t
+e_group_last_row ()
+{
+  uint32_t rows = e_group_config.group_rows;
+  return rows ? rows - 1 : 0;
+}
+
+inline static uint32_t
+e_group_last_col ()
+{
+  uint32_t cols = e_group_config.group_cols;
+  return cols ? cols - 1 : 0;
+}
+
+inline static uint32_t
+e_group_cols ()
+{
+  return e_group_config.group_cols;
+}
+
+inline static uint32_t
+e_group_my_row ()
+{
+  return e_group_config.core_row;
+}
+
+inline static uint32_t
+e_group_row (uint32_t rank)
+{
+  return rank / e_group_cols ();
+}
+
+inline static uint32_t
+e_group_col (uint32_t rank)
+{
+  return rank % e_group_cols ();
+}
+
+inline static uint32_t
+e_group_rank (uint32_t row, uint32_t col)
+{
+  return row * e_group_cols () + col;
+}
+
+inline static uint32_t
+e_group_my_col ()
+{
+  return e_group_config.core_col;
+}
+
+inline static uint32_t
+e_group_my_rank ()
+{
+  return e_group_config.core_row * e_group_config.group_cols
+    + e_group_config.core_col;
+}
+
+uint32_t
+e_group_leader_rank ()
+{
+  /* Leader col is adjusted to '1' when groupid (northwestmost coreid) is 0 */
+  uint32_t leader_col = e_group_config.group_id ? 0x0 : 0x1;
+
+  /* Leader row is always 0 */
+  return leader_col;
+}
+
+bool
+e_group_leader_p ()
+{
+  return e_group_my_rank () == e_group_leader_rank ();
+}
+
+uint32_t
+e_group_size ()
+{
+  static bool cached = false;
+  static uint32_t size = 0;
+
+  /* ???: what to do when group_id = 0 */
+
+  if (!cached)
+    {
+      cached = true;
+      size = e_group_config.group_cols * e_group_config.group_rows;
+    }
+
+  return size;
+}
+
+uint32_t
+e_rank_to_coreid (uint32_t rank)
+{
+  uint32_t row = e_group_row (rank);
+  uint32_t col = e_group_col (rank);
+
+  return (row << 6) | col;
+}
+
 void *
-e_get_global_address (unsigned row, unsigned col, const void *ptr)
+e_group_global_address (uint32_t rank, const void *ptr)
 {
   uint32_t coreid;
   uintptr_t uptr = (uintptr_t) ptr;
@@ -224,10 +420,53 @@ e_get_global_address (unsigned row, unsigned col, const void *ptr)
   if (uptr & 0xfff00000)
     return (void *) uptr;
 
-  if ((row == E_SELF) || (col == E_SELF))
+  if (rank == (uint32_t) E_SELF)
     coreid = e_get_coreid ();
   else
-    coreid = (row * 0x40 + col);
+    coreid = e_rank_to_coreid (rank) +  e_group_config.group_id;
+
+  /* Get the 20 ls bits of the pointer and add coreid. */
+  uptr |= (coreid << 20);
+
+  return (void *) uptr;
+}
+
+void
+e_coords_from_coreid(e_coreid_t coreid, uint32_t *row, uint32_t *col)
+{
+  coreid = coreid - e_group_config.group_id;
+
+  *row = (coreid >> 6) & 0x3f;
+  *col = coreid & 0x3f;
+
+  return;
+}
+
+e_coreid_t
+e_coreid_from_coords (uint32_t row, uint32_t col)
+{
+  e_coreid_t coreid;
+
+  coreid = ((row & 0x3f) << 6) | (col & 0x3f);
+  coreid = coreid + e_group_config.group_id;
+
+  return coreid;
+}
+
+void *
+e_get_global_address (uint32_t row, uint32_t col, const void *ptr)
+{
+  uint32_t coreid;
+  uintptr_t uptr = (uintptr_t) ptr;
+
+  /* If the address is global, return the pointer unchanged */
+  if (uptr & 0xfff00000)
+    return (void *) uptr;
+
+  if ((row == (unsigned) E_SELF) || (col == (unsigned) E_SELF))
+    coreid = e_get_coreid ();
+  else
+    coreid = ((row << 6) | col) + e_group_config.group_id;
 
   /* Get the 20 ls bits of the pointer and add coreid. */
   uptr |= (coreid << 20);
@@ -333,7 +572,8 @@ e_dma_start(e_dma_desc_t *descriptor, e_dma_id_t chan)
 
 e_dma_desc_t _dma_copy_descriptor_ __attribute__((section(".data_bank0")));
 
-int e_dma_copy(void *dst, void *src, size_t n)
+int
+e_dma_copy(void *dst, void *src, size_t n)
 {
   const uintptr_t local_mask = 0xfff00000;
   e_dma_id_t chan;

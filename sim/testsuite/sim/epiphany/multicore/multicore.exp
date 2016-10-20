@@ -50,7 +50,8 @@ set board_info([target_info name],ldflags) "\
     -Wl,--section-start=RESERVED_CRT0=0x100,--section-start=.init=0x300 \
     -Wl,--section-start=.data_bank0=0x400 \
     -Wl,-Ttext=0x1000,-Tdata=0x40000,--defsym=__heap_start=0x80000 \
-    -Wl,--defsym=__heap_end=0xb0000,--defsym=__stack=0xffff0"
+    -Wl,--defsym=__heap_end=0xb0000,--defsym=__stack=0xffff0 \
+    -Wl,--section-start=workgroup_cfg=0x28,--section-start=ext_mem_cfg=0x50"
 
 foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.c]] {
     # If we're only testing specific files and this isn't one of them,

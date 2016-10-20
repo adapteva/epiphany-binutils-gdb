@@ -1,3 +1,42 @@
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/multicore.exp (ldflags): Define section start of
+	workgroup_cfg and ext_mem_cfg.
+	* multicore/e-lib-inl.h (barrier): Add compiler barrier macro.
+	(e_objtype_t): Import enum from e-lib.
+	(e_chiptype_t): Import enum from e-lib.
+	(e_group_config_t): Import struct from e-lib.
+	(e_group_config): Add global data structure.
+	(e_emem_config): Add global data structure.
+	(e_irq_global_mask): Add barriers around code.
+	(e_irq_mask): Ditto.
+	(e_reg_write): Ditto.
+	(e_reg_read): Ditto.
+	(e_irq_attach): Ditto
+	(e_irq_set): Ditto.
+	(e_group_rows): New function. Not in e-hal.
+	(e_group_last_row): Ditto.
+	(e_group_last_col): Ditto.
+	(e_group_cols): Ditto.
+	(e_group_my_row): Ditto.
+	(e_group_row): Ditto.
+	(e_group_col): Ditto.
+	(e_group_rank): Ditto.
+	(e_group_my_col): Ditto.
+	(e_group_my_rank): Ditto.
+	(e_group_leader_rank): Ditto.
+	(e_group_leader_p): Ditto.
+	(e_group_size): Ditto.
+	(e_rank_to_coreid): Ditto.
+	(e_group_global_address): Ditto.
+	(e_coords_from_coreid): Import from e-lib.
+	(e_coreid_from_coords): Import from e-lib.
+	(e_get_global_address): Make use of e_group_config.
+	* multicore/domino.c: Rewrite from hardcoded mesh property defines, to
+	make use of e-lib API to dynamically figure out mesh configuration.
+	* multicore/domino-dma.c: Ditto.
+	* multicore/wand.c: Ditto.
+
 2015-11-29  Ola Jeppsson  <ola@adapteva.com>
 
 	* imul.cgs: New test.

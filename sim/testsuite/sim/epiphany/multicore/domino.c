@@ -11,37 +11,12 @@
 #include <stdbool.h>
 #include "e-lib-inl.h"
 
-#ifndef ROWS
-#  define ROWS 4
-#endif
-#ifndef COLS
-#  define COLS 4
-#endif
-
-
-#define E_ROW(x) ((x) >> 6)
-#define E_COL(x) ((x) & ((1<<6)-1))
-#define E_CORE(r, c) (((r) << 6) | (c))
-
-#ifndef FIRST_CORE
-#  define FIRST_CORE 0x808  // Coreid of first core in group
-#endif
-
-#define FIRST_ROW E_ROW(FIRST_CORE)    // First row in group
-#define FIRST_COL E_COL(FIRST_CORE)    // First col in group
-
-#if FIRST_CORE
-#define LEADER FIRST_CORE
-#else
-#define LEADER 0x1
-#endif
-
 /* Make linker allocate memory for message box. Same binary, so same address
  * on all cores. */
-uint16_t _msg_box[ROWS*COLS+1];
+uint16_t _msg_box[4096];
 #define MSG_BOX _msg_box
 
-volatile uint32_t _start_sync[ROWS*COLS] = { 0, };
+volatile uint32_t _start_sync[4096] = { 0, };
 #define START_SYNC _start_sync
 
 /* Can't hook up to sync since e-server traps it */
@@ -51,37 +26,34 @@ void print_route ();
 
 int main ()
 {
-  int i, j;
+  unsigned i;
 
-  uint32_t coreid = e_get_coreid ();
-  uint32_t *start_sync =
-    e_get_global_address (FIRST_ROW, FIRST_COL, (void *) START_SYNC);
+  uint32_t *start_sync = (uint32_t *)
+    e_group_global_address (e_group_leader_rank (), (void *) START_SYNC);
 
   e_irq_global_mask (true);
-  e_irq_mask (E_MESSAGE_INT, false);
+  e_irq_mask (E_MESSAGE_INT, true);
   e_irq_attach (E_MESSAGE_INT, interrupt_handler);
 
-  if (coreid == LEADER)
+  start_sync[e_group_my_rank ()] = 1;
+
+  if (e_group_leader_p ())
     {
-      for (i = 0; i < ROWS; i++)
-	for (j = 1; j < COLS; j++)
-	  while (!START_SYNC[i * ROWS + j]) ;
+      for (i = e_group_my_rank (); i < e_group_size (); i++)
+	while (!START_SYNC[i])
+	  ;
 
       pass_message ();
     }
-  else
-    {
-      i = E_ROW(coreid) - FIRST_ROW;
-      j = E_COL(coreid) - FIRST_COL;
-      start_sync[i * ROWS + j] = 1;
-    }
 
+  e_irq_global_mask (true);
+  e_irq_mask (E_MESSAGE_INT, false);
   e_idle ();
 
   /* will block until return from interrupt handler (triggered by message from
    * other core). */
 
-  if (e_get_coreid () == LEADER)
+  if (e_group_leader_p ())
     print_route ();  /* Print route message took */
   else
     pass_message (); /* Pass message to next core in path */
@@ -98,56 +70,58 @@ uint32_t next_hop ()
 {
   enum direction_t { LEFT, RIGHT } direction;
 
-  uint32_t coreid;
-  unsigned row, col, rel_row, rel_col;
+  unsigned myrow, mycol, lastrow, lastcol;
 
-  coreid = e_get_coreid ();
-  row = E_ROW(coreid);
-  col = E_COL(coreid);
-  rel_row = row - FIRST_ROW;
-  rel_col = col - FIRST_COL;
+  myrow = e_group_my_row ();
+  mycol = e_group_my_col ();
+  lastrow = e_group_last_row ();
+  lastcol = e_group_last_col ();
 
   /* Go left on odd rel row, right on even */
-  direction = (rel_row & 1) ? LEFT : RIGHT;
+  direction = (myrow & 1) ? LEFT : RIGHT;
 
-  if (coreid == LEADER)
+  if (e_group_leader_p ())
     {
-      if (rel_col < COLS-1)
-	return E_CORE(row, col+1);
+      if (mycol < lastcol)
+	return e_group_rank (myrow, mycol+1);
+      else if (myrow < lastrow)
+	return e_group_rank (myrow + 1, mycol);
       else
-	return E_CORE(row+1, col);
+	return e_group_leader_rank ();
     }
 
-  if (!rel_col)
+  if (mycol == 0 && e_group_cols () > 1)
     {
-      if (rel_row == 1)
-	return LEADER;
+      if (myrow <= 1)
+	return e_group_leader_rank ();
       else
-	return E_CORE(row-1, col);
+	return e_group_rank (myrow-1, mycol);
     }
-
-  //if (rel_row == ROWS-1)
-  //  return E_CORE(row, col-1);
 
   switch (direction)
     {
     case LEFT:
-      if (rel_col == 1 && rel_row != ROWS-1)
-	return E_CORE(row+1, col);
+      if (mycol == 1 && myrow != lastrow)
+	return e_group_rank (myrow+1, mycol);
+      else if (mycol != 0)
+	return e_group_rank (myrow, mycol-1);
+      else if (myrow != lastrow)
+	return e_group_rank (myrow+1, mycol);
       else
-	return E_CORE(row, col-1);
+	return e_group_leader_rank ();
 
     case RIGHT:
-      if (rel_row == ROWS-1 && rel_col == COLS-1)
-	return E_CORE(row, FIRST_COL);
-      else if (rel_col == COLS-1)
-	return E_CORE(row+1, col);
+      if (myrow == lastrow && mycol == lastcol)
+	return e_group_rank (myrow, 0);
+      else if (mycol == lastcol)
+	return e_group_rank (myrow+1, mycol);
       else
-	return E_CORE(row, col+1);
+	return e_group_rank (myrow, mycol+1);
     }
 
-  return FIRST_CORE;
-
+  /* BUG */
+  printf("%#x: next_hop: BUG", e_get_coreid ());
+  abort ();
 }
 
 void pass_message ()
@@ -157,33 +131,35 @@ void pass_message ()
   uint16_t *next_msgbox;
   uint16_t *msgbox = (uint16_t *) MSG_BOX;
 
-  if (e_get_coreid () == LEADER)
+  if (e_group_leader_p ())
     *msgbox = 0;
 
   msgbox[0]++;
   n = msgbox[0];
-  msgbox[n] = (uint16_t) (((unsigned) e_get_coreid ()) & 0xffff);
+
+  /* Add 1 to rank to distinguish between passed message / no message from
+   * leader */
+  msgbox[n] = (uint16_t) ((e_group_my_rank () + 1) & 0xffff);
 
   next = next_hop ();
-  next_msgbox = (uint16_t *)
-    e_get_global_address (E_ROW(next), E_COL(next), (void *) MSG_BOX);
+  next_msgbox = (uint16_t *) e_group_global_address (next, (void *) MSG_BOX);
   memcpy ((void *) next_msgbox, (void *) msgbox, (n+1)*sizeof (msgbox[0]));
 
-  e_irq_set (E_ROW(next), E_COL(next), E_MESSAGE_INT);
+  e_irq_set (e_group_row (next), e_group_col (next), E_MESSAGE_INT);
 }
 
-static void print_path (uint16_t path[ROWS][COLS], uint16_t row, uint16_t col)
+static void print_path (uint16_t *path, uint16_t row, uint16_t col)
 {
   signed north, east, south, west;
   uint16_t next, prev;
 
-  north = row == 0      ? -2 : path[row-1][col  ];
-  west  = col == 0      ? -2 : path[row  ][col-1];
-  south = row == ROWS-1 ? -2 : path[row+1][col  ];
-  east  = col == COLS-1 ? -2 : path[row  ][col+1];
+  north = row == 0                   ? -2 : path[e_group_rank (row-1, col  )];
+  west  = col == 0                   ? -2 : path[e_group_rank (row  , col-1)];
+  south = row == e_group_last_row () ? -2 : path[e_group_rank (row+1, col  )];
+  east  = col == e_group_last_col () ? -2 : path[e_group_rank (row  , col+1)];
 
-  next = path[row][col] + 1;
-  prev = path[row][col] - 1;
+  next = path[e_group_rank(row, col)] + 1;
+  prev = path[e_group_rank(row, col)] - 1;
 
   if (!prev)
     fputs ("○", stdout);
@@ -201,29 +177,24 @@ static void print_path (uint16_t path[ROWS][COLS], uint16_t row, uint16_t col)
 
 void print_route ()
 {
-  int i,j;
-  uint32_t core;
-  unsigned row, col;
-  uint16_t path[ROWS][COLS];
+  unsigned i,j;
+  uint32_t rank1; /* rank + 1 */
+  uint16_t path[e_group_size ()];
   uint16_t *msgbox = (uint16_t *) MSG_BOX;
 
   printf ("Got %d messages\n", msgbox[0]);
   printf ("Message path:\n");
   for (i=0; i < msgbox[0]; i++)
     {
-      core = msgbox[i+1];
-      if (core)
-	{
-	  row = E_ROW(core) - FIRST_ROW;
-	  col = E_COL(core) - FIRST_COL;
-	  path[row][col] = i+1;
-	}
+      rank1 = msgbox[i+1];
+      if (rank1)
+	path[rank1 - 1] = i+1;
     }
-  for (i=0; i < ROWS; i++)
+  for (i=0; i < e_group_rows (); i++)
     {
-      for (j=0; j < COLS; j++)
+      for (j=0; j < e_group_cols (); j++)
 	{
-	  if (path[i][j])
+	  if (path[e_group_rank (i, j)])
 	    print_path (path, i, j);
 	  else
 	    fputs ("⨯", stdout);
