@@ -1,3 +1,12 @@
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (sem-fpu): New pmacro. One common semantics
+	pmacro for all fpu instructions.
+	(op-two_operands-float): Use sem-fpu.
+	(op-fabs-float): Likewise.
+	(op-fix2float-float): Likewise.
+	(op-float2fix): Likewise.
+
 2015-10-07  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (op-two_operands-float): Add missing short

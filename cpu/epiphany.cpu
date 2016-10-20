@@ -2807,146 +2807,118 @@
       )
 
 
+(define-pmacro (sem-fpu SF_P DF_P SI_P PLACEHOLDER xname xrd xargs)
+  (cond VOID
+(%if SF_P
+    ((eq arithmetic-modebit2 0)
+      (sequence ((SF fptemp) (SI sdtmp) (BI bubit) (BI bibit))
+        (set sdtmp
+          (%splice c-call SI (%str "epiphany_f" xname) xrd (%unsplice xargs)))
+
+        ;;All bits are calculated in C
+        (set bzbit  (c-call BI "get_epiphany_fzeroflag"      sdtmp))
+        (set bnbit  (c-call BI "get_epiphany_fnegativeflag"  sdtmp))
+        (set bvbit  (c-call BI "get_epiphany_foverflowflag"  sdtmp))
+        (set bubit  (c-call BI "get_epiphany_funderflowflag" sdtmp))
+        (set bibit  (c-call BI "get_epiphany_finvalidflag"   sdtmp))
+        (set bvsbit (or bvsbit bvbit))
+        (set busbit (or busbit bubit))
+        (set bisbit (or bisbit bibit))
+        (set xrd sdtmp)
+        (if (or (and invexcenbit bisbit)
+                (or (and ovfexcenbit bvsbit) (and unexcenbit busbit)))
+          (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
+        )
+      )
+    )
+    ((eq 1 0) (error "unreachable"))
+)
+(%if SI_P
+    ((eq arithmetic-modebit2 1)
+        (sequence ((SI sdtmp))
+          (set sdtmp
+            (%splice c-call SI (%str "epiphany_i" xname) xrd (%unsplice xargs)))
+          ;; carry is not connected inb the design (set bcbit bcbit)
+          (set bzbit (zflag sdtmp))
+          (set bnbit (nflag sdtmp))
+          (set xrd sdtmp)
+        )
+    )
+    ((eq 1 0) (error "unreachable"))
+)
+    ;; TODO: double / simd
+    (else
+      (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-ILLEGAL))
+    )
+  )
+)
+
 
 ;; FLOATING POINT OPERATIONS
 ;; TWO operands
 (define-pmacro (op-two_operands-float name code)
   (begin
-    (dni
-      (%sym "f_" name "f16")
-      (%str "f_" name)
-      (SHORT-INSN)
-      (%str "f" name " $rd,$rn,$rm")
-      (+ OP4_DSP16 code rd rn rm)
-      (sequence ()
-	(if
-	  (eq  arithmetic-modebit2 0)
-	  (sequence ((SF fptemp) (SI sdtmp) (BI bubit) (BI bibit))
-	    (set sdtmp  (c-call SI (%str "epiphany_f" name) rd rn rm))
-
-	    ;;All bits are calculated in C
-	    (set bzbit  (c-call BI "get_epiphany_fzeroflag" sdtmp))
-	    (set bnbit  (c-call BI "get_epiphany_fnegativeflag" sdtmp))
-	    (set bvbit  (c-call BI "get_epiphany_foverflowflag" sdtmp))
-	    (set bubit  (c-call BI "get_epiphany_funderflowflag" sdtmp))
-	    (set bibit  (c-call BI "get_epiphany_finvalidflag" sdtmp))
-	    (set bvsbit (or bvsbit bvbit))
-	    (set busbit (or busbit bubit))
-	    (set bisbit (or bisbit bibit))
-	    (set rd sdtmp)
-	    (if (or (and invexcenbit bisbit)
-		    (or (and ovfexcenbit bvsbit) (and unexcenbit busbit)))
-		  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
-		)
-	  )
-	)
-	(if (eq arithmetic-modebit2 1)
-	    (sequence ((SI sdtmp))
-	      (set sdtmp  (c-call SI (%str "epiphany_i" name) rd rn rm))
-	      ;; carry is not connected inb the design (set bcbit bcbit)
-	      (set bzbit (zflag sdtmp))
-	      (set bnbit (nflag sdtmp))
-	      (set rd sdtmp)))
-	)
-
-      ()
-      )
+    (dni (%sym "f_" name "f16")
+         (%str "f_" name)
+         (SHORT-INSN)
+         (%str "f" name " $rd,$rn,$rm")
+         (+ OP4_DSP16 code rd rn rm)
+         (sem-fpu #t #t #t #t name rd (rn rm))
+         ()
+         )
     (dnmi (%sym "i_" name "f16")
           (%str "i_" name)
           (SHORT-INSN NO-DIS)
           (%str "i" name " $rd,$rn,$rm")
           (emit (%sym "f_" name "f16") rd rn rm)
-    )
-
-    ;; 64-bit float
-    (dnmi (%sym "f64_" name ".s")
+          )
+    (dnmi (%sym "f64_" name ".s") ;; 64-bit float
           (%str "f64_" name ".s")
           (SHORT-INSN NO-DIS)
           (%str "f" name "64 $rd,$rn,$rm")
           (emit (%sym "f_" name "f16") rd rn rm)
-    )
-
+          )
     ;; long insns
-    (dni
-      (%sym "f_" name "f32")
-      (%str "f_" name)
-      ()
-      (%str "f" name " $rd6,$rn6,$rm6")
-      (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rm6)
-      (sequence ()
-	(if
-	  (eq arithmetic-modebit2 0)
-	  (sequence ((SF fptemp) (SI sdtmp) (BI bubit) (BI bibit))
-	    (set sdtmp  (c-call SI (%str "epiphany_f" name) rd6 rn6 rm6))
-
-	    ;;All bits are calculated in C
-	    (set bzbit  (c-call BI "get_epiphany_fzeroflag" sdtmp))
-	    (set bnbit  (c-call BI "get_epiphany_fnegativeflag" sdtmp))
-	    (set bvbit  (c-call BI "get_epiphany_foverflowflag" sdtmp))
-	    (set bubit  (c-call BI "get_epiphany_funderflowflag" sdtmp))
-	    (set bibit  (c-call BI "get_epiphany_finvalidflag" sdtmp))
-	    (set bvsbit (or bvsbit bvbit))
-	    (set busbit (or busbit bubit))
-	    (set bisbit (or bisbit bibit))
-
-	    (set rd6 sdtmp)
-
-	    (if (or (and invexcenbit bisbit)
-		    (or (and ovfexcenbit bvsbit) (and unexcenbit busbit)))
-		  (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
-		)
-	  )
-	)
-	(if (eq arithmetic-modebit2 1)
-	    (sequence ((SI sdtmp))
-	      (set sdtmp (c-call SI (%str "epiphany_i" name) rd6 rn6 rm6))
-	      ;; carry is not connected inb the design (set bcbit bcbit)
-	      (set bzbit (zflag sdtmp))
-	      (set bnbit (nflag sdtmp))
-	      (set rd6 sdtmp)
-	      )
-	    )
-	)
-	;; TODO: double / simd
-      ()
-      )
-
+    (dni (%sym "f_" name "f32")
+         (%str "f_" name)
+         ()
+         (%str "f" name " $rd6,$rn6,$rm6")
+         (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rm6)
+         (sem-fpu #t #t #t #t name rd6 (rn6 rm6))
+         ()
+         )
     (dnmi (%sym "f_" name "f32.l")
-	  (%str "f_" name)
-	  (NO-DIS)
-	  (%str "f" name ".l $rd6,$rn6,$rm6")
-	  (emit  (%sym "f_" name "f32") rd6  rn6 rm6)
-	  )
+          (%str "f_" name)
+          (NO-DIS)
+          (%str "f" name ".l $rd6,$rn6,$rm6")
+          (emit  (%sym "f_" name "f32") rd6  rn6 rm6)
+          )
     (dnmi (%sym "i_" name "f32")
-	  (%str "i_" name)
-	  (NO-DIS)
-	  (%str "i" name " $rd6,$rn6,$rm6")
-	  (emit  (%sym "f_" name "f32") rd6  rn6 rm6)
-	  )
+          (%str "i_" name)
+          (NO-DIS)
+          (%str "i" name " $rd6,$rn6,$rm6")
+          (emit  (%sym "f_" name "f32") rd6  rn6 rm6)
+          )
     (dnmi (%sym "i_" name "f32.l")
-	  (%str "i_" name)
-	  (NO-DIS)
-	  (%str "i" name ".l $rd6,$rn6,$rm6")
-	  (emit  (%sym "f_" name "f32") rd6  rn6 rm6)
-	  )
-
-    ;; 64-bit float (double)
-    (dnmi (%sym "f64_" name)
+          (%str "i_" name)
+          (NO-DIS)
+          (%str "i" name ".l $rd6,$rn6,$rm6")
+          (emit  (%sym "f_" name "f32") rd6  rn6 rm6)
+          )
+    (dnmi (%sym "f64_" name) ;; 64-bit float (double)
           (%str "f64_" name)
           (NO-DIS)
           (%str "f" name "64 ${rd6-df},${rn6-df},${rm6-df}")
           (emit (%sym "f_" name "f32") rd6  rn6 rm6)
-    )
-    ;; 64-bit float (double) ".l"
-    (dnmi (%sym "f64_" name ".l")
+          )
+    (dnmi (%sym "f64_" name ".l") ;; 64-bit float (double) ".l"
           (%str "f64_" name ".l")
           (NO-DIS)
           (%str "f" name "64.l ${rd6-df},${rn6-df},${rm6-df}")
           (emit (%sym "f_" name "f32") rd6  rn6 rm6)
-    )
+          )
   )
 )
-
 (op-two_operands-float add OPF_ADD)
 (op-two_operands-float sub OPF_SUB)
 (op-two_operands-float mul OPF_MUL)
@@ -2958,208 +2930,85 @@
 (define-pmacro (op-fabs-float name code)
   (begin
     (dni (%sym "f_" name "f16")
-		 (%str "f_" name)
-		 (SHORT-INSN)
-		 (%str "f" name " rd,rn")
-		 (+ OP4_DSP16 code rd rn rn)
-		 (sequence ((SF fptemp) (SI sdtmp))
-
-		   ;(set sdtmp  (and rn  #x7fffffff))
-		   (set sdtmp  (c-call SI (%str "epiphany_fabs") rd rn rn))
-
-
-		   (set bnbit  (const SI 0))
-		   (set bzbit (eq SI sdtmp  (const SI 0)))
-
-		   ;;TODO subnormal ??
-		   (set bvsbit (or bvsbit bvbit))
-		   ;;(set busbit (or busbit bubit))
-		   ;;(set bisbit (or bisbit bibit))
-
-		   (set rd sdtmp)
-		   )
-		 ()
-		 )
-
+         (%str "f_" name)
+         (SHORT-INSN)
+         (%str "f" name " rd,rn")
+         (+ OP4_DSP16 code rd rn rn)
+         (sem-fpu #t #t #f #f name rd (rn))
+         ()
+         )
     (dni (%sym "f_" name "f32")
-		 (%str "f_" name)
-		 ()
-		 (%str "f" name " $rd6,$rn6")
-		 (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
-		 (sequence ((SF fptemp) (SI sdtmp))
-
-
-		   ;(set sdtmp   (and rn6  #x7fffffff))
-
-		   (set sdtmp  (c-call SI (%str "epiphany_fabs") rd6 rn6 rn6))
-
-
-		   (set bnbit   (const SI 0))
-		   (set bzbit (eq SI sdtmp  (const SI 0)))
-
-		   (set bvsbit (or bvsbit bvbit))
-		   ;;(set busbit (or busbit bubit))
-		   ;;(set bisbit (or bisbit bibit))
-
-		   (set rd6 sdtmp)
-
-		   )
-		 ()
-		 )
-
-    (dnmi  (%sym "f_" name "f32.l")
-	   (%str "f_" name)
-	   (NO-DIS)
-	   (%str "f" name ".l $rd6,$rn6")
-	   (emit (%sym "f_" name "f32") rd6  rn6)
-	   )
-
-
-    )
+         (%str "f_" name)
+         ()
+         (%str "f" name " $rd6,$rn6")
+         (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
+         (sem-fpu #t #f #f #f name rd6 (rn6))
+         ()
+         )
+    (dnmi (%sym "f_" name "f32.l")
+          (%str "f_" name)
+          (NO-DIS)
+          (%str "f" name ".l $rd6,$rn6")
+          (emit (%sym "f_" name "f32") rd6  rn6)
+          )
   )
-
+)
 (op-fabs-float abs OPF_FABS)
-
 
 (define-pmacro (op-fix2float-float name code)
   (begin
     (dni (%sym "f_" name "f16")
-		 (%str "f_" name)
-		 (SHORT-INSN)
-		 (%str "f" name " $rd,$rn")
-		 (+ OP4_DSP16 code frd frn frn)
-		 (sequence ((SF fptemp) (SI sdtmp))
-
-		   (set sdtmp  (c-call SI (%str "epiphany_f" name) rd rn rn))
-
-		   (set bnbit (lt SI sdtmp  (const SI 0)))
-		   (set bzbit (eq SI sdtmp  (const SI 0)))
-
-		   (set bvsbit (or bvsbit bvbit))
-		   ;;(set busbit (or busbit bubit))
-		   ;;(set bisbit (or bisbit bibit))
-
-		   (set rd sdtmp)
-		   )
-		 ()
-		 )
-
-
+         (%str "f_" name)
+         (SHORT-INSN)
+         (%str "f" name " $rd,$rn")
+         (+ OP4_DSP16 code frd frn frn)
+         (sem-fpu #t #f #f #f name rd (rn))
+         ()
+         )
     (dni (%sym "f_" name "f32")
-		 (%str "f_" name)
-		 ()
-		 (%str "f" name " $rd6,$rn6")
-		 (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
-		 (sequence ((SF fptemp) (SI sdtmp))
-
-		   (set sdtmp  (c-call SI (%str "epiphany_f" name) rd6 rn6 rn6))
-
-		   (set bnbit (lt SI sdtmp  (const SI 0)))
-		   (set bzbit (eq SI sdtmp  (const SI 0)))
-
-		   (set bvsbit (or bvsbit bvbit))
-		   ;;(set busbit (or busbit bubit))
-		   ;;(set bisbit (or bisbit bibit))
-
-		   (set rd6 sdtmp)
-
-		   )
-		 ()
-		 )
-
+         (%str "f_" name)
+         ()
+         (%str "f" name " $rd6,$rn6")
+         (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
+         (sem-fpu #t #f #f #f name rd6 (rn6))
+         ()
+         )
     (dnmi (%sym "f_" name "f32.l")
-	  (%str "f_" name)
-	  (NO-DIS)
-	  (%str "f" name ".l $rd6,$rn6")
-	  (emit (%sym "f_" name "f32")  rd6 rn6)
-	  )
-    )
+          (%str "f_" name)
+          (NO-DIS)
+          (%str "f" name ".l $rd6,$rn6")
+          (emit (%sym "f_" name "f32")  rd6 rn6)
+          )
   )
-
+)
 (op-fix2float-float loat OPF_FLOAT)
 
 (define-pmacro (op-float2fix-float name code)
   (begin
     (dni (%sym "f_" name "f16")
-		 (%str "f_" name)
-		 (SHORT-INSN)
-		 (%str "f" name " $rd,$rn")
-		 (+ OP4_DSP16 code rd rn rn)
-		 (sequence ((SF fptemp) (SI sdtmp) (BI bubit) (BI bibit))
-
-		   (set sdtmp  (c-call SI (%str "epiphany_f" name) rd rn rn))
-
-		   (set bzbit (zflag sdtmp))
-		   (set bnbit (nflag sdtmp))
-
-		   (set bvbit  (c-call BI "get_epiphany_foverflowflag" sdtmp))
-		   (set bubit  (c-call BI "get_epiphany_funderflowflag" sdtmp))
-		   (set bibit  (c-call BI "get_epiphany_finvalidflag" sdtmp))
-
-		   (set bvsbit (or bvsbit bvbit))
-		   (set busbit (or busbit bubit))
-		   (set bisbit (or bisbit bibit))
-
-		   (set rd6 sdtmp)
-
-		   (if (or (and invexcenbit bisbit)
-			   (or (and ovfexcenbit busbit)
-			       (and unexcenbit bvsbit)))
-			 (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
-		   )
-		   (set rd sdtmp)
-		   )
-		 ()
-		 )
-
-
-
+         (%str "f_" name)
+         (SHORT-INSN)
+         (%str "f" name " $rd,$rn")
+         (+ OP4_DSP16 code rd rn rn)
+         (sem-fpu #t #f #f #f name rd (rn))
+         ()
+         )
     (dni (%sym "f_" name "f32")
-		 (%str "f_" name)
-		 ()
-		 (%str "f" name " $rd6,$rn6")
-		 (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
-		 (sequence ((SF fptemp) (SI sdtmp) (BI bubit) (BI bibit))
-
-		   (set sdtmp  (c-call SI (%str "epiphany_f" name) rd6 rn6 rm6))
-
-		   (set bzbit (zflag sdtmp))
-		   (set bnbit (nflag sdtmp))
-
-		   (set bvbit  (c-call BI "get_epiphany_foverflowflag" sdtmp))
-		   (set bubit  (c-call BI "get_epiphany_funderflowflag" sdtmp))
-		   (set bibit  (c-call BI "get_epiphany_finvalidflag" sdtmp))
-
-		   (set bvsbit (or bvsbit bvbit))
-		   (set busbit (or busbit bubit))
-		   (set bisbit (or bisbit bibit))
-
-		   (set rd6 sdtmp)
-
-		   (if (or (and invexcenbit bisbit)
-			   (or (and ovfexcenbit busbit)
-			       (and unexcenbit bvsbit)))
-			 (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-FPU))
-		   )
-		 )
-		 ()
-	)
-
+         (%str "f_" name)
+         ()
+         (%str "f" name " $rd6,$rn6")
+         (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
+         (sem-fpu #t #f #f #f name rd6 (rn6))
+         ()
+         )
     (dnmi (%sym "f_" name "f32.l")
-	  (%str "f_" name)
-	  (NO-DIS)
-	  (%str "f" name ".l $rd6,$rn6")
-	  (emit (%sym "f_" name "f32") rd6  rn6)
-	  )
-
-
-    )
+          (%str "f_" name)
+          (NO-DIS)
+          (%str "f" name ".l $rd6,$rn6")
+          (emit (%sym "f_" name "f32") rd6  rn6)
+          )
   )
-
-
-
-
-
+)
 (op-float2fix-float ix OPF_FIX)
 
 ;; FMAX
