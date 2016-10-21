@@ -149,7 +149,7 @@ static int
 generic_hw_unit_address_to_attach_address (struct hw *me,
 					   const hw_unit *address,
 					   int *attach_space,
-					   unsigned_word *attach_address,
+					   address_word *attach_address,
 					   struct hw *client)
 {
   int i;
@@ -169,7 +169,7 @@ generic_hw_unit_address_to_attach_address (struct hw *me,
 static int
 generic_hw_unit_size_to_attach_size (struct hw *me,
 				     const hw_unit *size,
-				     unsigned *nr_bytes,
+				     address_word *nr_bytes,
 				     struct hw *client)
 {
   int i;
@@ -215,34 +215,34 @@ passthrough_hw_detach_address (struct hw *me,
 		     client);
 }
 
-static unsigned
+static address_word
 panic_hw_io_read_buffer (struct hw *me,
 			 void *dest,
 			 int space,
-			 unsigned_word addr,
-			 unsigned nr_bytes)
+			 address_word addr,
+			 address_word nr_bytes)
 {
   hw_abort (me, "no io-read method");
   return 0;
 }
 
-static unsigned
+static address_word
 panic_hw_io_write_buffer (struct hw *me,
 			  const void *source,
 			  int space,
-			  unsigned_word addr,
-			  unsigned nr_bytes)
+			  address_word addr,
+			  address_word nr_bytes)
 {
   hw_abort (me, "no io-write method");
   return 0;
 }
 
-static unsigned
+static address_word
 passthrough_hw_dma_read_buffer (struct hw *me,
 				void *dest,
 				int space,
-				unsigned_word addr,
-				unsigned nr_bytes)
+				address_word addr,
+				address_word nr_bytes)
 {
   if (hw_parent (me) == NULL)
     hw_abort (me, "no parent dma-read method");
@@ -250,12 +250,12 @@ passthrough_hw_dma_read_buffer (struct hw *me,
 			     space, addr, nr_bytes);
 }
 
-static unsigned
+static address_word
 passthrough_hw_dma_write_buffer (struct hw *me,
 				 const void *source,
 				 int space,
-				 unsigned_word addr,
-				 unsigned nr_bytes,
+				 address_word addr,
+				 address_word nr_bytes,
 				 int violate_read_only_section)
 {
   if (hw_parent (me) == NULL)
@@ -554,9 +554,9 @@ do_hw_attach_regs (struct hw *hw)
 					   &reg);
 	       reg_entry++)
 	    {
-	      unsigned_word attach_address;
+	      address_word attach_address;
 	      int attach_space;
-	      unsigned attach_size;
+	      address_word attach_size;
 	      if (!hw_unit_address_to_attach_address (hw_parent (hw),
 						      &reg.address,
 						      &attach_space,

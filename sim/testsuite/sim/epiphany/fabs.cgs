@@ -1,0 +1,21 @@
+# epiphany testcase for fabs $frd6,$frn6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fabs
+fabs:
+	mov	r20,0
+	mova	r21,0f4.5
+	fsub	r20,r20,r21
+	fabs	r22,r20
+	sub	r23,r22,r21
+	bne	1f
+	sub	r23,r20,0
+	beq	1f
+
+	trap	#4
+1:
+	trap	#5

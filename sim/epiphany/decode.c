@@ -83,36 +83,34 @@ static const struct insn_sem epiphanybf_insn_sem[] =
   { EPIPHANY_INSN_JALR16, EPIPHANYBF_INSN_JALR16, EPIPHANYBF_SFMT_JALR16 },
   { EPIPHANY_INSN_JALR, EPIPHANYBF_INSN_JALR, EPIPHANYBF_SFMT_JALR },
   { EPIPHANY_INSN_LDRBX16_S, EPIPHANYBF_INSN_LDRBX16_S, EPIPHANYBF_SFMT_LDRBX16_S },
-  { EPIPHANY_INSN_LDRBP16_S, EPIPHANYBF_INSN_LDRBP16_S, EPIPHANYBF_SFMT_LDRBP16_S },
   { EPIPHANY_INSN_LDRBX_L, EPIPHANYBF_INSN_LDRBX_L, EPIPHANYBF_SFMT_LDRBX_L },
+  { EPIPHANY_INSN_LDRBP16_S, EPIPHANYBF_INSN_LDRBP16_S, EPIPHANYBF_SFMT_LDRBP16_S },
   { EPIPHANY_INSN_LDRBP_L, EPIPHANYBF_INSN_LDRBP_L, EPIPHANYBF_SFMT_LDRBP_L },
   { EPIPHANY_INSN_LDRBD16_S, EPIPHANYBF_INSN_LDRBD16_S, EPIPHANYBF_SFMT_LDRBD16_S },
   { EPIPHANY_INSN_LDRBD_L, EPIPHANYBF_INSN_LDRBD_L, EPIPHANYBF_SFMT_LDRBD_L },
   { EPIPHANY_INSN_LDRBDPM_L, EPIPHANYBF_INSN_LDRBDPM_L, EPIPHANYBF_SFMT_LDRBDPM_L },
   { EPIPHANY_INSN_LDRHX16_S, EPIPHANYBF_INSN_LDRHX16_S, EPIPHANYBF_SFMT_LDRHX16_S },
-  { EPIPHANY_INSN_LDRHP16_S, EPIPHANYBF_INSN_LDRHP16_S, EPIPHANYBF_SFMT_LDRHP16_S },
   { EPIPHANY_INSN_LDRHX_L, EPIPHANYBF_INSN_LDRHX_L, EPIPHANYBF_SFMT_LDRHX_L },
+  { EPIPHANY_INSN_LDRHP16_S, EPIPHANYBF_INSN_LDRHP16_S, EPIPHANYBF_SFMT_LDRHP16_S },
   { EPIPHANY_INSN_LDRHP_L, EPIPHANYBF_INSN_LDRHP_L, EPIPHANYBF_SFMT_LDRHP_L },
   { EPIPHANY_INSN_LDRHD16_S, EPIPHANYBF_INSN_LDRHD16_S, EPIPHANYBF_SFMT_LDRHD16_S },
   { EPIPHANY_INSN_LDRHD_L, EPIPHANYBF_INSN_LDRHD_L, EPIPHANYBF_SFMT_LDRHD_L },
   { EPIPHANY_INSN_LDRHDPM_L, EPIPHANYBF_INSN_LDRHDPM_L, EPIPHANYBF_SFMT_LDRHDPM_L },
   { EPIPHANY_INSN_LDRX16_S, EPIPHANYBF_INSN_LDRX16_S, EPIPHANYBF_SFMT_LDRX16_S },
-  { EPIPHANY_INSN_LDRP16_S, EPIPHANYBF_INSN_LDRP16_S, EPIPHANYBF_SFMT_LDRP16_S },
   { EPIPHANY_INSN_LDRX_L, EPIPHANYBF_INSN_LDRX_L, EPIPHANYBF_SFMT_LDRX_L },
+  { EPIPHANY_INSN_LDRP16_S, EPIPHANYBF_INSN_LDRP16_S, EPIPHANYBF_SFMT_LDRP16_S },
   { EPIPHANY_INSN_LDRP_L, EPIPHANYBF_INSN_LDRP_L, EPIPHANYBF_SFMT_LDRP_L },
   { EPIPHANY_INSN_LDRD16_S, EPIPHANYBF_INSN_LDRD16_S, EPIPHANYBF_SFMT_LDRD16_S },
   { EPIPHANY_INSN_LDRD_L, EPIPHANYBF_INSN_LDRD_L, EPIPHANYBF_SFMT_LDRD_L },
   { EPIPHANY_INSN_LDRDPM_L, EPIPHANYBF_INSN_LDRDPM_L, EPIPHANYBF_SFMT_LDRDPM_L },
   { EPIPHANY_INSN_LDRDX16_S, EPIPHANYBF_INSN_LDRDX16_S, EPIPHANYBF_SFMT_LDRDX16_S },
-  { EPIPHANY_INSN_LDRDP16_S, EPIPHANYBF_INSN_LDRDP16_S, EPIPHANYBF_SFMT_LDRDP16_S },
   { EPIPHANY_INSN_LDRDX_L, EPIPHANYBF_INSN_LDRDX_L, EPIPHANYBF_SFMT_LDRDX_L },
+  { EPIPHANY_INSN_LDRDP16_S, EPIPHANYBF_INSN_LDRDP16_S, EPIPHANYBF_SFMT_LDRDP16_S },
   { EPIPHANY_INSN_LDRDP_L, EPIPHANYBF_INSN_LDRDP_L, EPIPHANYBF_SFMT_LDRDP_L },
   { EPIPHANY_INSN_LDRDD16_S, EPIPHANYBF_INSN_LDRDD16_S, EPIPHANYBF_SFMT_LDRDD16_S },
   { EPIPHANY_INSN_LDRDD_L, EPIPHANYBF_INSN_LDRDD_L, EPIPHANYBF_SFMT_LDRDD_L },
   { EPIPHANY_INSN_LDRDDPM_L, EPIPHANYBF_INSN_LDRDDPM_L, EPIPHANYBF_SFMT_LDRDDPM_L },
-  { EPIPHANY_INSN_TESTSETBT, EPIPHANYBF_INSN_TESTSETBT, EPIPHANYBF_SFMT_TESTSETBT },
-  { EPIPHANY_INSN_TESTSETHT, EPIPHANYBF_INSN_TESTSETHT, EPIPHANYBF_SFMT_TESTSETBT },
-  { EPIPHANY_INSN_TESTSETT, EPIPHANYBF_INSN_TESTSETT, EPIPHANYBF_SFMT_TESTSETBT },
+  { EPIPHANY_INSN_TESTSETT, EPIPHANYBF_INSN_TESTSETT, EPIPHANYBF_SFMT_TESTSETT },
   { EPIPHANY_INSN_STRBX16, EPIPHANYBF_INSN_STRBX16, EPIPHANYBF_SFMT_STRBX16 },
   { EPIPHANY_INSN_STRBX, EPIPHANYBF_INSN_STRBX, EPIPHANYBF_SFMT_STRBX },
   { EPIPHANY_INSN_STRBP16, EPIPHANYBF_INSN_STRBP16, EPIPHANYBF_SFMT_STRBP16 },
@@ -176,6 +174,7 @@ static const struct insn_sem epiphanybf_insn_sem[] =
   { EPIPHANY_INSN_MOVTSDMA, EPIPHANYBF_INSN_MOVTSDMA, EPIPHANYBF_SFMT_MOVTSDMA },
   { EPIPHANY_INSN_MOVTSMEM, EPIPHANYBF_INSN_MOVTSMEM, EPIPHANYBF_SFMT_MOVTSMEM },
   { EPIPHANY_INSN_MOVTSMESH, EPIPHANYBF_INSN_MOVTSMESH, EPIPHANYBF_SFMT_MOVTSMESH },
+  { EPIPHANY_INSN_MODE, EPIPHANYBF_INSN_MODE, EPIPHANYBF_SFMT_MODE },
   { EPIPHANY_INSN_MOVFS16, EPIPHANYBF_INSN_MOVFS16, EPIPHANYBF_SFMT_MOVFS16 },
   { EPIPHANY_INSN_MOVFS6, EPIPHANYBF_INSN_MOVFS6, EPIPHANYBF_SFMT_MOVFS6 },
   { EPIPHANY_INSN_MOVFSDMA, EPIPHANYBF_INSN_MOVFSDMA, EPIPHANYBF_SFMT_MOVFSDMA },
@@ -186,7 +185,7 @@ static const struct insn_sem epiphanybf_insn_sem[] =
   { EPIPHANY_INSN_UNIMPL, EPIPHANYBF_INSN_UNIMPL, EPIPHANYBF_SFMT_NOP },
   { EPIPHANY_INSN_IDLE, EPIPHANYBF_INSN_IDLE, EPIPHANYBF_SFMT_IDLE },
   { EPIPHANY_INSN_BKPT, EPIPHANYBF_INSN_BKPT, EPIPHANYBF_SFMT_BKPT },
-  { EPIPHANY_INSN_MBKPT, EPIPHANYBF_INSN_MBKPT, EPIPHANYBF_SFMT_MBKPT },
+  { EPIPHANY_INSN_MBKPT, EPIPHANYBF_INSN_MBKPT, EPIPHANYBF_SFMT_NOP },
   { EPIPHANY_INSN_RTI, EPIPHANYBF_INSN_RTI, EPIPHANYBF_SFMT_RTI },
   { EPIPHANY_INSN_WAND, EPIPHANYBF_INSN_WAND, EPIPHANYBF_SFMT_WAND },
   { EPIPHANY_INSN_SYNC, EPIPHANYBF_INSN_SYNC, EPIPHANYBF_SFMT_NOP },
@@ -220,11 +219,16 @@ static const struct insn_sem epiphanybf_insn_sem[] =
   { EPIPHANY_INSN_LSLI32, EPIPHANYBF_INSN_LSLI32, EPIPHANYBF_SFMT_LSRI32 },
   { EPIPHANY_INSN_ASRI16, EPIPHANYBF_INSN_ASRI16, EPIPHANYBF_SFMT_LSRI16 },
   { EPIPHANY_INSN_ASRI32, EPIPHANYBF_INSN_ASRI32, EPIPHANYBF_SFMT_LSRI32 },
+  { EPIPHANY_INSN_ADD64, EPIPHANYBF_INSN_ADD64, EPIPHANYBF_SFMT_ADD64 },
+  { EPIPHANY_INSN_SUB64, EPIPHANYBF_INSN_SUB64, EPIPHANYBF_SFMT_ADD64 },
+  { EPIPHANY_INSN_AND64, EPIPHANYBF_INSN_AND64, EPIPHANYBF_SFMT_AND64 },
+  { EPIPHANY_INSN_ORR64, EPIPHANYBF_INSN_ORR64, EPIPHANYBF_SFMT_AND64 },
+  { EPIPHANY_INSN_EOR64, EPIPHANYBF_INSN_EOR64, EPIPHANYBF_SFMT_AND64 },
+  { EPIPHANY_INSN_ASR64, EPIPHANYBF_INSN_ASR64, EPIPHANYBF_SFMT_ASR64 },
+  { EPIPHANY_INSN_LSR64, EPIPHANYBF_INSN_LSR64, EPIPHANYBF_SFMT_ASR64 },
+  { EPIPHANY_INSN_LSL64, EPIPHANYBF_INSN_LSL64, EPIPHANYBF_SFMT_ASR64 },
   { EPIPHANY_INSN_BITR16, EPIPHANYBF_INSN_BITR16, EPIPHANYBF_SFMT_BITR16 },
   { EPIPHANY_INSN_BITR, EPIPHANYBF_INSN_BITR, EPIPHANYBF_SFMT_BITR },
-  { EPIPHANY_INSN_FEXT, EPIPHANYBF_INSN_FEXT, EPIPHANYBF_SFMT_FEXT },
-  { EPIPHANY_INSN_FDEP, EPIPHANYBF_INSN_FDEP, EPIPHANYBF_SFMT_FEXT },
-  { EPIPHANY_INSN_LFSR, EPIPHANYBF_INSN_LFSR, EPIPHANYBF_SFMT_FEXT },
   { EPIPHANY_INSN_MOV8, EPIPHANYBF_INSN_MOV8, EPIPHANYBF_SFMT_MOV8 },
   { EPIPHANY_INSN_MOV16, EPIPHANYBF_INSN_MOV16, EPIPHANYBF_SFMT_MOV16 },
   { EPIPHANY_INSN_MOVT, EPIPHANYBF_INSN_MOVT, EPIPHANYBF_SFMT_MOVT },
@@ -241,11 +245,12 @@ static const struct insn_sem epiphanybf_insn_sem[] =
   { EPIPHANY_INSN_F_ABSF16, EPIPHANYBF_INSN_F_ABSF16, EPIPHANYBF_SFMT_F_ABSF16 },
   { EPIPHANY_INSN_F_ABSF32, EPIPHANYBF_INSN_F_ABSF32, EPIPHANYBF_SFMT_F_ABSF32 },
   { EPIPHANY_INSN_F_LOATF16, EPIPHANYBF_INSN_F_LOATF16, EPIPHANYBF_SFMT_F_LOATF16 },
-  { EPIPHANY_INSN_F_LOATF32, EPIPHANYBF_INSN_F_LOATF32, EPIPHANYBF_SFMT_F_ABSF32 },
-  { EPIPHANY_INSN_F_IXF16, EPIPHANYBF_INSN_F_IXF16, EPIPHANYBF_SFMT_F_IXF16 },
-  { EPIPHANY_INSN_F_IXF32, EPIPHANYBF_INSN_F_IXF32, EPIPHANYBF_SFMT_F_IXF32 },
-  { EPIPHANY_INSN_F_RECIPF32, EPIPHANYBF_INSN_F_RECIPF32, EPIPHANYBF_SFMT_F_RECIPF32 },
-  { EPIPHANY_INSN_F_SQRTF32, EPIPHANYBF_INSN_F_SQRTF32, EPIPHANYBF_SFMT_F_RECIPF32 },
+  { EPIPHANY_INSN_F_LOATF32, EPIPHANYBF_INSN_F_LOATF32, EPIPHANYBF_SFMT_F_LOATF32 },
+  { EPIPHANY_INSN_F_IXF16, EPIPHANYBF_INSN_F_IXF16, EPIPHANYBF_SFMT_F_LOATF16 },
+  { EPIPHANY_INSN_F_IXF32, EPIPHANYBF_INSN_F_IXF32, EPIPHANYBF_SFMT_F_LOATF32 },
+  { EPIPHANY_INSN_FMAX, EPIPHANYBF_INSN_FMAX, EPIPHANYBF_SFMT_FMAX },
+  { EPIPHANY_INSN_UMUL, EPIPHANYBF_INSN_UMUL, EPIPHANYBF_SFMT_UMUL },
+  { EPIPHANY_INSN_MUL, EPIPHANYBF_INSN_MUL, EPIPHANYBF_SFMT_UMUL },
 };
 
 static const struct insn_sem epiphanybf_insn_sem_invalid =
@@ -435,7 +440,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 60 :
             if ((entire_insn & 0xffff) == 0x3c2)
-              { itype = EPIPHANYBF_INSN_MBKPT; goto extract_sfmt_mbkpt; }
+              { itype = EPIPHANYBF_INSN_MBKPT; goto extract_sfmt_nop; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 62 : itype = EPIPHANYBF_INSN_TRAP16; goto extract_sfmt_trap16;
           default : itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
@@ -512,7 +517,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
           case 3 : itype = EPIPHANYBF_INSN_F_MADDF16; goto extract_sfmt_f_addf16;
           case 4 : itype = EPIPHANYBF_INSN_F_MSUBF16; goto extract_sfmt_f_addf16;
           case 5 : itype = EPIPHANYBF_INSN_F_LOATF16; goto extract_sfmt_f_loatf16;
-          case 6 : itype = EPIPHANYBF_INSN_F_IXF16; goto extract_sfmt_f_ixf16;
+          case 6 : itype = EPIPHANYBF_INSN_F_IXF16; goto extract_sfmt_f_loatf16;
           case 7 : itype = EPIPHANYBF_INSN_F_ABSF16; goto extract_sfmt_f_absf16;
           default : itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           }
@@ -578,17 +583,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
             if ((entire_insn & 0x6f007f) == 0x79)
               { itype = EPIPHANYBF_INSN_STRDX; goto extract_sfmt_strdx; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
-          case 8 :
-            if ((entire_insn & 0x6f007f) == 0x200009)
-              { itype = EPIPHANYBF_INSN_TESTSETBT; goto extract_sfmt_testsetbt; }
-            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
-          case 10 :
-            if ((entire_insn & 0x6f007f) == 0x200029)
-              { itype = EPIPHANYBF_INSN_TESTSETHT; goto extract_sfmt_testsetbt; }
-            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 12 :
-            if ((entire_insn & 0x6f007f) == 0x200049)
-              { itype = EPIPHANYBF_INSN_TESTSETT; goto extract_sfmt_testsetbt; }
+            if ((entire_insn & 0x7f007f) == 0x200049)
+              { itype = EPIPHANYBF_INSN_TESTSETT; goto extract_sfmt_testsett; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           default : itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           }
@@ -721,7 +718,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
           {
           case 0 :
             {
-              unsigned int val = (((insn >> 19) & (1 << 2)) | ((insn >> 7) & (3 << 0)));
+              unsigned int val = (((insn >> 18) & (1 << 3)) | ((insn >> 7) & (7 << 0)));
               switch (val)
               {
               case 0 :
@@ -737,6 +734,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
                   { itype = EPIPHANYBF_INSN_MOVTS6; goto extract_sfmt_movts6; }
                 itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
               case 6 :
+                if ((entire_insn & 0xdfff1fff) == 0x2030f)
+                  { itype = EPIPHANYBF_INSN_MODE; goto extract_sfmt_mode; }
+                itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
+              case 10 :
                 if ((entire_insn & 0x3ff03ff) == 0x22010f)
                   { itype = EPIPHANYBF_INSN_MOVTSMEM; goto extract_sfmt_movtsmem; }
                 itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
@@ -895,11 +896,11 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 29 :
             if ((entire_insn & 0x7f007f) == 0x7005f)
-              { itype = EPIPHANYBF_INSN_F_LOATF32; goto extract_sfmt_f_absf32; }
+              { itype = EPIPHANYBF_INSN_F_LOATF32; goto extract_sfmt_f_loatf32; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 30 :
             if ((entire_insn & 0x7f007f) == 0x7006f)
-              { itype = EPIPHANYBF_INSN_F_IXF32; goto extract_sfmt_f_ixf32; }
+              { itype = EPIPHANYBF_INSN_F_IXF32; goto extract_sfmt_f_loatf32; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 31 :
             if ((entire_insn & 0x7f007f) == 0x7007f)
@@ -984,25 +985,49 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
               default : itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
               }
             }
-          case 88 :
-            if ((entire_insn & 0x7f007f) == 0x17000f)
-              { itype = EPIPHANYBF_INSN_F_RECIPF32; goto extract_sfmt_f_recipf32; }
+          case 90 :
+            if ((entire_insn & 0x7f007f) == 0x17002f)
+              { itype = EPIPHANYBF_INSN_MUL; goto extract_sfmt_umul; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
-          case 89 :
-            if ((entire_insn & 0x7f007f) == 0x17001f)
-              { itype = EPIPHANYBF_INSN_F_SQRTF32; goto extract_sfmt_f_recipf32; }
+          case 91 :
+            if ((entire_insn & 0x7f007f) == 0x17003f)
+              { itype = EPIPHANYBF_INSN_UMUL; goto extract_sfmt_umul; }
+            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
+          case 95 :
+            if ((entire_insn & 0x7f007f) == 0x17007f)
+              { itype = EPIPHANYBF_INSN_FMAX; goto extract_sfmt_fmax; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 96 :
             if ((entire_insn & 0x7f007f) == 0x1a000f)
-              { itype = EPIPHANYBF_INSN_FEXT; goto extract_sfmt_fext; }
+              { itype = EPIPHANYBF_INSN_EOR64; goto extract_sfmt_and64; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 97 :
             if ((entire_insn & 0x7f007f) == 0x1a001f)
-              { itype = EPIPHANYBF_INSN_FDEP; goto extract_sfmt_fext; }
+              { itype = EPIPHANYBF_INSN_ADD64; goto extract_sfmt_add64; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           case 98 :
             if ((entire_insn & 0x7f007f) == 0x1a002f)
-              { itype = EPIPHANYBF_INSN_LFSR; goto extract_sfmt_fext; }
+              { itype = EPIPHANYBF_INSN_LSL64; goto extract_sfmt_asr64; }
+            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
+          case 99 :
+            if ((entire_insn & 0x7f007f) == 0x1a003f)
+              { itype = EPIPHANYBF_INSN_SUB64; goto extract_sfmt_add64; }
+            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
+          case 100 :
+            if ((entire_insn & 0x7f007f) == 0x1a004f)
+              { itype = EPIPHANYBF_INSN_LSR64; goto extract_sfmt_asr64; }
+            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
+          case 101 :
+            if ((entire_insn & 0x7f007f) == 0x1a005f)
+              { itype = EPIPHANYBF_INSN_AND64; goto extract_sfmt_and64; }
+            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
+          case 102 :
+            if ((entire_insn & 0x7f007f) == 0x1a006f)
+              { itype = EPIPHANYBF_INSN_ASR64; goto extract_sfmt_asr64; }
+            itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
+          case 103 :
+            if ((entire_insn & 0x7f007f) == 0x1a007f)
+              { itype = EPIPHANYBF_INSN_ORR64; goto extract_sfmt_and64; }
             itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           default : itype = EPIPHANYBF_INSN_X_INVALID; goto extract_sfmt_empty;
           }
@@ -1412,7 +1437,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (out_h_registers_SI_14) = 14;
+      FLD (out_h_registers_USI_14) = 14;
     }
 #endif
 #undef FLD
@@ -1436,7 +1461,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (out_h_registers_SI_14) = 14;
+      FLD (out_h_registers_USI_14) = 14;
     }
 #endif
 #undef FLD
@@ -1515,7 +1540,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn) = f_rn;
-      FLD (out_h_registers_SI_14) = 14;
+      FLD (out_h_registers_USI_14) = 14;
     }
 #endif
 #undef FLD
@@ -1546,7 +1571,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
-      FLD (out_h_registers_SI_14) = 14;
+      FLD (out_h_registers_USI_14) = 14;
     }
 #endif
 #undef FLD
@@ -1557,7 +1582,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -1577,41 +1602,11 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd) = f_rd;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_ldrbp16_s:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
-    UINT f_rd;
-    UINT f_rn;
-    UINT f_rm;
-
-    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
-    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_rm) = f_rm;
-  FLD (f_rn) = f_rn;
-  FLD (f_rd) = f_rd;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrbp16_s", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rm) = f_rm;
-      FLD (in_rn) = f_rn;
-      FLD (out_rd) = f_rd;
-      FLD (out_rn) = f_rn;
     }
 #endif
 #undef FLD
@@ -1622,7 +1617,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -1663,8 +1658,48 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_ldrbp16_s:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+
+    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rm) = f_rm;
+  FLD (f_rn) = f_rn;
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrbp16_s", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
+      FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd) = f_rd;
+      FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -1675,7 +1710,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -1716,9 +1751,13 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -1729,7 +1768,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdd16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbd16_s.f
     UINT f_rd;
     UINT f_rn;
     UINT f_disp3;
@@ -1749,6 +1788,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd) = f_rd;
     }
 #endif
@@ -1760,7 +1801,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -1801,6 +1842,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
     }
 #endif
@@ -1812,7 +1855,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -1853,6 +1896,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
       FLD (out_rn6) = f_rn6;
     }
@@ -1865,7 +1910,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -1885,41 +1930,11 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd) = f_rd;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_ldrhp16_s:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
-    UINT f_rd;
-    UINT f_rn;
-    UINT f_rm;
-
-    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
-    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_rm) = f_rm;
-  FLD (f_rn) = f_rn;
-  FLD (f_rd) = f_rd;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrhp16_s", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rm) = f_rm;
-      FLD (in_rn) = f_rn;
-      FLD (out_rd) = f_rd;
-      FLD (out_rn) = f_rn;
     }
 #endif
 #undef FLD
@@ -1930,7 +1945,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -1971,8 +1986,48 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_ldrhp16_s:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+
+    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rm) = f_rm;
+  FLD (f_rn) = f_rn;
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrhp16_s", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
+      FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd) = f_rd;
+      FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -1983,7 +2038,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -2024,9 +2079,13 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -2037,7 +2096,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdd16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbd16_s.f
     UINT f_rd;
     UINT f_rn;
     UINT f_disp3;
@@ -2057,6 +2116,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd) = f_rd;
     }
 #endif
@@ -2068,7 +2129,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -2109,6 +2170,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
     }
 #endif
@@ -2120,7 +2183,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -2161,6 +2224,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
       FLD (out_rn6) = f_rn6;
     }
@@ -2173,7 +2238,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -2193,41 +2258,11 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd) = f_rd;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_ldrp16_s:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
-    UINT f_rd;
-    UINT f_rn;
-    UINT f_rm;
-
-    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
-    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_rm) = f_rm;
-  FLD (f_rn) = f_rn;
-  FLD (f_rd) = f_rd;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrp16_s", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rm) = f_rm;
-      FLD (in_rn) = f_rn;
-      FLD (out_rd) = f_rd;
-      FLD (out_rn) = f_rn;
     }
 #endif
 #undef FLD
@@ -2238,7 +2273,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -2279,8 +2314,48 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_ldrp16_s:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+
+    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rm) = f_rm;
+  FLD (f_rn) = f_rn;
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrp16_s", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
+      FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd) = f_rd;
+      FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -2291,7 +2366,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -2332,9 +2407,13 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -2345,7 +2424,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdd16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbd16_s.f
     UINT f_rd;
     UINT f_rn;
     UINT f_disp3;
@@ -2365,6 +2444,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd) = f_rd;
     }
 #endif
@@ -2376,7 +2457,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -2417,6 +2498,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
     }
 #endif
@@ -2428,7 +2511,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -2469,6 +2552,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
       FLD (out_rn6) = f_rn6;
     }
@@ -2501,43 +2586,11 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
-      FLD (out_h_registers_SI_add__INT_index_of__INT_rd_1) = ((FLD (f_rd)) + (1));
-      FLD (out_rd) = f_rd;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_ldrdp16_s:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
-    UINT f_rd;
-    UINT f_rn;
-    UINT f_rm;
-
-    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
-    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
-  FLD (f_rm) = f_rm;
-  FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrdp16_s", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rm) = f_rm;
-      FLD (in_rn) = f_rn;
-      FLD (out_h_registers_SI_add__INT_index_of__INT_rd_1) = ((FLD (f_rd)) + (1));
-      FLD (out_rd) = f_rd;
-      FLD (out_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd_di) = f_rd;
     }
 #endif
 #undef FLD
@@ -2589,9 +2642,48 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
-      FLD (out_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (out_rd6) = f_rd6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd6_di) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_ldrdp16_s:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+
+    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rd) = f_rd;
+  FLD (f_rm) = f_rm;
+  FLD (f_rn) = f_rn;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_ldrdp16_s", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
+      FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd_di) = f_rd;
+      FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -2643,10 +2735,13 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
-      FLD (out_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (out_rd6) = f_rd6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd6_di) = f_rd6;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -2677,8 +2772,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn) = f_rn;
-      FLD (out_h_registers_SI_add__INT_index_of__INT_rd_1) = ((FLD (f_rd)) + (1));
-      FLD (out_rd) = f_rd;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd_di) = f_rd;
     }
 #endif
 #undef FLD
@@ -2730,8 +2826,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
-      FLD (out_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (out_rd6) = f_rd6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd6_di) = f_rd6;
     }
 #endif
 #undef FLD
@@ -2783,8 +2880,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   if (PROFILE_MODEL_P (current_cpu))
     {
       FLD (in_rn6) = f_rn6;
-      FLD (out_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (out_rd6) = f_rd6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd6_di) = f_rd6;
       FLD (out_rn6) = f_rn6;
     }
 #endif
@@ -2792,15 +2890,14 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     return idesc;
   }
 
- extract_sfmt_testsetbt:
+ extract_sfmt_testsett:
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
-    UINT f_addsubx;
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -2811,7 +2908,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
     f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
     f_rm_x = EXTRACT_LSB0_UINT (insn, 32, 25, 3);
-    f_addsubx = EXTRACT_LSB0_UINT (insn, 32, 20, 1);
     f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
     f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
     f_rm = EXTRACT_LSB0_UINT (insn, 32, 9, 3);
@@ -2826,11 +2922,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 }
 
   /* Record the fields for the semantic handler.  */
-  FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_testsetbt", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_testsett", "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -2838,7 +2933,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rd6) = f_rd6;
     }
 #endif
@@ -2850,7 +2948,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -2860,10 +2958,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
 
   /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
   FLD (f_rm) = f_rm;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbx16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbx16", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -2871,7 +2969,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -2882,7 +2983,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -2913,10 +3014,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbx", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbx", "f_addsubx 0x%x", 'x', f_addsubx, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -2924,7 +3025,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -2935,7 +3039,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdp16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -2945,10 +3049,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
 
   /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
   FLD (f_rm) = f_rm;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbp16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbp16", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -2956,8 +3060,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -2968,7 +3076,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdp.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -2999,10 +3107,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbp", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbp", "f_addsubx 0x%x", 'x', f_addsubx, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3010,8 +3118,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -3022,7 +3134,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdd16.f
+#define FLD(f) abuf->fields.sfmt_strbd16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_disp3;
@@ -3033,9 +3145,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_disp3) = f_disp3;
-  FLD (f_rd) = f_rd;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbd16", "f_disp3 0x%x", 'x', f_disp3, "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbd16", "f_disp3 0x%x", 'x', f_disp3, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3043,6 +3155,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3053,7 +3167,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -3085,9 +3199,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   FLD (f_disp11) = f_disp11;
   FLD (f_subd) = f_subd;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbd", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbd", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3095,6 +3209,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3105,7 +3221,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -3137,9 +3253,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   FLD (f_disp11) = f_disp11;
   FLD (f_subd) = f_subd;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbdpm", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strbdpm", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3147,7 +3263,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -3158,7 +3277,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -3168,10 +3287,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
 
   /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
   FLD (f_rm) = f_rm;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhx16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhx16", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3179,7 +3298,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3190,7 +3312,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -3221,10 +3343,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhx", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhx", "f_addsubx 0x%x", 'x', f_addsubx, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3232,7 +3354,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3243,7 +3368,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdp16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -3253,10 +3378,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
 
   /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
   FLD (f_rm) = f_rm;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhp16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhp16", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3264,8 +3389,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -3276,7 +3405,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdp.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -3307,10 +3436,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhp", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhp", "f_addsubx 0x%x", 'x', f_addsubx, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3318,8 +3447,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -3330,7 +3463,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdd16.f
+#define FLD(f) abuf->fields.sfmt_strbd16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_disp3;
@@ -3341,9 +3474,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_disp3) = f_disp3;
-  FLD (f_rd) = f_rd;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhd16", "f_disp3 0x%x", 'x', f_disp3, "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhd16", "f_disp3 0x%x", 'x', f_disp3, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3351,6 +3484,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3361,7 +3496,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -3393,9 +3528,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   FLD (f_disp11) = f_disp11;
   FLD (f_subd) = f_subd;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhd", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhd", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3403,6 +3538,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3413,7 +3550,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -3445,9 +3582,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   FLD (f_disp11) = f_disp11;
   FLD (f_subd) = f_subd;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhdpm", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strhdpm", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3455,7 +3592,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -3466,7 +3606,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -3476,10 +3616,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
 
   /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
   FLD (f_rm) = f_rm;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strx16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strx16", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3487,7 +3627,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3498,7 +3641,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -3529,10 +3672,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strx", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strx", "f_addsubx 0x%x", 'x', f_addsubx, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3540,7 +3683,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3551,7 +3697,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdp16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
@@ -3561,10 +3707,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
 
   /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
   FLD (f_rm) = f_rm;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strp16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strp16", "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3572,8 +3718,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -3584,7 +3734,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdp.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -3615,10 +3765,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_addsubx) = f_addsubx;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strp", "f_addsubx 0x%x", 'x', f_addsubx, "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strp", "f_addsubx 0x%x", 'x', f_addsubx, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3626,8 +3776,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -3638,7 +3792,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strdd16.f
+#define FLD(f) abuf->fields.sfmt_strbd16.f
     UINT f_rd;
     UINT f_rn;
     UINT f_disp3;
@@ -3649,9 +3803,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
 
   /* Record the fields for the semantic handler.  */
   FLD (f_disp3) = f_disp3;
-  FLD (f_rd) = f_rd;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strd16", "f_disp3 0x%x", 'x', f_disp3, "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd) = f_rd;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strd16", "f_disp3 0x%x", 'x', f_disp3, "f_rn 0x%x", 'x', f_rn, "f_rd 0x%x", 'x', f_rd, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3659,6 +3813,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd) = f_rd;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3669,7 +3825,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -3701,9 +3857,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   FLD (f_disp11) = f_disp11;
   FLD (f_subd) = f_subd;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strd", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strd", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3711,6 +3867,8 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3721,7 +3879,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_subd;
@@ -3753,9 +3911,9 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   FLD (f_disp11) = f_disp11;
   FLD (f_subd) = f_subd;
-  FLD (f_rd6) = f_rd6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strdpm", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_strdpm", "f_disp11 0x%x", 'x', f_disp11, "f_subd 0x%x", 'x', f_subd, "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -3763,7 +3921,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     {
       FLD (in_rd6) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -3793,10 +3954,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_h_registers_SI_add__INT_index_of__INT_rd_1) = ((FLD (f_rd)) + (1));
-      FLD (in_rd) = f_rd;
+      FLD (in_rd_di) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3847,10 +4010,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (in_rd6) = f_rd6;
+      FLD (in_rd6_di) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -3880,11 +4045,14 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_h_registers_SI_add__INT_index_of__INT_rd_1) = ((FLD (f_rd)) + (1));
-      FLD (in_rd) = f_rd;
+      FLD (in_rd_di) = f_rd;
       FLD (in_rm) = f_rm;
+      FLD (in_rm_di) = f_rm;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn) = f_rn;
+      FLD (out_rn_di) = f_rn;
     }
 #endif
 #undef FLD
@@ -3935,11 +4103,14 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (in_rd6) = f_rd6;
+      FLD (in_rd6_di) = f_rd6;
       FLD (in_rm6) = f_rm6;
+      FLD (in_rm6_di) = f_rm6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -3969,9 +4140,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_h_registers_SI_add__INT_index_of__INT_rd_1) = ((FLD (f_rd)) + (1));
-      FLD (in_rd) = f_rd;
+      FLD (in_rd_di) = f_rd;
       FLD (in_rn) = f_rn;
+      FLD (in_rn_di) = f_rn;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -4022,9 +4194,10 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (in_rd6) = f_rd6;
+      FLD (in_rd6_di) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
     }
 #endif
 #undef FLD
@@ -4075,10 +4248,12 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_h_registers_SI_add__INT_index_of__INT_rd6_1) = ((FLD (f_rd6)) + (1));
-      FLD (in_rd6) = f_rd6;
+      FLD (in_rd6_di) = f_rd6;
       FLD (in_rn6) = f_rn6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
       FLD (out_rn6) = f_rn6;
+      FLD (out_rn6_di) = f_rn6;
     }
 #endif
 #undef FLD
@@ -4812,6 +4987,29 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     return idesc;
   }
 
+ extract_sfmt_mode:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_mode.f
+    UINT f_mode4_h;
+    UINT f_mode4_l;
+    UINT f_mode4;
+
+    f_mode4_h = EXTRACT_LSB0_UINT (insn, 32, 29, 1);
+    f_mode4_l = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
+{
+  f_mode4 = ((((f_mode4_h) << (3))) | (((f_mode4_l) << (0))));
+}
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_mode4) = f_mode4;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_mode", "f_mode4 0x%x", 'x', f_mode4, (char *) 0));
+
+#undef FLD
+    return idesc;
+  }
+
  extract_sfmt_movfs16:
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
@@ -5004,12 +5202,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_nop", (char *) 0));
 
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-    }
-#endif
 #undef FLD
     return idesc;
   }
@@ -5052,19 +5244,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     return idesc;
   }
 
- extract_sfmt_mbkpt:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-#define FLD(f) abuf->fields.sfmt_empty.f
-
-
-  /* Record the fields for the semantic handler.  */
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_mbkpt", (char *) 0));
-
-#undef FLD
-    return idesc;
-  }
-
  extract_sfmt_rti:
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
@@ -5093,12 +5272,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_wand", (char *) 0));
 
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-    }
-#endif
 #undef FLD
     return idesc;
   }
@@ -5112,12 +5285,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for the semantic handler.  */
   CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_gidis", (char *) 0));
 
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-    }
-#endif
 #undef FLD
     return idesc;
   }
@@ -5125,12 +5292,19 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_swi_num:
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
-#define FLD(f) abuf->fields.sfmt_empty.f
+#define FLD(f) abuf->fields.sfmt_strdd16.f
 
 
   /* Record the fields for the semantic handler.  */
   CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_swi_num", (char *) 0));
 
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+    }
+#endif
 #undef FLD
     return idesc;
   }
@@ -5196,7 +5370,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -5280,7 +5454,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -5485,6 +5659,162 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
     return idesc;
   }
 
+ extract_sfmt_add64:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_add64.f
+    UINT f_rd_x;
+    UINT f_rn_x;
+    UINT f_rm_x;
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+    UINT f_rd6;
+    UINT f_rn6;
+    UINT f_rm6;
+
+    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
+    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
+    f_rm_x = EXTRACT_LSB0_UINT (insn, 32, 25, 3);
+    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 32, 9, 3);
+{
+  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
+}
+{
+  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
+}
+{
+  f_rm6 = ((((f_rm_x) << (3))) | (f_rm));
+}
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rd6) = f_rd6;
+  FLD (f_rm6) = f_rm6;
+  FLD (f_rn6) = f_rn6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_add64", "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_rd6_di) = f_rd6;
+      FLD (in_rm6_di) = f_rm6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd6_di) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_and64:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_add64.f
+    UINT f_rd_x;
+    UINT f_rn_x;
+    UINT f_rm_x;
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+    UINT f_rd6;
+    UINT f_rn6;
+    UINT f_rm6;
+
+    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
+    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
+    f_rm_x = EXTRACT_LSB0_UINT (insn, 32, 25, 3);
+    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 32, 9, 3);
+{
+  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
+}
+{
+  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
+}
+{
+  f_rm6 = ((((f_rm_x) << (3))) | (f_rm));
+}
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rd6) = f_rd6;
+  FLD (f_rm6) = f_rm6;
+  FLD (f_rn6) = f_rn6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_and64", "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_rd6_di) = f_rd6;
+      FLD (in_rm6_di) = f_rm6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd6_di) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_asr64:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_asr64.f
+    UINT f_rd_x;
+    UINT f_rn_x;
+    UINT f_rm_x;
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+    UINT f_rd6;
+    UINT f_rn6;
+    UINT f_rm6;
+
+    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
+    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
+    f_rm_x = EXTRACT_LSB0_UINT (insn, 32, 25, 3);
+    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 32, 9, 3);
+{
+  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
+}
+{
+  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
+}
+{
+  f_rm6 = ((((f_rm_x) << (3))) | (f_rm));
+}
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rd6) = f_rd6;
+  FLD (f_rn6) = f_rn6;
+  FLD (f_rm6) = f_rm6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_asr64", "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, "f_rm6 0x%x", 'x', f_rm6, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_rd6_di) = f_rd6;
+      FLD (in_rm6) = f_rm6;
+      FLD (in_rn6_di) = f_rn6;
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_rd6_di) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
  extract_sfmt_bitr16:
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
@@ -5549,36 +5879,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
       FLD (in_rd6) = f_rd6;
       FLD (in_rn6) = f_rn6;
       FLD (out_rd6) = f_rd6;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_fext:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_movts6.f
-    UINT f_rd_x;
-    UINT f_rd;
-    UINT f_rd6;
-
-    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
-    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
-{
-  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
-}
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_rd6) = f_rd6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_fext", "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rd6) = f_rd6;
     }
 #endif
 #undef FLD
@@ -5695,29 +5995,45 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
+    UINT f_rd_x;
     UINT f_rd;
     UINT f_rn;
     UINT f_rm;
+    UINT f_rd6;
 
+    f_rd_x = EXTRACT_LSB0_UINT (insn, 16, 31, 3);
     f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
     f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
     f_rm = EXTRACT_LSB0_UINT (insn, 16, 9, 3);
+{
+  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
+}
 
   /* Record the fields for the semantic handler.  */
   FLD (f_rd) = f_rd;
   FLD (f_rm) = f_rm;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_addf16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_addf16", "f_rd 0x%x", 'x', f_rd, "f_rm 0x%x", 'x', f_rm, "f_rn 0x%x", 'x', f_rn, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_rd) = f_rd;
-      FLD (in_rm) = f_rm;
-      FLD (in_rn) = f_rn;
-      FLD (out_rd) = f_rd;
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rd_1) = ((FLD (f_rd)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rm_1) = ((FLD (f_rm)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rn_1) = ((FLD (f_rn)) + (1));
+      FLD (in_h_registers_USI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (in_h_registers_USI_ifield__UINT_f_rm) = FLD (f_rm);
+      FLD (in_h_registers_USI_ifield__UINT_f_rn) = FLD (f_rn);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rm) = FLD (f_rm);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rn) = FLD (f_rn);
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_h_registers_USI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (out_h_registers_di_DI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (out_rd6_di) = f_rd6;
     }
 #endif
 #undef FLD
@@ -5728,7 +6044,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -5765,10 +6081,19 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_rd6) = f_rd6;
-      FLD (in_rm6) = f_rm6;
-      FLD (in_rn6) = f_rn6;
-      FLD (out_rd6) = f_rd6;
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rd6_1) = ((FLD (f_rd6)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rm6_1) = ((FLD (f_rm6)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rn6_1) = ((FLD (f_rn6)) + (1));
+      FLD (in_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (in_h_registers_USI_ifield__UINT_f_rm6) = FLD (f_rm6);
+      FLD (in_h_registers_USI_ifield__UINT_f_rn6) = FLD (f_rn6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rm6) = FLD (f_rm6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rn6) = FLD (f_rn6);
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (out_h_registers_di_DI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (out_rd6_di) = f_rd6;
     }
 #endif
 #undef FLD
@@ -5779,25 +6104,39 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_lsri16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
+    UINT f_rd_x;
     UINT f_rd;
     UINT f_rn;
+    UINT f_rd6;
 
+    f_rd_x = EXTRACT_LSB0_UINT (insn, 16, 31, 3);
     f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
     f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
+{
+  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
+}
 
   /* Record the fields for the semantic handler.  */
   FLD (f_rd) = f_rd;
   FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_absf16", "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, (char *) 0));
+  FLD (f_rd6) = f_rd6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_absf16", "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_rd) = f_rd;
-      FLD (in_rn) = f_rn;
-      FLD (out_rd) = f_rd;
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rd_1) = ((FLD (f_rd)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rn_1) = ((FLD (f_rn)) + (1));
+      FLD (in_h_registers_USI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (in_h_registers_USI_ifield__UINT_f_rn) = FLD (f_rn);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rn) = FLD (f_rn);
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_h_registers_USI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (out_h_registers_di_DI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (out_rd6_di) = f_rd6;
     }
 #endif
 #undef FLD
@@ -5808,7 +6147,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_lsri32.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rd;
@@ -5836,9 +6175,16 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_rd6) = f_rd6;
-      FLD (in_rn6) = f_rn6;
-      FLD (out_rd6) = f_rd6;
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rd6_1) = ((FLD (f_rd6)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rn6_1) = ((FLD (f_rn6)) + (1));
+      FLD (in_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (in_h_registers_USI_ifield__UINT_f_rn6) = FLD (f_rn6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rn6) = FLD (f_rn6);
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (out_h_registers_di_DI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (out_rd6_di) = f_rd6;
     }
 #endif
 #undef FLD
@@ -5849,36 +6195,7 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_lsri16.f
-    UINT f_rd;
-    UINT f_rn;
-
-    f_rd = EXTRACT_LSB0_UINT (insn, 16, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 16, 12, 3);
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_rd) = f_rd;
-  FLD (f_rn) = f_rn;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_loatf16", "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_rd) = f_rd;
-      FLD (in_rn) = f_rn;
-      FLD (out_rd) = f_rd;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_f_ixf16:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_f_ixf16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
     UINT f_rd_x;
     UINT f_rd;
     UINT f_rn;
@@ -5895,27 +6212,75 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   FLD (f_rd) = f_rd;
   FLD (f_rn) = f_rn;
   FLD (f_rd6) = f_rd6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_ixf16", "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_loatf16", "f_rd 0x%x", 'x', f_rd, "f_rn 0x%x", 'x', f_rn, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
   if (PROFILE_MODEL_P (current_cpu))
     {
-      FLD (in_rd) = f_rd;
-      FLD (in_rn) = f_rn;
-      FLD (out_rd) = f_rd;
-      FLD (out_rd6) = f_rd6;
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rd_1) = ((FLD (f_rd)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rn_1) = ((FLD (f_rn)) + (1));
+      FLD (in_h_registers_USI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (in_h_registers_USI_ifield__UINT_f_rn) = FLD (f_rn);
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_h_registers_USI_ifield__UINT_f_rd) = FLD (f_rd);
+      FLD (out_rd6_di) = f_rd6;
     }
 #endif
 #undef FLD
     return idesc;
   }
 
- extract_sfmt_f_ixf32:
+ extract_sfmt_f_loatf32:
   {
     const IDESC *idesc = &epiphanybf_insn_data[itype];
     CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
+    UINT f_rd_x;
+    UINT f_rn_x;
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rd6;
+    UINT f_rn6;
+
+    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
+    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
+    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
+{
+  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
+}
+{
+  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
+}
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rd6) = f_rd6;
+  FLD (f_rn6) = f_rn6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_loatf32", "f_rd6 0x%x", 'x', f_rd6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rd6_1) = ((FLD (f_rd6)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rn6_1) = ((FLD (f_rn6)) + (1));
+      FLD (in_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (in_h_registers_USI_ifield__UINT_f_rn6) = FLD (f_rn6);
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (out_rd6_di) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_fmax:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
     UINT f_rd_x;
     UINT f_rn_x;
     UINT f_rm_x;
@@ -5946,7 +6311,67 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
   FLD (f_rd6) = f_rd6;
   FLD (f_rm6) = f_rm6;
   FLD (f_rn6) = f_rn6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_ixf32", "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_fmax", "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
+
+#if WITH_PROFILE_MODEL_P
+  /* Record the fields for profiling.  */
+  if (PROFILE_MODEL_P (current_cpu))
+    {
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rd6_1) = ((FLD (f_rd6)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rm6_1) = ((FLD (f_rm6)) + (1));
+      FLD (in_h_registers_USI_add__UINT_ifield__UINT_f_rn6_1) = ((FLD (f_rn6)) + (1));
+      FLD (in_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (in_h_registers_USI_ifield__UINT_f_rm6) = FLD (f_rm6);
+      FLD (in_h_registers_USI_ifield__UINT_f_rn6) = FLD (f_rn6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rm6) = FLD (f_rm6);
+      FLD (in_h_registers_di_DI_ifield__UINT_f_rn6) = FLD (f_rn6);
+      FLD (out_h_all_registers_USI_enum__UINT_H_REG_SCR_ILATST) = H_REG_SCR_ILATST;
+      FLD (out_h_registers_USI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (out_h_registers_di_DI_ifield__UINT_f_rd6) = FLD (f_rd6);
+      FLD (out_rd6_di) = f_rd6;
+    }
+#endif
+#undef FLD
+    return idesc;
+  }
+
+ extract_sfmt_umul:
+  {
+    const IDESC *idesc = &epiphanybf_insn_data[itype];
+    CGEN_INSN_WORD insn = entire_insn;
+#define FLD(f) abuf->fields.sfmt_testsett.f
+    UINT f_rd_x;
+    UINT f_rn_x;
+    UINT f_rm_x;
+    UINT f_rd;
+    UINT f_rn;
+    UINT f_rm;
+    UINT f_rd6;
+    UINT f_rn6;
+    UINT f_rm6;
+
+    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
+    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
+    f_rm_x = EXTRACT_LSB0_UINT (insn, 32, 25, 3);
+    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
+    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
+    f_rm = EXTRACT_LSB0_UINT (insn, 32, 9, 3);
+{
+  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
+}
+{
+  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
+}
+{
+  f_rm6 = ((((f_rm_x) << (3))) | (f_rm));
+}
+
+  /* Record the fields for the semantic handler.  */
+  FLD (f_rd6) = f_rd6;
+  FLD (f_rm6) = f_rm6;
+  FLD (f_rn6) = f_rn6;
+  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_umul", "f_rd6 0x%x", 'x', f_rd6, "f_rm6 0x%x", 'x', f_rm6, "f_rn6 0x%x", 'x', f_rn6, (char *) 0));
 
 #if WITH_PROFILE_MODEL_P
   /* Record the fields for profiling.  */
@@ -5956,46 +6381,6 @@ epiphanybf_decode (SIM_CPU *current_cpu, IADDR pc,
       FLD (in_rm6) = f_rm6;
       FLD (in_rn6) = f_rn6;
       FLD (out_rd6) = f_rd6;
-    }
-#endif
-#undef FLD
-    return idesc;
-  }
-
- extract_sfmt_f_recipf32:
-  {
-    const IDESC *idesc = &epiphanybf_insn_data[itype];
-    CGEN_INSN_WORD insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_f_recipf32.f
-    UINT f_rd_x;
-    UINT f_rn_x;
-    UINT f_rd;
-    UINT f_rn;
-    UINT f_rd6;
-    UINT f_rn6;
-
-    f_rd_x = EXTRACT_LSB0_UINT (insn, 32, 31, 3);
-    f_rn_x = EXTRACT_LSB0_UINT (insn, 32, 28, 3);
-    f_rd = EXTRACT_LSB0_UINT (insn, 32, 15, 3);
-    f_rn = EXTRACT_LSB0_UINT (insn, 32, 12, 3);
-{
-  f_rd6 = ((((f_rd_x) << (3))) | (f_rd));
-}
-{
-  f_rn6 = ((((f_rn_x) << (3))) | (f_rn));
-}
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_rn6) = f_rn6;
-  FLD (f_rd6) = f_rd6;
-  CGEN_TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_f_recipf32", "f_rn6 0x%x", 'x', f_rn6, "f_rd6 0x%x", 'x', f_rd6, (char *) 0));
-
-#if WITH_PROFILE_MODEL_P
-  /* Record the fields for profiling.  */
-  if (PROFILE_MODEL_P (current_cpu))
-    {
-      FLD (in_frn6) = f_rn6;
-      FLD (out_frd6) = f_rd6;
     }
 #endif
 #undef FLD

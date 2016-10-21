@@ -1,0 +1,15 @@
+# epiphany testcase for imul $frd6,$frn6,$frm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global imul
+imul:
+	mova	r6,0x80000
+	movts	config,r6
+	mov	r8,8
+	mov	r9,9
+	imul	r10,r8,r9
+	compare	r10,72

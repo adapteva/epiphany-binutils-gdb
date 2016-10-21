@@ -1,0 +1,25 @@
+# epiphany testcase for ldr $rd,[$rn],$rm -*- Asm -*-
+# mach: all
+
+	.include "testutils64.inc"
+
+	start64
+
+	.global ldrp16
+ldrp16:
+	mova	r0,0xffff0010
+	mova	r1,0xffffffff
+	mov	r12,r0
+	mov	r13,r1
+	mova	r2,32
+	mova	r3,0
+	mova	r16,0x13121110
+	ldr	r4,[r0],-r2
+	add	r0,r0,32
+	sub64	r0,r0,r12
+	bne	1f		;check that we subtracted 32
+	sub	r4,r4,r16
+	bne	1f
+	pass
+1:
+	fail

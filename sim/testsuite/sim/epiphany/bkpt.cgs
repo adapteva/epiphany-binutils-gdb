@@ -1,5 +1,7 @@
 # epiphany testcase for bkpt -*- Asm -*-
 # mach: all
+# xerror:
+# output: program stopped with signal 5 (Trace/breakpoint trap).\n
 
 	.include "testutils.inc"
 

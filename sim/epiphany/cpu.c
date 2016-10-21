@@ -30,7 +30,7 @@ This file is part of the GNU simulators.
 
 /* Get the value of h-all-registers.  */
 
-SI
+USI
 epiphanybf_h_all_registers_get (SIM_CPU *current_cpu, UINT regno)
 {
   return CPU (h_all_registers[regno]);
@@ -39,14 +39,14 @@ epiphanybf_h_all_registers_get (SIM_CPU *current_cpu, UINT regno)
 /* Set a value for h-all-registers.  */
 
 void
-epiphanybf_h_all_registers_set (SIM_CPU *current_cpu, UINT regno, SI newval)
+epiphanybf_h_all_registers_set (SIM_CPU *current_cpu, UINT regno, USI newval)
 {
   SET_H_ALL_REGISTERS (regno, newval);
 }
 
 /* Get the value of h-registers.  */
 
-SI
+USI
 epiphanybf_h_registers_get (SIM_CPU *current_cpu, UINT regno)
 {
   return GET_H_REGISTERS (regno);
@@ -55,25 +55,41 @@ epiphanybf_h_registers_get (SIM_CPU *current_cpu, UINT regno)
 /* Set a value for h-registers.  */
 
 void
-epiphanybf_h_registers_set (SIM_CPU *current_cpu, UINT regno, SI newval)
+epiphanybf_h_registers_set (SIM_CPU *current_cpu, UINT regno, USI newval)
 {
   SET_H_REGISTERS (regno, newval);
 }
 
-/* Get the value of h-fpregisters.  */
+/* Get the value of h-registers-di.  */
 
-SF
-epiphanybf_h_fpregisters_get (SIM_CPU *current_cpu, UINT regno)
+DI
+epiphanybf_h_registers_di_get (SIM_CPU *current_cpu, UINT regno)
 {
-  return GET_H_FPREGISTERS (regno);
+  return GET_H_REGISTERS_DI (regno);
 }
 
-/* Set a value for h-fpregisters.  */
+/* Set a value for h-registers-di.  */
 
 void
-epiphanybf_h_fpregisters_set (SIM_CPU *current_cpu, UINT regno, SF newval)
+epiphanybf_h_registers_di_set (SIM_CPU *current_cpu, UINT regno, DI newval)
 {
-  SET_H_FPREGISTERS (regno, newval);
+  SET_H_REGISTERS_DI (regno, newval);
+}
+
+/* Get the value of h-hwloop-next.  */
+
+BI
+epiphanybf_h_hwloop_next_get (SIM_CPU *current_cpu)
+{
+  return CPU (h_hwloop_next);
+}
+
+/* Set a value for h-hwloop-next.  */
+
+void
+epiphanybf_h_hwloop_next_set (SIM_CPU *current_cpu, BI newval)
+{
+  CPU (h_hwloop_next) = newval;
 }
 
 /* Get the value of h-pc.  */
@@ -94,7 +110,7 @@ epiphanybf_h_pc_set (SIM_CPU *current_cpu, USI newval)
 
 /* Get the value of h-memaddr.  */
 
-SI
+DI
 epiphanybf_h_memaddr_get (SIM_CPU *current_cpu)
 {
   return CPU (h_memaddr);
@@ -103,9 +119,41 @@ epiphanybf_h_memaddr_get (SIM_CPU *current_cpu)
 /* Set a value for h-memaddr.  */
 
 void
-epiphanybf_h_memaddr_set (SIM_CPU *current_cpu, SI newval)
+epiphanybf_h_memaddr_set (SIM_CPU *current_cpu, DI newval)
 {
   CPU (h_memaddr) = newval;
+}
+
+/* Get the value of h-memory-atomic.  */
+
+DI
+epiphanybf_h_memory_atomic_get (SIM_CPU *current_cpu)
+{
+  return CPU (h_memory_atomic);
+}
+
+/* Set a value for h-memory-atomic.  */
+
+void
+epiphanybf_h_memory_atomic_set (SIM_CPU *current_cpu, DI newval)
+{
+  CPU (h_memory_atomic) = newval;
+}
+
+/* Get the value of h-memory-atomic-flag.  */
+
+BI
+epiphanybf_h_memory_atomic_flag_get (SIM_CPU *current_cpu)
+{
+  return CPU (h_memory_atomic_flag);
+}
+
+/* Set a value for h-memory-atomic-flag.  */
+
+void
+epiphanybf_h_memory_atomic_flag_set (SIM_CPU *current_cpu, BI newval)
+{
+  CPU (h_memory_atomic_flag) = newval;
 }
 
 /* Get the value of h-core-registers.  */
@@ -652,52 +700,52 @@ epiphanybf_h_timer1bit3_set (SIM_CPU *current_cpu, BI newval)
   SET_H_TIMER1BIT3 (newval);
 }
 
-/* Get the value of h-arithmetic-modebit0.  */
+/* Get the value of h-arith-modebit0.  */
 
 BI
-epiphanybf_h_arithmetic_modebit0_get (SIM_CPU *current_cpu)
+epiphanybf_h_arith_modebit0_get (SIM_CPU *current_cpu)
 {
-  return GET_H_ARITHMETIC_MODEBIT0 ();
+  return GET_H_ARITH_MODEBIT0 ();
 }
 
-/* Set a value for h-arithmetic-modebit0.  */
+/* Set a value for h-arith-modebit0.  */
 
 void
-epiphanybf_h_arithmetic_modebit0_set (SIM_CPU *current_cpu, BI newval)
+epiphanybf_h_arith_modebit0_set (SIM_CPU *current_cpu, BI newval)
 {
-  SET_H_ARITHMETIC_MODEBIT0 (newval);
+  SET_H_ARITH_MODEBIT0 (newval);
 }
 
-/* Get the value of h-arithmetic-modebit1.  */
+/* Get the value of h-arith-modebit1.  */
 
 BI
-epiphanybf_h_arithmetic_modebit1_get (SIM_CPU *current_cpu)
+epiphanybf_h_arith_modebit1_get (SIM_CPU *current_cpu)
 {
-  return GET_H_ARITHMETIC_MODEBIT1 ();
+  return GET_H_ARITH_MODEBIT1 ();
 }
 
-/* Set a value for h-arithmetic-modebit1.  */
+/* Set a value for h-arith-modebit1.  */
 
 void
-epiphanybf_h_arithmetic_modebit1_set (SIM_CPU *current_cpu, BI newval)
+epiphanybf_h_arith_modebit1_set (SIM_CPU *current_cpu, BI newval)
 {
-  SET_H_ARITHMETIC_MODEBIT1 (newval);
+  SET_H_ARITH_MODEBIT1 (newval);
 }
 
-/* Get the value of h-arithmetic-modebit2.  */
+/* Get the value of h-arith-modebit2.  */
 
 BI
-epiphanybf_h_arithmetic_modebit2_get (SIM_CPU *current_cpu)
+epiphanybf_h_arith_modebit2_get (SIM_CPU *current_cpu)
 {
-  return GET_H_ARITHMETIC_MODEBIT2 ();
+  return GET_H_ARITH_MODEBIT2 ();
 }
 
-/* Set a value for h-arithmetic-modebit2.  */
+/* Set a value for h-arith-modebit2.  */
 
 void
-epiphanybf_h_arithmetic_modebit2_set (SIM_CPU *current_cpu, BI newval)
+epiphanybf_h_arith_modebit2_set (SIM_CPU *current_cpu, BI newval)
 {
-  SET_H_ARITHMETIC_MODEBIT2 (newval);
+  SET_H_ARITH_MODEBIT2 (newval);
 }
 
 /* Get the value of h-clockgateenbit.  */
@@ -730,6 +778,22 @@ void
 epiphanybf_h_mbkptenbit_set (SIM_CPU *current_cpu, BI newval)
 {
   SET_H_MBKPTENBIT (newval);
+}
+
+/* Get the value of h-scr-config-arithmode.  */
+
+QI
+epiphanybf_h_scr_config_arithmode_get (SIM_CPU *current_cpu)
+{
+  return GET_H_SCR_CONFIG_ARITHMODE ();
+}
+
+/* Set a value for h-scr-config-arithmode.  */
+
+void
+epiphanybf_h_scr_config_arithmode_set (SIM_CPU *current_cpu, QI newval)
+{
+  SET_H_SCR_CONFIG_ARITHMODE (newval);
 }
 
 /* Get the value of h-coredma-registers.  */

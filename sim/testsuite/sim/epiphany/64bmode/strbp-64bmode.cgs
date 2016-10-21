@@ -1,0 +1,26 @@
+# epiphany testcase for strb $rd6,[$rn6],$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils64.inc"
+
+	start64
+
+	.global strbp
+strbp:
+	mova	r20,0xffff0111
+	mova	r21,0xffffffff
+	mov	r22,r20		;save start64ing address
+	mov	r23,r21
+	mov	r24,1
+	mov	r25,0
+	mov	r1,0xaa
+	strb 	r1,[r20],r24	;store 0xaa into memory
+	sub64	r30,r20,r22	;should have advanced r20-di by 1
+	sub	r30,r30,1
+	bne	1f
+	sub	r31,r31,0
+	bne	1f
+	ldrb	r1,[r22]	;read the byte we stored
+	compare	r1,0xaa
+1:
+	fail

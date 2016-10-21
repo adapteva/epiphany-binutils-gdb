@@ -1,0 +1,33 @@
+# epiphany testcase for eor64 $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global eor64
+eor64:
+	;; expect
+	mova	r20,0xffffffff
+	mova	r21,0xffffffff
+
+	mova    r30,0x55555555
+	mova    r31,0x55555555
+	mova    r32,0xaaaaaaaa
+	mova    r33,0xaaaaaaaa
+
+	;; test a `xor` a == 0
+	eor64	r40,r30,r30
+	bne	1f
+
+	eor64	r40,r30,r32
+	sub64	r42,r40,r20
+	bne	1f
+
+	eor64	r40,r32,r30
+	sub64	r42,r40,r20
+	bne	1f
+
+	pass
+1:
+	fail

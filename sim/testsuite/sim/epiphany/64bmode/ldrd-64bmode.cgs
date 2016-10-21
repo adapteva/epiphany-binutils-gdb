@@ -1,0 +1,18 @@
+# epiphany testcase for ldr $rd6,[$rn6,$disp11] -*- Asm -*-
+# mach: all
+
+	.include "testutils64.inc"
+
+	start64
+
+	.global ldrd
+ldrd:
+	mova	r8,0xffff0000
+	mova	r9,0xffffffff
+	mova	r10,0x47464544
+	ldr	r0,[r8,0x11]
+	sub	r0,r0,r10
+	bne	1f
+	pass
+1:
+	fail

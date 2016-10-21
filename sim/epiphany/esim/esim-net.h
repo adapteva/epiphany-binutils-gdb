@@ -89,7 +89,7 @@ int es_net_init_mmr(es_state *esim);
 int es_net_init_mpi_win(es_state *esim);
 void es_net_addr_translate(const es_state *esim,
 			   es_transl *transl,
-			   uint32_t addr);
+			   address_word addr);
 int es_net_tx_one(es_state *esim, es_transaction *tx);
 
 #endif /* __emesh_net_h__ */

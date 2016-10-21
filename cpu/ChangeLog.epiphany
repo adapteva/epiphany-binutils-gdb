@@ -1,3 +1,390 @@
+2016-07-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-int-idlebit): Remove hardware.
+	(dni idle): Increment pc by 2.
+
+2015-12-18  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (sem-fpu-float-default-flags): Add default FPU flags
+	pmacro.
+	(sem-fpu-float): Add xflags-sem argument so instructions can
+	override when needed. Empty list means default flags semantics.
+	(sem-fpu): Add xflags-sem argument. Forward to sem-fpu-float.
+	(op-two_operands-float): Use default flags semantics.
+	(op-fabs-float): Likewise.
+	(op-fix2float): Likewise.
+	(dni fmax): Likewise.
+	(sem-float2fix-flags): Added pmacro.
+	(op-float2fix-float): Use sem-float2fix-flags.
+
+2015-12-18  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro load-insn): Fix post modify when rd and rm
+	are the same register.
+	(pmacro store-insn): Likewise.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (dni umul): Add semantics.
+	(dni mul): Add semantics.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (insn-iopmul): Add instruction field enum for
+	multiply instuctions. Move UMUL here from insn-iopexn. Add MUL.
+	Update to follow specification.
+	(insn-iopexn): Remove.
+	(dni mul): Add. Semantics unimplemented.
+	(dni fmax): Update opcode.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (dni bitr16): Use explicit SI type for calculating
+	zflag and nflag.
+	(dni bitr): Likewise.
+	(sem-fpu): Likewise, but for bzflag and bnflag, when FPU is in
+	integer mode.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (define-operand pos-direction): Add no-op operand.
+	(op-atomic-testset): Add pos-direction to syntax.
+	* epiphany.opc (parse_pos_direction): Implemented. Support '+'
+	modifier, print error on '-' modifier.
+	(print_pos_direction): Implemented. Absoulte no-op.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (store-to-ea): Truncate register value to mode, don't
+	sign extend it.
+
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers): Make writing to H-REG-MESH-COREID
+	a no-operation.
+
+2015-12-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers): Add H-REG-SRC-SIMCMD.
+
+2015-11-26  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-pc): Call epiphanybf_fetchable_p to verify that newval
+	is a valid instruction address.
+
+2015-11-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (dni idle): Call epiphany_gie ().
+	(dni gien): Adjust for API change in epiphany_gie ().
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers): Route all writes to dma registers
+	through epiphanybf_set_dmareg.
+
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (sem-atomic-dw-load-op): Calculate 64-bit address from
+	rn6-di and rm6-di, not rn-di and rm-di. Calculate 32-bit address from
+	rn6 and rm6, not rn and rm.
+	(sem-atomic-load-op): Likewise.
+	(sem-atomic-dw-store-op): Likewise.
+	(sem-atomic-store-op): Likewise.
+
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (dni wand): Call epiphanybf_wand().
+
+2015-11-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers): Add special case for
+	FSTATUS.
+
+2015-11-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-int-idlebit): New hardware.
+	(dni idle): Set h-int-idlebit.
+	(h-pc): Don't show write to h-hwloop-next in trace.
+
+2015-11-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (op-atomic-testset): Rename from testset-insn.
+	Deprecate direction-bit for rm. Only support word access. Use
+	sem-atomic-op for semantics.
+
+2015-10-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Fix bugs for atomic semantics. Add
+	restrictions on which modes to support for each instruction.
+	(h-memory-atomic) (h-memory-atomic-flag): New
+	dummy hardware for tracing.
+	(memory-atomic) (memory-atomic-flag): New operands for
+	tracing.
+	(sem-atomic-memop-or-exc): New pmacro.
+	(sem-atomic-dw-load-op): Use sem-atomic-memop-or-exc. Pass in
+	rd6 to c-call.
+	(sem-atomic-load-op): Likewise.
+	(sem-atomic-dw-store-op): Use sem-atomic-memop-or-exc.
+	(sem-atomic-dw-load-op): Likewise.
+	(op-atomic-atomic-size): Rename from op-atomic-atomic-helper.
+	(op-atomic-size): Rename from op-atomic-helper.
+	(op-atomic-all): Rename from op-atomic.
+
+2015-10-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (sem-dword-regs-or-exc): Rename from
+	sem-dword-regs.
+	(sem-memop-or-exc): Rename from sem-memop-or-exc.
+	(sem-atomic-dw-load-op): New.
+	(sem-atomic-load-op): New.
+	(sem-atomic-dw-store-op): New.
+	(sem-atomic-store-op): New.
+	(sem-atomic-op store): New.
+	(op-atomic-atomic-helper): Add semantics.
+	(op-atomic-helper): Likewise.
+
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (enum e-interrupts): Add.
+	(sem-memop-or-exception): Always set memaddr.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-all-registers) (h-registers) (h-core-registers)
+	(h-coredma-registers) (h-coremem-registers)
+	(h-coremesh-registers): Change to unsigned type.
+	(h-fpregisters): Remove hardware.
+	(h-registers-df): Likewise.
+	(frd) (frn) (frm) (frd6) (frn6) (frm6) (rd6-df) (rn6-df)
+	(rm6-df): Remove operands.
+	(op-two_operands-float): Use double-integer operands for
+	float64 instructions.
+	(dnim fmax64) (dnim fmax64.l): Likewise.
+
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (e4-scr-config-bits): New enum, not complete.
+	(e5-scr-config-bits): New enum, not complete.
+	(h-memaddr): Change to 64-bit word.
+	(dnop-short-dword-reg): New pmacro.
+	(rd-di): New operand for dword register.
+	(rn-di): Likewise.
+	(rm-di): Likewise.
+	(sem-64bmode-p): New pmacro.
+	(sem-if-64bmode): New pmacro.
+	(load-double-from-ea): Check that rd operand is an even number
+	register. Zero-extend to 64-bit address.
+	(load-from-ea): Zero-extend to 64-bit address.
+	(store-double-to-ea): Check that rd operand is an even number
+	register. Zero-extent to 64-bit address.
+	(store-to-ea): Zero-extend to 64-bit address.
+	(load-insn): Added support for 64-bit address mode.
+	(store-insn): Likewise.
+
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (e-excause): Default to Epiphany-IV+ exception
+	cause numbers for now.
+
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro op-fabs-float): Add missing fabs64
+	variant.
+
+2015-10-16  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro sem-fpu-float): OR all flags in SIMD
+	mode.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro shift64-rrr): rm operand is a 32-bit
+	register.
+	(pmacro sem-dword-regs): Fix silly logic bug.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro sem-fpu-apply): New helper pmacro.
+	(pmacro sem-fpu-float): Generic code for single-precision
+	double precision and single-precision SIMD.
+	(pmacro sem-fpu): Adjust arguments, use indexes instead of
+	values. Handle SF-SIMD mode. Add boilerplate code for DF.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (pmacro sem-dword-regs): Semantics helper for
+	insns with 64-bit operands. Throws exception if regs are not
+	aligned, otherwise performs applies sem-op.
+	(op64-rrr): Use sem-dword-regs.
+	(shift-rrr): Likewise.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (arithmode): Include SIMD bit.
+	(dni mode): Use arithmode operand.
+
+2015-10-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (op-atomic-helper): Fix operands for '.l' alias.
+
+2015-10-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Remove signedness from hardware
+	description.
+
+2015-10-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-memaddr) (memaddr): Reinstated. Needed for
+	tracing purposes.
+	(callMisalignmentExceptionIfNeeded): Rename from ...
+	(sem-memop-or-exception): ... to. Take memory operand as
+	argument. Apply if address is aligned, otherwise schedule
+	exception as before.
+	(load-double-from-ea): Adjust for above.
+	(load-from-ea): Likewise.
+	(store-double-to-ea): Likewise.
+	(store-to-ea): Likewise.
+	(testset-insn): Likewise.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (dni fmax): Add semantics.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-scr-config-arithmode): New hardware, alias
+	for arith mode bits in config register.
+	(e-arithmode): Arithmetic mode enum.
+	(arithmode): New operand.
+	(sem-fpu): Use arithmode and e-arithmode.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (sem-fpu): New pmacro. One common semantics
+	pmacro for all fpu instructions.
+	(op-two_operands-float): Use sem-fpu.
+	(op-fabs-float): Likewise.
+	(op-fix2float-float): Likewise.
+	(op-float2fix): Likewise.
+
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (op-two_operands-float): Add missing short
+	instructions for double precision floats.
+
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-memaddr) (memaddr): Removed.
+	(callMisalignmentExceptionIfNeeded): Rename isAlignedAccess to
+	isAligned.
+	(load-double-from-ea): Rename isAlignedAccess to isAligned and
+	simplify.
+	(load-from-ea): Likewise.
+	(store-double-to-ea): Likewise.
+	(store-to-ea): Likewise.
+	(testset-insn): Likewise.
+
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (rd-di): New operand. Parser is
+	parse_dword_shortregs.
+	(load-insn) (store-insn): Limit rd6 operand to even register
+	numbers when size is 64 bits.
+	* epiphany.opc (parse_dword_shortregs): New function.
+	(parse_dword_regs): Adjust error message.
+
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (op-atomic-atomic-helper, op-atomic-atomic,
+	op-atomic-helper, op-atomic): Don't use shortregs.
+	Limit rd6 operand to even register numbers when size is 64
+	bits.
+
+2015-10-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.opc: Use parse_dword_regs for 64-bit operands.
+	* epiphany.cpu (parse_dword_regs): New function. Only allow
+	even register numbers for 64-bit operands.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Fix disassembly output for 64-bit integer
+	instructions. Don't append "-di" suffix, use normal register
+	names.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (add64) (sub64) (and64) (orr64) (eor64) (asr64)
+	(lsr64) (lsl64): Add semantics for 64-bit integer instructions.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (add-vc) (sub-vc) (logic-vc): Add mode
+	parameter.
+	(op-rrr) (op-rri) (shift-rrr) (shift-rri): Adjust for above.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-registers-di) (h-registers-df) (rd6-di)
+	(rn6-di) (rm6-di) (rd6-df) (rn6-df) (rm6-df): Add 64-bit
+	versions of registers and operands.
+
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Remove dni_wrapper pmacro. Use dni
+	directly instead.
+
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (h-pc): Implement support for hardware loops in
+	setter.
+	(dni_wrapper): Remove incorrect hardware-loops
+	implementation. In other words: don't set pc here.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Add 64-bit integer register instructions.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Add Epiphany-5 instructions: fmax,
+	and umul.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Add Epiphany-5 aliases for double float
+	instructions.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Add atomic instruction group and boilerplate.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (mode): Change to 4-bit operand.
+
+2015-09-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Remove fext, fdep, lfsr, frecip, and fsqrt
+	instructions. They were never realised in  hardware.
+
+2015-09-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Add long alias for 'mode'.
+
+2015-09-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Fix register rename regressions for gas. Promote ip as
+	default alias for r12. Rename debugstatus back to debug.
+
+2015-09-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Add "MODE" instruction.
+
+2015-09-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu: Fix (some) code formatting.
+
 2015-09-24  Ola Jeppsson  <ola@adapteva.com>
 
 	* cpu/epiphany.cpu: Fix inconsistent alias for fp.

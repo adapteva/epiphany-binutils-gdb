@@ -1,0 +1,26 @@
+# epiphany testcase for and64 $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global and64
+and64:
+	;expect
+	mov	r20,0
+	mova	r21,0xA0000000
+
+	mova	r10,0x55555555
+	mova	r11,0xA5555555
+	mova	r12,0xAAAAAAAA
+	mova	r13,0xAAAAAAAA
+	and64	r14,r10,r12
+	nop
+	sub64	r16,r20,r14
+	bne	1f
+
+	pass
+1:
+	fail
+

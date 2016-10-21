@@ -70,12 +70,12 @@ dv_core_attach_address_callback (struct hw *me,
 }
 
 
-static unsigned
+static address_word
 dv_core_dma_read_buffer_callback (struct hw *me,
 				  void *dest,
 				  int space,
-				  unsigned_word addr,
-				  unsigned nr_bytes)
+				  address_word addr,
+				  address_word nr_bytes)
 {
   return sim_core_read_buffer (hw_system (me),
 			       NULL, /*CPU*/
@@ -86,12 +86,12 @@ dv_core_dma_read_buffer_callback (struct hw *me,
 }
 
 
-static unsigned
+static address_word
 dv_core_dma_write_buffer_callback (struct hw *me,
 				   const void *source,
 				   int space,
-				   unsigned_word addr,
-				   unsigned nr_bytes,
+				   address_word addr,
+				   address_word nr_bytes,
 				   int violate_read_only_section)
 {
   return sim_core_write_buffer (hw_system (me),

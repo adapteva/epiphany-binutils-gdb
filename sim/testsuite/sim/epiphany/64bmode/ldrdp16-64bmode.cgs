@@ -1,0 +1,39 @@
+# epiphany testcase for ldrd $rd,[$rn],$rm -*- Asm -*-
+# mach: all
+
+	.include "testutils64.inc"
+
+	start64
+
+	.global ldrdp
+ldrdp:
+	mova	r0,0xffff0040
+	mova	r1,0xffffffff
+	mova	r2,0xfffffff8
+	mova	r3,0xffffffff ;; -8
+	mov	r34,r0
+	mov	r35,r1
+
+	ldrd	r6,[r0],r2
+	;; check addr decrement
+	add64	r34,r34,r2
+	sub64	r40,r34,r0
+	bne	1f
+	;; check value
+	mova	r36,0x43424140
+	mova	r37,0x47464544
+	sub64	r6,r6,r36
+	bne	1f
+	ldrd	r6,[r0],r2
+	;; check addr decrement
+	add64	r34,r34,r2
+	sub64	r40,r34,r0
+	bne	1f
+	;; check value
+	mova	r36,0x3b3a3938
+	mova	r37,0x3f3e3d3c
+	sub64	r6,r6,r36
+	bne	1f
+	pass
+1:
+	fail

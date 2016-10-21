@@ -1,0 +1,21 @@
+# epiphany testcase for fsub-simd $frd6,$frn6,$frm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fsub_simd
+fsub_simd:
+	mova	r20,0f2.0
+	mova	r21,0f2.0
+	mova	r22,0f122.5
+	mova	r23,0f-2.5
+	mova	r30,0f-120.5
+	mova	r31,0f4.5
+	mode	8
+	fsub	r40,r20,r22
+	eor64	r42,r40,r30
+	bne	1f
+	pass
+1:	fail

@@ -1,0 +1,24 @@
+# epiphany testcase for asr64 $rd6,$rn6,$rm6 -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global asr
+asr:
+	mov	r20,0
+	mov	r21,0
+	mov	r22,1
+	mov	r23,0
+	mov	r10,0
+	mova	r11,0x80000000
+	mov	r12,63
+	asr64	r10,r10,r12
+	add64	r10,r10,r22
+	sub64	r10,r20,r10
+	bne	1f
+
+	pass
+1:
+	fail

@@ -352,9 +352,9 @@ static const struct cfi_cmdset * const cfi_cmdsets[] =
    machine, we figure out what to do with this specific write.  All
    common code sits here and if there is a request we can't process,
    we hand it off to the command set-specific write function.  */
-static unsigned
+static address_word
 cfi_io_write_buffer (struct hw *me, const void *source, int space,
-		     address_word addr, unsigned nr_bytes)
+		     address_word addr, address_word nr_bytes)
 {
   struct cfi *cfi = hw_data (me);
   const unsigned char *ssource = source;
@@ -366,8 +366,8 @@ cfi_io_write_buffer (struct hw *me, const void *source, int space,
 
   if (cfi->width != nr_bytes)
     {
-      HW_TRACE ((me, "write 0x%08lx length %u does not match flash width %u",
-		 (unsigned long) addr, nr_bytes, cfi->width));
+      HW_TRACE ((me, "write 0x%08lx length %lu does not match flash width %u",
+		 (unsigned long) addr, (unsigned long) nr_bytes, cfi->width));
       return nr_bytes;
     }
 
@@ -376,7 +376,8 @@ cfi_io_write_buffer (struct hw *me, const void *source, int space,
       /* NOR flash can only go from 1 to 0.  */
       unsigned i;
 
-      HW_TRACE ((me, "program %#x length %u", offset, nr_bytes));
+      HW_TRACE ((me, "program %#x length %lu",
+		 offset, (unsigned long) nr_bytes));
 
       for (i = 0; i < nr_bytes; ++i)
 	cfi->data[offset + i] &= ssource[i];
@@ -437,9 +438,9 @@ cfi_io_write_buffer (struct hw *me, const void *source, int space,
    flash, the CFI query structure, some status info, or something else ?
    Any requests that we can't handle are passed to the command set-
    specific read function.  */
-static unsigned
+static address_word
 cfi_io_read_buffer (struct hw *me, void *dest, int space,
-		    address_word addr, unsigned nr_bytes)
+		    address_word addr, address_word nr_bytes)
 {
   struct cfi *cfi = hw_data (me);
   unsigned char *sdest = dest;
@@ -458,8 +459,9 @@ cfi_io_read_buffer (struct hw *me, void *dest, int space,
     }
 #endif
 
-  HW_TRACE ((me, "%s read 0x%08lx length %u",
-	     state_names[cfi->state], (unsigned long) addr, nr_bytes));
+  HW_TRACE ((me, "%s read 0x%08lx length %lu",
+	     state_names[cfi->state], (unsigned long) addr,
+	     (unsigned long) nr_bytes));
 
   switch (cfi->state)
     {
@@ -578,7 +580,7 @@ attach_cfi_regs (struct hw *me, struct cfi *cfi)
 {
   address_word attach_address;
   int attach_space;
-  unsigned attach_size;
+  address_word attach_size;
   reg_property_spec reg;
   bool fd_writable;
   int i, ret, fd;

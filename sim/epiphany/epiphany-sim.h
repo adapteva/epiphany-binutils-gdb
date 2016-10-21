@@ -20,58 +20,59 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef EPIPHANY_SIM_H
 #define EPIPHANY_SIM_H
 
+#include "cgen-types.h"
 #include "cgen-atomic.h"
+
+#include <stdint.h>
+#include <stdbool.h>
 
 /* GDB register numbers.  */
 /* TBS */
 
 extern int epiphany_decode_gdb_ctrl_regnum (int);
 
-/* Cover macros for hardware accesses.
-   FIXME: Eventually move to cgen.  */
-#define GET_H_SM() ((CPU (h_psw) & 0x80) != 0)
-
-#ifndef GET_H_CR
-extern USI  epiphanybf_h_cr_get_handler (SIM_CPU *, UINT);
-extern void epiphanybf_h_cr_set_handler (SIM_CPU *, UINT, USI);
-
-#define GET_H_CR(regno) \
-  XCONCAT2 (WANT_CPU,_h_cr_get_handler) (current_cpu, (regno))
-#define SET_H_CR(regno, val) \
-  XCONCAT2 (WANT_CPU,_h_cr_set_handler) (current_cpu, (regno), (val))
-#endif
-
-#ifndef  GET_H_PSW
-extern UQI  epiphanybf_h_psw_get_handler (SIM_CPU *);
-extern void epiphanybf_h_psw_set_handler (SIM_CPU *, UQI);
-
-#define GET_H_PSW() \
-  XCONCAT2 (WANT_CPU,_h_psw_get_handler) (current_cpu)
-#define SET_H_PSW(val) \
-  XCONCAT2 (WANT_CPU,_h_psw_set_handler) (current_cpu, (val))
-#endif
-
-#ifndef  GET_H_ACCUM
-extern DI   epiphanybf_h_accum_get_handler (SIM_CPU *);
-extern void epiphanybf_h_accum_set_handler (SIM_CPU *, DI);
-
-#define GET_H_ACCUM() \
-  XCONCAT2 (WANT_CPU,_h_accum_get_handler) (current_cpu)
-#define SET_H_ACCUM(val) \
-  XCONCAT2 (WANT_CPU,_h_accum_set_handler) (current_cpu, (val))
-#endif
-
 /* Custom reg getters/setters */
 void epiphanybf_set_config(SIM_CPU *current_cpu, USI val);
-void epiphanybf_set_status(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_status(SIM_CPU *current_cpu, USI val, BI fstatus);
+void epiphanybf_set_imask(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_ilatst(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_ilatcl(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_debugcmd(SIM_CPU *current_cpu, USI val);
 void epiphanybf_set_resetcore(SIM_CPU *current_cpu, USI val);
+void epiphanybf_set_dmareg(SIM_CPU *current_cpu, UINT regno, USI val);
+void epiphanybf_set_simcmd(SIM_CPU *current_cpu, USI val);
+
+bool epiphanybf_external_fetch_allowed_p(SIM_CPU *current_cpu);
+/* This function is called for every instruction fetch, so it better be fast */
+inline static BI
+epiphanybf_fetchable_p (SIM_CPU *current_cpu, address_word addr)
+{
+  static bool initialized = false;
+  static bool external_fetch_allowed;
+
+  if (!initialized)
+    external_fetch_allowed = epiphanybf_external_fetch_allowed_p (current_cpu);
+
+  return (addr < 0x100000 || external_fetch_allowed);
+}
+
+/* epiphany_dma */
+struct hw;
+
+extern void epiphany_dma_set_reg (struct hw *me, int regno, uint32_t val);
+extern bool epiphany_dma_active_p (struct hw *me);
+
+/* timer */
+extern void epiphany_timer_set_cfg (struct hw *me, uint32_t val);
+extern bool epiphany_timer_active_p (struct hw *me);
+
+
+void epiphanybf_cpu_reset(SIM_CPU *current_cpu);
+void epiphanybf_wand(SIM_CPU *current_cpu);
 
 /* Misc. profile data.  */
 
-typedef struct 
+typedef struct
 {
   /* nop insn slot filler count.  */
   unsigned int fillnop_count;
@@ -161,26 +162,32 @@ extern void epiphany_fpu_error (CGEN_FPU *, int);
 extern USI epiphany_rti (SIM_CPU *);
 
 /* Handle the gie insn.  */
-extern void epiphany_gie( SIM_CPU * );
+extern void epiphany_gie(SIM_CPU *, int);
 
 /* Call back after every instruction.  */
-extern USI epiphany_post_isn_callback (SIM_CPU *cpu , USI pc) ;
+extern USI epiphany_post_isn_callback (SIM_CPU *cpu , PCADDR pc) ;
 
 /* Check if core is active */
 extern int epiphany_cpu_is_active(SIM_CPU *current_cpu);
+
+/* Check if any peripheral is active */
+extern bool epiphany_any_peripheral_active_p (SIM_CPU *current_cpu);
+
+/* Halt simulation (for user environment) */
+extern void  epiphany_halt_on_inactive(SIM_CPU *current_cpu, PCADDR vpc);
 
 #if WITH_SCACHE
 extern void epiphanybf_scache_invalidate(SIM_CPU *current_cpu, PCADDR vpc);
 #endif
 
-void
-epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu, UINT regno,
-				    SI newval);
+extern void epiphanybf_h_all_registers_set_raw (SIM_CPU *current_cpu,
+						UINT regno, USI newval);
+extern void epiphanybf_h_all_registers_set (SIM_CPU *current_cpu, UINT regno,
+					    USI newval);
 
-SI epiphany_testset(SIM_CPU *, USI, SI, int);
-SI epiphany_testset_SI(SIM_CPU *, USI, SI);
-SI epiphany_testset_HI(SIM_CPU *, USI, HI);
-SI epiphany_testset_QI(SIM_CPU *, USI, QI);
-
+extern UDI epiphany_atomic_load (SIM_CPU *, INSN_ATOMIC_CTRLMODE, address_word,
+				 INSN_WORDSIZE, UDI);
+extern void epiphany_atomic_store (SIM_CPU *, INSN_ATOMIC_CTRLMODE,
+				   address_word, INSN_WORDSIZE, UDI);
 
 #endif /* EPIPHANY_SIM_H */

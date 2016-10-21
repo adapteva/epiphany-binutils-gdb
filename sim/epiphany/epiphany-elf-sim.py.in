@@ -30,10 +30,16 @@ import os
 import time
 import traceback
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from subprocess import call
 
 
+TARGET_PREFIX='@TARGET_PREFIX@'
 EXEC_DIR = os.path.dirname(os.path.realpath(__file__))
-DUMMY_PROGRAM = os.path.join(EXEC_DIR, '..', 'epiphany-elf', 'libexec', 'epiphany-elf-sim-dummy')
+DUMMY_PROGRAM = os.path.join(TARGET_PREFIX, 'libexec', 'epiphany-elf-sim-dummy')
+EPIPHANY_ELF_RUN='epiphany-elf-run'
+
+if not os.path.isfile(DUMMY_PROGRAM):
+    DUMMY_PROGRAM = os.path.join(EXEC_DIR, '..', 'epiphany-elf', 'libexec', 'epiphany-elf-sim-dummy')
 
 SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) \
     for n in dir(signal) if n.startswith('SIG') and '_' not in n)
@@ -51,6 +57,53 @@ def auto_int(x):
     return int(x,0)
 
 
+# From:
+# https://stackoverflow.com/questions/6679641/how-to-split-a-list-in-two-at-the-point-where-predicate-is-first-false
+# Why isn't there a break in itertools? Gah!
+def breakwhen(pred, seq):
+    # if seq is not already an iterator, make it one
+    if not hasattr(seq,'next'):
+        seq = iter(seq)
+
+    fst, snd = [], []
+    for item in seq:
+        if pred(item):
+            snd.append(item)
+            break
+        fst.append(item)
+
+    snd.extend(seq)
+
+    return fst, snd
+
+def not_number_part(x):
+    return not x in (map(str, range(0,10)) + ['x', 'X'])
+
+def parse_size(x):
+    """ Support size argument w/ "K,M,G" suffix. """
+    try:
+        num, sfx = map(''.join, breakwhen(not_number_part, x))
+        num = auto_int(num)
+        switch = {
+            ' ' : (lambda: True, num),
+            '\t': (lambda: True, num),
+            'k' : (lambda: True, num << 10),
+            'm' : (lambda: True, num << 20),
+            'g' : (lambda: True, num << 30),
+        }
+        if not sfx:
+            return True, num
+
+        # Just look at one character, (emulates sim-options.c)
+        return switch.get(sfx.lower()[0], (lambda: False, -1))
+
+    except ValueError:
+        return False, -1
+
+def pow_of_two_p(n):
+    return (n != 0)  and (n & (n-1) == 0)
+
+
 def parse_or_die():
     """ Parse command line arguments """
     parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter)
@@ -59,10 +112,10 @@ def parse_or_die():
 Epiphany simulator frontend.
 Helps spawning simulator processes.
 
-Default configuration is Parallella-16 Epiphany-III.
-Rows: 4 Columns: 4
+Default configuration is DRAFT Parallella-2 Epiphany-V.
+Rows: 32 Columns: 32
 External RAM size: 32 MB External RAM base: 0x8e000000
-First core: 0x808 (32, 8)
+First core: 0x020 (0, 32)
 
 Press Ctrl-C at any time to abort the simulation.
 """
@@ -70,10 +123,22 @@ Press Ctrl-C at any time to abort the simulation.
     parser.add_argument(
             '--verbose', action='store_true', help='Verbose output')
 
+    parser.add_argument('-p', '--preset',
+            choices=['parallella16', 'parallella64', 'parallella1k'],
+            help=
+            """
+            parallella16: '--rows 4  --cols  4 --first-core 0x808 --external-fetch --core-mem 32k'
+            parallella64: '--rows 8  --cols  8 --first-core 0x808 --external-fetch --core-mem 32k'
+            parallella1k: '--rows 32 --cols 32 --first-core 0x020 --core-mem 64k'
+
+            All presets also implies:
+            '--ext-ram-size 32M --ext-ram-base 0x8e000000'
+            """)
+
     parser.add_argument(
-            '-r', '--rows', type=auto_int, default=4, help='Number of rows')
+            '-r', '--rows', type=auto_int, default=32, help='Number of rows')
     parser.add_argument(
-            '-c', '--cols', type=auto_int, default=4, help='Number of columns')
+            '-c', '--cols', type=auto_int, default=32, help='Number of columns')
 
 
     parser.add_argument(
@@ -88,15 +153,22 @@ Press Ctrl-C at any time to abort the simulation.
 
 
     parser.add_argument(
-            '--environment', type=str, default='user',
-            help='Environment. Either `user\' or `operating\'')
+            '--environment', type=str, default='virtual',
+            help=
+            """Environment. Must be one of `user', `virtual', or `operating'.
+            NOTE: Default is `virtual'. This is different from epiphany-elf-run,
+            where the default environment setting is `user'""")
 
     parser.add_argument(
-            '--ext-ram-size', type=auto_int, default=32,
-            help='External RAM size in MB')
+            '--ext-ram-size', type=str, default='32MB',
+            help='External RAM size. Allowed suffixes: KB, MB, GB. No spaces. Default: 32MB.')
     parser.add_argument(
             '--ext-ram-base', type=auto_int, default=0x8e000000,
             help='External RAM base address')
+
+    parser.add_argument(
+            '--core-mem', type=str, default='64kB',
+            help='Core memory size (SRAM). Allowed suffixes: KB, MB, GB. No spaces. Default: 64kB.')
 
     parser.add_argument(
             '--redirect-dir', type=str,
@@ -125,6 +197,17 @@ Press Ctrl-C at any time to abort the simulation.
     parser.add_argument('--profile', action='store_true',
             help='Enable profiling')
 
+    parser.add_argument('--trace', action='store_true',
+            help='Enable tracing')
+
+    parser.add_argument('--external-fetch', action='store_true',
+            help='Enable external fetch')
+
+    parser.add_argument('--host', nargs='+', metavar=('PROGRAM','ARG'),
+            help="""Start simulation with host program. First argument is the
+            native program to spawn. The following arguments are arguments to
+            the host program.""")
+
     parser.add_argument('--extra-args', type=str, metavar='ARGS', default='',
             help="""Pass ARGS to epiphany-elf-run. Enclose in quotes, e.g
             --extra-args="--foo --bar" """)
@@ -135,6 +218,27 @@ Press Ctrl-C at any time to abort the simulation.
     args.wait_attach = sum(args.wait_attach, [])
 
 
+    if args.preset:
+        args.ext_ram_size = '32M'
+        args.ext_ram_base = 0x8e000000
+        if args.preset == 'parallella16':
+            args.rows = 4
+            args.cols = 4
+            args.first_core = 0x808
+            args.core_mem = '32k'
+            args.external_fetch = True
+        if args.preset == 'parallella64':
+            args.rows = 8
+            args.cols = 8
+            args.first_core = 0x808
+            args.core_mem = '32k'
+            args.external_fetch = True
+        if args.preset == 'parallella1k':
+            args.rows = 32
+            args.cols = 32
+            args.first_core = 0x020
+            args.core_mem = '64k'
+
     # Check arguments
     if args.rows < 1 or 64 < args.rows:
         parser.error('Rows must be within range [1..64]')
@@ -142,11 +246,23 @@ Press Ctrl-C at any time to abort the simulation.
     if args.cols < 1 or 64 < args.cols:
         parser.error('Columns must be within range [1..64]')
 
-    if args.ext_ram_size < 0 or 4095 < args.ext_ram_size:
-        parser.error('External RAM size must be within range [0..4095]')
+    issize, size = parse_size(args.ext_ram_size)
+    if (not issize) or size < 0 or 4095 * 1024 * 1024 < size:
+        parser.error('External RAM size must be within range [0..4095] MB')
 
-    if args.environment != 'user' and args.environment != 'operating':
-        parser.error('Environment must be either `user\' or `operating\'')
+    issize, size = parse_size(args.core_mem)
+    if (not issize) or size < 32768 or 0x100000 < size:
+        parser.error('Core memory size must be within range [32KB..1MB]')
+    if not pow_of_two_p(size):
+        parser.error('Core memory size must be power of two')
+
+    if args.host:
+        args.environment = 'operating'
+        if not (os.path.isfile(args.host[0]) or which(args.host[0])):
+            parser.error("Host program `%s' not found" % args.host[0])
+
+    if not {args.environment} & {'user', 'virtual', 'operating'}:
+        parser.error('Environment must be `user\', `environment\', or `operating\'')
 
     if not args.program and args.environment != 'operating':
         parser.error('No program(s) specified')
@@ -163,7 +279,7 @@ Press Ctrl-C at any time to abort the simulation.
     # Adjust/check first_core argument
     if args.first_core == None:
         if args.first_row == None and args.first_col == None:
-            args.first_core = 0x808
+            args.first_core = 0x020
         elif args.first_row != None and args.first_col != None:
             if args.first_row < 0 or 63 < args.first_row:
                 parser.error('First row must be within range [0..63]')
@@ -319,11 +435,18 @@ def spawn(args, i, j):
         '--e-cols'        , args.cols,
         '--e-ext-ram-size', args.ext_ram_size,
         '--e-ext-ram-base', args.ext_ram_base,
+        '--e-core-mem'    , args.core_mem,
         '--environment'   , args.environment
         ])
 
     if args.profile:
         sim_args.append('-pon')
+
+    if args.trace:
+        sim_args.append('--trace')
+
+    if args.external_fetch:
+        sim_args.append('--e-external-fetch')
 
     sim_args.extend(args.extra_args.split())
 
@@ -347,7 +470,7 @@ def spawn(args, i, j):
                 os.kill(os.getppid(), signal.SIGTERM)
                 os._exit(1)
 
-            os.execlp('epiphany-elf-run', 'epiphany-elf-run', *sim_args)
+            os.execlp(EPIPHANY_ELF_RUN, EPIPHANY_ELF_RUN, *sim_args)
 
         except Exception as e:
             print_stderr('[ERR ] core-0x%03x: ' % coreid)
@@ -369,7 +492,7 @@ def spawn_sim_processes(args):
         for j in range(args.cols):
             pid, coreid = spawn(args, i, j)
             if pid != () and coreid != ():
-                pid_core_map[pid] = coreid
+                pid_core_map[pid] = (coreid, True)
 
     return pid_core_map
 
@@ -382,13 +505,146 @@ def which(command):
             return full_path
     return None
 
+def in_build_tree():
+    end = os.path.join(*(EXEC_DIR.split(os.path.sep)[-2:]))
+    return end == os.path.join('sim', 'epiphany')
+
+
+def run_inferior(args, pid_core_map):
+    if args.verbose:
+        print_stderr('[INFO] Starting host program')
+
+    # Tell e-hal we want to use the simulator target
+    if not "EHAL_TARGET" in os.environ:
+        os.environ["EHAL_TARGET"] = "sim"
+
+    # Tell pal we want to use the simulator target
+    if not "PAL_EPIPHANY_TARGET" in os.environ:
+        os.environ["PAL_EPIPHANY_TARGET"] = "sim"
+
+    # We only report the host app's exit status
+    retval = 0
+    try:
+        retval = call(args.host)
+    except OSError as e:
+        retval = 127
+        print_stderr('[INFO] Failed to start host program. Reason: %s' % e.strerror)
+
+    if args.verbose or retval != 0:
+        print_stderr('[INFO] Host program exited with status %d' % retval)
+
+    grace_start = time.time()
+    while any((lambda (_, alive) : alive) for p in pid_core_map):
+
+        """ Wait for children """
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+            if (pid, status) == (0, 0):
+                if (time.time() - grace_start < 2.0):
+                    time.sleep(0.1)
+                    continue
+
+                for p in pid_core_map:
+                    _, alive = pid_core_map[p]
+                    if alive:
+                        os.kill(p, signal.SIGTERM)
+
+                continue
+
+            coreid, _ = pid_core_map[pid]
+            pid_core_map[pid] = coreid, False
+
+            # Lowest byte signal, second byte return code
+            sim_rc     = status / 256
+            sim_signal = status % 256
+
+            if sim_signal:
+                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
+                          (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
+            else:
+                if args.verbose or sim_rc != 0:
+                    print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
+                                 (coreid, coreid/64, coreid%64, sim_rc))
+
+        except OSError as e:
+            if e.errno == os.errno.ECHILD:
+                """ All children done """
+                break
+            else:
+                raise
+
+    return retval
+
+def run_standalone(args, pid_core_map):
+    my_exit_status = 0
+    first_fail_core = -1
+    while True:
+        """ Wait for children """
+        try:
+            pid, status = os.wait()
+
+            # Lowest byte signal, second byte return code
+            sim_rc     = status / 256
+            sim_signal = status % 256
+
+            coreid, _ = pid_core_map[pid]
+            pid_core_map[pid] = (coreid, False)
+            if sim_signal:
+                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
+                          (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
+            else:
+                if args.verbose or sim_rc != 0:
+                    print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
+                                 (coreid, coreid/64, coreid%64, sim_rc))
+
+            # Set exit status to first non-zero core simulator exit status.
+            # Unfortunately, it doesn't seem possible to return an exit code
+            # higher than 127 in Python, so we must choose one of sim_signal or
+            # sim_rc. Use sim_signal when.
+            if status != 0 and \
+               ((first_fail_core == -1 or first_fail_core > coreid) or \
+                 (status < 256 and my_exit_status >= 256)):
+                first_fail_core = coreid
+                my_exit_status = status
+
+        except OSError as e:
+            if e.errno == os.errno.ECHILD:
+                """ All children done """
+                break
+            else:
+                raise
+
+    if my_exit_status % 256:
+        # We're returning a signal
+        return my_exit_status % 256
+    else:
+        # We're returning a return code
+        return my_exit_status / 256
 
 
 def main():
+    global EPIPHANY_ELF_RUN
+    found_run = False
 
-    if not which('epiphany-elf-run'):
+    # Look in build tree first (for simulator testsuite support)
+    if in_build_tree() and os.path.exists(os.path.join(EXEC_DIR, 'run')):
+        EPIPHANY_ELF_RUN = os.path.join(EXEC_DIR, 'run')
+        found_run = True
+
+    # Check if it's in PATH
+    if not found_run:
+        if which(EPIPHANY_ELF_RUN):
+            found_run = True
+
+    # Finally, try in script dir
+    if not found_run:
+        if os.path.exists(os.path.join(EXEC_DIR, EPIPHANY_ELF_RUN)):
+            EPIPHANY_ELF_RUN = os.path.join(EXEC_DIR, EPIPHANY_ELF_RUN)
+            found_run = True
+
+    if not found_run:
         print_stderr('[ERR ] epiphany-elf-run must be in path')
-        exit(1)
+        sys.exit(1)
 
     args = parse_or_die()
 
@@ -404,11 +660,11 @@ def main():
             if e.errno == os.errno.EEXIST:
                 print_stderr('[ERR ] Specified redirect directory `%s\' already '
                 'exists but is not a directory' % args.redirect_dir)
-                exit(8)
+                sys.exit(8)
             if e.errno == os.errno.EACCES:
                 print_stderr('[ERR ] Permission denied to access specified '
                 'redirect directory `%s\'' % args.redirect_dir)
-                exit(9)
+                sys.exit(9)
             else:
                 raise
 
@@ -418,30 +674,11 @@ def main():
     if args.verbose:
         print_stderr('[INFO] All core simulators started')
 
-    while True:
-        """ Wait for children """
-        try:
-            pid, status = os.wait()
+    if args.host:
+        return run_inferior(args, pid_core_map)
+    else:
+        return run_standalone(args, pid_core_map)
 
-            # Lowest byte signal, second byte return code
-            sim_rc     = status / 256
-            sim_signal = status % 256
-
-            coreid = pid_core_map[pid]
-            if sim_signal:
-                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) terminated by signal %s' %
-                          (coreid, coreid/64, coreid%64, signal_name(sim_signal)))
-            else:
-                print_stderr('[INFO] core simulator 0x%0.3x (%2d,%2d) exited with status %d' %
-                          (coreid, coreid/64, coreid%64, sim_rc))
-        except OSError as e:
-            if e.errno == os.errno.ECHILD:
-                """ All children done """
-                break
-            else:
-                raise
-
-    return 0
 
 def sigterm_handler(sig, frame):
     """ Kill all children on SIGTERM """
@@ -453,13 +690,14 @@ def sigterm_handler(sig, frame):
     print_stderr('[INFO] Got SIGTERM. Terminating all children...')
     time.sleep(1)
     os.kill(0, signal.SIGTERM)
-    exit(6)
+    sys.exit(6)
 
 
 if __name__ == "__main__":
+    status = 0
     signal.signal(signal.SIGTERM, sigterm_handler)
     try:
-        main()
+        status = main()
     except KeyboardInterrupt:
         """ Ctrl-C """
         # Catch SIGTERM/SIGINT (will exit immediately anyways)
@@ -469,7 +707,7 @@ if __name__ == "__main__":
         print_stderr('\n[INFO] Keyboard interrupt. Terminating all children...')
         time.sleep(1)
         os.kill(0, signal.SIGTERM)
-        exit(4)
+        sys.exit(4)
     except Exception:
         # Catch SIGTERM/SIGINT (will exit immediately anyways)
         signal.signal(signal.SIGTERM, (lambda sig, frame : 0))
@@ -479,5 +717,5 @@ if __name__ == "__main__":
         print_stderr('[ERR ] Terminating all children...')
         time.sleep(1)
         os.kill(0, signal.SIGTERM)
-        exit(5)
-
+        sys.exit(5)
+    exit(status)

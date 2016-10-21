@@ -49,9 +49,9 @@ struct _sim_core_mapping {
   /* common */
   int level;
   int space;
-  unsigned_word base;
-  unsigned_word bound;
-  unsigned_word nr_bytes;
+  address_word base;
+  address_word bound;
+  address_word nr_bytes;
   unsigned mask;
   /* memory map */
   void *free_buffer;

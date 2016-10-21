@@ -38,7 +38,22 @@ sim_engine_invalid_insn (SIM_CPU *current_cpu, IADDR cia, SEM_PC pc)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
 
-  fprintf(stderr, "----------- sim_engine_invalid_insn at pc 0x%p\n", pc);
+  fprintf (stderr, "----------- sim_engine_invalid_insn at pc 0x%llx\n",
+	   (ulong64) pc);
+
+  /* Contribute to global progress */
+  if (!CPU_SCR_WRITESLOT_EMPTY (current_cpu))
+    {
+      CPU_SCR_WRITESLOT_LOCK (current_cpu);
+      epiphanybf_h_all_registers_set (current_cpu,
+				      current_cpu->scr_remote_write_reg,
+				      current_cpu->scr_remote_write_val);
+      current_cpu->scr_remote_write_reg = -1;
+      current_cpu->scr_remote_write_val = 0xbaadbeef;
+      CPU_SCR_WRITESLOT_SIGNAL (current_cpu);
+      CPU_SCR_WRITESLOT_RELEASE (current_cpu);
+    }
+  pc = epiphany_handle_oob_events (current_cpu, cia, pc);
 
   sim_engine_halt (sd, current_cpu, NULL, cia, sim_stopped, SIM_SIGILL);
 
@@ -55,30 +70,6 @@ epiphany_core_signal (SIM_DESC sd, SIM_CPU *current_cpu, sim_cia cia,
   sim_core_signal (sd, current_cpu, cia, map, nr_bytes, addr,
 		   transfer, sig);
 }
-
-/* Read/write functions for system call interface.  */
-
-static int
-syscall_read_mem (host_callback *cb, struct cb_syscall *sc,
-		  unsigned long taddr, char *buf, int bytes)
-{
-  SIM_DESC sd = (SIM_DESC) sc->p1;
-  SIM_CPU *cpu = (SIM_CPU *) sc->p2;
-
-  return sim_core_read_buffer (sd, cpu, read_map, buf, taddr, bytes);
-}
-
-static int
-syscall_write_mem (host_callback *cb, struct cb_syscall *sc,
-		   unsigned long taddr, const char *buf, int bytes)
-{
-
-  SIM_DESC sd = (SIM_DESC) sc->p1;
-  SIM_CPU *cpu = (SIM_CPU *) sc->p2;
-
-  return sim_core_write_buffer (sd, cpu, write_map, buf, taddr, bytes);
-}
-
 
 /*! @todo Rewrite this and interrupt_handler in oob_events */
 USI epiphany_rti(SIM_CPU *current_cpu)
@@ -120,6 +111,7 @@ USI epiphany_rti(SIM_CPU *current_cpu)
     {
       SET_H_GIDISABLEBIT(0);
       SET_H_KMBIT(0);
+
       return iret;
     }
 }

@@ -20,6 +20,8 @@
 
 #include <pthread.h>
 
+#include "sim-types.h"
+
 #if WITH_EMESH_NET
 #include "esim-net.h"
 #endif
@@ -113,6 +115,9 @@ ES_ATOMIC_INCR_DEF(64)
 
 typedef struct _sim_cpu sim_cpu;
 
+#define ES_CPU ((sim_cpu *) esim->this_core_cpu_state)
+
+
 /*! ESIM node configuration */
 typedef struct es_node_cfg_ {
     /*! @privatesection */
@@ -169,6 +174,8 @@ typedef struct es_state_ {
         *this_core_state_header;           /*!< Ptr to core state header     */
     volatile uint8_t *this_core_cpu_state; /*!< GDB sim_cpu struct           */
     volatile uint8_t *ext_ram;             /*!< Ptr to external RAM          */
+
+    const char *session_name;
 #if WITH_EMESH_NET
     es_net_state net;
 #endif
@@ -192,15 +199,17 @@ typedef enum es_loc_t_ {
 typedef enum es_req_t {
   ES_REQ_LOAD,
   ES_REQ_STORE,
-  ES_REQ_TESTSET,
+  ES_REQ_ATOMIC_LOAD,
+  ES_REQ_ATOMIC_STORE,
 } es_req_t;
 
 
 /*! Address translation */
 typedef struct es_transl_ {
   es_loc_t	location;  /*!< Location (local shm or network) and type */
-  uint32_t	addr;      /*!< Epiphany address */
-  size_t	in_region; /*!< Num of bytes left in region, need better name */
+  address_word  addr;      /*!< Epiphany address */
+  address_word  in_region; /*!< Num of bytes left in region, need better
+				name */
   unsigned	coreid;    /*!< Core (if any) address belongs to */
   unsigned	node;      /*!< Node address belongs to */
   uint8_t	*mem;      /*!< Native pointer into shm region */
@@ -224,10 +233,11 @@ typedef struct es_transl_ {
 typedef struct es_transaction_ {
   es_req_t	type;       /*!< Type of request */
   uint8_t	*target;    /*!< Pointer to target buffer */
-  uint32_t	addr;       /*!< Target (Epiphany) base address */
-  uint32_t	size;       /*!< Total number of bytes requested.
+  int           ctrlmode;   /*!< Control mode */
+  address_word  addr;       /*!< Target (Epiphany) base address */
+  address_word  size;       /*!< Total number of bytes requested.
 				 @todo not used? remove? */
-  uint32_t	remaining;  /*!< Remaining bytes in transaction */
+  address_word  remaining;  /*!< Remaining bytes in transaction */
   es_transl	sim_addr;   /*!< Address translation of current region */
 } es_transaction;
 

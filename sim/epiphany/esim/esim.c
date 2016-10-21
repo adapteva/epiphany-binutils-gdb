@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 /** @todo Standard errnos should be sufficient for now */
 /* Errors are returned as negative numbers. */
@@ -51,6 +52,8 @@
 
 #include "esim.h"
 #include "esim-int.h"
+
+#include "epiphany-desc.h"
 
 /*! Get core index in shared memory
  *
@@ -78,7 +81,7 @@ es_shm_core_index(const es_state *esim, unsigned coreid)
  *
  * @return Pointer to start of Epiphany cores memory, or NULL
  */
-volatile static uint8_t *
+static volatile uint8_t *
 es_shm_core_base(const es_state *esim, unsigned coreid)
 {
   signed offset = es_shm_core_index(esim, coreid);
@@ -97,7 +100,7 @@ es_shm_core_base(const es_state *esim, unsigned coreid)
  * @return Simulator node where addr is located
  */
 static signed
-es_addr_to_node(const es_state *esim, uint32_t addr)
+es_addr_to_node(const es_state *esim, address_word addr)
 {
   unsigned coreid;
   signed row_offset, col_offset, node;
@@ -144,10 +147,12 @@ out:
  * @param[in]  addr   target (Epiphany) memory address
  */
 static void
-es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
+es_addr_translate(const es_state *esim, es_transl *transl,
+		  address_word addr)
 {
   uint8_t *tmp_ptr;
   signed node;
+  address_word offset, top;
 
   if (es_initialized(esim) != ES_OK)
     {
@@ -156,7 +161,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
       return;
     }
 
-  /* TESTSET instruction requires requested address to be global */
+  /* Atomic instructions requires requested address to be global */
   transl->addr_was_global = ES_ADDR_IS_GLOBAL(addr);
 
   addr = ES_ADDR_TO_GLOBAL(addr);
@@ -208,6 +213,13 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 	    }
 	  else
 	    {
+	      offset = addr & (ES_CLUSTER_CFG.core_mem_region - 1);
+	      top = min (ES_CLUSTER_CFG.core_phys_mem, ES_CORE_MMR_BASE);
+	      if (offset >= top)
+		{
+		  transl->location = ES_LOC_INVALID;
+		  return;
+		}
 	      transl->location = ES_LOC_SHM;
 	      transl->mem =
 	       ((uint8_t *) esim->cores_mem) +
@@ -216,11 +228,7 @@ es_addr_translate(const es_state *esim, es_transl *transl, uint32_t addr)
 		  ES_SHM_CORE_STATE_SIZE +
 		  (addr % ES_CLUSTER_CFG.core_mem_region);
 
-	      /** @todo We have to check on which side of the memory mapped
-	       * register we are and take that into account.
-	       */
-	      transl->in_region = (ES_CLUSTER_CFG.core_mem_region) -
-		(addr % ES_CLUSTER_CFG.core_mem_region);
+	      transl->in_region = top - offset;
 	    }
 	}
     }
@@ -276,7 +284,7 @@ es_tx_one_shm_load(es_state *esim, es_transaction *tx)
 static int
 es_tx_one_shm_store(es_state *esim, es_transaction *tx)
 {
-  uint32_t i, invalidate;
+  PCADDR i, invalidate;
   size_t n = min(tx->remaining, tx->sim_addr.in_region);
   memmove(tx->sim_addr.mem, tx->target, n);
   tx->target += n;
@@ -308,8 +316,71 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
   return ES_OK;
 }
 
+static void
+es_shm_mmr_write (es_state *esim, sim_cpu *target_cpu, int reg, USI val)
+{
+  bool to_self;
 
-/*! Perform one TESTSET to SHM, and advance transaction state
+  sim_cpu *my_cpu = ES_CPU;
+  to_self = !esim->is_client && my_cpu == target_cpu;
+
+  /* If target cpu is local cpu, we can do the write immediately,
+   * otherwise we need to serialize it on the target */
+  if (!esim->is_client && to_self)
+    epiphanybf_h_all_registers_set (my_cpu, reg, val);
+  else
+    {
+      /* Busy-waiting seems to give best performance (compared to
+       * pthread_cond_timedwait), even with a large number (1024) of simulated
+       * cores.  */
+
+      while (true)
+	{
+	  /* take remote writeslot lock */
+	  CPU_SCR_WRITESLOT_LOCK (target_cpu);
+
+	  if (CPU_SCR_WRITESLOT_EMPTY (target_cpu))
+	    break;
+
+	  /* need to release remote cpu lock to get some global progress */
+	  CPU_SCR_WRITESLOT_RELEASE (target_cpu);
+
+	  /* Empty local writeslot to break cyclic deadlocks */
+	  if (!esim->is_client && !CPU_SCR_WRITESLOT_EMPTY (my_cpu))
+	    {
+	      CPU_SCR_WRITESLOT_LOCK (my_cpu);
+	      epiphanybf_h_all_registers_set (
+		  my_cpu,
+		  my_cpu->scr_remote_write_reg,
+		  my_cpu->scr_remote_write_val);
+	      my_cpu->scr_remote_write_reg = -1;
+	      my_cpu->scr_remote_write_val = 0xbaadbeef;
+	      CPU_SCR_WRITESLOT_SIGNAL (my_cpu);
+	      CPU_SCR_WRITESLOT_RELEASE (my_cpu);
+	    }
+	  else
+	    {
+	      /* "Punish" processes that don't contribute to global
+	       * progress */
+	      sched_yield ();
+	    }
+	}
+      target_cpu->scr_remote_write_reg = reg;
+      target_cpu->scr_remote_write_val = val;
+      CPU_SCR_WAKEUP_SIGNAL (target_cpu);
+      CPU_SCR_WRITESLOT_RELEASE (target_cpu);
+    }
+}
+
+static void
+es_shm_tx_mmr_write (es_state *esim, es_transaction *tx, int reg, USI val)
+{
+  sim_cpu *target_cpu = tx->sim_addr.cpu;
+
+  es_shm_mmr_write(esim, target_cpu, reg, val);
+}
+
+/*! Perform one atomic operation to SHM, and advance transaction state
  *
  * @param[in]     esim   ESIM handle
  * @param[in,out] tx     Transaction
@@ -317,34 +388,116 @@ es_tx_one_shm_store(es_state *esim, es_transaction *tx)
  * @return ES_OK on success
  */
 static int
-es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
+es_tx_one_shm_atomic_op(es_state *esim, es_transaction *tx)
 {
-  uint32_t tmp;
-  uint32_t *target;
+  union acme_ptr {
+    uint8_t  *u8;
+    uint16_t *u16;
+    uint32_t *u32;
+    uint64_t *u64;
+  };
 
-  target = (uint32_t *) tx->target;
+  sim_cpu *this_cpu = (sim_cpu *) esim->this_core_cpu_state;
 
-  /* TESTSET requires that requested addr is global */
+  union acme_ptr rd  = { .u8 = tx->target };
+  union acme_ptr mem = { .u8 = tx->sim_addr.mem };
+  UDI rdnew = 0;
+
+  /* Atomic OPS require that requested addr is global */
   if (!tx->sim_addr.addr_was_global)
-    return -EINVAL;
-
-  /* Only word size is supported */
-  if (tx->remaining != 4)
-    return -EINVAL;
-
-  /* Must be word aligned */
-  if (tx->sim_addr.addr % 4)
     return -EINVAL;
 
   /* addr cannot reside in RAM, must be in on-chip memory  */
   if (tx->sim_addr.location != ES_LOC_SHM)
     return -EINVAL;
 
-  tmp = es_cas32((uint32_t *) tx->sim_addr.mem, 0, *target);
-  *target = tmp;
+/* Macros for different atomic op types */
+#define atomic_load(Op) \
+  ({ \
+    UDI _tmp;\
+    switch (tx->remaining) \
+    { \
+    case 1: \
+      _tmp = Op(mem.u8, __ATOMIC_SEQ_CST); \
+      break; \
+    case 2: \
+      _tmp = Op(mem.u16, __ATOMIC_SEQ_CST); \
+      break; \
+    case 4: \
+      _tmp = Op(mem.u32, __ATOMIC_SEQ_CST); \
+      break; \
+    case 8: \
+      _tmp = Op(mem.u64, __ATOMIC_SEQ_CST); \
+      break; \
+    default: \
+      return -EINVAL; \
+    } \
+    _tmp; \
+  })
 
-  tx->target += 4;
-  tx->remaining -= 4;
+#define atomic_store(Op) \
+  switch (tx->remaining) \
+  { \
+  case 1: \
+    Op(mem.u8, *rd.u8, __ATOMIC_SEQ_CST); \
+    break; \
+  case 2: \
+    Op(mem.u16, *rd.u16, __ATOMIC_SEQ_CST); \
+    break; \
+  case 4: \
+    Op(mem.u32, *rd.u32, __ATOMIC_SEQ_CST); \
+    break; \
+  case 8: \
+    Op(mem.u64, *rd.u64, __ATOMIC_SEQ_CST); \
+    break; \
+  default: \
+    return -EINVAL; \
+  }
+
+#define atomic_testset(Op) \
+  ({ \
+    USI _expected = 0; \
+    USI _tmp = *rd.u32; \
+    switch (tx->remaining) \
+    { \
+    case 4: \
+      Op(mem.u32, &_expected, _tmp, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+      break; \
+    default: \
+      return -EINVAL; \
+    } \
+    _expected; \
+  })
+
+  switch (tx->ctrlmode)
+    {
+    case OP_CTRLMODE_TESTSET:
+      rdnew = atomic_testset(__atomic_compare_exchange_n);
+      if (!rdnew)
+	{
+	  epiphanybf_h_memory_atomic_set (this_cpu, *rd.u32);
+	  epiphanybf_h_memory_atomic_flag_set (this_cpu, 1);
+	}
+      break;
+    default:
+      return -EINVAL;
+    }
+#undef atomic_load
+#undef atomic_store
+#undef atomic_testset
+
+  if (tx->type == ES_REQ_ATOMIC_LOAD)
+    {
+    switch (tx->remaining)
+      {
+      case 1: *rd.u8  = (uint8_t)  rdnew; break;
+      case 2: *rd.u16 = (uint16_t) rdnew; break;
+      case 4: *rd.u32 = (uint32_t) rdnew; break;
+      case 8: *rd.u64 = (uint64_t) rdnew; break;
+      default:
+	abort ();
+      }
+    }
 
   /* Signal other CPU simulator a write from another core did occur so that
    * it can invalidate its scache.
@@ -357,6 +510,9 @@ es_tx_one_shm_testset(es_state *esim, es_transaction *tx)
       MEM_BARRIER();
       tx->sim_addr.cpu->external_write = 1;
     }
+
+  tx->target += tx->remaining;
+  tx->remaining -= tx->remaining;
 
   return ES_OK;
 }
@@ -414,23 +570,10 @@ es_tx_one_shm_mmr(es_state *esim, es_transaction *tx)
 	}
       break;
     case ES_REQ_STORE:
-      /* If target cpu is local cpu, we can do the write immediately,
-       * otherwise we need to serialize it on the target */
-      if (tx->sim_addr.coreid == esim->coreid)
-	epiphanybf_h_all_registers_set(current_cpu, reg, *target);
-      else
-	{
-	  CPU_SCR_WRITESLOT_LOCK();
-	  while (!CPU_SCR_WRITESLOT_EMPTY())
-	    CPU_SCR_WRITESLOT_WAIT();
-	  current_cpu->scr_remote_write_reg = reg;
-	  current_cpu->scr_remote_write_val = *target;
-	  CPU_SCR_WAKEUP_SIGNAL();
-	  CPU_SCR_WRITESLOT_RELEASE();
-	}
-
+      es_shm_tx_mmr_write(esim, tx, reg, *target);
       n = 4;
       break;
+
     /*! @todo Implement (if supported by hardware?) */
     /* case ES_REQ_TESTSET: */
     default:
@@ -468,8 +611,9 @@ es_tx_one(es_state *esim, es_transaction *tx)
 	  return es_tx_one_shm_load(esim, tx);
 	case ES_REQ_STORE:
 	  return es_tx_one_shm_store(esim, tx);
-	case ES_REQ_TESTSET:
-	  return es_tx_one_shm_testset(esim, tx);
+	case ES_REQ_ATOMIC_LOAD:
+	case ES_REQ_ATOMIC_STORE:
+	  return es_tx_one_shm_atomic_op(esim, tx);
 	default:
 #ifdef ES_DEBUG
 	  fprintf(stderr, "es_tx_one: BUG\n");
@@ -490,6 +634,10 @@ es_tx_one(es_state *esim, es_transaction *tx)
       return es_net_tx_one(esim, tx);
       break;
 #endif
+
+    case ES_LOC_INVALID:
+      return -ENOENT;
+      break;
 
     default:
 #ifdef ES_DEBUG
@@ -538,14 +686,16 @@ es_tx_run(es_state *esim, es_transaction *tx)
  * @return ES_OK on success
  */
 int
-es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
+es_mem_store(es_state *esim, uint64_t addr, uint64_t size,
+	     const void *src)
 {
   es_transaction tx = {
     ES_REQ_STORE,
-    src,
-    addr,
-    size,
-    size,
+    (uint8_t *) src,
+    -1,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
     ES_TRANSL_INIT
   };
   return es_tx_run(esim, &tx);
@@ -561,20 +711,22 @@ es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src)
  * @return ES_OK on success
  */
 int
-es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
+es_mem_load(es_state *esim, uint64_t addr, uint64_t size,
+	    void *dst)
 {
   es_transaction tx = {
     ES_REQ_LOAD,
-    dst,
-    addr,
-    size,
-    size,
+    (uint8_t *) dst,
+    -1,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
     ES_TRANSL_INIT
   };
   return es_tx_run(esim, &tx);
 }
 
-/*! Perform TESTSET on memory address
+/*! Perform atomic load access
  *
  * @param[in]  esim   ESIM handle
  * @param[in]  addr   Target (Epiphany) address
@@ -584,17 +736,238 @@ es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
  * @return ES_OK on success
  */
 int
-es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst)
+es_mem_atomic_load (es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
+		    void *dst)
 {
   es_transaction tx = {
-    ES_REQ_TESTSET,
-    dst,
-    addr,
-    size,
-    size,
+    ES_REQ_ATOMIC_LOAD,
+    (uint8_t *) dst,
+    ctrlmode,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
     ES_TRANSL_INIT
   };
   return es_tx_run(esim, &tx);
+}
+
+/*! Perform atomic store access
+ *
+ * @param[in]  esim   ESIM handle
+ * @param[in]  addr   Target (Epiphany) address
+ * @param[in]  size   Number of bytes
+ * @param[out] src    Source buffer
+ *
+ * @return ES_OK on success
+ */
+int
+es_mem_atomic_store (es_state *esim, int ctrlmode, uint64_t addr, uint64_t size,
+		     const void *src)
+{
+  es_transaction tx = {
+    ES_REQ_ATOMIC_STORE,
+    (uint8_t *) src,
+    ctrlmode,
+    (address_word) addr,
+    (address_word) size,
+    (address_word) size,
+    ES_TRANSL_INIT
+  };
+  return es_tx_run(esim, &tx);
+}
+
+
+/*! Raise WAND interrupt on all cores in south-east direction
+ *
+ * This function manages locking by itself,
+ *
+ * @param[in]  esim          ESIM handle
+ *
+ * @return true if WAND did propagate (is high) to all nodes in mesh.
+ */
+static void
+es_wand_propagate_se (es_state *esim)
+{
+  sim_cpu *current_cpu;
+  uint32_t coreid;
+  uint32_t i, j;
+  es_transl transl;
+
+  /* Keep it simple, use a for loop, no radial propagation. */
+
+  for (i = ES_CLUSTER_CFG.row_base;
+       i < ES_CLUSTER_CFG.row_base + ES_CLUSTER_CFG.rows; i++)
+    {
+      for (j = ES_CLUSTER_CFG.col_base;
+	   j < ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols; j++)
+	{
+	  coreid = ES_COREID (i, j);
+	  current_cpu =
+	    ({ es_addr_translate(esim, &transl, coreid << 20); transl.cpu; });
+	  CPU_WAND_LOCK (current_cpu);
+
+	  assert (   current_cpu->wand_self
+		  && current_cpu->wand_east
+		  && current_cpu->wand_south);
+
+	  current_cpu->wand_self  = 0;
+	  current_cpu->wand_east  = 0;
+	  current_cpu->wand_south = 0;
+	  es_shm_mmr_write (esim, current_cpu, H_REG_SCR_ILATST,
+			    1 << H_INTERRUPT_WAND);
+	  CPU_WAND_RELEASE (current_cpu);
+	}
+    }
+}
+
+/*! Propagate WAND in north-west direction
+ *
+ * It is the responsibility of the caller to lock/unlock the WAND lock for
+ * current_cpu upon entering / after the function returns. Returns true iff
+ * the WAND have propagated to all cores.
+ *
+ * @param[in]  esim          ESIM handle
+ * @param[in]  coreid        coreid of current cpu
+ * @param[in]  current_cpu   sim_cpu struct for current cpu
+ *
+ * @return true if WAND did propagate (is high) to all nodes in mesh.
+ */
+static bool
+es_wand_propagate_nw (es_state *esim, uint32_t coreid, sim_cpu *current_cpu)
+{
+  bool northmost, westmost;
+  es_transl transl;
+  bool propagated_north = false, propagated_west = false;
+  uint32_t north_coreid, west_coreid;
+  uint32_t row, col;
+  sim_cpu *north_cpu, *west_cpu;
+
+  row = ES_CORE_ROW(coreid);
+  col = ES_CORE_COL(coreid);
+
+  northmost = row == ES_CLUSTER_CFG.row_base;
+  westmost  = col == ES_CLUSTER_CFG.col_base;
+
+  north_coreid = northmost ? 0 : ES_COREID(row - 1, col    );
+  west_coreid  = westmost  ? 0 : ES_COREID(row    , col - 1);
+
+  north_cpu = northmost ? NULL :
+    ({ es_addr_translate(esim, &transl, north_coreid << 20); transl.cpu; });
+  west_cpu  = westmost ?  NULL :
+    ({ es_addr_translate(esim, &transl, west_coreid  << 20); transl.cpu; });
+
+  /* Special case when coreid == 0 (which cannot exist),
+   * Make wand_self always go 'high'. */
+  if (coreid == 0)
+    current_cpu->wand_self = 1;
+
+  if (   !current_cpu->wand_self
+      || !current_cpu->wand_south
+      || !current_cpu->wand_east)
+    return false;
+
+  /* This will break if the neighbour core is resided on a different node */
+  assert ((!northmost && north_coreid) || (northmost && !north_coreid));
+  assert ((!westmost  && west_coreid)  || (westmost  && !west_coreid));
+
+  if (!northmost)
+    {
+      CPU_WAND_LOCK (north_cpu);
+      if (!north_cpu->wand_south) /* check if already propagated */
+	{
+	  north_cpu->wand_south = 1;
+	  propagated_north =
+	    es_wand_propagate_nw (esim, north_coreid, north_cpu);
+	}
+      CPU_WAND_RELEASE (north_cpu);
+    }
+
+  if (!westmost)
+    {
+      CPU_WAND_LOCK (west_cpu);
+      if (!west_cpu->wand_east) /* check if already propagated */
+	{
+	  west_cpu->wand_east = 1;
+	  propagated_west =
+	    es_wand_propagate_nw (esim, west_coreid, west_cpu);
+	}
+      CPU_WAND_RELEASE (west_cpu);
+    }
+
+  return (westmost && northmost) || (propagated_north || propagated_west);
+}
+
+/*! Issue WAND throughout mesh
+ *
+ * @param[in]  esim   ESIM handle
+ *
+ * @return ES_OK on success
+ */
+int
+es_wand (es_state *esim)
+{
+  bool eastmost, southmost;
+  uint32_t coreid, row, col;
+  sim_cpu *cpu;
+  bool propagated_nw = false;
+
+  es_transl transl;
+
+  cpu = (sim_cpu *) esim->this_core_cpu_state;
+  coreid = esim->coreid;
+
+  row = ES_CORE_ROW(coreid);
+  col = ES_CORE_COL(coreid);
+
+  eastmost  = col == ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols - 1;
+  southmost = row == ES_CLUSTER_CFG.row_base + ES_CLUSTER_CFG.rows - 1;
+
+  CPU_WAND_LOCK (cpu);
+  if (cpu->wand_self)
+    {
+      CPU_WAND_RELEASE (cpu);
+      return 0;
+    }
+  else
+    cpu->wand_self = 1;
+
+  if (southmost)
+    cpu->wand_south = 1;
+  if (eastmost)
+    cpu->wand_east = 1;
+
+  propagated_nw = es_wand_propagate_nw (esim, coreid, cpu);
+  CPU_WAND_RELEASE (cpu);
+
+  if (propagated_nw)
+    es_wand_propagate_se (esim);
+
+  return 0;
+}
+
+
+/*! Send interrupt to other core.
+ *
+ * If coreid is external ram the operation is a no-op.
+ *
+ * @param[in]  esim   ESIM handle
+ * @param[in]  coreid remote core
+ * @param[in]  irq    interrupt to raise
+ *
+ * @return ES_OK on success
+ */
+int
+es_send_interrupt (es_state *esim, unsigned coreid, unsigned irq)
+{
+  uint64_t addr;
+  uint32_t val;
+
+  val = 1 << irq;
+  addr = (coreid << 20) | 0xf0000 | (H_REG_SCR_ILATST << 2);
+
+  return ES_ADDR_IS_EXT_RAM(addr)
+    ? ES_OK
+    : es_mem_store (esim, addr, 4, (uint8_t *) &val);
 }
 
 /*! Validate cluster configuration
@@ -620,16 +993,12 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 
   FAIL_IF(!c->rows,         "Rows cannot be zero");
   FAIL_IF(!c->cols,         "Cols cannot be zero");
-  FAIL_IF((cores != 1) && cores & 1,
-			    "Number of cores must be even (or exactly 1)");
-
-  FAIL_IF(c->col_base & 1,  "Col base must be even");
   FAIL_IF(c->row_base+c->rows > 64,
 			    "Bottommost core row must be less than 64");
   FAIL_IF(c->col_base+c->cols > 64,
 			    "Rightmost core col must be less than 64");
 
-  FAIL_IF((ES_COREID(c->row_base+c->rows-1, c->col_base+c->col_base-1)) > 4095,
+  FAIL_IF((ES_COREID(c->row_base+c->rows-1, c->col_base+c->cols-1)) > 4095,
 			    "At least one of core in mesh has coreid > 4095");
   /** @todo Only support 1M for now */
   FAIL_IF(c->core_mem_region != (1<<20),
@@ -638,6 +1007,13 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "Core memory region size is zero");
   FAIL_IF(c->core_mem_region & (c->core_mem_region-1),
 			    "Core memory region size must be power of two");
+
+  FAIL_IF(c->core_phys_mem < 32768,
+			    "Core SRAM size must be at least 32KB");
+  FAIL_IF(c->core_phys_mem > c->core_mem_region,
+			    "Core SRAM size cannot be larger than core memory region");
+  FAIL_IF(c->core_phys_mem & (c->core_phys_mem-1),
+			    "Core SRAM size must be power of two");
 
   /* Only support up to 4GB for now */
   FAIL_IF((uint64_t) c->ext_ram_size > (1ULL<<32ULL),
@@ -948,6 +1324,7 @@ static int
 es_init_impl(es_state **handle,
 	es_cluster_cfg cluster,
 	unsigned coreid_hint,
+	const char *session_name,
 	int client)
 {
   int error;
@@ -978,8 +1355,25 @@ es_init_impl(es_state **handle,
   es_state_reset(esim);
 
   esim->is_client = client;
+  esim->session_name = session_name;
 
-  snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.%d", getuid());
+  if (session_name)
+    {
+      snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.u.%d-%s",
+	       getuid(), session_name);
+    }
+  else if (!client && cluster.rows == 1 && cluster.cols == 1)
+    {
+      /* Use a unique (PID) private name when there is exactly one
+       * core and no session name is provided. */
+      snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.u%d.p%d",
+	       getuid(), getpid());
+    }
+  else
+    {
+      snprintf(shm_name, sizeof(shm_name)/sizeof(char)-1, "/esim.u%d",
+	       getuid());
+    }
 
   msecs_wait = 0;
   do
@@ -1246,8 +1640,8 @@ es_init_impl(es_state **handle,
 
 #ifdef ES_DEBUG
   fprintf(stderr,
-	  "es_init: shm=0x%lx shm_size=%ld fd=%d coreid=%d shm_name=\"%s\"\n",
-	  (unsigned long int) esim->shm, esim->shm_size, esim->fd,
+	  "es_init: shm=0x%llx shm_size=%lld fd=%d coreid=%d shm_name=\"%s\"\n",
+	  (ulong64) esim->shm, (ulong64) esim->shm_size, esim->fd,
 	  esim->coreid, esim->shm_name);
 #endif
 
@@ -1274,9 +1668,10 @@ err_out:
  *         handle to NULL.
  */
 int
-es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
+es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint,
+	const char *session_name)
 {
-  return es_init_impl(handle, cluster, coreid_hint, 0);
+  return es_init_impl(handle, cluster, coreid_hint, session_name, 0);
 }
 
 /*! Connect to eMesh simulator as a client
@@ -1288,12 +1683,12 @@ es_init(es_state **handle, es_cluster_cfg cluster, unsigned coreid_hint)
  *         handle to NULL.
  */
 int
-es_client_connect(es_state **handle)
+es_client_connect(es_state **handle, const char *session_name)
 {
   int rc;
   es_cluster_cfg cluster;
 
-  if ((rc = es_init_impl(handle, cluster, 0, 1)) != ES_OK)
+  if ((rc = es_init_impl(handle, cluster, 0, session_name, 1)) != ES_OK)
     return rc;
 
   es_wait_run(*handle);
@@ -1301,18 +1696,75 @@ es_client_connect(es_state **handle)
   return ES_OK;
 }
 
+static void
+es_client_stop_cores (es_state *esim)
+{
+  unsigned i, j;
+  uint64_t addr, coreid;
+  uint32_t stopcmd = 1;
+
+  for (i = ES_CLUSTER_CFG.row_base;
+       i < ES_CLUSTER_CFG.row_base + ES_CLUSTER_CFG.rows;
+       i++)
+    {
+      for (j = ES_CLUSTER_CFG.col_base;
+	   j < ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols;
+	   j++)
+	{
+	  coreid = ES_COREID(i, j);
+	  if (coreid == 0)
+	    continue;
+
+	  addr = (coreid << 20) | 0xf0000 | (H_REG_SCR_SIMCMD << 2);
+	  es_mem_store (esim, addr, 4, (uint8_t *) &stopcmd);
+	}
+    }
+}
+
 /*! Disconnect client from eMesh simulator
  *
  * @param[in,out] esim          pointer to ESIM handle
+ * @param[in]     stop          true if simulation should be stopped
  */
 void
-es_client_disconnect(es_state *esim)
+es_client_disconnect(es_state *esim, bool stop)
 {
   if (!esim)
     return;
 
+  if (stop)
+    es_client_stop_cores (esim);
+
   es_wait_exit(esim);
   es_fini(esim);
+}
+
+/*! Get raw pointer to a memory region
+ *
+ * @param[in]     esim          pointer to ESIM handle
+ * @param[in]     addr          address
+ * @param[in]     size          size
+ *
+ * @return NULL on failure, base pointer on success.
+ */
+volatile void
+*es_client_get_raw_pointer (es_state *esim, uint64_t addr, uint64_t size)
+{
+  es_transl transl;
+
+  if (!esim || !esim->ready)
+    return NULL;
+
+  es_addr_translate(esim, &transl, addr);
+
+  /* Due to instruction caching we must not return a pointer to core memory */
+  if (transl.location != ES_LOC_RAM)
+    return NULL;
+
+  if (transl.in_region < size)
+    return NULL;
+
+  return (volatile void *) transl.mem;
 }
 
 
@@ -1322,7 +1774,7 @@ es_client_disconnect(es_state *esim)
  *
  * @return ES_OK if ESIM is initialized, -EINVAL otherwise.
  */
-int inline
+inline int
 es_initialized(const es_state* esim)
 {
   return ((esim && esim->initialized == 1) ? ES_OK : -EINVAL);
@@ -1393,7 +1845,7 @@ es_wait_run(es_state *esim)
   if (!esim->is_client)
     {
       pthread_barrier_wait((pthread_barrier_t *) &esim->shm->run_barrier);
-      if (!(esim->coreid % ES_CLUSTER_CFG.cores_per_node))
+      if (esim->creator)
 	{
 	  pthread_mutex_lock((pthread_mutex_t *) &esim->shm->client_mtx);
 	  pthread_cond_broadcast((pthread_cond_t *) &esim->shm->client_run_cond);
@@ -1529,7 +1981,7 @@ es_set_coreid(es_state *esim, unsigned coreid)
  *
  * @return Pointer to CPU state address or NULL
  */
-volatile void *
+void *
 es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 {
 
@@ -1543,7 +1995,18 @@ es_set_cpu_state(es_state *esim, void *cpu, size_t size)
 	 ES_SHM_CORE_STATE_SIZE - ES_SHM_CORE_STATE_HEADER_SIZE);
   memmove((void *)esim->this_core_cpu_state, cpu, size);
 
-  return esim->this_core_cpu_state;
+  return (void *) esim->this_core_cpu_state;
+}
+
+/*! Get copy of cluster configuration
+ *
+ * @param[in]  esim     ESIM handle
+ * @param[out] cfg      target configuration
+ */
+void
+es_get_cluster_cfg(const es_state *esim, es_cluster_cfg *cfg)
+{
+  memcpy((void *) cfg, (void *) &ES_CLUSTER_CFG, sizeof(*cfg));
 }
 
 /*! Dump node and cluster configuration
@@ -1560,9 +2023,10 @@ es_dump_config(const es_state *esim)
 	  "  .rows            = %d\n"
 	  "  .cols            = %d\n"
 	  "  .core_mem_region = %zu\n"
+	  "  .core_phys_mem   = %zu\n"
 	  "  .ext_ram_node    = %d\n"
-	  "  .ext_ram_base    = 0x%.8x\n"
-	  "  .ext_ram_size    = %zu\n"
+	  "  .ext_ram_base    = 0x%.16llx\n"
+	  "  .ext_ram_size    = %llu\n"
 	  "  .cores           = %d\n"
 	  "  .nodes           = %d\n"
 	  "  .cores_per_node  = %d\n"
@@ -1575,9 +2039,10 @@ es_dump_config(const es_state *esim)
 	  ES_CLUSTER_CFG.rows,
 	  ES_CLUSTER_CFG.cols,
 	  ES_CLUSTER_CFG.core_mem_region,
+	  ES_CLUSTER_CFG.core_phys_mem,
 	  ES_CLUSTER_CFG.ext_ram_node,
-	  ES_CLUSTER_CFG.ext_ram_base,
-	  ES_CLUSTER_CFG.ext_ram_size,
+	  (ulong64) ES_CLUSTER_CFG.ext_ram_base,
+	  (ulong64) ES_CLUSTER_CFG.ext_ram_size,
 	  ES_CLUSTER_CFG.cores,
 	  ES_CLUSTER_CFG.nodes,
 	  ES_CLUSTER_CFG.cores_per_node,
@@ -1601,7 +2066,7 @@ es_dump_config(const es_state *esim)
 	  "  .fd                     = %d\n"
 	  "  .creator                = %d\n"
 	  "  .shm_name               = %s\n"
-	  "  .shm_size               = %lu\n"
+	  "  .shm_size               = %llu\n"
 	  "  .shm                    = 0x%p\n"
 	  "  .cores_mem              = 0x%p\n"
 	  "  .this_core_mem          = 0x%p\n"
@@ -1615,7 +2080,7 @@ es_dump_config(const es_state *esim)
 	  esim->fd,
 	  esim->creator,
 	  esim->shm_name,
-	  esim->shm_size,
+	  (ulong64) esim->shm_size,
 	  esim->shm,
 	  esim->cores_mem,
 	  esim->this_core_mem,
@@ -1628,6 +2093,11 @@ inline size_t
 es_get_core_mem_region_size(const es_state *esim)
 {
   return ES_CLUSTER_CFG.core_mem_region;
+}
+inline size_t
+es_get_core_phys_mem_size(const es_state *esim)
+{
+  return ES_CLUSTER_CFG.core_phys_mem;
 }
 inline unsigned
 es_get_coreid(const es_state *esim)

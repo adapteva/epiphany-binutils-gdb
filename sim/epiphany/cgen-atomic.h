@@ -21,7 +21,7 @@
 #define _OP_REG_ATOMIC(Op, Regno, Val)\
 do\
   {\
-    volatile USI *ptr;\
+    typeof (CPU (h_all_registers)[0]) *ptr;\
 \
     assert (0 <= Regno && Regno < H_REG_NUM_REGS);\
 \
@@ -39,7 +39,7 @@ while (0)
 #define SET_REG_BIT_ATOMIC(regno, bit, val)\
 do\
   {\
-    volatile USI *ptr;\
+    volatile typeof (CPU (h_all_registers)[0]) *ptr;\
 \
     assert (0 <= regno && regno < H_REG_NUM_REGS);\
     assert (0 <= bit && bit < 32);\

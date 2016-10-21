@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 /** @todo We use standard errnos now but we need more specific, e.g. EALIGN */
 
@@ -33,10 +34,10 @@ typedef struct es_cluster_cfg_ {
     unsigned rows;                    /*!< Number of rows                  */
     unsigned cols;                    /*!< Number of cols                  */
     size_t   core_mem_region;         /*!< Core memory region size         */
-    /* signed   core_phys_mem; */     /* Allocate entire region for now    */
+    size_t   core_phys_mem;           /*!< Size of core SRAM               */
     unsigned ext_ram_node;            /*!< Let this be rank '0' for now    */
-    uint32_t ext_ram_base;            /*!< core_mem_region must be divisor */
-    size_t   ext_ram_size;            /*!< Size of external memory         */
+    uint64_t ext_ram_base;            /*!< core_mem_region must be divisor */
+    uint64_t ext_ram_size;            /*!< Size of external memory         */
 
     /*! @privatesection */
     /* Keep your grubby little mitts off of these plz :) */
@@ -59,16 +60,31 @@ typedef struct es_state_ es_state;
 /* API functions */
 
 /* For core simulator processes */
-int es_init(es_state **esim, es_cluster_cfg cluster, unsigned coreid);
+int es_init(es_state **esim, es_cluster_cfg cluster, unsigned coreid,
+	    const char *session_name);
 void es_fini(es_state *esim);
 
 /* Get access to eMesh simulator address space */
-int es_client_connect(es_state **esim);
-void es_client_disconnect(es_state *esim);
+int es_client_connect(es_state **esim, const char *session_name);
+void es_client_disconnect(es_state *esim, bool stop);
+/* Get raw pointer to external RAM, which is needed for e-hal's SHM interface.
+ * WARNING: This function might be removed from the client API in the future.
+ */
+volatile void *es_client_get_raw_pointer (es_state *esim, uint64_t addr,
+					  uint64_t size);
 
-int es_mem_store(es_state *esim, uint32_t addr, uint32_t size, uint8_t *src);
-int es_mem_load(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
-int es_mem_testset(es_state *esim, uint32_t addr, uint32_t size, uint8_t *dst);
+int es_mem_store (es_state *esim, uint64_t addr, uint64_t size,
+		  const void *src);
+int es_mem_load (es_state *esim, uint64_t addr, uint64_t size, void *dst);
+
+int es_mem_atomic_store (es_state *esim, int ctrlmode, uint64_t addr,
+			 uint64_t size, const void *src);
+int es_mem_atomic_load (es_state *esim, int ctrlmode, uint64_t addr,
+		        uint64_t size, void *dst);
+
+int es_wand (es_state *esim);
+
+int es_send_interrupt (es_state *esim, unsigned coreid, unsigned irq);
 
 void es_wait_run(es_state *esim);
 void es_wait_exit(es_state *esim);
@@ -78,9 +94,13 @@ int es_initialized(const es_state* esim);
 
 unsigned es_get_coreid(const es_state *esim);
 
-volatile void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
+void *es_set_cpu_state(es_state *esim, void* cpu, size_t size);
 size_t es_get_core_mem_region_size(const es_state *esim);
+size_t es_get_core_phys_mem_size(const es_state *esim);
+/* Get copy of cluster configuration */
+void es_get_cluster_cfg(const es_state *esim, es_cluster_cfg *cfg);
 
 void es_dump_config(const es_state *esim);
+
 
 #endif /* __emesh_h__ */

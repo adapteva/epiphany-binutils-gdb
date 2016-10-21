@@ -1,0 +1,47 @@
+# epiphany testcase for fmax64 $frd6-di,$frn6-di,$frm6-di -*- Asm -*-
+# mach: all
+
+	.include "testutils.inc"
+
+	start
+
+	.global fmax64
+fmax64:
+	mode	1
+
+	mova	r40,values
+	ldrd	r20,[r40],+1
+	ldrd	r22,[r40],+1
+	ldrd	r24,[r40],+1
+	fmax64	r30,r20,r22
+	fsub64	r32,r30,r24
+	bbne	1f
+	ldrd	r2,[r40],+1
+	ldrd	r4,[r40],+1
+	ldrd	r6,[r40],+1
+	fmax64	r30,r2,r4
+	eor64	r32,r30,r6
+	bne	1f
+	ldrd	r2,[r40],+1
+	ldrd	r4,[r40],+1
+	ldrd	r6,[r40],+1
+	fmax64	r30,r2,r4
+	eor64	r32,r30,r6
+	bne	1f
+	ldrd	r2,[r40],+1
+	ldrd	r4,[r40],+1
+	ldrd	r6,[r40],+1
+	fmax64	r30,r2,r4
+	eor64	r32,r30,r6
+	bne	1f
+	pass
+1:
+	fail
+
+.align 3
+values:
+;;	rn		rm		expect
+.double	-0.000001,	0.000001,	0.000001
+.double	1.000001,	1.000002,	1.000002
+.double 4503599627370495.25, 4503599627370494.0,4503599627370495.25
+.double -4503599627370495.25, -4503599627370494.0,-4503599627370494.0

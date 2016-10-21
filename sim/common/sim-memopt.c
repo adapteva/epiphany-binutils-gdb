@@ -564,7 +564,11 @@ memory_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
 		sim_io_printf (sd, " map ");
 		if (mapping->space != 0)
 		  sim_io_printf (sd, "0x%x:", mapping->space);
+#if (WITH_TARGET_ADDRESS_BITSIZE == 64)
+		sim_io_printf (sd, "0x%016lx", (long) mapping->base);
+#else
 		sim_io_printf (sd, "0x%08lx", (long) mapping->base);
+#endif
 		if (mapping->level != 0)
 		  sim_io_printf (sd, "@0x%x", mapping->level);
 		sim_io_printf (sd, ",0x%lx", (long) mapping->nr_bytes);

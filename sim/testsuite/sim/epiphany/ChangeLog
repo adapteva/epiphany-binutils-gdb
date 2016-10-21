@@ -1,0 +1,301 @@
+2016-01-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/mmr-deadlock.c: New test.
+
+2015-12-21  Ola Jeppsson  <ola@adapteva.com>
+
+	* fix.cgs: Test flags for MIN_INT (-2^31).
+	* fmax.cgs: Add test for flags.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* mul.cgs: New test.
+
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* bitr.cgs: Test that negative flag is set correctly.
+	* bitr16.cgs: Likewise.
+
+2015-12-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/domino.c: Set rows and cols to 4 in sim flags.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/multicore.exp (ldflags): Adjust __stack to 0xefff0, which
+	is just below the MMR area.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/domino-dma.c (next_hop): Add case for when groupid=0 and
+	number of rows is 1.
+	(print_route): Eliminate possibility for uninitialized value in path.
+	* multicore/domino.c (next_hop): Add case for when groupid=0 and
+	number of rows is 1.
+	(print_route): Eliminate possibility for uninitialized value in path.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/multicore.exp (ldflags): Define section start of
+	workgroup_cfg and ext_mem_cfg.
+	* multicore/e-lib-inl.h (barrier): Add compiler barrier macro.
+	(e_objtype_t): Import enum from e-lib.
+	(e_chiptype_t): Import enum from e-lib.
+	(e_group_config_t): Import struct from e-lib.
+	(e_group_config): Add global data structure.
+	(e_emem_config): Add global data structure.
+	(e_irq_global_mask): Add barriers around code.
+	(e_irq_mask): Ditto.
+	(e_reg_write): Ditto.
+	(e_reg_read): Ditto.
+	(e_irq_attach): Ditto
+	(e_irq_set): Ditto.
+	(e_group_rows): New function. Not in e-hal.
+	(e_group_last_row): Ditto.
+	(e_group_last_col): Ditto.
+	(e_group_cols): Ditto.
+	(e_group_my_row): Ditto.
+	(e_group_row): Ditto.
+	(e_group_col): Ditto.
+	(e_group_rank): Ditto.
+	(e_group_my_col): Ditto.
+	(e_group_my_rank): Ditto.
+	(e_group_leader_rank): Ditto.
+	(e_group_leader_p): Ditto.
+	(e_group_size): Ditto.
+	(e_rank_to_coreid): Ditto.
+	(e_group_global_address): Ditto.
+	(e_coords_from_coreid): Import from e-lib.
+	(e_coreid_from_coords): Import from e-lib.
+	(e_get_global_address): Make use of e_group_config.
+	* multicore/domino.c: Rewrite from hardcoded mesh property defines, to
+	make use of e-lib API to dynamically figure out mesh configuration.
+	* multicore/domino-dma.c: Ditto.
+	* multicore/wand.c: Ditto.
+
+2015-11-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* imul.cgs: New test.
+
+2015-11-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/multicore.exp: Pass --core-mem 1024kb to simulator.
+
+2015-11-20  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/domino-dma.c: New test.
+
+2015-11-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/dma.c: New test.
+	* multicore/timers.c: New test.
+
+2015-11-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/e-lib-inl.h (int e_dma_busy): New function.
+	(int e_dma_start): New function.
+	(int e_dma_copy): New function.
+	(e_ctimer_start): New function.
+	(e_ctimer_stop): New function.
+	(e_ctimer_set): New function.
+	(e_ctimer_get): New function.
+	(e_wait): New function.
+	* multicore/lib.S (wand_isr): sp should always be 64-bit aligned.
+	* multicore/multicore.exp (board_info ldflags): Add .data_bank0
+
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/e-lib-inl.h (pass): New function.
+	(fail): New function.
+	(e_wait): New function.
+	* multicore/lib.S: New library file.
+	(wand_isr): New interrupt service routine for WAND.
+	* multicore/multicore.exp: Add lib.S to global_cc_options.
+	* multicore/wand.c: New test.
+
+2015-11-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/domino.c (main): Move
+	code from interrupt_handler to after call to e_idle().
+	(interrupt_handler): Do nothing.
+
+2015-11-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/domino.c: New test.
+
+2015-11-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/e-lib-inl.h: Minimal inline implementation of
+	e-lib.
+	* multicore/multicore.exp: New file for multicore C tests.
+
+2015-11-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* 64bmode/64bmode.exp: Rename from 64bmode/allinsn.exp. Save
+	and restore global variables.
+	* allinsn.exp: Save and restore global variables.
+	* atomics/atomics.exp: Rename from atomic/allinsn.exp. Save
+	and restore global variables.
+
+2015-10-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* atomics/allinsn.exp: New file.
+	* atomics/testset.cgs: New test.
+	* atomics/testutils.inc: New test.
+
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
+	* fmul-denormal-exception.s: Run in virtual environment.
+	* fmul64-denormal-exception.s: Likewise.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* allinsn.exp (global_ld_option): Set default value if
+	none is provided by base board configuration.
+	* 64bmode/allinsn.exp: Likewise.
+
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* 64bmode/allinsn.exp: New file.
+	* 64bmode/ldrbd-64bmode.cgs: New test.
+	* 64bmode/ldrbd16-64bmode.cgs: New test.
+	* 64bmode/ldrbp-64bmode.cgs: New test.
+	* 64bmode/ldrbp16-64bmode.cgs: New test.
+	* 64bmode/ldrbx-64bmode.cgs: New test.
+	* 64bmode/ldrbx16-64bmode.cgs: New test.
+	* 64bmode/ldrd-64bmode.cgs: New test.
+	* 64bmode/ldrd16-64bmode.cgs: New test.
+	* 64bmode/ldrdd-64bmode.cgs: New test.
+	* 64bmode/ldrdd16-64bmode.cgs: New test.
+	* 64bmode/ldrdp-64bmode.cgs: New test.
+	* 64bmode/ldrdp16-64bmode.cgs: New test.
+	* 64bmode/ldrdx-64bmode.cgs: New test.
+	* 64bmode/ldrdx16-64bmode.cgs: New test.
+	* 64bmode/ldrhd-64bmode.cgs: New test.
+	* 64bmode/ldrhd16-64bmode.cgs: New test.
+	* 64bmode/ldrhp-64bmode.cgs: New test.
+	* 64bmode/ldrhp16-64bmode.cgs: New test.
+	* 64bmode/ldrhx-64bmode.cgs: New test.
+	* 64bmode/ldrhx16-64bmode.cgs: New test.
+	* 64bmode/ldrp-64bmode.cgs: New test.
+	* 64bmode/ldrp16-64bmode.cgs: New test.
+	* 64bmode/ldrpd-64bmode.cgs: New test.
+	* 64bmode/ldrx-64bmode.cgs: New test.
+	* 64bmode/ldrx16-64bmode.cgs: New test.
+	* 64bmode/strbd-64bmode.cgs: New test.
+	* 64bmode/strbd16-64bmode.cgs: New test.
+	* 64bmode/strbp-64bmode.cgs: New test.
+	* 64bmode/strbp16-64bmode.cgs: New test.
+	* 64bmode/strbx-64bmode.cgs: New test.
+	* 64bmode/strbx16-64bmode.cgs: New test.
+	* 64bmode/strd-64bmode.cgs: New test.
+	* 64bmode/strd16-64bmode.cgs: New test.
+	* 64bmode/strdd-64bmode.cgs: New test.
+	* 64bmode/strdd16-64bmode.cgs: New test.
+	* 64bmode/strdp-64bmode.cgs: New test.
+	* 64bmode/strdp16-64bmode.cgs: New test.
+	* 64bmode/strdx-64bmode.cgs: New test.
+	* 64bmode/strdx16-64bmode.cgs: New test.
+	* 64bmode/strp-64bmode.cgs: New test.
+	* 64bmode/strp16-64bmode.cgs: New test.
+	* 64bmode/strwd-64bmode.cgs: New test.
+	* 64bmode/strwd16-64bmode.cgs: New test.
+	* 64bmode/strwp-64bmode.cgs: New test.
+	* 64bmode/strwp16-64bmode.cgs: New test.
+	* 64bmode/strwx-64bmode.cgs: New test.
+	* 64bmode/strwx16-64bmode.cgs: New test.
+	* 64bmode/strx-64bmode.cgs: New test.
+	* 64bmode/strx16-64bmode.cgs: New test.
+	* 64bmode/testutils64.inc: New test.
+
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* fmul-denormal-exception.s: New test.
+	* fmul64-denormal-exception.s: New test.
+
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* fabs64.cgs: New test.
+	* fadd64.cgs: New test.
+	* fmadd64.cgs: New test.
+	* fmax64.cgs: New test.
+	* fmsub64.cgs: New test.
+	* fmul64.cgs: New test.
+	* fsub64.cgs: New test.
+
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* allinsn.exp: Separate cgen instruction unit tests and CPU
+	behaviour tests by file extension.
+	* hwloops.s: Renamed from hwloops.cgs
+	* syscalls.s: Renamed from syscalls.cgs
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* fadd-simd.cgs: New test.
+	* fmadd-simd.cgs: New test.
+	* fmsub-simd.cgs: New test.
+	* fmul-simd.cgs: New test.
+	* fsub-simd.cgs: New test.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* mode.cgs: New test.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* float.cgs: Add real test instead of accidental symlink.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* fmax.cgs: New test.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* pushpop.cgs: Remove.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* fabs.cgs: New test.
+	* fix.cgs: New test.
+	* float.cgs: New test.
+	* iadd.cgs: New test.
+
+2015-10-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* hwloops.cgs: Calculate pc-relative addresses for ls and le.
+
+2015-10-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* allinsn.exp: Allow baseboard to set ldflags for the simulator
+	testsuite via sim,ldflags
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* and64.cgs: New test.
+
+2015-10-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* add64.cgs: New test.
+	* asr64.cgs: New test.
+	* eor64.cgs: New test.
+	* lsl64.cgs: New test.
+	* lsr64.cgs: New test.
+	* orr64.cgs: New test.
+	* sub64.cgs: New test.
+
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
+	* hwloops.cgs: New test.
+
+2015-10-01  Ola Jeppsson  <ola@adapteva.com>
+
+	* bkpt.cgs: bkpt stops the program with
+	signal 5 (bkpt, trap).
+	* idle.cgs: Disable test.
+	* ldrdp16.cgs: Fix alignment.
+	* ldrx.cgs: Fix 32-bit mov.
+	* ldrx16.cgs: Likewise.
+	* movfs16.cgs: Only compare nbit.
+	* syscalls.cgs: Pass syscall args in right
+	order.

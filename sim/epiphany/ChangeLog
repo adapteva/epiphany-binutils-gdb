@@ -1,3 +1,697 @@
+2016-10-20  Ola Jeppsson  <ola@adapteva.com>
+
+	* cpu.c: Regenerated.
+	* cpu.h: Regenerated.
+	* decode.c: Regenerated.
+	* decode.h: Regenerated.
+	* model.c: Regenerated.
+	* sem-switch.c: Regenerated.
+	* sem.c: Regenerated.
+
+2016-07-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* traps.c (sim_engine_invalid_insn): Handle remote register writes
+	before halting simulation.
+
+2016-07-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim.c (es_mem_store): Make arguments more library-like.
+	(es_mem_load): Likewise.
+	(es_mem_atomic_load): Likewise.
+	(es_mem_atomic_store): Likewise.
+	* esim/esim.h: Update function prototypes.
+
+2016-07-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in (run_inferior): Add PAL support. Don't
+	override environment variables that are already present.
+
+2016-07-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphany_any_periphal_active_p): Rename to ...
+	(epiphany_any_peripheral_active_p): ... this.
+	* epiphany-sim.h (epiphany_any_periphal_active_p): Rename to ...
+	(epiphany_any_peripheral_active_p): ... this.
+	* mloop.in: Change epiphany_any_periphal_active_p to
+	epiphany_any_peripheral_active_p.
+	* sim-main.h ((SIM_ENGINE_HALT_HOOK): Change
+	epiphany_any_periphal_active_p to epiphany_any_peripheral_active_p.
+
+2016-07-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-main.h (SIM_ENGINE_HALT_HOOK): Null check cpu before calling
+	epiphany_any_periphal_active_p ().
+
+2016-07-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_cpu_reset): Don't call SET_H_INT_IDLEBIT.
+	Hardware is removed in cpu definition file.
+
+2016-07-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* traps.c (epiphany_rti): Do not adjust iret when returning from
+	idle here, let the 'idle' semantics in epiphany.cpu handle that.
+
+2016-07-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Add back support for relative/absolute
+	path for --host argument.
+
+2016-06-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_shm_mmr_write): Fix SEGFAULT when connected as
+	client.
+
+2016-06-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Check for --host argument in
+	PATH, not just in the current working directory.
+
+2016-03-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (extract_mant): Declare as static inline.
+	(extract_exp): Likewise.
+	(extract_sign): Likewise.
+	(isDenormalOrZero): Likewise.
+	(isDenormal): Likewise.
+	(makeZero): Likewise.
+	(makeNegative): Likewise.
+	(makePositive): Likewise.
+	(isZero): Likewise.
+	(isNegative): Likewise.
+	(isInf): Likewise.
+	(isNAN): Likewise.
+	(makeNAN): Likewise.
+	* oob-events.c (epiphany_handle_oob_events): Don't declare as
+	inline.
+	* oob-events.h (epiphany_handle_oob_events): Update function
+	prototype.
+
+2016-02-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_validate_cluster_cfg): Use ULL postfix for
+	comparing 64 bit values.
+
+2016-01-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-main.h (CPU_SCR_WRITESLOT_LOCK) (CPU_SCR_WRITESLOT_RELEASE)
+	(CPU_WAKEUP_WAIT) (CPU_SCR_WAKEUP_SIGNAL) (CPU_SCR_WRITESLOT_EMPTY)
+	(CPU_SCR_WRITESLOT_WAIT) (CPU_SCR_WRITESLOT_SIGNAL): Add cpu argument
+	to macros.
+	* mloop.in: Provide cpu argument to above macros.
+	* esim/esim-int.h: Add ES_CPU helper macro.
+	* esim/esim.c (es_shm_mmr_write): Break cyclic deadlocks. Update
+	function arguments.
+	(es_shm_tx_mmr_write): Update to match es_shm_mmr_write() arguments.
+	(es_wand_propagate_se): Likewise.
+
+2015-12-14  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_set_simcmd): Exit silently when called if
+	core is inactive.
+	(epiphany_trap): In operating environment, don't call sim_halt() on
+	exit (trap #3). Instead, set halt bit in debugstatus and
+	return.
+
+2015-12-14  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_cpu_reset): Reset H_INT_IDLE_BIT and
+	H_HWLOOP_NEXT.
+
+2015-12-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_client_get_raw_pointer): Implemented.
+	* esim/esim.h (es_client_get_raw_pounter): Add function prototype.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in (parse_or_die): Add --preset argument.
+	Current presets: parallella16, parallella64, and parallella1k.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in (run_inferior): Handle host binary failure
+	more gracefully.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in (main): Call run_inferior or run_standalone
+	depending on if host flag is set.
+	(run_inferior): Factor out from main. Kill simulator processes when
+	host application exits.
+	(run_standalone): Factor out from main.
+
+2015-12-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_wait_run): Let process that created shm file
+	wake up client(s).
+
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Fix exception when checking if host argument
+	is present.
+
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Add --host flag.
+
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Add --external-fetch flag.
+
+2015-12-11  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_cpu_reset): Don't reset H_REG_MESH_COREID.
+
+2015-12-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_dma.c (epiphany_dma_hw_event_callback): Use
+	es_send_interrupt () to raise interrupt on remote core in dma message
+	mode.
+	* esim/esim.c (es_send_interrupt): Implemented.
+	* esim/esim.h (es_send_interrupt): Add function prototype.
+
+2015-12-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_set_simcmd): Implemented. Writing a 'one'
+	to the register will stop the simulation.
+	* epiphany-sim.h (epiphanybf_set_simcmd): Add function prototype.
+	* esim/esim.c (es_client_stop_cores): Implemented.
+	(es_client_disconnect): Add stop parameter.
+	* esim/esim.h (es_client_disconnect): Update function prototype.
+
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (AS_FOR_TARGET): Don't use in-build-tree host
+	assembler when building a Canadian cross.
+
+2015-12-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (install-esim): Install esim/esim.h.
+
+2015-12-04  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (install-esim): Rename from esim-install. Install
+	libesim.so.
+	(SIM_EXTRA_CFLAGS): Append -fPIC.
+	(SIM_EXTRA_ALL): Build libesim.so.
+	(SIM_EXTRA_INSTALL): Append libesim.so.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Change default paramters.
+	rows=cols=32. first_core=0x020
+	* sim-if.c (sim_esim_have_required_params): Change
+	default e-first-core to 0x020.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_addr_translate): Make access to area above end of
+	memory mapped registers illegal.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_validate_cluster_cfg): Relax constraints: allow
+	uneven number of cores and uneven base column.
+	Fix coreid range check.
+
+2015-11-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_mem.c (epiphany_mem_io_read_buffer): Fix trace output
+	formatting.
+	(epiphany_mem_io_write_buffer): Likewise.
+
+2015-11-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* ert-workgroup.h: New file.
+	* esim/esim.c (es_get_cluster_cfg): New function.
+	* esim/esim.h (es_get_cluster_cfg: Add function prototype.
+	* sim-if.c (setup_workgroup_cfg): New function. If workgroup_cfg
+	section is present in binary, fill in mesh properties.
+	(sim_create_inferior): Call setup_workgroup_cfg (), unless in
+	operating environment.
+
+2015-11-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.h (es_cluster_cfg): Add core_phys_mem member.
+	(es_get_core_phys_mem_size): Add prototype.
+	* esim/esim.c (es_addr_translate): Check that address is backed by
+	physical memory.
+	(es_validate_cluster_cfg): Validate core_phys_mem field in es_cluster.
+	(es_dump_config): Print core_phys_mem.
+	(es_get_core_phys_mem_size): New function.
+	* sim-if.c (struct emesh_params): Add core_mem.
+	(options_epiphany): Add '--e-core-mem' flag.
+	(epiphany_mem_size_option_handler): Add case for E_OPTION_CORE_MEM.
+	(sim_esim_init): Set core_phys_mem in cluster.
+	* epiphany-elf-sim.py.in (pow_of_two): New function.
+	(parse_or_die): Add '--core-mem' argument.
+
+2015-11-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-if.c (epiphany_mem_size_option_handler): New
+	function. Supports 'K', 'M', and 'G' suffixes.
+	(epiphany_option_handler): Remove E_OPTION_EXT_RAM_SIZE case.
+	(options_epiphany): Use epiphany_mem_size_option_handler for
+	E_OPTION_EXT_RAM_SIZE.
+	* epiphany-elf-sim.py.in (breakwhen): New function.
+	(not_number_part): Ditto.
+	(parse_size): New function that can parse size arguments.
+	(parse_or_die): Parse ext_ram_size with parse_size.
+
+2015-11-26  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h (epiphanybf_fetchable_p): New function.
+	* epiphany.c (epiphanybf_external_fetch_allowed_p): New function.
+	* sim-if.c (enum epiphany_options): Add E_OPTION_EXTERNAL_FETCH.
+	(options_epiphany): Add E_OPTION_EXTERNAL_FETCH entry.
+	(epiphany_option_handler): Handle E_OPTION_EXTERNAL_FETCH,
+	* sim-main.h (struct sim_state): Add external_fetch boolean.
+
+2015-11-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphany_gie): Add insn_is_idle parameter.
+	* epiphany-sim.h (epiphany_gie): Adjust function prototype.
+
+2015-11-20  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_dma.c (epiphany_dma_hw_event_callback): Add raised
+	interrupts to trace.
+	* sim-main.h (SIM_ENGINE_HALT_HOOK): Warn if an peripheral is still
+	active.
+
+2015-11-18  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure: Regenerate.
+
+2015-11-18  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure.ac (SIM_AC_OPTION_HARDWARE): Add
+	"epiphany_dma" to hardware list.
+	* dv-epiphany_timer.c: New file.
+	* epiphany-sim.h: Add function prototypes for
+	epiphany_timer_set_cfg and epiphany_timer_active_p.
+	* epiphany.c (epiphanybf_set_config): Call
+	epiphany_timer_set_cfg.
+	(epiphany_any_periphal_active_p): Call epiphany_timer_active_p.
+	* sim-if.c (sim_open): Add timer hardware.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h (GET_H_SM) (GET_H_CR) (GET_H_PSW)
+	(GET_H_ACCUM): Remove macros.
+	* epiphany.c (epiphany_decode_gdb_ctrl_regnum): Remove
+	function.
+	(epiphanybf_h_cr_get_handler): Remove function.
+	(epiphanybf_h_cr_set_handler): Remove function.
+	* sim-if.c (sim_open): Remove dead code.
+	* traps.c (syscall_read_mem): Remove function.
+	(syscall_write_mem): Remove function.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_dma.c (epiphany_dma_load_desc): Set curr_ptr in
+	status to current descriptor.
+	(epiphany_dma_hw_event_callback): After loading a descriptor, set
+	state to either DMA_STATE_ACTIVE, or DMA_STATE_SLAVE, according
+	descriptor configuration.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_dma.c (epiphany_dma_signal): Remove.
+	(epiphany_dma_io_read_buffer): Remove.
+	(epiphany_dma_io_write_buffer): Remove.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure: Regenerate.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure.ac (SIM_AC_OPTION_HARDWARE): Add "epiphany_dma"
+	to hardware list.
+	* dv-epiphany_dma.c: New file.
+	* epiphany-sim.h: Add function prototypes for
+	epiphanybf_set_dmareg, epiphany_dma_set_reg, epiphany_dma_active_p,
+	and epiphany_any_periphal_active_p.
+	* epiphany.c (epiphanybf_set_dmareg): Implemented. All stores
+	to dma registers are routed through here.
+	(epiphany_any_periphal_active_p): Implemented.
+	* mloop.in (full-exec-scache): Prevent from going into
+	blocking wait when core is inactive if there are any pending events.
+	* sim-if.c: Add dma hardware.
+
+2015-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in: Add missing AS_FOR_TARGET.
+
+2015-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h: Add prototype for epiphanybf_wand.
+	* epiphany.c (epiphanybf_wand): Implement. Calls es_wand.
+	* esim/esim.c (es_shm_mmr_write): Replace tx argument with to_self.
+	(es_shm_tx_mmr_write): Implemented.
+	(es_tx_one_shm_atomic_op): Replace call to es_shm_mmr_write with call
+	to es_shm_tx_mmr_write.
+	(es_tx_one_shm_mmr): Likewise.
+	(es_wand_propagate_se): Implement.
+	(es_wand_propagate_nw): Implement.
+	(es_wand): Implement.
+	* esim/esim.h: Add function prototype for es_wand.
+	* sim-if.c (sim_esim_init): Initialize current_cpu->wand_lock.
+	* sim-main.h (struct _sim_cpu): Add wand_lock mutex, wand_self,
+	wand_east, wand_south.
+
+2015-11-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-main.h (struct _sim_cpu): Rename member oob_event to oob_events.
+	* oob-events.h (OOB_EMIT_EVENT): Switch to flags instead of numbers to
+	support more than one emitted event.
+	(OOB_UNTOGGLE_EVENT): Add.
+	* oob-events.c (epiphany_handle_oob_events): Switch to flags instead
+	of numbers to support more than one emitted event.
+	* mloop.in: Adjust for above name change to oob_events.
+
+2015-11-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphanybf_set_status): Add special case for FSTATUS.
+	* epiphany-sim.h: Update prototype for epiphanybf_set_status.
+
+2015-11-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphany_gie): Detect and handle GIE/IDLE instruction
+	pair as hardware = delay interrupts handling by one insn.
+	* mloop.in (full-exec-scache): If after handling OOB events emitted by
+	current instruction, there is still an event in the slot, delay
+	handling external register writes until after next insn.
+	* oob-events.h (oob_event_t): Add OOB_EVT_INTERRUPT_DELAYED.
+	* oob-events.c (epiphany_handle_oob_events): Handle
+	OOB_EVT_INTERRUPT_DELAYED.
+
+2015-11-05  Ola Jeppsson  <ola@adapteva.com>
+
+	* traps.c (epiphany_rti): If the core was idle because
+	of an 'idle' instruction, adjust return address to the next
+	instruction.
+
+2015-11-03  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Return with simulator error code. Don't
+	print successful exit status unless --verbose is toggled.
+
+2015-11-03  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim.c (es_tx_one_shm_mmr): Fix bug that caused EINVAL on
+	all writes to the mmr region.
+
+2015-11-03  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-main.h: Add long64 and ulong64 typedefs.
+	* dv-epiphany_mem.c (epiphany_mem_finish): Use ULL rather than UL for
+	64-bit literals.
+	(epiphany_mem_signal): Cast to ulong64 when printing address and size.
+	(epiphany_mem_io_read_buffer): Likewise.
+	(epiphany_mem_io_write_buffer): Likewise.
+	* epiphany.c (epiphany_halt_on_inactive): Likewise.
+	* esim/esim.c (es_validate_cluster_cfg): Use ULL rather than UL for
+	64-bit literals.
+	(es_dump_config): Cast to ulong64 when printing address and size.
+	* oob-events.c (halt_on_excause): Likewise.
+	(halt_on_interrupt): Likewise.
+	* sim-if.c (epiphany_option_handler): Use long long type for parsing
+	64-bit values.
+	* traps.c (sim_engine_invalid_insn): Cast to ulong64 when printing
+	address and size.
+
+2015-11-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim/epiphany/epiphany.c (epiphany_testset): Delete.
+	(epiphany_testset_SI): Delete.
+	(epiphany_testset_HI): Delete.
+	(epiphany_testset_QI): Delete.
+	* sim/epiphany/epiphany-sim.h: Remove above prototypes.
+	* sim/epiphany/esim/esim-int.h (es_req_t): Remove ES_REQ_TESTSET enum
+	value.
+	* sim/epiphany/esim/esim-net.c (es_net_tx_one_mmr): Replace
+	ES_REQ_TESTSET case with ES_REQ_ATOMIC_LOAD / ES_REQ_ATOMIC_STORE.
+	(es_net_tx_one):
+	* sim/epiphany/esim/esim.c (es_addr_translate): Likewise.
+	(es_tx_one_shm_testset): Delete.
+	(es_tx_one): Remove ES_REQ_TESTSET case.
+	(es_mem_store): Use -1 for 'normal' ctrlmode for now.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	* sim/epiphany/esim/esim.h: Remove es_tx_one_shm_testset prototype.
+
+2015-10-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphany_atomic_load): Implement.
+	(epiphany_atomic_store): Implement.
+	* epiphany-sim.h (epiphany_atomic_load): Update prototype.
+	* esim/esim-int.h (es_req_t): Add ES_REQ_ATOMIC_LOAD and
+	ES_REQ_ATOMIC_STORE request types to enum.
+	(es_transl): Add ctrlmode member.
+	* esim/esim.c (es_shm_mmr_write): New function.
+	(es_tx_one_shm_atomic_op): New function.
+	(es_tx_one_shm_mmr): Use es_shm_mmr_write.
+	(es_tx_one): Add hooks for ES_REQ_ATOMIC_LOAD and ES_REQ_ATOMIC_STORE.
+	(es_mem_store): Add ctrlmode to transaction.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	(es_mem_atomic_load): New function.
+	(es_mem_atomic_store): New function.
+	* esim/esim.h (es_mem_atomic_load): Add function prototype.
+	(es_mem_atomic_store): Likewise.
+
+2015-10-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.c (epiphany_atomic_load): Add empty function.
+	(epiphany_atomic_store): Likewise.
+	* epiphany-sim.h: Add function prototypes for above.
+
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Fix path handling.
+	* Makefile.in: Update rule for epiphany-elf-sim.py.in.
+
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-elf-sim.py.in: Change default environment to virtual.
+
+2015-10-28  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h: Add prototype for halt_on_inactive.
+	* epiphany.c (epiphany_halt_on_inactive): Add.
+	* mloop.in (full-exec-scache): Rename from old_vpc to prev_vpc.
+	Halt simulation if core becomes inactive in user environment mode.
+	* oob-events.c (halt_on_excause): Add.
+	(halt_on_interrupt): Add.
+	(interrupt_handler): Add prev_vpc argument.
+	(inline IADDR epiphany_handle_oob_events): Add prev_vpc argument.
+	* oob-events.h: Adjust halt_on_interrupt and interrupt_handler
+	prototypes.
+	* sim-if.c (sim_create_inferior): Depending on simulation environment:
+	start with setting caibit in USER_ENVIRONMENT, in VIRTUAL_ENVIRONMENT
+	start by triggering SYNC interrupt, do nothing in
+	OPERATING_ENVIRONMENT.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* mloop.in: Only print esim status messages in verbose mode.
+	* sim-if.c (sim_esim_init): Likewise.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-if.c (options_epiphany): Show default values in help text.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-if.c (sim_esim_have_required_params): Provide default values for
+	num_rows, num_cols and coreid if none are specified.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* esim/esim-int.h (es_state): Add session_name member.
+	* esim/esim.c (es_init_impl): Add session_name parameter.
+	(es_init): Likewise.
+	(es_client_connect): Likewise.
+	* esim/esim.h (es_init): Update prototype.
+	(es_client_connect): Update prototype.
+	* sim-if.c (EPIPHANY_OPTIONS): Add E_OPTION_SESSION_NAME enum.
+	(emesh_params): Rename mesh_add_ext_ram from epiphany_add_ext_ram,
+	change to uint64_t type. Add session_name member.
+	(epiphany_option_handler): Add null check for arg. Add case for
+	E_OPTION_SESSION_NAME.
+	(sim_esim_have_required_params): Fix help strings for
+	--e-num-cols and --e-num-rows.
+	(sim_esim_params_from_xml): Likewise.
+	(sim_esim_init): Fix setting ext_ram_base.
+	(sim_open): Adjust for name change to emesh_params.mesh_add_ext_ram
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in: Add missing esim dependencies.
+	* esim/esim-int.h (ES_ADDR_IS_EXT_RAM): Fix check when
+	external RAM includes top memory byte.
+	* esim/esim.c (es_tx_one_shm_store): Change to PCADDR
+	type for i and invalidate.
+	(es_validate_cluster_cfg): Fix external ram overflow check.
+
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.h: Change function prototypes to unsigned
+	types for register values.
+	* epiphany.c (epiphanybf_set_status): Use USI type for
+	register values.
+	(epiphanybf_set_debugcmd): Likewise.
+	(epiphanybf_set_resetcore): Likewise.
+	(epiphany_gie): Likewise.
+	(epiphany_trap): Likewise.
+	(epiphany_testset): Likewise.
+	* traps.c (USI epiphany_rti): Likewise.
+
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure: Regenerate.
+
+2015-10-22  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure.ac (SIM_AC_OPTION_ALIGNMENT): Set 64-bit address word
+	bitsize.
+	* sim-main.h (CIA_ADDR): Define.
+	(INVALID_INSTRUCTION_ADDRESS): Define.
+	* dv-epiphany_mem.c (epiphany_mem_finish): Fix compiler warning.
+	(epiphany_mem_signal): Change to address_word type for addr
+	and nr_bytes.
+	(epiphany_mem_io_read_buffer): Change to address word type for
+	addr, nr_bytes, and return value.
+	(epiphany_mem_io_write_buffer): Likewise.
+	* epiphany.c (epiphanybf_scache_invalidate): Use
+	INVALID_INSTRUCTION_ADDRESS instead of hardcoded value.
+	* esim/esim.h (es_cluster_cfg): Use uint64_t type for
+	addresses and sizes in the public API.
+	(es_mem_store): Likewise.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	* esim/esim-int.h (es_transl): Use address_word type for addresses and
+	sizes internally.
+	* esim/esim-net.h (es_net_addr_translate): Likewise.
+	* esim/esim.c (es_tx_one_shm_store): Likewise.
+	(es_addr_to_node(const es_state *esim, address_word addr): Likewise.
+	(es_mem_store): Likewise.
+	(es_mem_load): Likewise.
+	(es_mem_testset): Likewise.
+	(es_dump_config):
+	* esim/esim-net.c (es_net_addr_translate): Adjust function header for
+	above.
+
+2015-10-19  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (float64_calc): Common float64 calculation
+	function. Same structure as the single-precision
+	implementation.
+	(get_epiphany_fzeroflag64): Implemented.
+	(get_epiphany_fnegativeflag64): Implemented.
+	(get_epiphany_funderflowflag64): Implemented.
+	(get_epiphany_foverflowflag64): Implemented.
+	(get_epiphany_finvalidflag64): Implemented.
+	(epiphany_fadd64): Add call to float64_calc().
+	(epiphany_fmul64): Likewise.
+	(epiphany_fsub64): Likewise.
+	(epiphany_fmadd64): Likewise.
+	(epiphany_fmsub64): Likewise.
+	(epiphany_fabs64): Likewise.
+	(epiphany_fmax64): Likewise.
+	(epiphany_fix64): Likewise.
+	(epiphany_float64): Likewise.
+	(GETMANTDF): Double precision float helper function.
+	(GETEXPDF): Likewise.
+	(DENORMALDF_P): Likewise.
+	(MAKEZERODF): Likewise.
+	(MAKEPOSITIVEDF): Likewise.
+	(ZERODF_P): Likewise.
+	(NEGATIVEDF_P): Likewise.
+	(NANDF_P): Likewise.
+	(MAKENANDF): Likewise.
+	(DFTODI): Likewise.
+	(DITODF): Likewise.
+
+2015-10-18  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_mem.c (epiphany_mem_finish): Map address space
+	at bottom level so user-defined mappings will take precedence.
+	(static void epiphany_mem_signal): Adjust error messages to
+	match sim-core's.
+
+2015-10-16  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c: Remove dead code. Fix compiler
+	warnings.
+	(epiphany_float): Remove unused u.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (epiphany_fadd64): Added placeholder function.
+	(epiphany_fmul64): Likewise.
+	(epiphany_fsub64): Likewise.
+	(epiphany_fmadd64): Likewise.
+	(epiphany_fmsub64): Likewise.
+	(epiphany_fix64): Likewise.
+	(epiphany_float64): Likewise.
+	(epiphany_fabs64): Likewise.
+	(epiphany_fmax64): Likewise.
+	(get_epiphany_fzeroflag64): Likewise.
+	(get_epiphany_fnegativeflag64): Likewise.
+	(get_epiphany_funderflowflag64): Likewise.
+	(get_epiphany_foverflowflag64): Likewise.
+	(get_epiphany_finvalidflag64): Likewise.
+	* sim/epiphany/epiphany-fp.h: Add prototypes for above
+	functions.
+
+2015-10-12  Ola Jeppsson  <ola@adapteva.com>
+
+	* cgen-atomic.h: Fix signedness warnings.
+	* epiphany-fp.c (float_as_int): Likewise.
+	(int_as_float): Likewise.
+	(fcal): Likewise.
+	(epiphany_fabs): Likewise.
+	* epiphany-fp.h: Likewise.
+	* epiphany-sim.h: Likewise.
+	* epiphany.c (epiphanybf_set_status): Likewise.
+	(epiphanybf_set_debugcmd): Likewise.
+	(epiphanybf_set_resetcore): Likewise.
+	(epiphany_gie): Likewise.
+	(SI epiphany_testset): Likewise.
+	* oob-events.c (interrupt_handler): Likewise.
+	* traps.c (SI epiphany_rti): Likewise.
+	* sim-if.c (sim_open): Fix old style function prototype
+	warnings.
+	(sim_close): Likewise.
+	(sim_create_inferior): Likewise.
+	* esim/esim.c (es_set_cpu_state): Fix function type prototype
+	warning.
+	* esim/esim.h: Likewise.
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (fcal): Handle FMAX_FP_OP.
+	(epiphany_fmax): New function.
+	* epiphany-fp.h: Add prototype for epiphany_fmax().
+
+2015-10-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (epiphany_fix): Adjust arguments.
+	(epiphany_float): Likewise.
+	(epiphany_fabs): Likewise.
+	* epiphany-fp.h: Adjust above function
+	prototypes.
+
+2015-09-29  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-fp.c (epiphany_frecip): Removed.
+	(epiphany_fsqrt): Removed.
+	* epiphany-fp.h: Removed function prototypes.
+
 2016-03-13  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-fp.c (extract_mant): Declare as static inline.

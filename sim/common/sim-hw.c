@@ -338,8 +338,8 @@ sim_cpu_hw_io_read_buffer (sim_cpu *cpu,
 			   struct hw *hw,
 			   void *dest,
 			   int space,
-			   unsigned_word addr,
-			   unsigned nr_bytes)
+			   address_word addr,
+			   address_word nr_bytes)
 {
   SIM_DESC sd = CPU_STATE (cpu);
   STATE_HW (sd)->cpu = cpu;
@@ -354,8 +354,8 @@ sim_cpu_hw_io_write_buffer (sim_cpu *cpu,
 			    struct hw *hw,
 			    const void *source,
 			    int space,
-			    unsigned_word addr,
-			    unsigned nr_bytes)
+			    address_word addr,
+			    address_word nr_bytes)
 {
   SIM_DESC sd = CPU_STATE (cpu);
   STATE_HW (sd)->cpu = cpu;
@@ -369,25 +369,25 @@ sim_cpu_hw_io_write_buffer (sim_cpu *cpu,
 
 /* SYSTEM: A data transfer is being initiated by the system. */
 
-unsigned
+address_word
 sim_hw_io_read_buffer (struct sim_state *sd,
 		       struct hw *hw,
 		       void *dest,
 		       int space,
-		       unsigned_word addr,
-		       unsigned nr_bytes)
+		       address_word addr,
+		       address_word nr_bytes)
 {
   STATE_HW (sd)->cpu = NULL;
   return hw_io_read_buffer (hw, dest, space, addr, nr_bytes);
 }
 
-unsigned
+address_word
 sim_hw_io_write_buffer (struct sim_state *sd,
 			struct hw *hw,
 			const void *source,
 			int space,
-			unsigned_word addr,
-			unsigned nr_bytes)
+			address_word addr,
+			address_word nr_bytes)
 {
   STATE_HW (sd)->cpu = NULL;
   return hw_io_write_buffer (hw, source, space, addr, nr_bytes);

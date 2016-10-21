@@ -613,23 +613,7 @@ model_epiphany32_jalr (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrbx16_s (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_ldrbp16_s (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -645,7 +629,23 @@ model_epiphany32_ldrbp16_s (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrbx_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_ldrbp16_s (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -661,7 +661,7 @@ model_epiphany32_ldrbx_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrbp_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -677,7 +677,7 @@ model_epiphany32_ldrbp_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrbd16_s (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdd16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbd16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -693,7 +693,7 @@ model_epiphany32_ldrbd16_s (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrbd_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -709,7 +709,7 @@ model_epiphany32_ldrbd_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrbdpm_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -725,23 +725,7 @@ model_epiphany32_ldrbdpm_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrhx16_s (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_ldrhp16_s (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -757,7 +741,23 @@ model_epiphany32_ldrhp16_s (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrhx_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_ldrhp16_s (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -773,7 +773,7 @@ model_epiphany32_ldrhx_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrhp_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -789,7 +789,7 @@ model_epiphany32_ldrhp_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrhd16_s (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdd16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbd16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -805,7 +805,7 @@ model_epiphany32_ldrhd16_s (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrhd_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -821,7 +821,7 @@ model_epiphany32_ldrhd_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrhdpm_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -837,23 +837,7 @@ model_epiphany32_ldrhdpm_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrx16_s (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_ldrp16_s (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -869,7 +853,23 @@ model_epiphany32_ldrp16_s (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrx_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_ldrp16_s (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_ldrbp16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -885,7 +885,7 @@ model_epiphany32_ldrx_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrp_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbp_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -901,7 +901,7 @@ model_epiphany32_ldrp_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrd16_s (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdd16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrbd16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -917,7 +917,7 @@ model_epiphany32_ldrd16_s (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrd_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -933,7 +933,7 @@ model_epiphany32_ldrd_l (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_ldrdpm_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrddpm_l.f
+#define FLD(f) abuf->fields.sfmt_ldrbdpm_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -963,9 +963,9 @@ model_epiphany32_ldrdx16_s (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
-model_epiphany32_ldrdp16_s (SIM_CPU *current_cpu, void *sem_arg)
+model_epiphany32_ldrdx_l (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
+#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -979,9 +979,9 @@ model_epiphany32_ldrdp16_s (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
-model_epiphany32_ldrdx_l (SIM_CPU *current_cpu, void *sem_arg)
+model_epiphany32_ldrdp16_s (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_ldrdp_l.f
+#define FLD(f) abuf->fields.sfmt_ldrdp16_s.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1059,41 +1059,9 @@ model_epiphany32_ldrddpm_l (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
-model_epiphany32_testsetbt (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_testsetht (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
 model_epiphany32_testsett (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1109,7 +1077,7 @@ model_epiphany32_testsett (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strbx16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1125,7 +1093,7 @@ model_epiphany32_strbx16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strbx (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1141,7 +1109,7 @@ model_epiphany32_strbx (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strbp16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdp16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1157,7 +1125,7 @@ model_epiphany32_strbp16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strbp (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdp.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1173,7 +1141,7 @@ model_epiphany32_strbp (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strbd16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdd16.f
+#define FLD(f) abuf->fields.sfmt_strbd16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1189,7 +1157,7 @@ model_epiphany32_strbd16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strbd (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1205,7 +1173,7 @@ model_epiphany32_strbd (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strbdpm (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1221,7 +1189,7 @@ model_epiphany32_strbdpm (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strhx16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1237,7 +1205,7 @@ model_epiphany32_strhx16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strhx (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1253,7 +1221,7 @@ model_epiphany32_strhx (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strhp16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdp16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1269,7 +1237,7 @@ model_epiphany32_strhp16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strhp (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdp.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1285,7 +1253,7 @@ model_epiphany32_strhp (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strhd16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdd16.f
+#define FLD(f) abuf->fields.sfmt_strbd16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1301,7 +1269,7 @@ model_epiphany32_strhd16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strhd (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1317,7 +1285,7 @@ model_epiphany32_strhd (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strhdpm (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1333,7 +1301,7 @@ model_epiphany32_strhdpm (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strx16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1349,7 +1317,7 @@ model_epiphany32_strx16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strx (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1365,7 +1333,7 @@ model_epiphany32_strx (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strp16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdp16.f
+#define FLD(f) abuf->fields.sfmt_strbp16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1381,7 +1349,7 @@ model_epiphany32_strp16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strp (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdp.f
+#define FLD(f) abuf->fields.sfmt_strbp.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1397,7 +1365,7 @@ model_epiphany32_strp (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strd16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strdd16.f
+#define FLD(f) abuf->fields.sfmt_strbd16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1413,7 +1381,7 @@ model_epiphany32_strd16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strd (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -1429,7 +1397,7 @@ model_epiphany32_strd (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_strdpm (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_strddpm.f
+#define FLD(f) abuf->fields.sfmt_strbdpm.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2115,6 +2083,22 @@ model_epiphany32_movtsmesh (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
+model_epiphany32_mode (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_mode.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
 model_epiphany32_movfs16 (SIM_CPU *current_cpu, void *sem_arg)
 {
 #define FLD(f) abuf->fields.sfmt_movfs16.f
@@ -2373,7 +2357,7 @@ model_epiphany32_gidis (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_swi_num (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_empty.f
+#define FLD(f) abuf->fields.sfmt_strdd16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2421,7 +2405,7 @@ model_epiphany32_add16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_add (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2453,7 +2437,7 @@ model_epiphany32_sub16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_sub (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2485,7 +2469,7 @@ model_epiphany32_and16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_and (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2517,7 +2501,7 @@ model_epiphany32_orr16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_orr (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2549,7 +2533,7 @@ model_epiphany32_eor16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_eor (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2645,7 +2629,7 @@ model_epiphany32_asr16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_asr (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2677,7 +2661,7 @@ model_epiphany32_lsr16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_lsr (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2709,7 +2693,7 @@ model_epiphany32_lsl16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_lsl (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2819,6 +2803,134 @@ model_epiphany32_asri32 (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
+model_epiphany32_add64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_add64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_sub64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_add64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_and64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_add64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_orr64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_add64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_eor64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_add64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_asr64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_asr64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_lsr64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_asr64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_lsl64 (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_asr64.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
 model_epiphany32_bitr16 (SIM_CPU *current_cpu, void *sem_arg)
 {
 #define FLD(f) abuf->fields.sfmt_lsri16.f
@@ -2838,54 +2950,6 @@ static int
 model_epiphany32_bitr (SIM_CPU *current_cpu, void *sem_arg)
 {
 #define FLD(f) abuf->fields.sfmt_lsri32.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_fext (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_movts6.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_fdep (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_movts6.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_lfsr (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_movts6.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2949,7 +3013,7 @@ model_epiphany32_movt (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_addf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2965,7 +3029,7 @@ model_epiphany32_f_addf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_addf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2981,7 +3045,7 @@ model_epiphany32_f_addf32 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_subf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -2997,7 +3061,7 @@ model_epiphany32_f_subf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_subf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3013,7 +3077,7 @@ model_epiphany32_f_subf32 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_mulf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3029,7 +3093,7 @@ model_epiphany32_f_mulf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_mulf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3045,7 +3109,7 @@ model_epiphany32_f_mulf32 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_maddf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3061,7 +3125,7 @@ model_epiphany32_f_maddf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_maddf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3077,7 +3141,7 @@ model_epiphany32_f_maddf32 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_msubf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_add16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3093,7 +3157,7 @@ model_epiphany32_f_msubf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_msubf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3109,7 +3173,7 @@ model_epiphany32_f_msubf32 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_absf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_lsri16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3125,7 +3189,7 @@ model_epiphany32_f_absf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_absf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_lsri32.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3141,7 +3205,7 @@ model_epiphany32_f_absf32 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_loatf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_lsri16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3157,7 +3221,7 @@ model_epiphany32_f_loatf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_loatf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_lsri32.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3173,7 +3237,7 @@ model_epiphany32_f_loatf32 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_ixf16 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_f_ixf16.f
+#define FLD(f) abuf->fields.sfmt_f_addf16.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3189,7 +3253,7 @@ model_epiphany32_f_ixf16 (SIM_CPU *current_cpu, void *sem_arg)
 static int
 model_epiphany32_f_ixf32 (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_testsetbt.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3203,9 +3267,9 @@ model_epiphany32_f_ixf32 (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
-model_epiphany32_f_recipf32 (SIM_CPU *current_cpu, void *sem_arg)
+model_epiphany32_fmax (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_f_recipf32.f
+#define FLD(f) abuf->fields.sfmt_f_addf32.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3219,9 +3283,25 @@ model_epiphany32_f_recipf32 (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
-model_epiphany32_f_sqrtf32 (SIM_CPU *current_cpu, void *sem_arg)
+model_epiphany32_umul (SIM_CPU *current_cpu, void *sem_arg)
 {
-#define FLD(f) abuf->fields.sfmt_f_recipf32.f
+#define FLD(f) abuf->fields.sfmt_testsett.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_epiphany32_mul (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_testsett.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
   const IDESC * UNUSED idesc = abuf->idesc;
   int cycles = 0;
@@ -3283,35 +3363,33 @@ static const INSN_TIMING epiphany32_timing[] = {
   { EPIPHANYBF_INSN_JALR16, model_epiphany32_jalr16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_JALR, model_epiphany32_jalr, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRBX16_S, model_epiphany32_ldrbx16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_LDRBP16_S, model_epiphany32_ldrbp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRBX_L, model_epiphany32_ldrbx_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_LDRBP16_S, model_epiphany32_ldrbp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRBP_L, model_epiphany32_ldrbp_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRBD16_S, model_epiphany32_ldrbd16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRBD_L, model_epiphany32_ldrbd_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRBDPM_L, model_epiphany32_ldrbdpm_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRHX16_S, model_epiphany32_ldrhx16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_LDRHP16_S, model_epiphany32_ldrhp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRHX_L, model_epiphany32_ldrhx_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_LDRHP16_S, model_epiphany32_ldrhp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRHP_L, model_epiphany32_ldrhp_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRHD16_S, model_epiphany32_ldrhd16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRHD_L, model_epiphany32_ldrhd_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRHDPM_L, model_epiphany32_ldrhdpm_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRX16_S, model_epiphany32_ldrx16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_LDRP16_S, model_epiphany32_ldrp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRX_L, model_epiphany32_ldrx_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_LDRP16_S, model_epiphany32_ldrp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRP_L, model_epiphany32_ldrp_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRD16_S, model_epiphany32_ldrd16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRD_L, model_epiphany32_ldrd_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRDPM_L, model_epiphany32_ldrdpm_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRDX16_S, model_epiphany32_ldrdx16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_LDRDP16_S, model_epiphany32_ldrdp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRDX_L, model_epiphany32_ldrdx_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_LDRDP16_S, model_epiphany32_ldrdp16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRDP_L, model_epiphany32_ldrdp_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRDD16_S, model_epiphany32_ldrdd16_s, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRDD_L, model_epiphany32_ldrdd_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_LDRDDPM_L, model_epiphany32_ldrddpm_l, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_TESTSETBT, model_epiphany32_testsetbt, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_TESTSETHT, model_epiphany32_testsetht, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_TESTSETT, model_epiphany32_testsett, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_STRBX16, model_epiphany32_strbx16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_STRBX, model_epiphany32_strbx, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
@@ -3376,6 +3454,7 @@ static const INSN_TIMING epiphany32_timing[] = {
   { EPIPHANYBF_INSN_MOVTSDMA, model_epiphany32_movtsdma, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOVTSMEM, model_epiphany32_movtsmem, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOVTSMESH, model_epiphany32_movtsmesh, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_MODE, model_epiphany32_mode, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOVFS16, model_epiphany32_movfs16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOVFS6, model_epiphany32_movfs6, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOVFSDMA, model_epiphany32_movfsdma, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
@@ -3420,11 +3499,16 @@ static const INSN_TIMING epiphany32_timing[] = {
   { EPIPHANYBF_INSN_LSLI32, model_epiphany32_lsli32, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_ASRI16, model_epiphany32_asri16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_ASRI32, model_epiphany32_asri32, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_ADD64, model_epiphany32_add64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_SUB64, model_epiphany32_sub64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_AND64, model_epiphany32_and64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_ORR64, model_epiphany32_orr64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_EOR64, model_epiphany32_eor64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_ASR64, model_epiphany32_asr64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_LSR64, model_epiphany32_lsr64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_LSL64, model_epiphany32_lsl64, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_BITR16, model_epiphany32_bitr16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_BITR, model_epiphany32_bitr, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_FEXT, model_epiphany32_fext, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_FDEP, model_epiphany32_fdep, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_LFSR, model_epiphany32_lfsr, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOV8, model_epiphany32_mov8, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOV16, model_epiphany32_mov16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_MOVT, model_epiphany32_movt, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
@@ -3444,8 +3528,9 @@ static const INSN_TIMING epiphany32_timing[] = {
   { EPIPHANYBF_INSN_F_LOATF32, model_epiphany32_f_loatf32, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_F_IXF16, model_epiphany32_f_ixf16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_F_IXF32, model_epiphany32_f_ixf32, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_F_RECIPF32, model_epiphany32_f_recipf32, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_F_SQRTF32, model_epiphany32_f_sqrtf32, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_FMAX, model_epiphany32_fmax, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_UMUL, model_epiphany32_umul, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
+  { EPIPHANYBF_INSN_MUL, model_epiphany32_mul, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
 };
 
 #endif /* WITH_PROFILE_MODEL_P */

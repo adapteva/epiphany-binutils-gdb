@@ -7,7 +7,7 @@
 
 	.global ldrx16
 ldrx16:
-	mov	r0,v
+	mova	r0,v
 	mov	r1,8
 	ldr r0,[r0,r1]
 	compare r0,2

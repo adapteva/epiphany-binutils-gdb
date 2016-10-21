@@ -37,6 +37,7 @@
 #endif
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <ctype.h>
 
 #include "sim-options.h"
@@ -48,6 +49,8 @@
 #include <epiphany_xml_c.h>
 #endif
 #endif
+
+#include "ert-workgroup.h"
 
 /* Records simulator descriptor so utilities like epiphany_dump_regs can be
    called from gdb.  */
@@ -66,6 +69,9 @@ typedef enum {
   E_OPTION_ADD_EXT_MEM,
   E_OPTION_EXT_RAM_BASE,
   E_OPTION_EXT_RAM_SIZE,
+  E_OPTION_SESSION_NAME,
+  E_OPTION_EXTERNAL_FETCH,
+  E_OPTION_CORE_MEM,
   /** @todo Add more options:
    * Check es_cluster_cfg in esim.h
    */
@@ -79,16 +85,35 @@ struct emesh_params {
   int first_coreid;
 
   /* Extra */
-  unsigned epiphany_add_ext_ram;
-  int64_t ext_ram_base;
+  unsigned mesh_add_ext_ram;
+  uint64_t ext_ram_base;
+  /* Don't allow crazy large ext ram size for now */
   int64_t ext_ram_size;
+  int64_t core_mem;
 
   char *xml_hdf_file;
+
+  const char *session_name;
 };
-static struct emesh_params emesh_params = {-1, -1, -1, -1, 1, -1, -1, NULL};
+static struct emesh_params emesh_params = {
+  .coreid           = -1,
+  .num_cols         = -1,
+  .num_rows         = -1,
+  .first_coreid     = -1,
+
+  .mesh_add_ext_ram =  1,
+  .ext_ram_base     =  0,
+  .ext_ram_size     = -1,
+  .core_mem        = -1,
+
+  .xml_hdf_file     = NULL,
+  .session_name     = NULL,
+};
 
 static void free_state (SIM_DESC);
 static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
+static SIM_RC epiphany_mem_size_option_handler (SIM_DESC, sim_cpu *, int,
+						char *, int);
 static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
 
 #ifdef WITH_EMESH_SIM
@@ -114,24 +139,33 @@ static const OPTION options_epiphany[] =
   /* coreid is determined from MPI rank */
 #else
   { {"e-coreid", required_argument, NULL, E_OPTION_COREID},
-      '\0', "COREID", "Set coreid",
+      '\0', "COREID", "Set coreid. Default is 0x020.",
       epiphany_option_handler  },
 #endif
   { {"e-cols", required_argument, NULL, E_OPTION_NUM_COLS},
-      '\0', "n", "Number of core columns",
+      '\0', "n", "Number of core columns. Default is 1.",
       epiphany_option_handler  },
   { {"e-rows", required_argument, NULL, E_OPTION_NUM_ROWS},
-      '\0', "n", "Number of core rows",
+      '\0', "n", "Number of core rows. DEFAULT is 1.",
       epiphany_option_handler  },
   { {"e-first-core", required_argument, NULL, E_OPTION_FIRST_CORE},
       '\0', "COREID", "Coreid of upper leftmost core",
       epiphany_option_handler  },
   { {"e-ext-ram-base", required_argument, NULL, E_OPTION_EXT_RAM_BASE},
-      '\0', "address", "Base address of external RAM",
+      '\0', "address", "Base address of external RAM. Default is 0x8e000000.",
       epiphany_option_handler  },
   { {"e-ext-ram-size", required_argument, NULL, E_OPTION_EXT_RAM_SIZE},
-      '\0', "MB", "Size of external RAM in MB",
+      '\0', "MB", "Size of external RAM. Default is `32MB'.",
+      epiphany_mem_size_option_handler  },
+  { {"e-session-name", required_argument, NULL, E_OPTION_SESSION_NAME},
+      '\0', "NAME", "Set the session name. Use this option when you want to run separate simulations concurrently without clashing, or if you want to connect clients to a one-core simulation.",
       epiphany_option_handler  },
+  { {"e-external-fetch", no_argument, NULL, E_OPTION_EXTERNAL_FETCH},
+      '\0', NULL, "Allow instruction fetch from off-core memory. Default is off.",
+      epiphany_option_handler  },
+  { {"e-core-mem", required_argument, NULL, E_OPTION_CORE_MEM},
+      '\0', "SIZE", "Core memory size. Default is `64KB'.",
+      epiphany_mem_size_option_handler  },
 #endif
   { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL, NULL }
 };
@@ -149,37 +183,13 @@ free_state (SIM_DESC sd)
   sim_state_free (sd);
 }
 
-static SIM_RC
-epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
-			 int is_command)
-{
-  char *endp;
-  unsigned long ul;
-  unsigned value;
-  int valid;
-
-  ul = strtoul (arg, &endp, 0);
-  valid = ((isdigit (arg[0]) && endp != arg));
-
-  switch ((EPIPHANY_OPTIONS) opt)
-    {
-    case E_OPTION_EXT_RAM:
-      if(strcmp(arg,"off") == 0 ) {
-	      emesh_params.epiphany_add_ext_ram = 0;
-      }
-      if(strcmp(arg,"on") == 0 ) {
-	      emesh_params.epiphany_add_ext_ram = 1;
-      }
-      return SIM_RC_OK;
-      break;
-#if WITH_EMESH_SIM
 
 #define SET_OR_FAIL(Param, Name)\
   do \
     {\
       if (valid)\
 	{\
-	  emesh_params.Param = (unsigned) ul;\
+	  emesh_params.Param = (sizeof(emesh_params.Param) < 8 ? (unsigned) ul : ul);\
 	}\
       else\
 	{\
@@ -188,6 +198,85 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 	}\
     }\
   while (0)
+
+static SIM_RC
+epiphany_mem_size_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
+				  int is_command)
+{
+  char *endp;
+  ulong64 ul = 0;
+  int valid = 0;
+
+  if (arg)
+    {
+      ul = strtoull (arg, &endp, 0);
+      valid = ((isdigit (arg[0]) && endp != arg));
+
+      switch (*endp)
+	{
+	case 'k': case 'K': ul <<= 10; break;
+	case 'm': case 'M': ul <<= 20; break;
+	case 'g': case 'G': ul <<= 30; break;
+	case ' ': case '\0': case '\t':  break;
+	default:
+	  if (ul > 0)
+	    sim_io_eprintf (sd, "Ignoring strange character at end of memory size: %c\n",
+			    *endp);
+	  break;
+	}
+    }
+
+  switch ((EPIPHANY_OPTIONS) opt)
+    {
+    case E_OPTION_EXT_RAM_SIZE:
+      SET_OR_FAIL(ext_ram_size, "e-ext-ram-size");
+      break;
+    case E_OPTION_CORE_MEM:
+      SET_OR_FAIL (core_mem, "e-core-mem");
+      break;
+    default:
+      sim_io_eprintf (sd, "Unknown option %d `%s'\n", opt, arg);
+      return SIM_RC_FAIL;
+    }
+
+  /* Update options */
+  if (STATE_OPEN_KIND (sd) == SIM_OPEN_DEBUG)
+    return sim_esim_set_options(sd, cpu);
+  else
+    return SIM_RC_OK;
+}
+
+static SIM_RC
+epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
+			 int is_command)
+{
+  char *endp;
+  ulong64 ul = 0;
+  int valid = 0;
+
+  if (arg)
+    {
+      ul = strtoull (arg, &endp, 0);
+      valid = ((isdigit (arg[0]) && endp != arg));
+    }
+
+  switch ((EPIPHANY_OPTIONS) opt)
+    {
+    case E_OPTION_EXT_RAM:
+      if (!arg || strcmp(arg,"on") == 0 )
+	emesh_params.mesh_add_ext_ram = 1;
+      else if(strcmp(arg,"off") == 0 )
+	emesh_params.mesh_add_ext_ram = 0;
+      else
+	{
+	  sim_io_eprintf(sd, "%s: Invalid parameter `%s'\n", "-e", arg);\
+	  return SIM_RC_FAIL;
+	}
+
+      return SIM_RC_OK;
+      break;
+#if WITH_EMESH_SIM
+
 #if HAVE_E_XML
     case E_OPTION_XML_HDF:
       emesh_params.xml_hdf_file = arg;
@@ -208,12 +297,12 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
     case E_OPTION_EXT_RAM_BASE:
       SET_OR_FAIL(ext_ram_base, "e-ext-ram-base");
       break;
-    case E_OPTION_EXT_RAM_SIZE:
-      SET_OR_FAIL(ext_ram_size, "e-ext-ram-size");
-      /* Specified in MB */
-      emesh_params.ext_ram_size = emesh_params.ext_ram_size << 20;
+    case E_OPTION_SESSION_NAME:
+      emesh_params.session_name = arg;
       break;
-#undef SET_OR_FAIL
+    case E_OPTION_EXTERNAL_FETCH:
+      sd->external_fetch = true;
+      break;
 #endif
     default:
       sim_io_eprintf (sd, "Unknown option %d `%s'\n", opt, arg);
@@ -230,8 +319,7 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 #endif
     return SIM_RC_OK;
 }
-
-
+#undef SET_OR_FAIL
 
 #if WITH_EMESH_SIM
 /* Custom sim cpu alloc for emesh sim */
@@ -273,6 +361,15 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
       return SIM_RC_FAIL;\
     }
 
+  /* Provide default values if none specified */
+  if (emesh_params.num_rows == -1 && emesh_params.num_cols == -1 &&
+      emesh_params.coreid == -1)
+    {
+      emesh_params.num_rows = 1;
+      emesh_params.num_cols = 1;
+      emesh_params.coreid = 0x020;
+    }
+
 #if WITH_EMESH_NET
   /* Coreid is determined by MPI RANK */
 #else
@@ -294,17 +391,17 @@ static SIM_RC sim_esim_have_required_params(SIM_DESC sd)
   if (emesh_params.xml_hdf_file != NULL)
     {
       FAIL_IF(-1 != emesh_params.num_cols    ,
-	      "Both --e-xml-file and --e-num-cols set");
+	      "Both --e-xml-file and --e-cols set");
       FAIL_IF(-1 != emesh_params.num_rows    ,
-	      "Both --e-xml-file and --e-num-rows set");
+	      "Both --e-xml-file and --e-rows set");
       FAIL_IF(-1 != emesh_params.first_coreid,
 	      "Both --e-xml-file and --e-first-core set");
       /** @todo Also check add_ext_ram */
     }
   else
     {
-      FAIL_IF(0 > emesh_params.num_cols    , "--e-num-cols not set");
-      FAIL_IF(0 > emesh_params.num_rows    , "--e-num-rows not set");
+      FAIL_IF(0 > emesh_params.num_cols    , "--e-cols not set");
+      FAIL_IF(0 > emesh_params.num_rows    , "--e-rows not set");
       FAIL_IF(0 > emesh_params.first_coreid, "--e-first-core not set");
     }
 #undef FAIL_IF
@@ -356,7 +453,7 @@ static SIM_RC sim_esim_params_from_xml(SIM_DESC sd)
   /* emesh_params.core_mem_size = p->chips[0].core_memory_size; */
 
   /* No external RAM unless specified in HDF file */
-  emesh_params.epiphany_add_ext_ram = 0;
+  emesh_params.mesh_add_ext_ram = 0;
 
   for (i=0; i < p->num_banks; i++)
     {
@@ -364,10 +461,10 @@ static SIM_RC sim_esim_params_from_xml(SIM_DESC sd)
       if (strncmp(p->ext_mem[i].name, "EXTERNAL_DRAM", 13) == 0)
 	{
 	  /* Fail if there already was an ext ram bank */
-	  FAIL_IF(emesh_params.epiphany_add_ext_ram,
+	  FAIL_IF(emesh_params.mesh_add_ext_ram,
 		  "The simulator only supports at most 1 memory bank");
 
-	  emesh_params.epiphany_add_ext_ram = 1;
+	  emesh_params.mesh_add_ext_ram = 1;
 
 	  emesh_params.ext_ram_base = p->ext_mem[i].base;
 	  emesh_params.ext_ram_size = p->ext_mem[i].size;
@@ -390,7 +487,7 @@ sim_esim_init(SIM_DESC sd)
 {
   es_cluster_cfg cluster;
   struct emesh_params *p;
-  uint64_t ext_ram_size, ext_ram_base;
+  uint64_t ext_ram_size, ext_ram_base, core_mem;
 
   if (es_initialized(STATE_ESIM(sd)) == ES_OK)
     return SIM_RC_OK;
@@ -400,8 +497,10 @@ sim_esim_init(SIM_DESC sd)
 
   p = &emesh_params;
 
+  /* Default values */
   ext_ram_size = 32*1024*1024;
   ext_ram_base = 0x8e000000;
+  core_mem    = 65536; /*!< @todo: derive from model */
 
 #if HAVE_E_XML
   /* Parse XML file, if specified */
@@ -420,21 +519,25 @@ sim_esim_init(SIM_DESC sd)
   cluster.rows = p->num_rows;
   cluster.core_mem_region = 1024*1024;
 
-  if (p->epiphany_add_ext_ram)
+  if (p->mesh_add_ext_ram)
     {
       ext_ram_size = (0 <= p->ext_ram_size) ? p->ext_ram_size : ext_ram_size;
-      ext_ram_base = (0 <= p->ext_ram_base) ? p->ext_ram_base : ext_ram_base;
+      ext_ram_base = (0 <  p->ext_ram_base) ? p->ext_ram_base : ext_ram_base;
     }
   else
     {
       ext_ram_size = 0;
       ext_ram_base = 0xffffffff;
     }
+
+  core_mem = (0 <= p->core_mem) ? p->core_mem : core_mem;
+
   cluster.ext_ram_size = ext_ram_size;
   cluster.ext_ram_base = ext_ram_base;
   cluster.ext_ram_node = 0;
+  cluster.core_phys_mem = core_mem;
 
-  if (es_init(&STATE_ESIM(sd), cluster, p->coreid) != ES_OK)
+  if (es_init(&STATE_ESIM(sd), cluster, p->coreid, p->session_name) != ES_OK)
     {
       return SIM_RC_FAIL;
     }
@@ -464,6 +567,8 @@ sim_esim_init(SIM_DESC sd)
     pthread_cond_init(&current_cpu->scr_wakeup_cond, &condattr);
     pthread_cond_init(&current_cpu->scr_writeslot_cond, &condattr);
 
+    pthread_mutex_init(&current_cpu->wand_lock, &mutexattr);
+
     current_cpu->scr_remote_write_reg = -1;
     current_cpu->scr_remote_write_val = 0xbaadbeef;
 
@@ -471,7 +576,8 @@ sim_esim_init(SIM_DESC sd)
     pthread_mutexattr_destroy(&mutexattr);
   }
 
-  sim_io_eprintf(sd, "ESIM: Initialized successfully\n");
+  if (STATE_VERBOSE_P (sd))
+    sim_io_eprintf(sd, "ESIM: Initialized successfully\n");
 
   return SIM_RC_OK;
 }
@@ -480,11 +586,10 @@ sim_esim_init(SIM_DESC sd)
 /* Create an instance of the simulator.  */
 
 SIM_DESC
-sim_open (kind, callback, abfd, argv)
-     SIM_OPEN_KIND kind;
-     host_callback *callback;
-     struct bfd *abfd;
-     char **argv;
+sim_open (SIM_OPEN_KIND kind,
+	  host_callback *callback,
+	  struct bfd *abfd,
+	  char **argv)
 {
   SIM_DESC sd = sim_state_alloc (kind, callback);
   char c;
@@ -540,33 +645,19 @@ sim_open (kind, callback, abfd, argv)
     }
 #endif
 
-#if 0
-  /* Allocate a handler for the control registers and other devices
-     if no memory for that range has been allocated by the user.
-     All are allocated in one chunk to keep things from being
-     unnecessarily complicated.  */
-  if (sim_core_read_buffer (sd, NULL, read_map, &c, EPIPHANY_DEVICE_ADDR, 1) == 0)
-    sim_core_attach (sd, NULL,
-		     0 /*level*/,
-		     access_read_write,
-		     0 /*space ???*/,
-		     EPIPHANY_DEVICE_ADDR, EPIPHANY_DEVICE_LEN /*nr_bytes*/,
-		     0 /*modulo*/,
-		     &epiphany_devices,
-		     NULL /*buffer*/);
-
-#endif
-
   /* Allocate core managed memory if none specified by user.  */
 
 #if (WITH_HW)
   sim_hw_parse (sd, "/epiphany_mem");
+  sim_hw_parse (sd, "/epiphany_dma@0");
+  sim_hw_parse (sd, "/epiphany_dma@1");
+  sim_hw_parse (sd, "/epiphany_timer");
   /** @todo Need to be able to map external mem */
 #else
   if (sim_core_read_buffer (sd, NULL, read_map, &c, 0, 1) == 0)
     sim_do_commandf (sd, "memory region 0,0x%x", EPIPHANY_DEFAULT_MEM_SIZE);
 
-  if (emesh_params.epiphany_add_ext_ram)
+  if (emesh_params.mesh_add_ext_ram)
     {
       if (sim_core_read_buffer (sd, NULL, read_map, &c,
 				EPIPHANY_DEFAULT_EXT_MEM_BANK0_START, 1) == 0)
@@ -650,29 +741,83 @@ sim_open (kind, callback, abfd, argv)
 }
 
 void
-sim_close (sd, quitting)
-     SIM_DESC sd;
-     int quitting;
+sim_close (SIM_DESC sd,
+	   int quitting)
 {
   epiphany_cgen_cpu_close (CPU_CPU_DESC (STATE_CPU (sd, 0)));
 #if WITH_EMESH_SIM
   if (es_initialized(STATE_ESIM(sd)) == ES_OK)
     {
-      sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
+      if (STATE_VERBOSE_P (sd))
+        sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
+
       es_wait_exit(STATE_ESIM(sd));
-      sim_io_eprintf(sd, " done.\n");
+
+      if (STATE_VERBOSE_P (sd))
+        sim_io_eprintf(sd, " done.\n");
     }
 #endif
   sim_module_uninstall (sd);
   free_state(sd);
 }
 
+static SIM_RC
+setup_workgroup_cfg (SIM_DESC sd)
+{
+  asection *s;
+  address_word addr;
+  es_cluster_cfg cluster;
+  e_group_config_t workgroup_cfg = { 0, };
+  unsigned coreid;
+  SIM_CPU *current_cpu = STATE_CPU (sd, 0);
+  es_state *esim = STATE_ESIM (sd);
+  bfd *prog_bfd = STATE_PROG_BFD (sd);
+  bool found = false;
+
+  if (!prog_bfd)
+    return SIM_RC_OK;
+
+  for (s = prog_bfd->sections; s; s = s->next)
+    if (strcmp (bfd_get_section_name (prog_bfd, s), "workgroup_cfg") == 0)
+      {
+	found = true;
+	break;
+      }
+
+  if (!found)
+    return SIM_RC_OK;
+
+  if (STATE_VERBOSE_P (sd))
+    sim_io_eprintf(sd, "setting workgroup configuration\n");
+
+  addr = bfd_get_section_vma (prog_bfd, s);
+
+  es_get_cluster_cfg(esim, &cluster);
+  coreid = es_get_coreid(esim);
+
+  workgroup_cfg.objtype    = E_EPI_GROUP;
+  workgroup_cfg.chiptype   = E_E1KG501;   /* TODO: Derive from model */
+  workgroup_cfg.group_id   = cluster.row_base * 0x40 + cluster.col_base;
+  workgroup_cfg.group_row  = cluster.row_base;
+  workgroup_cfg.group_col  = cluster.col_base;
+  workgroup_cfg.group_rows = cluster.rows;
+  workgroup_cfg.group_cols = cluster.cols;
+  workgroup_cfg.core_row   = coreid / 0x40 - cluster.row_base;
+  workgroup_cfg.core_col   = coreid % 0x40 - cluster.col_base;
+
+  if (sizeof(workgroup_cfg) !=
+      sim_core_write_buffer (sd, current_cpu, write_map, &workgroup_cfg, addr,
+			     sizeof(workgroup_cfg)))
+    return SIM_RC_FAIL;
+
+  return SIM_RC_OK;
+}
+
 SIM_RC
-sim_create_inferior (sd, abfd, argv, envp)
-     SIM_DESC sd;
-     struct bfd *abfd;
-     char **argv;
-     char **envp;
+sim_create_inferior (SIM_DESC sd,
+		     struct bfd *abfd,
+		     char **argv,
+		     char **envp)
 {
   SIM_CPU *current_cpu = STATE_CPU (sd, 0);
   SIM_ADDR addr;
@@ -690,19 +835,11 @@ sim_create_inferior (sd, abfd, argv, envp)
     }
 #endif
 
-
   if (abfd != NULL)
     addr = bfd_get_start_address (abfd);
   else
     addr = 0;
   sim_pc_set (current_cpu, addr);
-
-#ifdef EPIPHANY_LINUX
-  epiphanybf_h_cr_set (current_cpu,
-		       epiphany_decode_gdb_ctrl_regnum(SPI_REGNUM), 0x1f00000);
-  epiphanybf_h_cr_set (current_cpu,
-		       epiphany_decode_gdb_ctrl_regnum(SPU_REGNUM), 0x1f00000);
-#endif
 
 #if 0
   STATE_ARGV (sd) = sim_copy_argv (argv);
@@ -710,16 +847,41 @@ sim_create_inferior (sd, abfd, argv, envp)
 #endif
 
 #if WITH_EMESH_SIM
+
+  if (STATE_ENVIRONMENT (sd) != OPERATING_ENVIRONMENT)
+    {
+      /* Operating environment is intended host connect throug esim client api
+       * It's responsibility for host application to set workgroup_cfg */
+
+      /* set up workgroup configuration according to mesh properties */
+      if (setup_workgroup_cfg (sd) != SIM_RC_OK)
+	return SIM_RC_FAIL;
+    }
+
   /* Set coreid in cpu register. Do it via backdoor since it is (should be)
    * read only.
    */
   epiphanybf_h_all_registers_set_raw(STATE_CPU(sd, 0), H_REG_MESH_COREID,
 				 es_get_coreid(STATE_ESIM(sd)));
 
-  if (STATE_ENVIRONMENT (sd) != OPERATING_ENVIRONMENT)
+  switch (STATE_ENVIRONMENT (sd))
     {
-      /* Start by triggering SYNC interrupt*/
-      epiphanybf_h_all_registers_set(STATE_CPU(sd, 0), H_REG_SCR_ILATST, 1);
+    case ALL_ENVIRONMENT:
+      /* Fall through, default environment is USER */
+    case USER_ENVIRONMENT:
+      /* Start by setting caibit */
+      epiphanybf_h_caibit_set (current_cpu, 1);
+      break;
+    case VIRTUAL_ENVIRONMENT:
+      /* Start by triggering SYNC interrupt */
+      epiphanybf_h_all_registers_set(current_cpu, H_REG_SCR_ILATST, 1);
+      break;
+    case OPERATING_ENVIRONMENT:
+      /* Do nothing, this mode is for full system simulation. */
+      break;
+    default:
+      sim_io_eprintf(sd, "ERROR: Unsupported environment mode\n");
+      abort ();
     }
 
 #endif

@@ -26,8 +26,8 @@ typedef struct _sim_memopt sim_memopt;
 struct _sim_memopt {
   int level;
   int space;
-  unsigned_word addr;
-  unsigned_word nr_bytes;
+  address_word addr;
+  address_word nr_bytes;
   unsigned modulo;
   void *buffer;
   unsigned long munmap_length;
