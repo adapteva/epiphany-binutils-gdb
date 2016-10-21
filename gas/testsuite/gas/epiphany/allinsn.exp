@@ -24,4 +24,10 @@ if [istarget epiphany*-*-*] {
     run_dump_test "badrelax"
     gas_test_error "badpostmod" "" "destination register modified by displacement-post-modified address"
     run_dump_test "addr-syntax"
+
+    # Borrowed from ../cris/cris.exp
+    load_lib gas-dg.exp
+    dg-init
+    dg-runtest [lsort [glob -nocomplain $srcdir/$subdir/*-err-*.s $srcdir/$subdir/*-warn-*.s]] "" ""
+    dg-finish
 }

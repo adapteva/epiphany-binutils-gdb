@@ -420,116 +420,14 @@ epiphany_cons_fix_new (fragS *frag,
   fix_new_exp (frag, where, (int) nbytes, exp, 0, r);
 }
 
-/* Read a comma separated incrementing list of register names
-   and form a bit mask of upto 15 registers 0..14.  */
-
-static const char *
-parse_reglist (const char * s, int * mask)
-{
-  int regmask = 0;
-
-  while (*s)
-    {
-      long value;
-
-      while (*s == ' ')
-	++s;
-
-      /* Parse a list with "," or "}" as limiters.  */
-      const char *errmsg
-	= cgen_parse_keyword (gas_cgen_cpu_desc, &s,
-			      &epiphany_cgen_opval_gr_names, &value);
-      if (errmsg)
-	return errmsg;
-
-      if (value > 15)
-	return _("register number too large for push/pop");
-
-      regmask |= 1 << value;
-      if (regmask < *mask)
-	return _("register is out of order");
-      *mask |= regmask;
-
-      while (*s==' ')
-	++s;
-
-      if (*s == '}')
-	return NULL;
-      else if (*s++ == ',')
-	continue;
-      else
-	return _("bad register list");
-    }
-
-  return _("malformed reglist in push/pop");
-}
-
 
 void
 md_assemble (char *str)
 {
   epiphany_insn insn;
   char *errmsg = 0;
-  const char * pperr = 0;
-  int regmask=0, push=0, pop=0;
 
   memset (&insn, 0, sizeof (insn));
-
-  /* Special-case push/pop instruction macros.  */
-  if (0 == strncmp (str, "push {", 6))
-    {
-      char * s = str + 6;
-      push = 1;
-      pperr = parse_reglist (s, &regmask);
-    }
-  else if (0 == strncmp (str, "pop {", 5))
-    {
-      char * s = str + 5;
-      pop = 1;
-      pperr = parse_reglist (s, &regmask);
-    }
-
-  if (pperr)
-    {
-      as_bad ("%s", pperr);
-      return;
-    }
-
-  if (push && regmask)
-    {
-      char buff[20];
-      int i,p ATTRIBUTE_UNUSED;
-
-      md_assemble ("mov r15,4");
-      md_assemble ("sub sp,sp,r15");
-
-      for (i = 0, p = 1; i <= 15; ++i, regmask >>= 1)
-	{
-	  if (regmask == 1)
-	    sprintf (buff, "str r%d,[sp]", i); /* Last one.  */
-	  else if (regmask & 1)
-	    sprintf (buff, "str r%d,[sp],-r15", i);
-	  else
-	    continue;
-	  md_assemble (buff);
-	}
-      return;
-    }
-  else if (pop && regmask)
-    {
-      char buff[20];
-      int i,p;
-
-      md_assemble ("mov r15,4");
-
-      for (i = 15, p = 1 << 15; i >= 0; --i, p >>= 1)
-	if (regmask & p)
-	  {
-	    sprintf (buff, "ldr r%d,[sp],+r15", i);
-	    md_assemble (buff);
-	  }
-      return;
-    }
 
   /* Initialize GAS's cgen interface for a new instruction.  */
   gas_cgen_init_parse ();
@@ -562,8 +460,8 @@ md_assemble (char *str)
     }
 
   /* Checks for behavioral restrictions on LD/ST instructions.  */
+  /* 64-bit even register operand constraints is already checked by cgen */
 #define DISPMOD _("destination register modified by displacement-post-modified address")
-#define LDSTODD _("ldrd/strd requires even:odd register pair")
 
   /* Helper macros for spliting apart instruction fields.  */
 #define ADDR_POST_MODIFIED(i) (((i) >> 25) & 0x1)
@@ -583,12 +481,6 @@ md_assemble (char *str)
 	      as_bad ("%s", DISPMOD);
 	      return;
 	    }
-	if ((insn.fields.f_rd & 1) /* Odd-numbered register...  */
-	    && insn.fields.f_wordsize == OPW_DOUBLE) /* ...and 64 bit transfer.  */
-	  {
-	    as_bad ("%s", LDSTODD);
-	    return;
-	  }
 	break;
       }
 
@@ -603,25 +495,6 @@ md_assemble (char *str)
 	      as_bad ("%s", DISPMOD);
 	      return;
 	    }
-	if ((insn.fields.f_rd6 & 1) && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)
-	  /* Lsb of RD odd and 64 bit transfer.  */
-	  {
-	    as_bad ("%s", LDSTODD);
-	    return;
-	  }
-	break;
-      }
-
-    case OP4_LDSTR16X:
-    case OP4_LDSTR16D:
-      {
-	/* Check for unaligned load/store double.  */
-	if ((insn.fields.f_rd & 1) && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)
-	  /* Lsb of RD odd and 64 bit transfer.  */
-	  {
-	    as_bad ("%s", LDSTODD);
-	    return;
-	  }
 	break;
       }
 
@@ -635,17 +508,6 @@ md_assemble (char *str)
 		    && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)))
 	  {
 	    as_bad ("%s", DISPMOD);
-	    return;
-	  }
-      }
-      /* fall-thru.  */
-
-    case OP4_LDSTRX:
-      {
-	/* Check for unaligned load/store double.  */
-	if ((insn.fields.f_rd6 & 1) && ADDR_SIZE (insn.buffer[0]) == OPW_DOUBLE)
-	  {
-	    as_bad ("%s", LDSTODD);
 	    return;
 	  }
 	break;

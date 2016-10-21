@@ -73,12 +73,22 @@ extern const char * parse_shortregs (CGEN_CPU_DESC cd,
 				     CGEN_KEYWORD * keywords,
 				     long * valuep);
 
+extern const char * parse_dword_shortregs (CGEN_CPU_DESC cd,
+					   const char ** strp,
+					   CGEN_KEYWORD * keywords,
+					   long * valuep);
+
 extern const char * parse_branch_addr (CGEN_CPU_DESC cd,
 				       const char ** strp,
 				       int opindex,
 				       int opinfo,
 				       enum cgen_parse_operand_result * resultp,
 				       bfd_vma *valuep);
+
+extern const char * parse_dword_regs (CGEN_CPU_DESC cd,
+				      const char ** strp,
+				      CGEN_KEYWORD * keywords,
+				      long * valuep);
 
 /* Allows reason codes to be output when assembler errors occur.  */
 #define CGEN_VERBOSE_ASSEMBLER_ERRORS
@@ -105,6 +115,46 @@ parse_shortregs (CGEN_CPU_DESC cd,
 
   if (*regno > 7)
     errmsg = _("register unavailable for short instructions");
+
+  return errmsg;
+}
+
+const char *
+parse_dword_shortregs (CGEN_CPU_DESC cd,
+		       const char ** strp,
+		       CGEN_KEYWORD * keywords,
+		       long * regno)
+{
+  const char * errmsg;
+
+  /* Parse register.  */
+  errmsg = parse_shortregs (cd, strp, keywords, regno);
+
+  if (errmsg)
+    return errmsg;
+
+  if (*regno & 1)
+    errmsg = _("instruction requires even:odd register pair(s)");
+
+  return errmsg;
+}
+
+const char *
+parse_dword_regs (CGEN_CPU_DESC cd,
+		  const char ** strp,
+		  CGEN_KEYWORD * keywords,
+		  long * regno)
+{
+  const char * errmsg;
+
+  /* Parse register.  */
+  errmsg = cgen_parse_keyword (cd, strp, keywords, regno);
+
+  if (errmsg)
+    return errmsg;
+
+  if (*regno & 1)
+    errmsg = _("instruction requires even:odd register pair(s)");
 
   return errmsg;
 }
@@ -363,6 +413,25 @@ parse_branch_addr (CGEN_CPU_DESC cd,
     }
   return errmsg;
 }
+
+static const char *
+parse_pos_direction (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+		     const char ** strp,
+		     int opindex ATTRIBUTE_UNUSED,
+		     unsigned long *valuep)
+{
+  if (**strp == '-')
+    return _("negative direction not supported");
+  else if (**strp == '+')
+    {
+      *valuep = 0;
+      ++*strp;
+    }
+  else
+    *valuep = 0;
+
+  return NULL;
+}
 
 /* -- dis.c */
 
@@ -436,6 +505,17 @@ print_uimm_not_reg (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 
   value &= 0x7ff;
   print_address (cd, dis_info, value, attrs, pc, length);
+}
+
+static void
+print_pos_direction (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
+		     void * dis_info ATTRIBUTE_UNUSED,
+		     long value ATTRIBUTE_UNUSED,
+		     unsigned int attrs ATTRIBUTE_UNUSED,
+		     bfd_vma pc ATTRIBUTE_UNUSED,
+		     int length ATTRIBUTE_UNUSED)
+{
+  /* no-op */
 }
 
 

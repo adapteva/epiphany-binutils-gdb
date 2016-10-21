@@ -1,0 +1,30 @@
+2015-12-15  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/testset-err-sign.s: New test.
+
+2015-10-13  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/64bit-err-uneven-regs.s: 64-bit shift
+	instructions shift operator (rm) is 32-bits, i.e., uneven
+	register numbers are allowed.
+
+2015-10-07  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/64bit-err-uneven-regs.s: New test.
+	* gas/epiphany/allinsn.exp: Load gas-dg.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/addr-syntax.d: Expect that zero
+	displacement immediates for ldr instructions gets printed.
+	* gas/epiphany/allinsn.d: Likewise.
+	* gas/epiphany/regression.d: Likewise.
+
+2015-09-30  Ola Jeppsson  <ola@adapteva.com>
+
+	* gas/epiphany/addr-syntax.d: Adjusted for fp move to r15.
+	Removed default register aliases for (sl=r10), and (sb=r9).
+	Long suffix '.l' dropped for ldr/str operations.
+	* gas/epiphany/allinsn.d: Likewise.
+	* gas/epiphany/regression.d: Likewise.
+	* gas/epiphany/sample.d: Likewise.

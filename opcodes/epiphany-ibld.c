@@ -565,6 +565,9 @@ epiphany_cgen_insert_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      errmsg = insert_normal (cd, fields->f_ctrlmode5, 0, 0, 20, 5, 32, total_length, buffer);
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       errmsg = insert_normal (cd, fields->f_addsubx, 0, 0, 20, 1, 32, total_length, buffer);
       break;
@@ -588,57 +591,6 @@ epiphany_cgen_insert_operand (CGEN_CPU_DESC cd,
     case EPIPHANY_OPERAND_DPMI :
       errmsg = insert_normal (cd, fields->f_subd, 0, 0, 24, 1, 32, total_length, buffer);
       break;
-    case EPIPHANY_OPERAND_FRD :
-      errmsg = insert_normal (cd, fields->f_rd, 0, 0, 15, 3, 32, total_length, buffer);
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      {
-{
-  FLD (f_rd) = ((FLD (f_rd6)) & (7));
-  FLD (f_rd_x) = ((UINT) (FLD (f_rd6)) >> (3));
-}
-        errmsg = insert_normal (cd, fields->f_rd_x, 0, 0, 31, 3, 32, total_length, buffer);
-        if (errmsg)
-          break;
-        errmsg = insert_normal (cd, fields->f_rd, 0, 0, 15, 3, 32, total_length, buffer);
-        if (errmsg)
-          break;
-      }
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      errmsg = insert_normal (cd, fields->f_rm, 0, 0, 9, 3, 32, total_length, buffer);
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      {
-{
-  FLD (f_rm) = ((FLD (f_rm6)) & (7));
-  FLD (f_rm_x) = ((UINT) (FLD (f_rm6)) >> (3));
-}
-        errmsg = insert_normal (cd, fields->f_rm_x, 0, 0, 25, 3, 32, total_length, buffer);
-        if (errmsg)
-          break;
-        errmsg = insert_normal (cd, fields->f_rm, 0, 0, 9, 3, 32, total_length, buffer);
-        if (errmsg)
-          break;
-      }
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      errmsg = insert_normal (cd, fields->f_rn, 0, 0, 12, 3, 32, total_length, buffer);
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      {
-{
-  FLD (f_rn) = ((FLD (f_rn6)) & (7));
-  FLD (f_rn_x) = ((UINT) (FLD (f_rn6)) >> (3));
-}
-        errmsg = insert_normal (cd, fields->f_rn_x, 0, 0, 28, 3, 32, total_length, buffer);
-        if (errmsg)
-          break;
-        errmsg = insert_normal (cd, fields->f_rn, 0, 0, 12, 3, 32, total_length, buffer);
-        if (errmsg)
-          break;
-      }
-      break;
     case EPIPHANY_OPERAND_IMM16 :
       {
 {
@@ -656,7 +608,26 @@ epiphany_cgen_insert_operand (CGEN_CPU_DESC cd,
     case EPIPHANY_OPERAND_IMM8 :
       errmsg = insert_normal (cd, fields->f_imm8, 0, 0, 12, 8, 32, total_length, buffer);
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      {
+{
+  FLD (f_mode4_l) = ((FLD (f_mode4)) & (7));
+  FLD (f_mode4_h) = ((UINT) (FLD (f_mode4)) >> (3));
+}
+        errmsg = insert_normal (cd, fields->f_mode4_l, 0, 0, 15, 3, 32, total_length, buffer);
+        if (errmsg)
+          break;
+        errmsg = insert_normal (cd, fields->f_mode4_h, 0, 0, 29, 1, 32, total_length, buffer);
+        if (errmsg)
+          break;
+      }
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      break;
     case EPIPHANY_OPERAND_RD :
+      errmsg = insert_normal (cd, fields->f_rd, 0, 0, 15, 3, 32, total_length, buffer);
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
       errmsg = insert_normal (cd, fields->f_rd, 0, 0, 15, 3, 32, total_length, buffer);
       break;
     case EPIPHANY_OPERAND_RD6 :
@@ -673,7 +644,24 @@ epiphany_cgen_insert_operand (CGEN_CPU_DESC cd,
           break;
       }
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      {
+{
+  FLD (f_rd) = ((FLD (f_rd6)) & (7));
+  FLD (f_rd_x) = ((UINT) (FLD (f_rd6)) >> (3));
+}
+        errmsg = insert_normal (cd, fields->f_rd_x, 0, 0, 31, 3, 32, total_length, buffer);
+        if (errmsg)
+          break;
+        errmsg = insert_normal (cd, fields->f_rd, 0, 0, 15, 3, 32, total_length, buffer);
+        if (errmsg)
+          break;
+      }
+      break;
     case EPIPHANY_OPERAND_RM :
+      errmsg = insert_normal (cd, fields->f_rm, 0, 0, 9, 3, 32, total_length, buffer);
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
       errmsg = insert_normal (cd, fields->f_rm, 0, 0, 9, 3, 32, total_length, buffer);
       break;
     case EPIPHANY_OPERAND_RM6 :
@@ -690,10 +678,41 @@ epiphany_cgen_insert_operand (CGEN_CPU_DESC cd,
           break;
       }
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      {
+{
+  FLD (f_rm) = ((FLD (f_rm6)) & (7));
+  FLD (f_rm_x) = ((UINT) (FLD (f_rm6)) >> (3));
+}
+        errmsg = insert_normal (cd, fields->f_rm_x, 0, 0, 25, 3, 32, total_length, buffer);
+        if (errmsg)
+          break;
+        errmsg = insert_normal (cd, fields->f_rm, 0, 0, 9, 3, 32, total_length, buffer);
+        if (errmsg)
+          break;
+      }
+      break;
     case EPIPHANY_OPERAND_RN :
       errmsg = insert_normal (cd, fields->f_rn, 0, 0, 12, 3, 32, total_length, buffer);
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      errmsg = insert_normal (cd, fields->f_rn, 0, 0, 12, 3, 32, total_length, buffer);
+      break;
     case EPIPHANY_OPERAND_RN6 :
+      {
+{
+  FLD (f_rn) = ((FLD (f_rn6)) & (7));
+  FLD (f_rn_x) = ((UINT) (FLD (f_rn6)) >> (3));
+}
+        errmsg = insert_normal (cd, fields->f_rn_x, 0, 0, 28, 3, 32, total_length, buffer);
+        if (errmsg)
+          break;
+        errmsg = insert_normal (cd, fields->f_rn, 0, 0, 12, 3, 32, total_length, buffer);
+        if (errmsg)
+          break;
+      }
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
       {
 {
   FLD (f_rn) = ((FLD (f_rn6)) & (7));
@@ -908,6 +927,9 @@ epiphany_cgen_extract_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      length = extract_normal (cd, ex_info, insn_value, 0, 0, 20, 5, 32, total_length, pc, & fields->f_ctrlmode5);
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 20, 1, 32, total_length, pc, & fields->f_addsubx);
       break;
@@ -928,48 +950,6 @@ epiphany_cgen_extract_operand (CGEN_CPU_DESC cd,
     case EPIPHANY_OPERAND_DPMI :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 24, 1, 32, total_length, pc, & fields->f_subd);
       break;
-    case EPIPHANY_OPERAND_FRD :
-      length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 3, 32, total_length, pc, & fields->f_rd);
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      {
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 31, 3, 32, total_length, pc, & fields->f_rd_x);
-        if (length <= 0) break;
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 3, 32, total_length, pc, & fields->f_rd);
-        if (length <= 0) break;
-{
-  FLD (f_rd6) = ((((FLD (f_rd_x)) << (3))) | (FLD (f_rd)));
-}
-      }
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      length = extract_normal (cd, ex_info, insn_value, 0, 0, 9, 3, 32, total_length, pc, & fields->f_rm);
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      {
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 25, 3, 32, total_length, pc, & fields->f_rm_x);
-        if (length <= 0) break;
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 9, 3, 32, total_length, pc, & fields->f_rm);
-        if (length <= 0) break;
-{
-  FLD (f_rm6) = ((((FLD (f_rm_x)) << (3))) | (FLD (f_rm)));
-}
-      }
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      length = extract_normal (cd, ex_info, insn_value, 0, 0, 12, 3, 32, total_length, pc, & fields->f_rn);
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      {
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 28, 3, 32, total_length, pc, & fields->f_rn_x);
-        if (length <= 0) break;
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 12, 3, 32, total_length, pc, & fields->f_rn);
-        if (length <= 0) break;
-{
-  FLD (f_rn6) = ((((FLD (f_rn_x)) << (3))) | (FLD (f_rn)));
-}
-      }
-      break;
     case EPIPHANY_OPERAND_IMM16 :
       {
         length = extract_normal (cd, ex_info, insn_value, 0, 0, 12, 8, 32, total_length, pc, & fields->f_imm8);
@@ -984,7 +964,23 @@ epiphany_cgen_extract_operand (CGEN_CPU_DESC cd,
     case EPIPHANY_OPERAND_IMM8 :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 12, 8, 32, total_length, pc, & fields->f_imm8);
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      {
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 3, 32, total_length, pc, & fields->f_mode4_l);
+        if (length <= 0) break;
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 29, 1, 32, total_length, pc, & fields->f_mode4_h);
+        if (length <= 0) break;
+{
+  FLD (f_mode4) = ((((FLD (f_mode4_h)) << (3))) | (((FLD (f_mode4_l)) << (0))));
+}
+      }
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      break;
     case EPIPHANY_OPERAND_RD :
+      length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 3, 32, total_length, pc, & fields->f_rd);
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 3, 32, total_length, pc, & fields->f_rd);
       break;
     case EPIPHANY_OPERAND_RD6 :
@@ -998,7 +994,21 @@ epiphany_cgen_extract_operand (CGEN_CPU_DESC cd,
 }
       }
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      {
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 31, 3, 32, total_length, pc, & fields->f_rd_x);
+        if (length <= 0) break;
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 3, 32, total_length, pc, & fields->f_rd);
+        if (length <= 0) break;
+{
+  FLD (f_rd6) = ((((FLD (f_rd_x)) << (3))) | (FLD (f_rd)));
+}
+      }
+      break;
     case EPIPHANY_OPERAND_RM :
+      length = extract_normal (cd, ex_info, insn_value, 0, 0, 9, 3, 32, total_length, pc, & fields->f_rm);
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 9, 3, 32, total_length, pc, & fields->f_rm);
       break;
     case EPIPHANY_OPERAND_RM6 :
@@ -1012,10 +1022,35 @@ epiphany_cgen_extract_operand (CGEN_CPU_DESC cd,
 }
       }
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      {
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 25, 3, 32, total_length, pc, & fields->f_rm_x);
+        if (length <= 0) break;
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 9, 3, 32, total_length, pc, & fields->f_rm);
+        if (length <= 0) break;
+{
+  FLD (f_rm6) = ((((FLD (f_rm_x)) << (3))) | (FLD (f_rm)));
+}
+      }
+      break;
     case EPIPHANY_OPERAND_RN :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 12, 3, 32, total_length, pc, & fields->f_rn);
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      length = extract_normal (cd, ex_info, insn_value, 0, 0, 12, 3, 32, total_length, pc, & fields->f_rn);
+      break;
     case EPIPHANY_OPERAND_RN6 :
+      {
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 28, 3, 32, total_length, pc, & fields->f_rn_x);
+        if (length <= 0) break;
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 12, 3, 32, total_length, pc, & fields->f_rn);
+        if (length <= 0) break;
+{
+  FLD (f_rn6) = ((((FLD (f_rn_x)) << (3))) | (FLD (f_rn)));
+}
+      }
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
       {
         length = extract_normal (cd, ex_info, insn_value, 0, 0, 28, 3, 32, total_length, pc, & fields->f_rn_x);
         if (length <= 0) break;
@@ -1197,6 +1232,9 @@ epiphany_cgen_get_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      value = fields->f_ctrlmode5;
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       value = fields->f_addsubx;
       break;
@@ -1209,46 +1247,52 @@ epiphany_cgen_get_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
     case EPIPHANY_OPERAND_DPMI :
       value = fields->f_subd;
       break;
-    case EPIPHANY_OPERAND_FRD :
-      value = fields->f_rd;
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      value = fields->f_rd6;
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      value = fields->f_rm;
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      value = fields->f_rm6;
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      value = fields->f_rn;
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      value = fields->f_rn6;
-      break;
     case EPIPHANY_OPERAND_IMM16 :
       value = fields->f_imm16;
       break;
     case EPIPHANY_OPERAND_IMM8 :
       value = fields->f_imm8;
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      value = fields->f_mode4;
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      value = 0;
+      break;
     case EPIPHANY_OPERAND_RD :
+      value = fields->f_rd;
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
       value = fields->f_rd;
       break;
     case EPIPHANY_OPERAND_RD6 :
       value = fields->f_rd6;
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      value = fields->f_rd6;
+      break;
     case EPIPHANY_OPERAND_RM :
+      value = fields->f_rm;
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
       value = fields->f_rm;
       break;
     case EPIPHANY_OPERAND_RM6 :
       value = fields->f_rm6;
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      value = fields->f_rm6;
+      break;
     case EPIPHANY_OPERAND_RN :
       value = fields->f_rn;
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      value = fields->f_rn;
+      break;
     case EPIPHANY_OPERAND_RN6 :
+      value = fields->f_rn6;
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
       value = fields->f_rn6;
       break;
     case EPIPHANY_OPERAND_SD :
@@ -1322,6 +1366,9 @@ epiphany_cgen_get_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      value = fields->f_ctrlmode5;
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       value = fields->f_addsubx;
       break;
@@ -1334,46 +1381,52 @@ epiphany_cgen_get_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
     case EPIPHANY_OPERAND_DPMI :
       value = fields->f_subd;
       break;
-    case EPIPHANY_OPERAND_FRD :
-      value = fields->f_rd;
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      value = fields->f_rd6;
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      value = fields->f_rm;
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      value = fields->f_rm6;
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      value = fields->f_rn;
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      value = fields->f_rn6;
-      break;
     case EPIPHANY_OPERAND_IMM16 :
       value = fields->f_imm16;
       break;
     case EPIPHANY_OPERAND_IMM8 :
       value = fields->f_imm8;
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      value = fields->f_mode4;
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      value = 0;
+      break;
     case EPIPHANY_OPERAND_RD :
+      value = fields->f_rd;
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
       value = fields->f_rd;
       break;
     case EPIPHANY_OPERAND_RD6 :
       value = fields->f_rd6;
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      value = fields->f_rd6;
+      break;
     case EPIPHANY_OPERAND_RM :
+      value = fields->f_rm;
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
       value = fields->f_rm;
       break;
     case EPIPHANY_OPERAND_RM6 :
       value = fields->f_rm6;
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      value = fields->f_rm6;
+      break;
     case EPIPHANY_OPERAND_RN :
       value = fields->f_rn;
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      value = fields->f_rn;
+      break;
     case EPIPHANY_OPERAND_RN6 :
+      value = fields->f_rn6;
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
       value = fields->f_rn6;
       break;
     case EPIPHANY_OPERAND_SD :
@@ -1454,6 +1507,9 @@ epiphany_cgen_set_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 {
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      fields->f_ctrlmode5 = value;
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       fields->f_addsubx = value;
       break;
@@ -1466,46 +1522,51 @@ epiphany_cgen_set_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
     case EPIPHANY_OPERAND_DPMI :
       fields->f_subd = value;
       break;
-    case EPIPHANY_OPERAND_FRD :
-      fields->f_rd = value;
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      fields->f_rd6 = value;
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      fields->f_rm = value;
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      fields->f_rm6 = value;
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      fields->f_rn = value;
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      fields->f_rn6 = value;
-      break;
     case EPIPHANY_OPERAND_IMM16 :
       fields->f_imm16 = value;
       break;
     case EPIPHANY_OPERAND_IMM8 :
       fields->f_imm8 = value;
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      fields->f_mode4 = value;
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      break;
     case EPIPHANY_OPERAND_RD :
+      fields->f_rd = value;
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
       fields->f_rd = value;
       break;
     case EPIPHANY_OPERAND_RD6 :
       fields->f_rd6 = value;
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      fields->f_rd6 = value;
+      break;
     case EPIPHANY_OPERAND_RM :
+      fields->f_rm = value;
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
       fields->f_rm = value;
       break;
     case EPIPHANY_OPERAND_RM6 :
       fields->f_rm6 = value;
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      fields->f_rm6 = value;
+      break;
     case EPIPHANY_OPERAND_RN :
       fields->f_rn = value;
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      fields->f_rn = value;
+      break;
     case EPIPHANY_OPERAND_RN6 :
+      fields->f_rn6 = value;
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
       fields->f_rn6 = value;
       break;
     case EPIPHANY_OPERAND_SD :
@@ -1576,6 +1637,9 @@ epiphany_cgen_set_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 {
   switch (opindex)
     {
+    case EPIPHANY_OPERAND_CTRLMODE5 :
+      fields->f_ctrlmode5 = value;
+      break;
     case EPIPHANY_OPERAND_DIRECTION :
       fields->f_addsubx = value;
       break;
@@ -1588,46 +1652,51 @@ epiphany_cgen_set_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
     case EPIPHANY_OPERAND_DPMI :
       fields->f_subd = value;
       break;
-    case EPIPHANY_OPERAND_FRD :
-      fields->f_rd = value;
-      break;
-    case EPIPHANY_OPERAND_FRD6 :
-      fields->f_rd6 = value;
-      break;
-    case EPIPHANY_OPERAND_FRM :
-      fields->f_rm = value;
-      break;
-    case EPIPHANY_OPERAND_FRM6 :
-      fields->f_rm6 = value;
-      break;
-    case EPIPHANY_OPERAND_FRN :
-      fields->f_rn = value;
-      break;
-    case EPIPHANY_OPERAND_FRN6 :
-      fields->f_rn6 = value;
-      break;
     case EPIPHANY_OPERAND_IMM16 :
       fields->f_imm16 = value;
       break;
     case EPIPHANY_OPERAND_IMM8 :
       fields->f_imm8 = value;
       break;
+    case EPIPHANY_OPERAND_MODE4 :
+      fields->f_mode4 = value;
+      break;
+    case EPIPHANY_OPERAND_POS_DIRECTION :
+      break;
     case EPIPHANY_OPERAND_RD :
+      fields->f_rd = value;
+      break;
+    case EPIPHANY_OPERAND_RD_DI :
       fields->f_rd = value;
       break;
     case EPIPHANY_OPERAND_RD6 :
       fields->f_rd6 = value;
       break;
+    case EPIPHANY_OPERAND_RD6_DI :
+      fields->f_rd6 = value;
+      break;
     case EPIPHANY_OPERAND_RM :
+      fields->f_rm = value;
+      break;
+    case EPIPHANY_OPERAND_RM_DI :
       fields->f_rm = value;
       break;
     case EPIPHANY_OPERAND_RM6 :
       fields->f_rm6 = value;
       break;
+    case EPIPHANY_OPERAND_RM6_DI :
+      fields->f_rm6 = value;
+      break;
     case EPIPHANY_OPERAND_RN :
       fields->f_rn = value;
       break;
+    case EPIPHANY_OPERAND_RN_DI :
+      fields->f_rn = value;
+      break;
     case EPIPHANY_OPERAND_RN6 :
+      fields->f_rn6 = value;
+      break;
+    case EPIPHANY_OPERAND_RN6_DI :
       fields->f_rn6 = value;
       break;
     case EPIPHANY_OPERAND_SD :
