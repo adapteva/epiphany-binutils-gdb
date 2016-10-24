@@ -1,6 +1,6 @@
 /* Java language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1997-2014 Free Software Foundation, Inc.
+   Copyright (C) 1997-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -45,7 +45,7 @@ extern void _initialize_java_language (void);
 static int java_demangled_signature_length (const char *);
 static void java_demangled_signature_copy (char *, const char *);
 
-static struct symtab *get_java_class_symtab (struct gdbarch *gdbarch);
+static struct compunit_symtab *get_java_class_symtab (struct gdbarch *gdbarch);
 static char *get_java_utf8_name (struct obstack *obstack, struct value *name);
 static int java_class_is_primitive (struct value *clas);
 static struct value *java_value_string (char *ptr, int len);
@@ -79,11 +79,12 @@ struct jv_per_objfile_data
 static void
 jv_per_objfile_free (struct objfile *objfile, void *data)
 {
-  struct jv_per_objfile_data *jv_data = data;
+  struct jv_per_objfile_data *jv_data = (struct jv_per_objfile_data *) data;
   struct objfile *dynamics_objfile;
 
-  dynamics_objfile = program_space_data (current_program_space,
-					 jv_dynamics_progspace_key);
+  dynamics_objfile
+    = (struct objfile *) program_space_data (current_program_space,
+					     jv_dynamics_progspace_key);
   gdb_assert (objfile == dynamics_objfile);
 
   if (jv_data->dict)
@@ -106,8 +107,9 @@ get_dynamics_objfile (struct gdbarch *gdbarch)
 {
   struct objfile *dynamics_objfile;
 
-  dynamics_objfile = program_space_data (current_program_space,
-					 jv_dynamics_progspace_key);
+  dynamics_objfile
+    = (struct objfile *) program_space_data (current_program_space,
+					     jv_dynamics_progspace_key);
 
   if (dynamics_objfile == NULL)
     {
@@ -129,11 +131,11 @@ get_dynamics_objfile (struct gdbarch *gdbarch)
   return dynamics_objfile;
 }
 
-static struct symtab *
+static struct compunit_symtab *
 get_java_class_symtab (struct gdbarch *gdbarch)
 {
   struct objfile *objfile = get_dynamics_objfile (gdbarch);
-  struct symtab *class_symtab = objfile->symtabs;
+  struct compunit_symtab *class_symtab = objfile->compunit_symtabs;
 
   if (class_symtab == NULL)
     {
@@ -141,13 +143,16 @@ get_java_class_symtab (struct gdbarch *gdbarch)
       struct block *bl;
       struct jv_per_objfile_data *jv_data;
 
-      class_symtab = allocate_symtab ("<java-classes>", objfile);
-      class_symtab->language = language_java;
+      class_symtab = allocate_compunit_symtab (objfile, "<java-classes>");
+      add_compunit_symtab_to_objfile (class_symtab);
+      allocate_symtab (class_symtab, "<java-classes>");
+
+      COMPUNIT_FILETABS (class_symtab)->language = language_java;
       bv = (struct blockvector *)
 	obstack_alloc (&objfile->objfile_obstack,
 		       sizeof (struct blockvector) + sizeof (struct block *));
       BLOCKVECTOR_NBLOCKS (bv) = 1;
-      BLOCKVECTOR (class_symtab) = bv;
+      COMPUNIT_BLOCKVECTOR (class_symtab) = bv;
 
       /* Allocate dummy STATIC_BLOCK.  */
       bl = allocate_block (&objfile->objfile_obstack);
@@ -158,11 +163,12 @@ get_java_class_symtab (struct gdbarch *gdbarch)
       /* Allocate GLOBAL_BLOCK.  */
       bl = allocate_global_block (&objfile->objfile_obstack);
       BLOCK_DICT (bl) = dict_create_hashed_expandable ();
-      set_block_symtab (bl, class_symtab);
+      set_block_compunit_symtab (bl, class_symtab);
       BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK) = bl;
 
       /* Arrange to free the dict.  */
-      jv_data = objfile_data (objfile, jv_dynamics_objfile_data_key);
+      jv_data = ((struct jv_per_objfile_data *)
+		 objfile_data (objfile, jv_dynamics_objfile_data_key));
       jv_data->dict = BLOCK_DICT (bl);
     }
   return class_symtab;
@@ -171,9 +177,8 @@ get_java_class_symtab (struct gdbarch *gdbarch)
 static void
 add_class_symtab_symbol (struct symbol *sym)
 {
-  struct symtab *symtab
-    = get_java_class_symtab (get_objfile_arch (SYMBOL_SYMTAB (sym)->objfile));
-  const struct blockvector *bv = BLOCKVECTOR (symtab);
+  struct compunit_symtab *cust = get_java_class_symtab (symbol_arch (sym));
+  const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (cust);
 
   dict_add_symbol (BLOCK_DICT (BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK)), sym);
 }
@@ -200,7 +205,8 @@ java_lookup_class (char *name)
 {
   struct symbol *sym;
 
-  sym = lookup_symbol (name, expression_context_block, STRUCT_DOMAIN, NULL);
+  sym = lookup_symbol (name, expression_context_block, STRUCT_DOMAIN,
+		       NULL).symbol;
   if (sym != NULL)
     return SYMBOL_TYPE (sym);
   /* FIXME - should search inferior's symbol table.  */
@@ -221,7 +227,7 @@ get_java_utf8_name (struct obstack *obstack, struct value *name)
   temp = value_struct_elt (&temp, NULL, "length", NULL, "structure");
   name_length = (int) value_as_long (temp);
   data_addr = value_address (temp) + TYPE_LENGTH (value_type (temp));
-  chrs = obstack_alloc (obstack, name_length + 1);
+  chrs = (char *) obstack_alloc (obstack, name_length + 1);
   chrs[name_length] = '\0';
   read_memory (data_addr, (gdb_byte *) chrs, name_length);
   return chrs;
@@ -311,7 +317,7 @@ type_from_class (struct gdbarch *gdbarch, struct value *clas)
       int namelen = java_demangled_signature_length (signature);
 
       if (namelen > strlen (name))
-	name = obstack_alloc (&objfile->objfile_obstack, namelen + 1);
+	name = (char *) obstack_alloc (&objfile->objfile_obstack, namelen + 1);
       java_demangled_signature_copy (name, signature);
       name[namelen] = '\0';
       temp = clas;
@@ -588,7 +594,7 @@ get_java_object_type (void)
 {
   struct symbol *sym;
 
-  sym = lookup_symbol ("java.lang.Object", NULL, STRUCT_DOMAIN, NULL);
+  sym = lookup_symbol ("java.lang.Object", NULL, STRUCT_DOMAIN, NULL).symbol;
   if (sym == NULL)
     error (_("cannot find java.lang.Object"));
   return SYMBOL_TYPE (sym);
@@ -608,7 +614,7 @@ get_java_object_header_size (struct gdbarch *gdbarch)
 int
 is_object_type (struct type *type)
 {
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
   if (TYPE_CODE (type) == TYPE_CODE_PTR)
     {
       struct type *ttype = check_typedef (TYPE_TARGET_TYPE (type));
@@ -803,7 +809,7 @@ char *
 java_demangle_type_signature (const char *signature)
 {
   int length = java_demangled_signature_length (signature);
-  char *result = xmalloc (length + 1);
+  char *result = (char *) xmalloc (length + 1);
 
   java_demangled_signature_copy (result, signature);
   result[length] = '\0';
@@ -1012,6 +1018,15 @@ static char *java_demangle (const char *mangled, int options)
   return gdb_demangle (mangled, options | DMGL_JAVA);
 }
 
+/* la_sniff_from_mangled_name for Java.  */
+
+static int
+java_sniff_from_mangled_name (const char *mangled, char **demangled)
+{
+  *demangled = java_demangle (mangled, DMGL_PARAMS | DMGL_ANSI);
+  return *demangled != NULL;
+}
+
 /* Find the member function name of the demangled name NAME.  NAME
    must be a method name including arguments, in order to correctly
    locate the last component.
@@ -1056,7 +1071,7 @@ java_class_name_from_physname (const char *physname)
   end = java_find_last_component (demangled_name);
   if (end != NULL)
     {
-      ret = xmalloc (end - demangled_name + 1);
+      ret = (char *) xmalloc (end - demangled_name + 1);
       memcpy (ret, demangled_name, end - demangled_name);
       ret[end - demangled_name] = '\0';
     }
@@ -1096,7 +1111,7 @@ const struct op_print java_op_print_tab[] =
   {"*", UNOP_IND, PREC_PREFIX, 0},
   {"++", UNOP_PREINCREMENT, PREC_PREFIX, 0},
   {"--", UNOP_PREDECREMENT, PREC_PREFIX, 0},
-  {NULL, 0, 0, 0}
+  {NULL, OP_NULL, PREC_PREFIX, 0}
 };
 
 enum java_primitive_types
@@ -1156,6 +1171,11 @@ const struct exp_descriptor exp_descriptor_java =
   evaluate_subexp_java
 };
 
+static const char *java_extensions[] =
+{
+  ".java", ".class", NULL
+};
+
 const struct language_defn java_language_defn =
 {
   "java",			/* Language name */
@@ -1165,9 +1185,10 @@ const struct language_defn java_language_defn =
   case_sensitive_on,
   array_row_major,
   macro_expansion_no,
+  java_extensions,
   &exp_descriptor_java,
   java_parse,
-  java_error,
+  java_yyerror,
   null_post_parser,
   java_printchar,		/* Print a character constant */
   java_printstr,		/* Function to print string constant */
@@ -1182,6 +1203,7 @@ const struct language_defn java_language_defn =
   basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
   basic_lookup_transparent_type,/* lookup_transparent_type */
   java_demangle,		/* Language specific symbol demangler */
+  java_sniff_from_mangled_name,
   java_class_name_from_physname,/* Language specific class name */
   java_op_print_tab,		/* expression operators for printing */
   0,				/* not c-style arrays */
@@ -1195,6 +1217,8 @@ const struct language_defn java_language_defn =
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
   &java_varobj_ops,
+  NULL,
+  NULL,
   LANG_MAGIC
 };
 
@@ -1231,7 +1255,8 @@ static struct gdbarch_data *java_type_data;
 const struct builtin_java_type *
 builtin_java_type (struct gdbarch *gdbarch)
 {
-  return gdbarch_data (gdbarch, java_type_data);
+  return ((const struct builtin_java_type *)
+	  gdbarch_data (gdbarch, java_type_data));
 }
 
 void

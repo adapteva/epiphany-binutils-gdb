@@ -1,6 +1,6 @@
 /* Target-dependent code for the HP PA-RISC architecture.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    Contributed by the Center for Software Science at the
    University of Utah (pa-gdb-bugs@cs.utah.edu).
@@ -46,13 +46,44 @@ static int hppa_debug = 0;
 static const int hppa32_num_regs = 128;
 static const int hppa64_num_regs = 96;
 
+/* We use the objfile->obj_private pointer for two things:
+ * 1.  An unwind table;
+ *
+ * 2.  A pointer to any associated shared library object.
+ *
+ * #defines are used to help refer to these objects.
+ */
+
+/* Info about the unwind table associated with an object file.
+ * This is hung off of the "objfile->obj_private" pointer, and
+ * is allocated in the objfile's psymbol obstack.  This allows
+ * us to have unique unwind info for each executable and shared
+ * library that we are debugging.
+ */
+struct hppa_unwind_info
+  {
+    struct unwind_table_entry *table;	/* Pointer to unwind info */
+    struct unwind_table_entry *cache;	/* Pointer to last entry we found */
+    int last;				/* Index of last entry */
+  };
+
+struct hppa_objfile_private
+  {
+    struct hppa_unwind_info *unwind_info;	/* a pointer */
+    struct so_list *so_info;			/* a pointer  */
+    CORE_ADDR dp;
+
+    int dummy_call_sequence_reg;
+    CORE_ADDR dummy_call_sequence_addr;
+  };
+
 /* hppa-specific object data -- unwind and solib info.
    TODO/maybe: think about splitting this into two parts; the unwind data is 
    common to all hppa targets, but is only used in this file; we can register 
    that separately and make this static. The solib data is probably hpux-
    specific, so we can create a separate extern objfile_data that is registered
    by hppa-hpux-tdep.c and shared with pa64solib.c and somsolib.c.  */
-const struct objfile_data *hppa_objfile_priv_data = NULL;
+static const struct objfile_data *hppa_objfile_priv_data = NULL;
 
 /* Get at various relevent fields of an instruction word.  */
 #define MASK_5 0x1f
@@ -73,7 +104,7 @@ const struct objfile_data *hppa_objfile_priv_data = NULL;
 static int
 hppa_sign_extend (unsigned val, unsigned bits)
 {
-  return (int) (val >> (bits - 1) ? (-1 << bits) | val : val);
+  return (int) (val >> (bits - 1) ? (-(1 << bits)) | val : val);
 }
 
 /* For many immediate values the sign bit is the low bit!  */
@@ -81,7 +112,7 @@ hppa_sign_extend (unsigned val, unsigned bits)
 static int
 hppa_low_hppa_sign_extend (unsigned val, unsigned bits)
 {
-  return (int) ((val & 0x1 ? (-1 << (bits - 1)) : 0) | val >> 1);
+  return (int) ((val & 0x1 ? (-(1 << (bits - 1))) : 0) | val >> 1);
 }
 
 /* Extract the bits at positions between FROM and TO, using HP's numbering
@@ -170,7 +201,7 @@ hppa_symbol_address(const char *sym)
     return (CORE_ADDR)-1;
 }
 
-struct hppa_objfile_private *
+static struct hppa_objfile_private *
 hppa_init_objfile_priv_data (struct objfile *objfile)
 {
   struct hppa_objfile_private *priv;
@@ -192,8 +223,8 @@ hppa_init_objfile_priv_data (struct objfile *objfile)
 static int
 compare_unwind_entries (const void *arg1, const void *arg2)
 {
-  const struct unwind_table_entry *a = arg1;
-  const struct unwind_table_entry *b = arg2;
+  const struct unwind_table_entry *a = (const struct unwind_table_entry *) arg1;
+  const struct unwind_table_entry *b = (const struct unwind_table_entry *) arg2;
 
   if (a->region_start > b->region_start)
     return 1;
@@ -230,7 +261,7 @@ internalize_unwinds (struct objfile *objfile, struct unwind_table_entry *table,
       struct gdbarch *gdbarch = get_objfile_arch (objfile);
       unsigned long tmp;
       unsigned i;
-      char *buf = alloca (size);
+      char *buf = (char *) alloca (size);
       CORE_ADDR low_text_segment_address;
 
       /* For ELF targets, then unwinds are supposed to
@@ -403,7 +434,7 @@ read_unwind_info (struct objfile *objfile)
   if (stub_unwind_size > 0)
     {
       unsigned int i;
-      char *buf = alloca (stub_unwind_size);
+      char *buf = (char *) alloca (stub_unwind_size);
 
       /* Read in the stub unwind entries.  */
       bfd_get_section_contents (objfile->obfd, stub_unwind_sec, buf,
@@ -473,14 +504,16 @@ find_unwind_entry (CORE_ADDR pc)
   {
     struct hppa_unwind_info *ui;
     ui = NULL;
-    priv = objfile_data (objfile, hppa_objfile_priv_data);
+    priv = ((struct hppa_objfile_private *)
+	    objfile_data (objfile, hppa_objfile_priv_data));
     if (priv)
       ui = ((struct hppa_objfile_private *) priv)->unwind_info;
 
     if (!ui)
       {
 	read_unwind_info (objfile);
-        priv = objfile_data (objfile, hppa_objfile_priv_data);
+        priv = ((struct hppa_objfile_private *)
+		objfile_data (objfile, hppa_objfile_priv_data));
 	if (priv == NULL)
 	  error (_("Internal error reading unwind information."));
         ui = ((struct hppa_objfile_private *) priv)->unwind_info;
@@ -529,13 +562,16 @@ find_unwind_entry (CORE_ADDR pc)
   return NULL;
 }
 
-/* The epilogue is defined here as the area either on the `bv' instruction 
+/* Implement the stack_frame_destroyed_p gdbarch method.
+
+   The epilogue is defined here as the area either on the `bv' instruction 
    itself or an instruction which destroys the function's stack frame.
    
    We do not assume that the epilogue is at the end of a function as we can
    also have return sequences in the middle of a function.  */
+
 static int
-hppa_in_function_epilogue_p (struct gdbarch *gdbarch, CORE_ADDR pc)
+hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned long status;
@@ -660,14 +696,13 @@ static int
 hppa64_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
 {
   /* The general registers and the sar are the same in both sets.  */
-  if (reg <= 32)
+  if (reg >= 0 && reg <= 32)
     return reg;
 
   /* fr4-fr31 are mapped from 72 in steps of 2.  */
   if (reg >= 72 && reg < 72 + 28 * 2 && !(reg & 1))
     return HPPA64_FP4_REGNUM + (reg - 72) / 2;
 
-  warning (_("Unmapped DWARF DBX Register #%d encountered."), reg);
   return -1;
 }
 
@@ -694,10 +729,6 @@ hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   CORE_ADDR struct_end = 0;
   /* Stack base address at which the first parameter is stored.  */
   CORE_ADDR param_end = 0;
-
-  /* The inner most end of the stack after all the parameters have
-     been pushed.  */
-  CORE_ADDR new_sp = 0;
 
   /* Two passes.  First pass computes the location of everything,
      second pass writes the bytes out.  */
@@ -1322,7 +1353,7 @@ prologue_inst_adjust_sp (unsigned long inst)
 
   /* std,ma X,D(sp) */
   if ((inst & 0xffe00008) == 0x73c00008)
-    return (inst & 0x1 ? -1 << 13 : 0) | (((inst >> 4) & 0x3ff) << 3);
+    return (inst & 0x1 ? -(1 << 13) : 0) | (((inst >> 4) & 0x3ff) << 3);
 
   /* addil high21,%r30; ldo low11,(%r1),%r30)
      save high bits in save_high21 for later use.  */
@@ -1376,37 +1407,106 @@ is_branch (unsigned long inst)
 }
 
 /* Return the register number for a GR which is saved by INST or
-   zero it INST does not save a GR.  */
+   zero if INST does not save a GR.
+
+   Referenced from:
+
+     parisc 1.1:
+     https://parisc.wiki.kernel.org/images-parisc/6/68/Pa11_acd.pdf
+
+     parisc 2.0:
+     https://parisc.wiki.kernel.org/images-parisc/7/73/Parisc2.0.pdf
+
+     According to Table 6-5 of Chapter 6 (Memory Reference Instructions)
+     on page 106 in parisc 2.0, all instructions for storing values from
+     the general registers are:
+
+       Store:          stb, sth, stw, std (according to Chapter 7, they
+                       are only in both "inst >> 26" and "inst >> 6".
+       Store Absolute: stwa, stda (according to Chapter 7, they are only
+                       in "inst >> 6".
+       Store Bytes:    stby, stdby (according to Chapter 7, they are
+                       only in "inst >> 6").
+
+   For (inst >> 26), according to Chapter 7:
+
+     The effective memory reference address is formed by the addition
+     of an immediate displacement to a base value.
+
+    - stb: 0x18, store a byte from a general register.
+
+    - sth: 0x19, store a halfword from a general register.
+
+    - stw: 0x1a, store a word from a general register.
+
+    - stwm: 0x1b, store a word from a general register and perform base
+      register modification (2.0 will still treate it as stw).
+
+    - std: 0x1c, store a doubleword from a general register (2.0 only).
+
+    - stw: 0x1f, store a word from a general register (2.0 only).
+
+   For (inst >> 6) when ((inst >> 26) == 0x03), according to Chapter 7:
+
+     The effective memory reference address is formed by the addition
+     of an index value to a base value specified in the instruction.
+
+    - stb: 0x08, store a byte from a general register (1.1 calls stbs).
+
+    - sth: 0x09, store a halfword from a general register (1.1 calls
+      sths).
+
+    - stw: 0x0a, store a word from a general register (1.1 calls stws).
+
+    - std: 0x0b: store a doubleword from a general register (2.0 only)
+
+     Implement fast byte moves (stores) to unaligned word or doubleword
+     destination.
+
+    - stby: 0x0c, for unaligned word (1.1 calls stbys).
+
+    - stdby: 0x0d for unaligned doubleword (2.0 only).
+
+     Store a word or doubleword using an absolute memory address formed
+     using short or long displacement or indexed
+
+    - stwa: 0x0e, store a word from a general register to an absolute
+      address (1.0 calls stwas).
+
+    - stda: 0x0f, store a doubleword from a general register to an
+      absolute address (2.0 only).  */
 
 static int
 inst_saves_gr (unsigned long inst)
 {
-  /* Does it look like a stw?  */
-  if ((inst >> 26) == 0x1a || (inst >> 26) == 0x1b
-      || (inst >> 26) == 0x1f
-      || ((inst >> 26) == 0x1f
-	  && ((inst >> 6) == 0xa)))
-    return hppa_extract_5R_store (inst);
-
-  /* Does it look like a std?  */
-  if ((inst >> 26) == 0x1c
-      || ((inst >> 26) == 0x03
-	  && ((inst >> 6) & 0xf) == 0xb))
-    return hppa_extract_5R_store (inst);
-
-  /* Does it look like a stwm?  GCC & HPC may use this in prologues.  */
-  if ((inst >> 26) == 0x1b)
-    return hppa_extract_5R_store (inst);
-
-  /* Does it look like sth or stb?  HPC versions 9.0 and later use these
-     too.  */
-  if ((inst >> 26) == 0x19 || (inst >> 26) == 0x18
-      || ((inst >> 26) == 0x3
-	  && (((inst >> 6) & 0xf) == 0x8
-	      || (inst >> 6) & 0xf) == 0x9))
-    return hppa_extract_5R_store (inst);
-
-  return 0;
+  switch ((inst >> 26) & 0x0f)
+    {
+      case 0x03:
+	switch ((inst >> 6) & 0x0f)
+	  {
+	    case 0x08:
+	    case 0x09:
+	    case 0x0a:
+	    case 0x0b:
+	    case 0x0c:
+	    case 0x0d:
+	    case 0x0e:
+	    case 0x0f:
+	      return hppa_extract_5R_store (inst);
+	    default:
+	      return 0;
+	  }
+      case 0x18:
+      case 0x19:
+      case 0x1a:
+      case 0x1b:
+      case 0x1c:
+      /* no 0x1d or 0x1e -- according to parisc 2.0 document */
+      case 0x1f:
+	return hppa_extract_5R_store (inst);
+      default:
+	return 0;
+    }
 }
 
 /* Return the register number for a FR which is saved by INST or
@@ -1801,7 +1901,7 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
       if (hppa_debug)
         fprintf_unfiltered (gdb_stdlog, "base=%s (cached) }",
           paddress (gdbarch, ((struct hppa_frame_cache *)*this_cache)->base));
-      return (*this_cache);
+      return (struct hppa_frame_cache *) (*this_cache);
     }
   cache = FRAME_OBSTACK_ZALLOC (struct hppa_frame_cache);
   (*this_cache) = cache;
@@ -1813,7 +1913,7 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
     {
       if (hppa_debug)
         fprintf_unfiltered (gdb_stdlog, "base=NULL (no unwind entry) }");
-      return (*this_cache);
+      return (struct hppa_frame_cache *) (*this_cache);
     }
 
   /* Turn the Entry_GR field into a bitmask.  */
@@ -1903,7 +2003,7 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
 	  {
 	    error (_("Cannot read instruction at %s."),
 		   paddress (gdbarch, pc));
-	    return (*this_cache);
+	    return (struct hppa_frame_cache *) (*this_cache);
 	  }
 
 	inst = extract_unsigned_integer (buf4, sizeof buf4, byte_order);
@@ -1962,7 +2062,7 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
 		CORE_ADDR offset;
 		
 		if ((inst >> 26) == 0x1c)
-		  offset = (inst & 0x1 ? -1 << 13 : 0)
+		  offset = (inst & 0x1 ? -(1 << 13) : 0)
 		    | (((inst >> 4) & 0x3ff) << 3);
 		else if ((inst >> 26) == 0x03)
 		  offset = hppa_low_hppa_sign_extend (inst & 0x1f, 5);
@@ -2176,7 +2276,7 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
   if (hppa_debug)
     fprintf_unfiltered (gdb_stdlog, "base=%s }",
       paddress (gdbarch, ((struct hppa_frame_cache *)*this_cache)->base));
-  return (*this_cache);
+  return (struct hppa_frame_cache *) (*this_cache);
 }
 
 static void
@@ -2184,7 +2284,6 @@ hppa_frame_this_id (struct frame_info *this_frame, void **this_cache,
 		    struct frame_id *this_id)
 {
   struct hppa_frame_cache *info;
-  CORE_ADDR pc = get_frame_pc (this_frame);
   struct unwind_table_entry *u;
 
   info = hppa_frame_cache (this_frame, this_cache);
@@ -2350,7 +2449,7 @@ hppa_stub_frame_unwind_cache (struct frame_info *this_frame,
   struct unwind_table_entry *u;
 
   if (*this_cache)
-    return *this_cache;
+    return (struct hppa_stub_unwind_cache *) *this_cache;
 
   info = FRAME_OBSTACK_ZALLOC (struct hppa_stub_unwind_cache);
   *this_cache = info;
@@ -2709,14 +2808,6 @@ hppa_frame_prev_register_helper (struct frame_info *this_frame,
       return frame_unwind_got_constant (this_frame, regnum, pc + 4);
     }
 
-  /* Make sure the "flags" register is zero in all unwound frames.
-     The "flags" registers is a HP-UX specific wart, and only the code
-     in hppa-hpux-tdep.c depends on it.  However, it is easier to deal
-     with it here.  This shouldn't affect other systems since those
-     should provide zero for the "flags" register anyway.  */
-  if (regnum == HPPA_FLAGS_REGNUM)
-    return frame_unwind_got_constant (this_frame, regnum, 0);
-
   return trad_frame_get_prev_register (this_frame, saved_regs, regnum);
 }
 
@@ -3043,8 +3134,8 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* The following gdbarch vector elements do not depend on the address
      size, or in any other gdbarch element previously set.  */
   set_gdbarch_skip_prologue (gdbarch, hppa_skip_prologue);
-  set_gdbarch_in_function_epilogue_p (gdbarch,
-				      hppa_in_function_epilogue_p);
+  set_gdbarch_stack_frame_destroyed_p (gdbarch,
+				       hppa_stack_frame_destroyed_p);
   set_gdbarch_inner_than (gdbarch, core_addr_greaterthan);
   set_gdbarch_sp_regnum (gdbarch, HPPA_SP_REGNUM);
   set_gdbarch_fp0_regnum (gdbarch, HPPA_FP0_REGNUM);
@@ -3128,8 +3219,6 @@ extern initialize_file_ftype _initialize_hppa_tdep;
 void
 _initialize_hppa_tdep (void)
 {
-  struct cmd_list_element *c;
-
   gdbarch_register (bfd_arch_hppa, hppa_gdbarch_init, hppa_dump_tdep);
 
   hppa_objfile_priv_data = register_objfile_data ();

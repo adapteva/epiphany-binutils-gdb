@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002-2014 Free Software Foundation, Inc.
+   Copyright 2002-2016 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -21,7 +21,9 @@
 
 
 #ifndef SIM_TYPES_H
-/* #define SIM_TYPES_H */
+#define SIM_TYPES_H
+
+#include <stdint.h>
 
 /* INTEGER QUANTITIES:
 
@@ -42,95 +44,32 @@
 */
 
 
-#if !defined (SIM_TYPES_H) && defined (__GNUC__)
-#define SIM_TYPES_H
-
 /* bit based */
 
-#define UNSIGNED32(X) ((unsigned32) X##UL)
-#define UNSIGNED64(X) ((unsigned64) X##ULL)
-
-#define SIGNED32(X) ((signed32) X##L)
-#define SIGNED64(X) ((signed64) X##LL)
-
-typedef signed int signed8 __attribute__ ((__mode__ (__QI__)));
-typedef signed int signed16 __attribute__ ((__mode__ (__HI__)));
-typedef signed int signed32 __attribute__ ((__mode__ (__SI__)));
-typedef signed int signed64 __attribute__ ((__mode__ (__DI__)));
-
-typedef unsigned int unsigned8 __attribute__ ((__mode__ (__QI__)));
-typedef unsigned int unsigned16 __attribute__ ((__mode__ (__HI__)));
-typedef unsigned int unsigned32 __attribute__ ((__mode__ (__SI__)));
-typedef unsigned int unsigned64 __attribute__ ((__mode__ (__DI__)));
-
-typedef struct { unsigned64 a[2]; } unsigned128;
-typedef struct { signed64 a[2]; } signed128;
-
-#endif
-
-
-#if !defined (SIM_TYPES_H) && defined (_MSC_VER)
-#define SIM_TYPES_H
-
-/* bit based */
-
-#define UNSIGNED32(X) (X##ui32)
-#define UNSIGNED64(X) (X##ui64)
-
-#define SIGNED32(X) (X##i32)
-#define SIGNED64(X) (X##i64)
-
-typedef signed char signed8;
-typedef signed short signed16;
-typedef signed int signed32;
-typedef signed __int64 signed64;
-
-typedef unsigned int unsigned8;
-typedef unsigned int unsigned16;
-typedef unsigned int unsigned32;
-typedef unsigned __int64 unsigned64;
-
-typedef struct { unsigned64 a[2]; } unsigned128;
-typedef struct { signed64 a[2]; } signed128;
-
-#endif /* _MSC_VER */
-
-
-#if !defined (SIM_TYPES_H)
-#define SIM_TYPES_H
-
-/* bit based */
-
-#define UNSIGNED32(X) (X##UL)
-#define UNSIGNED64(X) (X##ULL)
-
-#define SIGNED32(X) (X##L)
-#define SIGNED64(X) (X##LL)
-
-typedef signed char signed8;
-typedef signed short signed16;
-#if defined (__ALPHA__)
-typedef signed int signed32;
-typedef signed long signed64;
+#ifdef _MSC_VER
+# define UNSIGNED32(X)	(X##ui32)
+# define UNSIGNED64(X)	(X##ui64)
+# define SIGNED32(X)	(X##i32)
+# define SIGNED64(X)	(X##i64)
 #else
-typedef signed long signed32;
-typedef signed long long signed64;
+# define UNSIGNED32(X)	((unsigned32) X##UL)
+# define UNSIGNED64(X)	((unsigned64) X##ULL)
+# define SIGNED32(X)	((signed32) X##L)
+# define SIGNED64(X)	((signed64) X##LL)
 #endif
 
-typedef unsigned char unsigned8;
-typedef unsigned short unsigned16;
-#if defined (__ALPHA__)
-typedef unsigned int unsigned32;
-typedef unsigned long unsigned64;
-#else
-typedef unsigned long unsigned32;
-typedef unsigned long long unsigned64;
-#endif
+typedef int8_t signed8;
+typedef int16_t signed16;
+typedef int32_t signed32;
+typedef int64_t signed64;
+
+typedef uint8_t unsigned8;
+typedef uint16_t unsigned16;
+typedef uint32_t unsigned32;
+typedef uint64_t unsigned64;
 
 typedef struct { unsigned64 a[2]; } unsigned128;
 typedef struct { signed64 a[2]; } signed128;
-
-#endif
 
 
 /* byte based */
@@ -146,6 +85,10 @@ typedef unsigned16 unsigned_2;
 typedef unsigned32 unsigned_4;
 typedef unsigned64 unsigned_8;
 typedef unsigned128 unsigned_16;
+
+
+/* Macros for printf.  Usage is restricted to this header.  */
+#define SIM_PRI_TB(t, b)	XCONCAT3 (PRI,t,b)
 
 
 /* for general work, the following are defined */
@@ -168,6 +111,10 @@ typedef unsigned16 unsigned_word;
 typedef signed16 signed_word;
 #endif
 
+#define PRI_TW(t)	SIM_PRI_TB (t, WITH_TARGET_WORD_BITSIZE)
+#define PRIiTW	PRI_TW (i)
+#define PRIxTW	PRI_TW (x)
+
 
 /* Other instructions */
 #if (WITH_TARGET_ADDRESS_BITSIZE == 64)
@@ -184,6 +131,10 @@ typedef signed16 signed_address;
 #endif
 typedef unsigned_address address_word;
 
+#define PRI_TA(t)	SIM_PRI_TB (t, WITH_TARGET_ADDRESS_BITSIZE)
+#define PRIiTA	PRI_TA (i)
+#define PRIxTA	PRI_TA (x)
+
 
 /* IEEE 1275 cell size */
 #if (WITH_TARGET_CELL_BITSIZE == 64)
@@ -196,6 +147,10 @@ typedef signed32 signed_cell;
 #endif
 typedef signed_cell cell_word; /* cells are normally signed */
 
+#define PRI_TC(t)	SIM_PRI_TB (t, WITH_TARGET_CELL_BITSIZE)
+#define PRIiTC	PRI_TC (i)
+#define PRIxTC	PRI_TC (x)
+
 
 /* Floating point registers */
 #if (WITH_TARGET_FLOATING_POINT_BITSIZE == 64)
@@ -204,5 +159,9 @@ typedef unsigned64 fp_word;
 #if (WITH_TARGET_FLOATING_POINT_BITSIZE == 32)
 typedef unsigned32 fp_word;
 #endif
+
+#define PRI_TF(t)	SIM_PRI_TB (t, WITH_TARGET_FLOATING_POINT_BITSIZE)
+#define PRIiTF	PRI_TF (i)
+#define PRIxTF	PRI_TF (x)
 
 #endif

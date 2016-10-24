@@ -1,4 +1,4 @@
-# Copyright (C) 1996-2014 Free Software Foundation, Inc.
+# Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,11 +40,7 @@ gdb_test_no_output "set width 0"
 
 # We'll need this when we send_gdb a ^C to GDB.  Need to do it before we
 # run the program and gdb starts saving and restoring tty states.
-# On Ultrix, we don't need it and it is really slow (because shell_escape
-# doesn't use vfork).
-if ![istarget "*-*-ultrix*"] then {
-    gdb_test "shell stty intr '^C'" ".*"
-}
+gdb_test "shell stty intr '^C'" ".*"
 
 proc test_all_threads { name kill } {
     global gdb_prompt inferior_exited_re
@@ -76,7 +72,7 @@ proc test_all_threads { name kill } {
 		fail "all threads ran once ($name) (total $i threads ran)"
 	    }
 	}
-	-re "Program received signal SIGTRAP.*(Thread \[-0-9a-fx\]* \\(zombie\\)|0x00000000 in ).*$gdb_prompt $" {
+	-re " received signal SIGTRAP.*(Thread \[-0-9a-fx\]* \\(zombie\\)|0x00000000 in ).*$gdb_prompt $" {
 	    if { $kill == 1 } {
 		kfail "gdb/1265" "Running threads ($name) (zombie thread)"
 	    } else {

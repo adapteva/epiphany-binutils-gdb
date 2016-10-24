@@ -1,5 +1,5 @@
 /* Annotation routines for GDB.
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,6 +25,7 @@
 #include "observer.h"
 #include "inferior.h"
 #include "infrun.h"
+#include "top.h"
 
 
 /* Prototypes for local functions.  */
@@ -46,16 +47,6 @@ void (*deprecated_annotate_signal_hook) (void);
 static int frames_invalid_emitted;
 static int breakpoints_invalid_emitted;
 
-/* True if the target can async, and a synchronous execution command
-   is not in progress.  If true, input is accepted, so don't suppress
-   annotations.  */
-
-static int
-async_background_execution_p (void)
-{
-  return (target_can_async_p () && !sync_execution);
-}
-
 static void
 print_value_flags (struct type *t)
 {
@@ -70,10 +61,19 @@ annotate_breakpoints_invalid (void)
 {
   if (annotation_level == 2
       && (!breakpoints_invalid_emitted
-	  || async_background_execution_p ()))
+	  || current_ui->prompt_state != PROMPT_BLOCKED))
     {
-      target_terminal_ours ();
+      /* If the inferior owns the terminal (e.g., we're resuming),
+	 make sure to leave with the inferior still owning it.  */
+      int was_inferior = target_terminal_is_inferior ();
+
+      target_terminal_ours_for_output ();
+
       printf_unfiltered (("\n\032\032breakpoints-invalid\n"));
+
+      if (was_inferior)
+	target_terminal_inferior ();
+
       breakpoints_invalid_emitted = 1;
     }
 }
@@ -208,10 +208,19 @@ annotate_frames_invalid (void)
 {
   if (annotation_level == 2
       && (!frames_invalid_emitted
-	  || async_background_execution_p ()))
+	  || current_ui->prompt_state != PROMPT_BLOCKED))
     {
-      target_terminal_ours ();
+      /* If the inferior owns the terminal (e.g., we're resuming),
+	 make sure to leave with the inferior still owning it.  */
+      int was_inferior = target_terminal_is_inferior ();
+
+      target_terminal_ours_for_output ();
+
       printf_unfiltered (("\n\032\032frames-invalid\n"));
+
+      if (was_inferior)
+	target_terminal_inferior ();
+
       frames_invalid_emitted = 1;
     }
 }

@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2014 Free Software Foundation, Inc.
+# Copyright (C) 2007-2016 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -50,9 +50,11 @@ WHICH = aarch64 \
 	i386/amd64 i386/amd64-linux \
 	i386/i386-avx i386/i386-avx-linux \
 	i386/i386-mpx i386/i386-mpx-linux \
+	i386/i386-avx-mpx i386/i386-avx-mpx-linux \
 	i386/i386-avx512 i386/i386-avx512-linux \
 	i386/amd64-avx i386/amd64-avx-linux \
 	i386/amd64-mpx i386/amd64-mpx-linux \
+	i386/amd64-avx-mpx i386/amd64-avx-mpx-linux \
 	i386/amd64-avx512 i386/amd64-avx512-linux \
 	i386/x32 i386/x32-linux \
 	i386/x32-avx i386/x32-avx-linux \
@@ -68,7 +70,8 @@ WHICH = aarch64 \
 	s390-linux32 s390-linux64 s390x-linux64 \
 	s390-linux32v1 s390-linux64v1 s390x-linux64v1 \
 	s390-linux32v2 s390-linux64v2 s390x-linux64v2 \
-	s390-te-linux64 s390x-te-linux64 \
+	s390-te-linux64 s390x-te-linux64 s390-vx-linux64 s390x-vx-linux64 \
+	s390-tevx-linux64 s390x-tevx-linux64 \
 	tic6x-c64xp tic6x-c64x tic6x-c62x \
 	tic6x-c64xp-linux tic6x-c64x-linux tic6x-c62x-linux
 
@@ -82,7 +85,9 @@ i386/amd64-linux-expedite = rbp,rsp,rip
 i386/i386-avx-expedite = ebp,esp,eip
 i386/i386-avx-linux-expedite = ebp,esp,eip
 i386/i386-mpx-expedite = ebp,esp,eip
+i386/i386-avx-mpx-expedite = ebp,esp,eip
 i386/i386-mpx-linux-expedite = ebp,esp,eip
+i386/i386-avx-mpx-linux-expedite = ebp,esp,eip
 i386/i386-avx512-expedite = ebp,esp,eip
 i386/i386-avx512-linux-expedite = ebp,esp,eip
 i386/i386-mmx-expedite = ebp,esp,eip
@@ -90,7 +95,9 @@ i386/i386-mmx-linux-expedite = ebp,esp,eip
 i386/amd64-avx-expedite = rbp,rsp,rip
 i386/amd64-avx-linux-expedite = rbp,rsp,rip
 i386/amd64-mpx-expedite = rbp,rsp,rip
+i386/amd64-avx-mpx-expedite = rbp,rsp,rip
 i386/amd64-mpx-linux-expedite = rbp,rsp,rip
+i386/amd64-avx-mpx-linux-expedite = rbp,rsp,rip
 i386/amd64-avx512-expedite = rbp,rsp,rip
 i386/amd64-avx512-linux-expedite = rbp,rsp,rip
 i386/x32-expedite = rbp,rsp,rip
@@ -103,7 +110,7 @@ mips-expedite = r29,pc
 mips-dsp-expedite = r29,pc
 mips64-expedite = r29,pc
 mips64-dsp-expedite = r29,pc
-microblaze-expedite = r1,pc
+microblaze-expedite = r1,rpc
 nios2-linux-expedite = sp,pc
 powerpc-expedite = r1,pc
 rs6000/powerpc-cell32l-expedite = r1,pc,r0,orig_r3,r4
@@ -114,11 +121,15 @@ s390-linux32v2-expedite = r14,r15,pswa
 s390-linux64-expedite = r14l,r15l,pswa
 s390-linux64v1-expedite = r14l,r15l,pswa
 s390-linux64v2-expedite = r14l,r15l,pswa
-s390-te-linux64-expedite = r14,r15,pswa
+s390-te-linux64-expedite = r14l,r15l,pswa
+s390-vx-linux64-expedite = r14l,r15l,pswa
+s390-tevx-linux64-expedite = r14l,r15l,pswa
 s390x-linux64-expedite = r14,r15,pswa
 s390x-linux64v1-expedite = r14,r15,pswa
 s390x-linux64v2-expedite = r14,r15,pswa
 s390x-te-linux64-expedite = r14,r15,pswa
+s390x-vx-linux64-expedite = r14,r15,pswa
+s390x-tevx-linux64-expedite = r14,r15,pswa
 tic6x-c64xp-expedite = A15,PC
 tic6x-c64x-expedite = A15,PC
 tic6x-c62x-expedite = A15,PC
@@ -151,6 +162,8 @@ XMLTOC = \
 	i386/amd64-linux.xml \
 	i386/amd64-mpx-linux.xml \
 	i386/amd64-mpx.xml \
+	i386/amd64-avx-mpx-linux.xml \
+	i386/amd64-avx-mpx.xml \
 	i386/amd64.xml \
 	i386/i386-avx-linux.xml \
 	i386/i386-avx.xml \
@@ -161,6 +174,8 @@ XMLTOC = \
 	i386/i386-mmx.xml \
 	i386/i386-mpx-linux.xml \
 	i386/i386-mpx.xml \
+	i386/i386-avx-mpx-linux.xml \
+	i386/i386-avx-mpx.xml \
 	i386/i386.xml \
 	i386/x32-avx-linux.xml \
 	i386/x32-avx.xml \
@@ -174,6 +189,7 @@ XMLTOC = \
 	mips-linux.xml \
 	mips64-dsp-linux.xml \
 	mips64-linux.xml \
+	nds32.xml \
 	nios2-linux.xml \
 	nios2.xml \
 	rs6000/powerpc-32.xml \
@@ -266,6 +282,10 @@ $(outdir)/i386/i386-mpx.dat: i386/32bit-core.xml i386/32bit-avx.xml \
 			       i386/32bit-mpx.xml
 $(outdir)/i386/i386-mpx-linux.dat: i386/32bit-core.xml 	i386/32bit-avx.xml \
 			       i386/32bit-linux.xml i386/32bit-mpx.xml
+$(outdir)/i386/i386-mpx-linux.dat: i386/32bit-core.xml \
+			       i386/32bit-linux.xml i386/32bit-mpx.xml
+$(outdir)/i386/i386-avx-mpx-linux.dat: i386/32bit-core.xml \
+			       i386/32bit-linux.xml i386/32bit-mpx.xml
 $(outdir)/i386/i386-avx512.dat: i386/32bit-core.xml i386/32bit-avx.xml \
 			       i386/32bit-mpx.xml i386/32bit-avx512.xml
 $(outdir)/i386/i386-avx512-linux.dat: i386/32bit-core.xml i386/32bit-avx.xml \
@@ -277,7 +297,11 @@ $(outdir)/i386/amd64-avx-linux.dat: i386/64bit-core.xml i386/64bit-avx.xml \
 				    i386/64bit-linux.xml
 $(outdir)/i386/amd64-mpx-linux.dat: i386/64bit-core.xml i386/64bit-avx.xml \
 			       i386/64bit-linux.xml i386/64bit-mpx.xml
+$(outdir)/i386/amd64-avx-mpx-linux.dat: i386/64bit-core.xml \
+			       i386/64bit-linux.xml i386/64bit-mpx.xml
 $(outdir)/i386/amd64-mpx.dat: i386/64bit-core.xml i386/64bit-avx.xml \
+			       i386/64bit-mpx.xml
+$(outdir)/i386/amd64-avx-mpx.dat: i386/64bit-core.xml \
 			       i386/64bit-mpx.xml
 $(outdir)/i386/amd64-avx512.dat: i386/64bit-core.xml i386/64bit-avx.xml \
 			       i386/64bit-mpx.xml i386/64bit-avx512.xml

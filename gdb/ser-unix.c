@@ -1,6 +1,6 @@
 /* Serial interface for local (hardwired) serial ports on Un*x like systems
 
-   Copyright (C) 1992-2014 Free Software Foundation, Inc.
+   Copyright (C) 1992-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,7 +26,7 @@
 #include <sys/types.h>
 #include "terminal.h"
 #include <sys/socket.h>
-#include <sys/time.h>
+#include "gdb_sys_time.h"
 
 #include "gdb_select.h"
 #include "gdbcmd.h"
@@ -83,6 +83,7 @@ static int hardwire_readchar (struct serial *scb, int timeout);
 static int do_hardwire_readchar (struct serial *scb, int timeout);
 static int rate_to_code (int rate);
 static int hardwire_setbaudrate (struct serial *scb, int rate);
+static int hardwire_setparity (struct serial *scb, int parity);
 static void hardwire_close (struct serial *scb);
 static int get_tty_state (struct serial *scb,
 			  struct hardwire_ttystate * state);
@@ -177,9 +178,7 @@ set_tty_state (struct serial *scb, struct hardwire_ttystate *state)
 static serial_ttystate
 hardwire_get_tty_state (struct serial *scb)
 {
-  struct hardwire_ttystate *state;
-
-  state = (struct hardwire_ttystate *) xmalloc (sizeof *state);
+  struct hardwire_ttystate *state = XNEW (struct hardwire_ttystate);
 
   if (get_tty_state (scb, state))
     {
@@ -193,9 +192,8 @@ hardwire_get_tty_state (struct serial *scb)
 static serial_ttystate
 hardwire_copy_tty_state (struct serial *scb, serial_ttystate ttystate)
 {
-  struct hardwire_ttystate *state;
+  struct hardwire_ttystate *state = XNEW (struct hardwire_ttystate);
 
-  state = (struct hardwire_ttystate *) xmalloc (sizeof *state);
   *state = *(struct hardwire_ttystate *) ttystate;
 
   return (serial_ttystate) state;
@@ -409,7 +407,7 @@ hardwire_raw (struct serial *scb)
   state.termios.c_iflag = 0;
   state.termios.c_oflag = 0;
   state.termios.c_lflag = 0;
-  state.termios.c_cflag &= ~(CSIZE | PARENB);
+  state.termios.c_cflag &= ~CSIZE;
   state.termios.c_cflag |= CLOCAL | CS8;
 #ifdef CRTSCTS
   /* h/w flow control.  */
@@ -432,7 +430,7 @@ hardwire_raw (struct serial *scb)
   state.termio.c_iflag = 0;
   state.termio.c_oflag = 0;
   state.termio.c_lflag = 0;
-  state.termio.c_cflag &= ~(CSIZE | PARENB);
+  state.termio.c_cflag &= ~CSIZE;
   state.termio.c_cflag |= CLOCAL | CS8;
   state.termio.c_cc[VMIN] = 0;
   state.termio.c_cc[VTIME] = 0;
@@ -451,10 +449,7 @@ hardwire_raw (struct serial *scb)
 }
 
 /* Wait for input on scb, with timeout seconds.  Returns 0 on success,
-   otherwise SERIAL_TIMEOUT or SERIAL_ERROR.
-
-   For termio{s}, we actually just setup VTIME if necessary, and let the
-   timeout occur in the read() in hardwire_read().  */
+   otherwise SERIAL_TIMEOUT or SERIAL_ERROR.  */
 
 /* FIXME: cagney/1999-09-16: Don't replace this with the equivalent
    ser_base*() until the old TERMIOS/SGTTY/... timer code has been
@@ -468,7 +463,6 @@ hardwire_raw (struct serial *scb)
 static int
 wait_for (struct serial *scb, int timeout)
 {
-#ifdef HAVE_SGTTY
   while (1)
     {
       struct timeval tv;
@@ -485,92 +479,22 @@ wait_for (struct serial *scb, int timeout)
       FD_ZERO (&readfds);
       FD_SET (scb->fd, &readfds);
 
-      if (timeout >= 0)
-	numfds = gdb_select (scb->fd + 1, &readfds, 0, 0, &tv);
-      else
-	numfds = gdb_select (scb->fd + 1, &readfds, 0, 0, 0);
+      QUIT;
 
-      if (numfds <= 0)
-	if (numfds == 0)
-	  return SERIAL_TIMEOUT;
-	else if (errno == EINTR)
-	  continue;
-	else
-	  return SERIAL_ERROR;	/* Got an error from select or poll.  */
+      if (timeout >= 0)
+	numfds = interruptible_select (scb->fd + 1, &readfds, 0, 0, &tv);
+      else
+	numfds = interruptible_select (scb->fd + 1, &readfds, 0, 0, 0);
+
+      if (numfds == -1 && errno == EINTR)
+	continue;
+      else if (numfds == -1)
+	return SERIAL_ERROR;
+      else if (numfds == 0)
+	return SERIAL_TIMEOUT;
 
       return 0;
     }
-#endif /* HAVE_SGTTY */
-
-#if defined HAVE_TERMIO || defined HAVE_TERMIOS
-  if (timeout == scb->current_timeout)
-    return 0;
-
-  scb->current_timeout = timeout;
-
-  {
-    struct hardwire_ttystate state;
-
-    if (get_tty_state (scb, &state))
-      fprintf_unfiltered (gdb_stderr, "get_tty_state failed: %s\n",
-			  safe_strerror (errno));
-
-#ifdef HAVE_TERMIOS
-    if (timeout < 0)
-      {
-	/* No timeout.  */
-	state.termios.c_cc[VTIME] = 0;
-	state.termios.c_cc[VMIN] = 1;
-      }
-    else
-      {
-	state.termios.c_cc[VMIN] = 0;
-	state.termios.c_cc[VTIME] = timeout * 10;
-	if (state.termios.c_cc[VTIME] != timeout * 10)
-	  {
-
-	    /* If c_cc is an 8-bit signed character, we can't go 
-	       bigger than this.  If it is always unsigned, we could use
-	       25.  */
-
-	    scb->current_timeout = 12;
-	    state.termios.c_cc[VTIME] = scb->current_timeout * 10;
-	    scb->timeout_remaining = timeout - scb->current_timeout;
-	  }
-      }
-#endif
-
-#ifdef HAVE_TERMIO
-    if (timeout < 0)
-      {
-	/* No timeout.  */
-	state.termio.c_cc[VTIME] = 0;
-	state.termio.c_cc[VMIN] = 1;
-      }
-    else
-      {
-	state.termio.c_cc[VMIN] = 0;
-	state.termio.c_cc[VTIME] = timeout * 10;
-	if (state.termio.c_cc[VTIME] != timeout * 10)
-	  {
-	    /* If c_cc is an 8-bit signed character, we can't go 
-	       bigger than this.  If it is always unsigned, we could use
-	       25.  */
-
-	    scb->current_timeout = 12;
-	    state.termio.c_cc[VTIME] = scb->current_timeout * 10;
-	    scb->timeout_remaining = timeout - scb->current_timeout;
-	  }
-      }
-#endif
-
-    if (set_tty_state (scb, &state))
-      fprintf_unfiltered (gdb_stderr, "set_tty_state failed: %s\n",
-			  safe_strerror (errno));
-
-    return 0;
-  }
-#endif /* HAVE_TERMIO || HAVE_TERMIOS */
 }
 
 /* Read a character with user-specified timeout.  TIMEOUT is number of
@@ -893,6 +817,51 @@ hardwire_setstopbits (struct serial *scb, int num)
   return set_tty_state (scb, &state);
 }
 
+/* Implement the "setparity" serial_ops callback.  */
+
+static int
+hardwire_setparity (struct serial *scb, int parity)
+{
+  struct hardwire_ttystate state;
+  int newparity = 0;
+
+  if (get_tty_state (scb, &state))
+    return -1;
+
+  switch (parity)
+    {
+    case GDBPARITY_NONE:
+      newparity = 0;
+      break;
+    case GDBPARITY_ODD:
+      newparity = PARENB | PARODD;
+      break;
+    case GDBPARITY_EVEN:
+      newparity = PARENB;
+      break;
+    default:
+      internal_warning (__FILE__, __LINE__,
+			"Incorrect parity value: %d", parity);
+      return -1;
+    }
+
+#ifdef HAVE_TERMIOS
+  state.termios.c_cflag &= ~(PARENB | PARODD);
+  state.termios.c_cflag |= newparity;
+#endif
+
+#ifdef HAVE_TERMIO
+  state.termio.c_cflag &= ~(PARENB | PARODD);
+  state.termio.c_cflag |= newparity;
+#endif
+
+#ifdef HAVE_SGTTY
+  return 0;            /* sgtty doesn't support this */
+#endif
+  return set_tty_state (scb, &state);
+}
+
+
 static void
 hardwire_close (struct serial *scb)
 {
@@ -929,6 +898,7 @@ static const struct serial_ops hardwire_ops =
   hardwire_noflush_set_tty_state,
   hardwire_setbaudrate,
   hardwire_setstopbits,
+  hardwire_setparity,
   hardwire_drain_output,
   ser_base_async,
   ser_unix_read_prim,
@@ -958,21 +928,11 @@ when debugging using remote targets."),
 int
 ser_unix_read_prim (struct serial *scb, size_t count)
 {
-  int status;
-
-  while (1)
-    {
-      status = read (scb->fd, scb->buf, count);
-      if (status != -1 || errno != EINTR)
-	break;
-    }
-  return status;
+  return read (scb->fd, scb->buf, count);
 }
 
 int
 ser_unix_write_prim (struct serial *scb, const void *buf, size_t len)
 {
-  /* ??? Historically, GDB has not retried calls to "write" that
-     result in EINTR.  */
   return write (scb->fd, buf, len);
 }

@@ -25,9 +25,7 @@ Section Headers:
  +\[[ 0-9]+\] .symtab .*
  +\[[ 0-9]+\] .strtab .*
 Key to Flags:
-.*
-.*
-.*
+#...
 
 Elf file type is DYN \(Shared object file\)
 Entry point 0x[0-9a-f]+
@@ -110,7 +108,9 @@ Symbol table '\.symtab' contains [0-9]+ entries:
 .* TLS +LOCAL +DEFAULT +8 sl6
 .* TLS +LOCAL +DEFAULT +8 sl7
 .* TLS +LOCAL +DEFAULT +8 sl8
+.* FILE +LOCAL +DEFAULT +ABS 
 .* TLS +LOCAL +DEFAULT +9 sH1
+.* OBJECT +LOCAL +DEFAULT +ABS _DYNAMIC
 .* TLS +LOCAL +DEFAULT +8 sh3
 .* TLS +LOCAL +DEFAULT +9 sH2
 .* TLS +LOCAL +DEFAULT +9 sH7
@@ -124,11 +124,9 @@ Symbol table '\.symtab' contains [0-9]+ entries:
 .* TLS +LOCAL +DEFAULT +9 sH6
 .* TLS +LOCAL +DEFAULT +9 sH8
 .* TLS +LOCAL +DEFAULT +8 sh1
+.* OBJECT +LOCAL +DEFAULT +ABS _GLOBAL_OFFSET_TABLE_
 .* TLS +LOCAL +DEFAULT +8 sh2
 .* TLS +LOCAL +DEFAULT +8 sh6
-.* FILE +LOCAL +DEFAULT +ABS .*
-.* OBJECT +LOCAL +DEFAULT +ABS _DYNAMIC
-.* OBJECT +LOCAL +DEFAULT +ABS _GLOBAL_OFFSET_TABLE_
 .* TLS +GLOBAL +DEFAULT +8 sg8
 .* TLS +GLOBAL +DEFAULT +8 sg3
 .* TLS +GLOBAL +DEFAULT +8 sg4

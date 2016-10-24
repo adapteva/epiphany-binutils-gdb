@@ -1,6 +1,6 @@
 /* TUI window generic functions.
 
-   Copyright (C) 1998-2014 Free Software Foundation, Inc.
+   Copyright (C) 1998-2016 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -32,8 +32,10 @@
 #include "cli/cli-cmds.h"
 #include "top.h"
 #include "source.h"
+#include "event-loop.h"
 
 #include "tui/tui.h"
+#include "tui/tui-io.h"
 #include "tui/tui-data.h"
 #include "tui/tui-wingeneral.h"
 #include "tui/tui-stack.h"
@@ -62,7 +64,6 @@ static int new_height_ok (struct tui_win_info *, int);
 static void tui_set_tab_width_command (char *, int);
 static void tui_refresh_all_command (char *, int);
 static void tui_set_win_height_command (char *, int);
-static void tui_xdb_set_win_height_command (char *, int);
 static void tui_all_windows_info (char *, int);
 static void tui_set_focus_command (char *, int);
 static void tui_scroll_forward_command (char *, int);
@@ -344,6 +345,94 @@ tui_get_cmd_list (void)
   return &tuilist;
 }
 
+/* The set_func hook of "set tui ..." commands that affect the window
+   borders on the TUI display.  */
+void
+tui_set_var_cmd (char *null_args, int from_tty, struct cmd_list_element *c)
+{
+  if (tui_update_variables () && tui_active)
+    tui_rehighlight_all ();
+}
+
+/* Generic window name completion function.  Complete window name pointed
+   to by TEXT and WORD.  If INCLUDE_NEXT_PREV_P is true then the special
+   window names 'next' and 'prev' will also be considered as possible
+   completions of the window name.  */
+
+static VEC (char_ptr) *
+window_name_completer (int include_next_prev_p,
+		       const char *text, const char *word)
+{
+  VEC (const_char_ptr) *completion_name_vec = NULL;
+  VEC (char_ptr) *matches_vec;
+  int win_type;
+
+  for (win_type = SRC_WIN; win_type < MAX_MAJOR_WINDOWS; win_type++)
+    {
+      const char *completion_name = NULL;
+
+      /* We can't focus on an invisible window.  */
+      if (tui_win_list[win_type] == NULL
+	  || !tui_win_list[win_type]->generic.is_visible)
+	continue;
+
+      completion_name = tui_win_name (&tui_win_list [win_type]->generic);
+      gdb_assert (completion_name != NULL);
+      VEC_safe_push (const_char_ptr, completion_name_vec, completion_name);
+    }
+
+  /* If no windows are considered visible then the TUI has not yet been
+     initialized.  But still "focus src" and "focus cmd" will work because
+     invoking the focus command will entail initializing the TUI which sets the
+     default layout to SRC_COMMAND.  */
+  if (VEC_length (const_char_ptr, completion_name_vec) == 0)
+    {
+      VEC_safe_push (const_char_ptr, completion_name_vec, SRC_NAME);
+      VEC_safe_push (const_char_ptr, completion_name_vec, CMD_NAME);
+    }
+
+  if (include_next_prev_p)
+    {
+      VEC_safe_push (const_char_ptr, completion_name_vec, "next");
+      VEC_safe_push (const_char_ptr, completion_name_vec, "prev");
+    }
+
+  VEC_safe_push (const_char_ptr, completion_name_vec, NULL);
+  matches_vec
+    = complete_on_enum (VEC_address (const_char_ptr, completion_name_vec),
+			text, word);
+
+  VEC_free (const_char_ptr, completion_name_vec);
+
+  return matches_vec;
+}
+
+/* Complete possible window names to focus on.  TEXT is the complete text
+   entered so far, WORD is the word currently being completed.  */
+
+static VEC (char_ptr) *
+focus_completer (struct cmd_list_element *ignore,
+		  const char *text, const char *word)
+{
+  return window_name_completer (1, text, word);
+}
+
+/* Complete possible window names for winheight command.  TEXT is the
+   complete text entered so far, WORD is the word currently being
+   completed.  */
+
+static VEC (char_ptr) *
+winheight_completer (struct cmd_list_element *ignore,
+		     const char *text, const char *word)
+{
+  /* The first word is the window name.  That we can complete.  Subsequent
+     words can't be completed.  */
+  if (word != text)
+    return NULL;
+
+  return window_name_completer (0, text, word);
+}
+
 /* Function to initialize gdb commands, for tui window
    manipulation.  */
 
@@ -355,6 +444,7 @@ _initialize_tui_win (void)
 {
   static struct cmd_list_element *tui_setlist;
   static struct cmd_list_element *tui_showlist;
+  struct cmd_list_element *cmd;
 
   /* Define the classes of commands.
      They will appear in the help list in the reverse of this order.  */
@@ -369,13 +459,11 @@ _initialize_tui_win (void)
 
   add_com ("refresh", class_tui, tui_refresh_all_command,
            _("Refresh the terminal display.\n"));
-  if (xdb_commands)
-    add_com_alias ("U", "refresh", class_tui, 0);
   add_com ("tabset", class_tui, tui_set_tab_width_command, _("\
 Set the width (in characters) of tab stops.\n\
 Usage: tabset <n>\n"));
-  add_com ("winheight", class_tui, tui_set_win_height_command, _("\
-Set the height of a specified window.\n\
+  cmd = add_com ("winheight", class_tui, tui_set_win_height_command, _("\
+Set or modify the height of a specified window.\n\
 Usage: winheight <win_name> [+ | -] <#lines>\n\
 Window names are:\n\
 src  : the source window\n\
@@ -383,9 +471,10 @@ cmd  : the command window\n\
 asm  : the disassembly window\n\
 regs : the register display\n"));
   add_com_alias ("wh", "winheight", class_tui, 0);
+  set_cmd_completer (cmd, winheight_completer);
   add_info ("win", tui_all_windows_info,
 	    _("List of all displayed windows.\n"));
-  add_com ("focus", class_tui, tui_set_focus_command, _("\
+  cmd = add_com ("focus", class_tui, tui_set_focus_command, _("\
 Set focus to named window or next/prev window.\n\
 Usage: focus {<win> | next | prev}\n\
 Valid Window names are:\n\
@@ -394,6 +483,7 @@ asm  : the disassembly window\n\
 regs : the register display\n\
 cmd  : the command window\n"));
   add_com_alias ("fs", "focus", class_tui, 0);
+  set_cmd_completer (cmd, focus_completer);
   add_com ("+", class_tui, tui_scroll_forward_command, _("\
 Scroll window forward.\n\
 Usage: + [win] [n]\n"));
@@ -401,15 +491,11 @@ Usage: + [win] [n]\n"));
 Scroll window backward.\n\
 Usage: - [win] [n]\n"));
   add_com ("<", class_tui, tui_scroll_left_command, _("\
-Scroll window forward.\n\
+Scroll window text to the left.\n\
 Usage: < [win] [n]\n"));
   add_com (">", class_tui, tui_scroll_right_command, _("\
-Scroll window backward.\n\
+Scroll window text to the right.\n\
 Usage: > [win] [n]\n"));
-  if (xdb_commands)
-    add_com ("w", class_xdb, tui_xdb_set_win_height_command, _("\
-XDB compatibility command for setting the height of a command window.\n\
-Usage: w <#lines>\n"));
 
   /* Define the tui control variables.  */
   add_setshow_enum_cmd ("border-kind", no_class, tui_border_kind_enums,
@@ -420,7 +506,7 @@ This variable controls the border of TUI windows:\n\
 space           use a white space\n\
 ascii           use ascii characters + - | for the border\n\
 acs             use the Alternate Character Set"),
-			NULL,
+			tui_set_var_cmd,
 			show_tui_border_kind,
 			&tui_setlist, &tui_showlist);
 
@@ -436,7 +522,7 @@ half            use half bright\n\
 half-standout   use half bright and standout mode\n\
 bold            use extra bright or bold\n\
 bold-standout   use extra bright or bold with standout mode"),
-			NULL,
+			tui_set_var_cmd,
 			show_tui_border_mode,
 			&tui_setlist, &tui_showlist);
 
@@ -452,7 +538,7 @@ half            use half bright\n\
 half-standout   use half bright and standout mode\n\
 bold            use extra bright or bold\n\
 bold-standout   use extra bright or bold with standout mode"),
-			NULL,
+			tui_set_var_cmd,
 			show_tui_active_border_mode,
 			&tui_setlist, &tui_showlist);
 }
@@ -461,15 +547,20 @@ bold-standout   use extra bright or bold with standout mode"),
 void
 tui_update_gdb_sizes (void)
 {
-  char cmd[50];
+  int width, height;
 
-  /* Set to TUI command window dimension or use readline values.  */
-  xsnprintf (cmd, sizeof (cmd), "set width %d",
-           tui_active ? TUI_CMD_WIN->generic.width : tui_term_width());
-  execute_command (cmd, 0);
-  xsnprintf (cmd, sizeof (cmd), "set height %d",
-           tui_active ? TUI_CMD_WIN->generic.height : tui_term_height());
-  execute_command (cmd, 0);
+  if (tui_active)
+    {
+      width = TUI_CMD_WIN->generic.width;
+      height = TUI_CMD_WIN->generic.height;
+    }
+  else
+    {
+      width = tui_term_width ();
+      height = tui_term_height ();
+    }
+
+  set_screen_width_and_height (width, height);
 }
 
 
@@ -617,7 +708,7 @@ tui_scroll (enum tui_scroll_direction direction,
 void
 tui_refresh_all_win (void)
 {
-  enum tui_win_type type;
+  int type;
 
   clearok (curscr, TRUE);
   tui_refresh_all (tui_win_list);
@@ -646,6 +737,14 @@ tui_refresh_all_win (void)
   tui_show_locator_content ();
 }
 
+void
+tui_rehighlight_all (void)
+{
+  int type;
+
+  for (type = SRC_WIN; type < MAX_MAJOR_WINDOWS; type++)
+    tui_check_and_display_highlight_if_needed (tui_win_list[type]);
+}
 
 /* Resize all the windows based on the terminal size.  This function
    gets called from within the readline sinwinch handler.  */
@@ -665,7 +764,7 @@ tui_resize_all (void)
       struct tui_win_info *first_win;
       struct tui_win_info *second_win;
       struct tui_gen_win_info *locator = tui_locator_win_info_ptr ();
-      enum tui_win_type win_type;
+      int win_type;
       int new_height, split_diff, cmd_split_diff, num_wins_displayed = 2;
 
 #ifdef HAVE_RESIZE_TERM
@@ -801,7 +900,7 @@ tui_resize_all (void)
 	      && !tui_win_list[win_type]->generic.is_visible)
 	    {
 	      tui_free_window (tui_win_list[win_type]);
-	      tui_win_list[win_type] = (struct tui_win_info *) NULL;
+	      tui_win_list[win_type] = NULL;
 	    }
 	}
       /* Turn keypad back on, unless focus is in the command
@@ -812,32 +911,68 @@ tui_resize_all (void)
 }
 
 #ifdef SIGWINCH
-/* SIGWINCH signal handler for the tui.  This signal handler is always
-   called, even when the readline package clears signals because it is
-   set as the old_sigwinch() (TUI only).  */
+/* Token for use by TUI's asynchronous SIGWINCH handler.  */
+static struct async_signal_handler *tui_sigwinch_token;
+
+/* TUI's SIGWINCH signal handler.  */
 static void
 tui_sigwinch_handler (int signal)
 {
-  /* Say that a resize was done so that the readline can do it later
-     when appropriate.  */
+  mark_async_signal_handler (tui_sigwinch_token);
   tui_set_win_resized_to (TRUE);
+}
+
+/* Callback for asynchronously resizing TUI following a SIGWINCH signal.  */
+static void
+tui_async_resize_screen (gdb_client_data arg)
+{
+  rl_resize_terminal ();
+
+  if (!tui_active)
+    {
+      int screen_height, screen_width;
+
+      rl_get_screen_size (&screen_height, &screen_width);
+      set_screen_width_and_height (screen_width, screen_height);
+
+      /* win_resized is left set so that the next call to tui_enable()
+	 resizes the TUI windows.  */
+    }
+  else
+    {
+      tui_set_win_resized_to (FALSE);
+      tui_resize_all ();
+      tui_refresh_all_win ();
+      tui_update_gdb_sizes ();
+      tui_redisplay_readline ();
+    }
 }
 #endif
 
-/* Initializes SIGWINCH signal handler for the tui.  */
+/* Initialize TUI's SIGWINCH signal handler.  Note that the handler is not
+   uninstalled when we exit TUI, so the handler should not assume that TUI is
+   always active.  */
 void
 tui_initialize_win (void)
 {
 #ifdef SIGWINCH
-#ifdef HAVE_SIGACTION
-  struct sigaction old_winch;
+  tui_sigwinch_token
+    = create_async_signal_handler (tui_async_resize_screen, NULL);
 
-  memset (&old_winch, 0, sizeof (old_winch));
-  old_winch.sa_handler = &tui_sigwinch_handler;
-  sigaction (SIGWINCH, &old_winch, NULL);
-#else
-  signal (SIGWINCH, &tui_sigwinch_handler);
+  {
+#ifdef HAVE_SIGACTION
+    struct sigaction old_winch;
+
+    memset (&old_winch, 0, sizeof (old_winch));
+    old_winch.sa_handler = &tui_sigwinch_handler;
+#ifdef SA_RESTART
+    old_winch.sa_flags = SA_RESTART;
 #endif
+    sigaction (SIGWINCH, &old_winch, NULL);
+#else
+    signal (SIGWINCH, &tui_sigwinch_handler);
+#endif
+  }
 #endif
 }
 
@@ -913,14 +1048,14 @@ tui_set_focus (char *arg, int from_tty)
     {
       char *buf_ptr = (char *) xstrdup (arg);
       int i;
-      struct tui_win_info *win_info = (struct tui_win_info *) NULL;
+      struct tui_win_info *win_info = NULL;
 
       for (i = 0; (i < strlen (buf_ptr)); i++)
-	buf_ptr[i] = toupper (arg[i]);
+	buf_ptr[i] = tolower (arg[i]);
 
-      if (subset_compare (buf_ptr, "NEXT"))
+      if (subset_compare (buf_ptr, "next"))
 	win_info = tui_next_win (tui_win_with_focus ());
-      else if (subset_compare (buf_ptr, "PREV"))
+      else if (subset_compare (buf_ptr, "prev"))
 	win_info = tui_prev_win (tui_win_with_focus ());
       else
 	win_info = tui_partial_win_by_name (buf_ptr);
@@ -939,8 +1074,7 @@ The window name specified must be valid and visible.\n"));
 	tui_refresh_data_win ();
       xfree (buf_ptr);
       printf_filtered (_("Focus set to %s window.\n"),
-		       tui_win_name ((struct tui_gen_win_info *)
-				     tui_win_with_focus ()));
+		       tui_win_name (&tui_win_with_focus ()->generic));
     }
   else
     warning (_("Incorrect Number of Arguments.\n%s"), FOCUS_USAGE);
@@ -958,7 +1092,7 @@ tui_set_focus_command (char *arg, int from_tty)
 static void
 tui_all_windows_info (char *arg, int from_tty)
 {
-  enum tui_win_type type;
+  int type;
   struct tui_win_info *win_with_focus = tui_win_with_focus ();
 
   for (type = SRC_WIN; (type < MAX_MAJOR_WINDOWS); type++)
@@ -987,7 +1121,7 @@ tui_refresh_all_command (char *arg, int from_tty)
 }
 
 
-/* Set the height of the specified window.  */
+/* Set the tab width of the specified window.  */
 static void
 tui_set_tab_width_command (char *arg, int from_tty)
 {
@@ -999,7 +1133,27 @@ tui_set_tab_width_command (char *arg, int from_tty)
 
       ts = atoi (arg);
       if (ts > 0)
-	tui_set_default_tab_len (ts);
+	{
+	  tui_set_default_tab_len (ts);
+	  /* We don't really change the height of any windows, but
+	     calling these 2 functions causes a complete regeneration
+	     and redisplay of the window's contents, which will take
+	     the new tab width into account.  */
+	  if (tui_win_list[SRC_WIN]
+	      && tui_win_list[SRC_WIN]->generic.is_visible)
+	    {
+	      make_invisible_and_set_new_height (TUI_SRC_WIN,
+						 TUI_SRC_WIN->generic.height);
+	      make_visible_with_new_height (TUI_SRC_WIN);
+	    }
+	  if (tui_win_list[DISASSEM_WIN]
+	      && tui_win_list[DISASSEM_WIN]->generic.is_visible)
+	    {
+	      make_invisible_and_set_new_height (TUI_DISASM_WIN,
+						 TUI_DISASM_WIN->generic.height);
+	      make_visible_with_new_height (TUI_DISASM_WIN);
+	    }
+	}
       else
 	warning (_("Tab widths greater than 0 must be specified."));
     }
@@ -1016,10 +1170,12 @@ tui_set_win_height (char *arg, int from_tty)
     {
       char *buf = xstrdup (arg);
       char *buf_ptr = buf;
-      char *wname = (char *) NULL;
+      char *wname = NULL;
       int new_height, i;
       struct tui_win_info *win_info;
+      struct cleanup *old_chain;
 
+      old_chain = make_cleanup (xfree, buf);
       wname = buf_ptr;
       buf_ptr = strchr (buf_ptr, ' ');
       if (buf_ptr != (char *) NULL)
@@ -1028,7 +1184,7 @@ tui_set_win_height (char *arg, int from_tty)
 
 	  /* Validate the window name.  */
 	  for (i = 0; i < strlen (wname); i++)
-	    wname[i] = toupper (wname[i]);
+	    wname[i] = tolower (wname[i]);
 	  win_info = tui_partial_win_by_name (wname);
 
 	  if (win_info == (struct tui_win_info *) NULL
@@ -1082,8 +1238,7 @@ The window name specified must be valid and visible.\n"));
       else
 	printf_filtered (WIN_HEIGHT_USAGE);
 
-      if (buf != (char *) NULL)
-	xfree (buf);
+      do_cleanups (old_chain);
     }
   else
     printf_filtered (WIN_HEIGHT_USAGE);
@@ -1097,45 +1252,6 @@ tui_set_win_height_command (char *arg, int from_tty)
   tui_enable ();
   tui_set_win_height (arg, from_tty);
 }
-
-
-/* XDB Compatibility command for setting the window height.  This will
-   increase or decrease the command window by the specified
-   amount.  */
-static void
-tui_xdb_set_win_height (char *arg, int from_tty)
-{
-  /* Make sure the curses mode is enabled.  */
-  tui_enable ();
-  if (arg != (char *) NULL)
-    {
-      int input_no = atoi (arg);
-
-      if (input_no > 0)
-	{			/* Add 1 for the locator.  */
-	  int new_height = tui_term_height () - (input_no + 1);
-
-	  if (!new_height_ok (tui_win_list[CMD_WIN], new_height)
-	      || tui_adjust_win_heights (tui_win_list[CMD_WIN],
-					 new_height) == TUI_FAILURE)
-	    warning (_("Invalid window height specified.\n%s"),
-		     XDBWIN_HEIGHT_USAGE);
-	}
-      else
-	warning (_("Invalid window height specified.\n%s"),
-		 XDBWIN_HEIGHT_USAGE);
-    }
-  else
-    warning (_("Invalid window height specified.\n%s"), XDBWIN_HEIGHT_USAGE);
-}
-
-/* Set the height of the specified window, with va_list.  */
-static void
-tui_xdb_set_win_height_command (char *arg, int from_tty)
-{
-  tui_xdb_set_win_height (arg, from_tty);
-}
-
 
 /* Function to adjust all window heights around the primary.   */
 static enum tui_status
@@ -1341,7 +1457,7 @@ make_invisible_and_set_new_height (struct tui_win_info *win_info,
 	    &((struct tui_win_element *)
 	      win_info->generic.content[i])->which_element.data_window;
 	  tui_delete_win (gen_win_info->handle);
-	  gen_win_info->handle = (WINDOW *) NULL;
+	  gen_win_info->handle = NULL;
 	}
       break;
     default:
@@ -1386,7 +1502,7 @@ make_visible_with_new_height (struct tui_win_info *win_info)
 	  struct frame_info *frame = deprecated_safe_get_selected_frame ();
 	  struct gdbarch *gdbarch = get_frame_arch (frame);
 
-	  s = find_pc_symtab (get_frame_pc (frame));
+	  s = find_pc_line_symtab (get_frame_pc (frame));
 	  if (win_info->generic.type == SRC_WIN)
 	    {
 	      line.loa = LOA_LINE;
@@ -1409,8 +1525,6 @@ make_visible_with_new_height (struct tui_win_info *win_info)
       tui_display_all_data ();
       break;
     case CMD_WIN:
-      win_info->detail.command_info.cur_line = 0;
-      win_info->detail.command_info.curch = 0;
 #ifdef HAVE_WRESIZE
       wresize (TUI_CMD_WIN->generic.handle,
 	       TUI_CMD_WIN->generic.height,
@@ -1419,9 +1533,7 @@ make_visible_with_new_height (struct tui_win_info *win_info)
       mvwin (TUI_CMD_WIN->generic.handle,
 	     TUI_CMD_WIN->generic.origin.y,
 	     TUI_CMD_WIN->generic.origin.x);
-      wmove (win_info->generic.handle,
-	     win_info->detail.command_info.cur_line,
-	     win_info->detail.command_info.curch);
+      wmove (win_info->generic.handle, 0, 0);
       break;
     default:
       break;
@@ -1553,9 +1665,11 @@ parse_scrolling_args (char *arg,
   if (arg != (char *) NULL)
     {
       char *buf, *buf_ptr;
+      struct cleanup *old_chain;
 
       /* Process the number of lines to scroll.  */
       buf = buf_ptr = xstrdup (arg);
+      old_chain = make_cleanup (xfree, buf);
       if (isdigit (*buf_ptr))
 	{
 	  char *num_str;
@@ -1589,7 +1703,7 @@ parse_scrolling_args (char *arg,
 
 	      /* Validate the window name.  */
 	      for (i = 0; i < strlen (wname); i++)
-		wname[i] = toupper (wname[i]);
+		wname[i] = tolower (wname[i]);
 	    }
 	  else
 	    wname = "?";
@@ -1603,6 +1717,6 @@ The window name specified must be valid and visible.\n"));
 	  else if (*win_to_scroll == TUI_CMD_WIN)
 	    *win_to_scroll = (tui_source_windows ())->list[0];
 	}
-      xfree (buf);
+      do_cleanups (old_chain);
     }
 }

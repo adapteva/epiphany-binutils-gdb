@@ -1,6 +1,6 @@
 /* Target-dependent code for Renesas Super-H, for GDB.
 
-   Copyright (C) 1993-2014 Free Software Foundation, Inc.
+   Copyright (C) 1993-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1305,8 +1305,6 @@ sh_extract_return_value_nofpu (struct type *type, struct regcache *regcache,
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int len = TYPE_LENGTH (type);
-  int return_register = R0_REGNUM;
-  int offset;
 
   if (len <= 4)
     {
@@ -1857,7 +1855,7 @@ sh_frame_cache (struct frame_info *this_frame, void **this_cache)
   int i;
 
   if (*this_cache)
-    return *this_cache;
+    return (struct sh_frame_cache *) *this_cache;
 
   cache = sh_alloc_frame_cache ();
   *this_cache = cache;
@@ -2021,7 +2019,7 @@ sh_stub_this_id (struct frame_info *this_frame, void **this_cache,
 
   if (*this_cache == NULL)
     *this_cache = sh_make_stub_cache (this_frame);
-  cache = *this_cache;
+  cache = (struct sh_frame_cache *) *this_cache;
 
   *this_id = frame_id_build (cache->saved_sp, get_frame_pc (this_frame));
 }
@@ -2050,11 +2048,14 @@ static const struct frame_unwind sh_stub_unwind =
   sh_stub_unwind_sniffer
 };
 
-/* The epilogue is defined here as the area at the end of a function,
+/* Implement the stack_frame_destroyed_p gdbarch method.
+
+   The epilogue is defined here as the area at the end of a function,
    either on the `ret' instruction itself or after an instruction which
    destroys the function's stack frame.  */
+
 static int
-sh_in_function_epilogue_p (struct gdbarch *gdbarch, CORE_ADDR pc)
+sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR func_addr = 0, func_end = 0;
@@ -2294,7 +2295,7 @@ sh_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_dummy_id (gdbarch, sh_dummy_id);
   frame_base_set_default (gdbarch, &sh_frame_base);
 
-  set_gdbarch_in_function_epilogue_p (gdbarch, sh_in_function_epilogue_p);
+  set_gdbarch_stack_frame_destroyed_p (gdbarch, sh_stack_frame_destroyed_p);
 
   dwarf2_frame_set_init_reg (gdbarch, sh_dwarf2_frame_init_reg);
 

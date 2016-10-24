@@ -1,6 +1,6 @@
 /* Machine independent support for SVR4 /proc (process file system) for GDB.
 
-   Copyright (C) 1999-2014 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
 
    Written by Michael Snyder at Cygnus Solutions.
    Based on work by Fred Fish, Stu Grossman, Geoff Noer, and others.
@@ -30,6 +30,7 @@
 #include "gdbthread.h"
 #include "regcache.h"
 #include "inf-child.h"
+#include "filestuff.h"
 
 #if defined (NEW_PROC_API)
 #define _STRUCTURED_PROC 1	/* Should be done by configure script.  */
@@ -111,7 +112,7 @@ static void procfs_attach (struct target_ops *, const char *, int);
 static void procfs_detach (struct target_ops *, const char *, int);
 static void procfs_resume (struct target_ops *,
 			   ptid_t, int, enum gdb_signal);
-static void procfs_stop (struct target_ops *self, ptid_t);
+static void procfs_interrupt (struct target_ops *self, ptid_t);
 static void procfs_files_info (struct target_ops *);
 static void procfs_fetch_registers (struct target_ops *,
 				    struct regcache *, int);
@@ -133,7 +134,7 @@ static target_xfer_partial_ftype procfs_xfer_partial;
 
 static int procfs_thread_alive (struct target_ops *ops, ptid_t);
 
-static void procfs_find_new_threads (struct target_ops *ops);
+static void procfs_update_thread_list (struct target_ops *ops);
 static char *procfs_pid_to_str (struct target_ops *, ptid_t);
 
 static int proc_find_memory_regions (struct target_ops *self,
@@ -143,7 +144,7 @@ static char * procfs_make_note_section (struct target_ops *self,
 					bfd *, int *);
 
 static int procfs_can_use_hw_breakpoint (struct target_ops *self,
-					 int, int, int);
+					 enum bptype, int, int);
 
 static void procfs_info_proc (struct target_ops *, const char *,
 			      enum info_proc_what);
@@ -194,9 +195,9 @@ procfs_target (void)
   t->to_xfer_partial = procfs_xfer_partial;
   t->to_pass_signals = procfs_pass_signals;
   t->to_files_info = procfs_files_info;
-  t->to_stop = procfs_stop;
+  t->to_interrupt = procfs_interrupt;
 
-  t->to_find_new_threads = procfs_find_new_threads;
+  t->to_update_thread_list = procfs_update_thread_list;
   t->to_thread_alive = procfs_thread_alive;
   t->to_pid_to_str = procfs_pid_to_str;
 
@@ -689,7 +690,7 @@ create_procinfo (int pid, int tid)
 						   create it if it
 						   doesn't exist yet?  */
 
-  pi = (procinfo *) xmalloc (sizeof (procinfo));
+  pi = XNEW (procinfo);
   memset (pi, 0, sizeof (procinfo));
   pi->pid = pid;
   pi->tid = tid;
@@ -917,7 +918,7 @@ load_syscalls (procinfo *pi)
       maxcall = syscalls[i].pr_number;
 
   pi->num_syscalls = maxcall+1;
-  pi->syscall_names = xmalloc (pi->num_syscalls * sizeof (char *));
+  pi->syscall_names = XNEWVEC (char *, pi->num_syscalls);
 
   for (i = 0; i < pi->num_syscalls; i++)
     pi->syscall_names[i] = NULL;
@@ -2489,7 +2490,7 @@ proc_get_LDT_entry (procinfo *pi, int key)
   /* Allocate space for one LDT entry.
      This alloc must persist, because we return a pointer to it.  */
   if (ldt_entry == NULL)
-    ldt_entry = (struct ssd *) xmalloc (sizeof (struct ssd));
+    ldt_entry = XNEW (struct ssd);
 
   /* Open the file descriptor for the LDT table.  */
   sprintf (pathname, "/proc/%d/ldt", pi->pid);
@@ -2730,7 +2731,7 @@ proc_update_threads (procinfo *pi)
   if ((nlwp = proc_get_nthreads (pi)) <= 1)
     return 1;	/* Process is not multi-threaded; nothing to do.  */
 
-  prstatus = xmalloc (sizeof (gdb_prstatus_t) * (nlwp + 1));
+  prstatus = XNEWVEC (gdb_prstatus_t, nlwp + 1);
 
   old_chain = make_cleanup (xfree, prstatus);
   if (ioctl (pi->ctl_fd, PIOCLSTATUS, prstatus) < 0)
@@ -2824,7 +2825,7 @@ proc_update_threads (procinfo *pi)
   if (nthreads < 2)
     return 0;		/* Nothing to do for 1 or fewer threads.  */
 
-  threads = xmalloc (nthreads * sizeof (tid_t));
+  threads = XNEWVEC (tid_t, nthreads);
 
   if (ioctl (pi->ctl_fd, PIOCTLIST, threads) < 0)
     proc_error (pi, "procfs: update_threads (PIOCTLIST)", __LINE__);
@@ -2917,16 +2918,9 @@ procfs_debug_inferior (procinfo *pi)
   sysset_t *traced_syscall_exits;
   int status;
 
-#ifdef PROCFS_DONT_TRACE_FAULTS
-  /* On some systems (OSF), we don't trace hardware faults.
-     Apparently it's enough that we catch them as signals.
-     Wonder why we don't just do that in general?  */
-  premptyset (&traced_faults);		/* don't trace faults.  */
-#else
   /* Register to trace hardware faults in the child.  */
   prfillset (&traced_faults);		/* trace all faults...  */
   gdb_prdelset  (&traced_faults, FLTPAGE);	/* except page fault.  */
-#endif
   if (!proc_set_traced_faults  (pi, &traced_faults))
     return __LINE__;
 
@@ -4211,7 +4205,7 @@ procfs_files_info (struct target_ops *ignore)
    kill(SIGINT) to the child's process group.  */
 
 static void
-procfs_stop (struct target_ops *self, ptid_t ptid)
+procfs_interrupt (struct target_ops *self, ptid_t ptid)
 {
   kill (-inferior_process_group (), SIGINT);
 }
@@ -4227,16 +4221,6 @@ unconditionally_kill_inferior (procinfo *pi)
   int parent_pid;
 
   parent_pid = proc_parent_pid (pi);
-#ifdef PROCFS_NEED_CLEAR_CURSIG_FOR_KILL
-  /* FIXME: use access functions.  */
-  /* Alpha OSF/1-3.x procfs needs a clear of the current signal
-     before the PIOCKILL, otherwise it might generate a corrupted core
-     file for the inferior.  */
-  if (ioctl (pi->ctl_fd, PIOCSSIG, NULL) < 0)
-    {
-      printf_filtered ("unconditionally_kill: SSIG failed!\n");
-    }
-#endif
 #ifdef PROCFS_NEED_PIOCSSIG_FOR_KILL
   /* Alpha OSF/1-2.x procfs needs a PIOCSSIG call with a SIGKILL signal
      to kill the inferior, otherwise it might remain stopped with a
@@ -4646,7 +4630,7 @@ procfs_inferior_created (struct target_ops *ops, int from_tty)
 #endif
 }
 
-/* Callback for find_new_threads.  Calls "add_thread".  */
+/* Callback for update_thread_list.  Calls "add_thread".  */
 
 static int
 procfs_notice_thread (procinfo *pi, procinfo *thread, void *ptr)
@@ -4663,9 +4647,11 @@ procfs_notice_thread (procinfo *pi, procinfo *thread, void *ptr)
    back to GDB to add to its list.  */
 
 static void
-procfs_find_new_threads (struct target_ops *ops)
+procfs_update_thread_list (struct target_ops *ops)
 {
   procinfo *pi;
+
+  prune_threads ();
 
   /* Find procinfo for main process.  */
   pi = find_procinfo_or_die (ptid_get_pid (inferior_ptid), 0);
@@ -4779,7 +4765,8 @@ procfs_set_watchpoint (ptid_t ptid, CORE_ADDR addr, int len, int rwflag,
 
 static int
 procfs_can_use_hw_breakpoint (struct target_ops *self,
-			      int type, int cnt, int othertype)
+			      enum bptype type,
+			      int cnt, int othertype)
 {
   /* Due to the way that proc_set_watchpoint() is implemented, host
      and target pointers must be of the same size.  If they are not,
@@ -4843,7 +4830,8 @@ procfs_stopped_data_address (struct target_ops *targ, CORE_ADDR *addr)
 
 static int
 procfs_insert_watchpoint (struct target_ops *self,
-			  CORE_ADDR addr, int len, int type,
+			  CORE_ADDR addr, int len,
+			  enum target_hw_bp_type type,
 			  struct expression *cond)
 {
   if (!target_have_steppable_watchpoint
@@ -4866,7 +4854,8 @@ procfs_insert_watchpoint (struct target_ops *self,
 
 static int
 procfs_remove_watchpoint (struct target_ops *self,
-			  CORE_ADDR addr, int len, int type,
+			  CORE_ADDR addr, int len,
+			  enum target_hw_bp_type type,
 			  struct expression *cond)
 {
   return procfs_set_watchpoint (inferior_ptid, addr, 0, 0, 0);

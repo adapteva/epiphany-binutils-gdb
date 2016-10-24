@@ -1,6 +1,6 @@
 /* Declarations for common target functions.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,8 +21,6 @@
 #define TARGET_COMMON_H
 
 #include "target/waitstatus.h"
-#include <stdint.h>
-
 /* This header is a stopgap until more code is shared.  */
 
 /* Read LEN bytes of target memory at address MEMADDR, placing the

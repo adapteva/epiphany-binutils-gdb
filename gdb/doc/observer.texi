@@ -2,7 +2,7 @@
 
 @c This file is part of the GDB manual.
 @c
-@c Copyright (C) 2003-2014 Free Software Foundation, Inc.
+@c Copyright (C) 2003-2016 Free Software Foundation, Inc.
 @c
 @c See the file gdbint.texinfo for copying conditions.
 @c
@@ -141,11 +141,16 @@ at the entry-point instruction.  For @samp{attach} and @samp{core},
 inferior, and before any information on the inferior has been printed.
 @end deftypefun
 
-@deftypefun void record_changed (struct inferior *@var{inferior}, int @var{started})
+@deftypefun void record_changed (struct inferior *@var{inferior}, int @var{started}, const char *@var{method}, const char *@var{format})
 The status of process record for inferior @var{inferior} in
 @value{GDBN} has changed.  The process record is started if
 @var{started} is true, and the process record is stopped if
 @var{started} is false.
+
+When @var{started} is true, @var{method} indicates the short name of the method
+used for recording.  If the method supports multiple formats, @var{format}
+indicates which one is being used, otherwise it is NULL.  When @var{started} is
+false, they are both NULL.
 @end deftypefun
 
 @deftypefun void solib_loaded (struct so_list *@var{solib})
@@ -279,6 +284,22 @@ The trace state variable @var{tsv} is deleted.  If @var{tsv} is
 
 @deftypefun void tsv_modified (const struct trace_state_variable *@var{tsv})
 The trace state value @var{tsv} is modified.
+@end deftypefun
+
+@deftypefun void inferior_call_pre (ptid_t @var{thread}, CORE_ADDR @var{address})
+An inferior function at @var{address} is about to be called in thread
+@var{thread}.
+@end deftypefun
+
+@deftypefun void inferior_call_post (ptid_t @var{thread}, CORE_ADDR @var{address})
+The inferior function at @var{address} has just been called.  This observer
+is called even if the inferior exits during the call.  @var{thread} is the
+thread in which the function was called, which may be different from the
+current thread.
+@end deftypefun
+
+@deftypefun void register_changed (struct frame_info *@var{frame}, int @var{regnum})
+A register in the inferior has been modified by the @value{GDBN} user.
 @end deftypefun
 
 @deftypefun void test_notification (int @var{somearg})

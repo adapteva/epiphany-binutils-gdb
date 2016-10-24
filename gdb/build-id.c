@@ -1,6 +1,6 @@
 /* build-id-related functions.
 
-   Copyright (C) 1991-2014 Free Software Foundation, Inc.
+   Copyright (C) 1991-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,8 +25,9 @@
 #include "symfile.h"
 #include "objfiles.h"
 #include "filenames.h"
+#include "gdbcore.h"
 
-/* Locate NT_GNU_BUILD_ID from ABFD and return its content.  */
+/* See build-id.h.  */
 
 const struct bfd_build_id *
 build_id_bfd_get (bfd *abfd)
@@ -74,10 +75,13 @@ build_id_to_debug_bfd (size_t build_id_len, const bfd_byte *build_id)
   struct cleanup *back_to;
   int ix;
   bfd *abfd = NULL;
+  int alloc_len;
 
   /* DEBUG_FILE_DIRECTORY/.build-id/ab/cdef */
-  link = alloca (strlen (debug_file_directory) + (sizeof "/.build-id/" - 1) + 1
-		 + 2 * build_id_len + (sizeof ".debug" - 1) + 1);
+  alloc_len = (strlen (debug_file_directory)
+	       + (sizeof "/.build-id/" - 1) + 1
+	       + 2 * build_id_len + (sizeof ".debug" - 1) + 1);
+  link = (char *) alloca (alloc_len);
 
   /* Keep backward compatibility so that DEBUG_FILE_DIRECTORY being "" will
      cause "/.build-id/..." lookups.  */
@@ -92,6 +96,7 @@ build_id_to_debug_bfd (size_t build_id_len, const bfd_byte *build_id)
       size_t size = build_id_len;
       char *s;
       char *filename = NULL;
+      struct cleanup *inner;
 
       memcpy (link, debugdir, debugdir_len);
       s = &link[debugdir_len];
@@ -115,7 +120,10 @@ build_id_to_debug_bfd (size_t build_id_len, const bfd_byte *build_id)
 	continue;
 
       /* We expect to be silent on the non-existing files.  */
-      abfd = gdb_bfd_open_maybe_remote (filename);
+      inner = make_cleanup (xfree, filename);
+      abfd = gdb_bfd_open (filename, gnutarget, -1);
+      do_cleanups (inner);
+
       if (abfd == NULL)
 	continue;
 

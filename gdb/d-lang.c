@@ -1,6 +1,6 @@
 /* D language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 2005-2014 Free Software Foundation, Inc.
+   Copyright (C) 2005-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,8 +23,8 @@
 #include "varobj.h"
 #include "d-lang.h"
 #include "c-lang.h"
-#include "parser-defs.h"
-#include "gdb_obstack.h"
+#include "demangle.h"
+#include "cp-support.h"
 
 /* The name of the symbol to use to get the name of the main subprogram.  */
 static const char D_MAIN[] = "D main";
@@ -52,37 +52,16 @@ d_main_name (void)
 char *
 d_demangle (const char *symbol, int options)
 {
-  struct obstack tempbuf;
-  char *result;
+  return gdb_demangle (symbol, options | DMGL_DLANG);
+}
 
-  if ((symbol == NULL) || (*symbol == '\0'))
-    return NULL;
-  else if (strcmp (symbol, "_Dmain") == 0)
-    return xstrdup ("D main");
+/* la_sniff_from_mangled_name implementation for D.  */
 
-  obstack_init (&tempbuf);
-
-  if (strncmp (symbol, "_D", 2) == 0)
-    symbol += 2;
-  else
-    {
-      obstack_free (&tempbuf, NULL);
-      return NULL;
-    }
-
-  if (d_parse_symbol (&tempbuf, symbol) != NULL)
-    {
-      obstack_grow_str0 (&tempbuf, "");
-      result = xstrdup (obstack_finish (&tempbuf));
-      obstack_free (&tempbuf, NULL);
-    }
-  else
-    {
-      obstack_free (&tempbuf, NULL);
-      return NULL;
-    }
-
-  return result;
+static int
+d_sniff_from_mangled_name (const char *mangled, char **demangled)
+{
+  *demangled = d_demangle (mangled, 0);
+  return *demangled != NULL;
 }
 
 /* Table mapping opcodes into strings for printing operators
@@ -120,7 +99,7 @@ static const struct op_print d_op_print_tab[] =
   {"sizeof ", UNOP_SIZEOF, PREC_PREFIX, 0},
   {"++", UNOP_PREINCREMENT, PREC_PREFIX, 0},
   {"--", UNOP_PREDECREMENT, PREC_PREFIX, 0},
-  {NULL, 0, 0, 0}
+  {NULL, OP_NULL, PREC_PREFIX, 0}
 };
 
 /* Mapping of all D basic data types into the language vector.  */
@@ -220,6 +199,11 @@ d_language_arch_info (struct gdbarch *gdbarch,
   lai->bool_type_default = builtin->builtin_bool;
 }
 
+static const char *d_extensions[] =
+{
+  ".d", NULL
+};
+
 static const struct language_defn d_language_defn =
 {
   "d",
@@ -229,9 +213,10 @@ static const struct language_defn d_language_defn =
   case_sensitive_on,
   array_row_major,
   macro_expansion_no,
+  d_extensions,
   &exp_descriptor_c,
   d_parse,
-  d_error,
+  d_yyerror,
   null_post_parser,
   c_printchar,			/* Print a character constant.  */
   c_printstr,			/* Function to print string constant.  */
@@ -244,9 +229,10 @@ static const struct language_defn d_language_defn =
   default_read_var_value,	/* la_read_var_value */
   NULL,				/* Language specific skip_trampoline.  */
   "this",
-  basic_lookup_symbol_nonlocal, 
+  d_lookup_symbol_nonlocal,
   basic_lookup_transparent_type,
   d_demangle,			/* Language specific symbol demangler.  */
+  d_sniff_from_mangled_name,
   NULL,				/* Language specific
 				   class_name_from_physname.  */
   d_op_print_tab,		/* Expression operators for printing.  */
@@ -261,6 +247,8 @@ static const struct language_defn d_language_defn =
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
   &default_varobj_ops,
+  NULL,
+  NULL,
   LANG_MAGIC
 };
 
@@ -350,7 +338,7 @@ static struct gdbarch_data *d_type_data;
 const struct builtin_d_type *
 builtin_d_type (struct gdbarch *gdbarch)
 {
-  return gdbarch_data (gdbarch, d_type_data);
+  return (const struct builtin_d_type *) gdbarch_data (gdbarch, d_type_data);
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */

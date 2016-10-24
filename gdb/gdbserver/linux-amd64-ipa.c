@@ -1,7 +1,7 @@
 /* GNU/Linux/x86-64 specific low level interface, for the in-process
    agent library for GDB.
 
-   Copyright (C) 2010-2014 Free Software Foundation, Inc.
+   Copyright (C) 2010-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,7 +19,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "server.h"
+#include <sys/mman.h>
 #include "tracepoint.h"
+#include "linux-x86-tdesc.h"
 
 /* Defined in auto-generated file amd64-linux.c.  */
 void init_registers_amd64_linux (void);
@@ -68,8 +70,8 @@ supply_fast_tracepoint_registers (struct regcache *regcache,
 		     ((char *) buf) + x86_64_ft_collect_regmap[i]);
 }
 
-ULONGEST __attribute__ ((visibility("default"), used))
-gdb_agent_get_raw_reg (const unsigned char *raw_regs, int regnum)
+ULONGEST
+get_raw_reg (const unsigned char *raw_regs, int regnum)
 {
   if (regnum >= X86_64_NUM_FT_COLLECT_GREGS)
     return 0;
@@ -166,9 +168,54 @@ supply_static_tracepoint_registers (struct regcache *regcache,
 
 #endif /* HAVE_UST */
 
+/* Return target_desc to use for IPA, given the tdesc index passed by
+   gdbserver.  */
+
+const struct target_desc *
+get_ipa_tdesc (int idx)
+{
+  switch (idx)
+    {
+    case X86_TDESC_SSE:
+      return tdesc_amd64_linux;
+    case X86_TDESC_AVX:
+      return tdesc_amd64_avx_linux;
+    case X86_TDESC_MPX:
+      return tdesc_amd64_mpx_linux;
+    case X86_TDESC_AVX_MPX:
+      return tdesc_amd64_avx_mpx_linux;
+    case X86_TDESC_AVX512:
+      return tdesc_amd64_avx512_linux;
+    default:
+      internal_error (__FILE__, __LINE__,
+		      "unknown ipa tdesc index: %d", idx);
+      return tdesc_amd64_linux;
+    }
+}
+
+/* Allocate buffer for the jump pads.  Since we're using 32-bit jumps
+   to reach them, and the executable is at low addresses, MAP_32BIT
+   works just fine.  Shared libraries, being allocated at the top,
+   are unfortunately out of luck.  */
+
+void *
+alloc_jump_pad_buffer (size_t size)
+{
+  void *res = mmap (NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+		    MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+
+  if (res == MAP_FAILED)
+    return NULL;
+
+  return res;
+}
+
 void
 initialize_low_tracepoint (void)
 {
   init_registers_amd64_linux ();
-  ipa_tdesc = tdesc_amd64_linux;
+  init_registers_amd64_avx_linux ();
+  init_registers_amd64_avx_mpx_linux ();
+  init_registers_amd64_mpx_linux ();
+  init_registers_amd64_avx512_linux ();
 }

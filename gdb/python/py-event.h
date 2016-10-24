@@ -1,6 +1,6 @@
 /* Python interface to inferior events.
 
-   Copyright (C) 2009-2014 Free Software Foundation, Inc.
+   Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -41,12 +41,11 @@
     python.
   DOC Python documentation for the new event type
   BASE the base event for this event usually just event_object_type.
-  QUAL qualification for the create event usually 'static'
 */
 
-#define GDBPY_NEW_EVENT_TYPE(name, py_path, py_name, doc, base, qual) \
+#define GDBPY_NEW_EVENT_TYPE(name, py_path, py_name, doc, base) \
 \
-    qual PyTypeObject name##_event_object_type \
+  PyTypeObject name##_event_object_type		    \
         CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object") \
     = { \
       PyVarObject_HEAD_INIT (NULL, 0)				\
@@ -105,6 +104,22 @@ typedef struct
 extern int emit_continue_event (ptid_t ptid);
 extern int emit_exited_event (const LONGEST *exit_code, struct inferior *inf);
 
+/* For inferior function call events, discriminate whether event is
+   before or after the call. */
+
+typedef enum
+{
+  /* Before the call */
+  INFERIOR_CALL_PRE,
+  /* after the call */
+  INFERIOR_CALL_POST,
+} inferior_call_kind;
+
+extern int emit_inferior_call_event (inferior_call_kind kind,
+				     ptid_t thread, CORE_ADDR addr);
+extern int emit_register_changed_event (struct frame_info *frame,
+				        int regnum);
+extern int emit_memory_changed_event (CORE_ADDR addr, ssize_t len);
 extern int evpy_emit_event (PyObject *event,
                             eventregistry_object *registry)
   CPYCHECKER_STEALS_REFERENCE_TO_ARG (1);
@@ -112,6 +127,7 @@ extern int evpy_emit_event (PyObject *event,
 extern PyObject *create_event_object (PyTypeObject *py_type);
 extern PyObject *create_thread_event_object (PyTypeObject *py_type);
 extern int emit_new_objfile_event (struct objfile *objfile);
+extern int emit_clear_objfiles_event (void);
 
 extern void evpy_dealloc (PyObject *self);
 extern int evpy_add_attribute (PyObject *event,

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2010-2014 Free Software Foundation, Inc.
+   Copyright 2010-2016 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -130,6 +130,9 @@ adjust_function_address (uintptr_t func_addr)
   /* Although Thumb functions are two-byte aligned, function
      pointers have the Thumb bit set.  Clear it.  */
   return func_addr & ~1;
+#elif defined __powerpc64__ && _CALL_ELF != 2
+  /* Get function address from function descriptor.  */
+  return *(uintptr_t *) func_addr;
 #else
   return func_addr;
 #endif

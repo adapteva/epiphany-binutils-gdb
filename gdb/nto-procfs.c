@@ -1,7 +1,7 @@
 /* Machine independent support for QNX Neutrino /proc (process file system)
    for GDB.  Written by Colin Burgess at QNX Software Systems Limited.
 
-   Copyright (C) 2003-2014 Free Software Foundation, Inc.
+   Copyright (C) 2003-2016 Free Software Foundation, Inc.
 
    Contributed by QNX Software Systems Ltd.
 
@@ -30,6 +30,8 @@
 #include <sys/syspage.h>
 #include <dirent.h>
 #include <sys/netmgr.h>
+#include <sys/auxv.h>
+
 #include "gdbcore.h"
 #include "inferior.h"
 #include "target.h"
@@ -40,6 +42,7 @@
 #include "regcache.h"
 #include "solib.h"
 #include "inf-child.h"
+#include "common/filestuff.h"
 
 #define NULL_PID		0
 #define _DEBUG_FLAG_TRACE	(_DEBUG_FLAG_TRACE_EXEC|_DEBUG_FLAG_TRACE_RD|\
@@ -47,21 +50,23 @@
 
 int ctl_fd;
 
-static void (*ofunc) ();
+static sighandler_t ofunc;
 
 static procfs_run run;
 
 static ptid_t do_attach (ptid_t ptid);
 
 static int procfs_can_use_hw_breakpoint (struct target_ops *self,
-					 int, int, int);
+					 enum bptype, int, int);
 
 static int procfs_insert_hw_watchpoint (struct target_ops *self,
-					CORE_ADDR addr, int len, int type,
+					CORE_ADDR addr, int len,
+					enum target_hw_bp_type type,
 					struct expression *cond);
 
 static int procfs_remove_hw_watchpoint (struct target_ops *self,
-					CORE_ADDR addr, int len, int type,
+					CORE_ADDR addr, int len,
+					enum target_hw_bp_type type,
 					struct expression *cond);
 
 static int procfs_stopped_by_watchpoint (struct target_ops *ops);
@@ -70,7 +75,7 @@ static int procfs_stopped_by_watchpoint (struct target_ops *ops);
    referenced elsewhere.  'nto_procfs_node' is a flag used to say
    whether we are local, or we should get the current node descriptor
    for the remote QNX node.  */
-static char nto_procfs_path[PATH_MAX] = { "/proc" };
+static char *nodestr;
 static unsigned nto_procfs_node = ND_LOCAL_NODE;
 
 /* Return the current QNX Node, or error out.  This is a simple
@@ -82,10 +87,11 @@ nto_node (void)
 {
   unsigned node;
 
-  if (ND_NODE_CMP (nto_procfs_node, ND_LOCAL_NODE) == 0)
+  if (ND_NODE_CMP (nto_procfs_node, ND_LOCAL_NODE) == 0
+      || nodestr == NULL)
     return ND_LOCAL_NODE;
 
-  node = netmgr_strtond (nto_procfs_path, 0);
+  node = netmgr_strtond (nodestr, 0);
   if (node == -1)
     error (_("Lost the QNX node.  Debug session probably over."));
 
@@ -105,12 +111,12 @@ procfs_is_nto_target (bfd *abfd)
 static void
 procfs_open_1 (struct target_ops *ops, const char *arg, int from_tty)
 {
-  char *nodestr;
   char *endstr;
   char buffer[50];
   int fd, total_size;
   procfs_sysinfo *sysinfo;
   struct cleanup *cleanups;
+  char nto_procfs_path[PATH_MAX];
 
   /* Offer to kill previous inferiors before opening this target.  */
   target_preopen (from_tty);
@@ -120,8 +126,11 @@ procfs_open_1 (struct target_ops *ops, const char *arg, int from_tty)
   /* Set the default node used for spawning to this one,
      and only override it if there is a valid arg.  */
 
+  xfree (nodestr);
+  nodestr = NULL;
+
   nto_procfs_node = ND_LOCAL_NODE;
-  nodestr = arg ? xstrdup (arg) : arg;
+  nodestr = (arg != NULL) ? xstrdup (arg) : NULL;
 
   init_thread_list ();
 
@@ -146,10 +155,8 @@ procfs_open_1 (struct target_ops *ops, const char *arg, int from_tty)
 	    *endstr = 0;
 	}
     }
-  snprintf (nto_procfs_path, PATH_MAX - 1, "%s%s", nodestr ? nodestr : "",
-	    "/proc");
-  if (nodestr)
-    xfree (nodestr);
+  snprintf (nto_procfs_path, PATH_MAX - 1, "%s%s",
+	    (nodestr != NULL) ? nodestr : "", "/proc");
 
   fd = open (nto_procfs_path, O_RDONLY);
   if (fd == -1)
@@ -171,7 +178,7 @@ procfs_open_1 (struct target_ops *ops, const char *arg, int from_tty)
     {
       total_size = sysinfo->total_size;
       sysinfo = alloca (total_size);
-      if (!sysinfo)
+      if (sysinfo == NULL)
 	{
 	  printf_filtered ("Memory error: %d (%s)\n", errno,
 			   safe_strerror (errno));
@@ -247,24 +254,24 @@ update_thread_private_data_name (struct thread_info *new_thread,
   gdb_assert (newname != NULL);
   gdb_assert (new_thread != NULL);
   newnamelen = strlen (newname);
-  if (!new_thread->private)
+  if (!new_thread->priv)
     {
-      new_thread->private = xmalloc (offsetof (struct private_thread_info,
+      new_thread->priv = xmalloc (offsetof (struct private_thread_info,
 					       name)
 				     + newnamelen + 1);
-      memcpy (new_thread->private->name, newname, newnamelen + 1);
+      memcpy (new_thread->priv->name, newname, newnamelen + 1);
     }
-  else if (strcmp (newname, new_thread->private->name) != 0)
+  else if (strcmp (newname, new_thread->priv->name) != 0)
     {
       /* Reallocate if neccessary.  */
-      int oldnamelen = strlen (new_thread->private->name);
+      int oldnamelen = strlen (new_thread->priv->name);
 
       if (oldnamelen < newnamelen)
-	new_thread->private = xrealloc (new_thread->private,
+	new_thread->priv = xrealloc (new_thread->priv,
 					offsetof (struct private_thread_info,
 						  name)
 					+ newnamelen + 1);
-      memcpy (new_thread->private->name, newname, newnamelen + 1);
+      memcpy (new_thread->priv->name, newname, newnamelen + 1);
     }
 }
 
@@ -299,7 +306,7 @@ update_thread_private_data (struct thread_info *new_thread,
 
   update_thread_private_data_name (new_thread, tn->name_buf);
 
-  pti = (struct private_thread_info *) new_thread->private;
+  pti = (struct private_thread_info *) new_thread->priv;
   pti->tid = tid;
   pti->state = state;
   pti->flags = flags;
@@ -307,7 +314,7 @@ update_thread_private_data (struct thread_info *new_thread,
 }
 
 static void
-procfs_find_new_threads (struct target_ops *ops)
+procfs_update_thread_list (struct target_ops *ops)
 {
   procfs_status status;
   pid_t pid;
@@ -317,6 +324,8 @@ procfs_find_new_threads (struct target_ops *ops)
 
   if (ctl_fd == -1)
     return;
+
+  prune_threads ();
 
   pid = ptid_get_pid (inferior_ptid);
 
@@ -349,12 +358,12 @@ do_closedir_cleanup (void *dir)
   closedir (dir);
 }
 
-void
+static void
 procfs_pidlist (char *args, int from_tty)
 {
   DIR *dp = NULL;
   struct dirent *dirp = NULL;
-  char buf[512];
+  char buf[PATH_MAX];
   procfs_info *pidinfo = NULL;
   procfs_debuginfo *info = NULL;
   procfs_status *status = NULL;
@@ -362,12 +371,16 @@ procfs_pidlist (char *args, int from_tty)
   pid_t pid;
   char name[512];
   struct cleanup *cleanups;
+  char procfs_dir[PATH_MAX];
 
-  dp = opendir (nto_procfs_path);
+  snprintf (procfs_dir, sizeof (procfs_dir), "%s%s",
+	    (nodestr != NULL) ? nodestr : "", "/proc");
+
+  dp = opendir (procfs_dir);
   if (dp == NULL)
     {
       fprintf_unfiltered (gdb_stderr, "failed to opendir \"%s\" - %d (%s)",
-			  nto_procfs_path, errno, safe_strerror (errno));
+			  procfs_dir, errno, safe_strerror (errno));
       return;
     }
 
@@ -390,7 +403,9 @@ procfs_pidlist (char *args, int from_tty)
 	      do_cleanups (cleanups);
 	      return;
 	    }
-	  snprintf (buf, 511, "%s/%s/as", nto_procfs_path, dirp->d_name);
+	  snprintf (buf, sizeof (buf), "%s%s/%s/as",
+		    (nodestr != NULL) ? nodestr : "",
+		    "/proc", dirp->d_name);
 	  pid = atoi (dirp->d_name);
 	}
       while (pid == 0);
@@ -401,8 +416,7 @@ procfs_pidlist (char *args, int from_tty)
 	{
 	  fprintf_unfiltered (gdb_stderr, "failed to open %s - %d (%s)\n",
 			      buf, errno, safe_strerror (errno));
-	  do_cleanups (cleanups);
-	  return;
+	  continue;
 	}
       inner_cleanup = make_cleanup_close (fd);
 
@@ -426,11 +440,16 @@ procfs_pidlist (char *args, int from_tty)
       status = (procfs_status *) buf;
       for (status->tid = 1; status->tid <= num_threads; status->tid++)
 	{
-	  if (devctl (fd, DCMD_PROC_TIDSTATUS, status, sizeof (buf), 0) != EOK
-	      && status->tid != 0)
-	    break;
-	  if (status->tid != 0)
-	    printf_filtered ("%s - %d/%d\n", name, pid, status->tid);
+	  const int err
+	    = devctl (fd, DCMD_PROC_TIDSTATUS, status, sizeof (buf), 0);
+	  printf_filtered ("%s - %d", name, pid);
+	  if (err == EOK && status->tid != 0)
+	    printf_filtered ("/%d\n", status->tid);
+	  else
+	    {
+	      printf_filtered ("\n");
+	      break;
+	    }
 	}
 
       do_cleanups (inner_cleanup);
@@ -441,7 +460,7 @@ procfs_pidlist (char *args, int from_tty)
   return;
 }
 
-void
+static void
 procfs_meminfo (char *args, int from_tty)
 {
   procfs_mapinfo *mapinfos = NULL;
@@ -482,7 +501,7 @@ procfs_meminfo (char *args, int from_tty)
       return;
     }
 
-  mapinfos = xmalloc (num * sizeof (procfs_mapinfo));
+  mapinfos = XNEWVEC (procfs_mapinfo, num);
 
   num_mapinfos = num;
   mapinfo_p = mapinfos;
@@ -594,7 +613,35 @@ procfs_files_info (struct target_ops *ignore)
 
   printf_unfiltered ("\tUsing the running image of %s %s via %s.\n",
 		     inf->attach_flag ? "attached" : "child",
-		     target_pid_to_str (inferior_ptid), nto_procfs_path);
+		     target_pid_to_str (inferior_ptid),
+		     (nodestr != NULL) ? nodestr : "local node");
+}
+
+/* Target to_pid_to_exec_file implementation.  */
+
+static char *
+procfs_pid_to_exec_file (struct target_ops *ops, const int pid)
+{
+  int proc_fd;
+  static char proc_path[PATH_MAX];
+  ssize_t rd;
+
+  /* Read exe file name.  */
+  snprintf (proc_path, sizeof (proc_path), "%s/proc/%d/exefile",
+	    (nodestr != NULL) ? nodestr : "", pid);
+  proc_fd = open (proc_path, O_RDONLY);
+  if (proc_fd == -1)
+    return NULL;
+
+  rd = read (proc_fd, proc_path, sizeof (proc_path) - 1);
+  close (proc_fd);
+  if (rd <= 0)
+    {
+      proc_path[0] = '\0';
+      return NULL;
+    }
+  proc_path[rd] = '\0';
+  return proc_path;
 }
 
 /* Attach to process PID, then initialize for debugging it.  */
@@ -631,7 +678,7 @@ procfs_attach (struct target_ops *ops, const char *args, int from_tty)
   if (!target_is_pushed (ops))
     push_target (ops);
 
-  procfs_find_new_threads (ops);
+  procfs_update_thread_list (ops);
 }
 
 static void
@@ -648,8 +695,8 @@ do_attach (ptid_t ptid)
   struct sigevent event;
   char path[PATH_MAX];
 
-  snprintf (path, PATH_MAX - 1, "%s/%d/as", nto_procfs_path,
-	    ptid_get_pid (ptid));
+  snprintf (path, PATH_MAX - 1, "%s%s/%d/as",
+	    (nodestr != NULL) ? nodestr : "", "/proc", ptid_get_pid (ptid));
   ctl_fd = open (path, O_RDWR);
   if (ctl_fd == -1)
     error (_("Couldn't open proc file %s, error %d (%s)"), path, errno,
@@ -676,34 +723,30 @@ do_attach (ptid_t ptid)
 static void
 interrupt_query (void)
 {
-  target_terminal_ours ();
-
   if (query (_("Interrupted while waiting for the program.\n\
 Give up (and stop debugging it)? ")))
     {
       target_mourn_inferior ();
       quit ();
     }
-
-  target_terminal_inferior ();
 }
 
 /* The user typed ^C twice.  */
 static void
-nto_interrupt_twice (int signo)
+nto_handle_sigint_twice (int signo)
 {
   signal (signo, ofunc);
   interrupt_query ();
-  signal (signo, nto_interrupt_twice);
+  signal (signo, nto_handle_sigint_twice);
 }
 
 static void
-nto_interrupt (int signo)
+nto_handle_sigint (int signo)
 {
   /* If this doesn't work, try more severe steps.  */
-  signal (signo, nto_interrupt_twice);
+  signal (signo, nto_handle_sigint_twice);
 
-  target_stop (inferior_ptid);
+  target_interrupt (inferior_ptid);
 }
 
 static ptid_t
@@ -731,11 +774,14 @@ procfs_wait (struct target_ops *ops,
   devctl (ctl_fd, DCMD_PROC_STATUS, &status, sizeof (status), 0);
   while (!(status.flags & _DEBUG_FLAG_ISTOP))
     {
-      ofunc = (void (*)()) signal (SIGINT, nto_interrupt);
+      ofunc = signal (SIGINT, nto_handle_sigint);
       sigwaitinfo (&set, &info);
       signal (SIGINT, ofunc);
       devctl (ctl_fd, DCMD_PROC_STATUS, &status, sizeof (status), 0);
     }
+
+  nto_inferior_data (NULL)->stopped_flags = status.flags;
+  nto_inferior_data (NULL)->stopped_pc = status.ip;
 
   if (status.flags & _DEBUG_FLAG_SSTEP)
     {
@@ -867,9 +913,42 @@ procfs_xfer_partial (struct target_ops *ops, enum target_object object,
     {
     case TARGET_OBJECT_MEMORY:
       return procfs_xfer_memory (readbuf, writebuf, offset, len, xfered_len);
+    case TARGET_OBJECT_AUXV:
+      if (readbuf != NULL)
+	{
+	  int err;
+	  CORE_ADDR initial_stack;
+	  debug_process_t procinfo;
+	  /* For 32-bit architecture, size of auxv_t is 8 bytes.  */
+	  const unsigned int sizeof_auxv_t = sizeof (auxv_t);
+	  const unsigned int sizeof_tempbuf = 20 * sizeof_auxv_t;
+	  int tempread;
+	  gdb_byte *const tempbuf = alloca (sizeof_tempbuf);
+
+	  if (tempbuf == NULL)
+	    return TARGET_XFER_E_IO;
+
+	  err = devctl (ctl_fd, DCMD_PROC_INFO, &procinfo,
+		        sizeof procinfo, 0);
+	  if (err != EOK)
+	    return TARGET_XFER_E_IO;
+
+	  initial_stack = procinfo.initial_stack;
+
+	  /* procfs is always 'self-hosted', no byte-order manipulation.  */
+	  tempread = nto_read_auxv_from_initial_stack (initial_stack, tempbuf,
+						       sizeof_tempbuf,
+						       sizeof (auxv_t));
+	  tempread = min (tempread, len) - offset;
+	  memcpy (readbuf, tempbuf + offset, tempread);
+	  *xfered_len = tempread;
+	  return tempread ? TARGET_XFER_OK : TARGET_XFER_EOF;
+	}
+	/* Fallthru */
     default:
       return ops->beneath->to_xfer_partial (ops->beneath, object, annex,
-					    readbuf, writebuf, offset, len);
+					    readbuf, writebuf, offset, len,
+					    xfered_len);
     }
 }
 
@@ -1115,7 +1194,7 @@ procfs_create_inferior (struct target_ops *ops, char *exec_file,
     }
 
   args = xstrdup (allargs);
-  breakup_args (args, exec_file ? &argv[1] : &argv[0]);
+  breakup_args (args, (exec_file != NULL) ? &argv[1] : &argv[0]);
 
   argv = nto_parse_redirection (argv, &in, &out, &err);
 
@@ -1195,7 +1274,7 @@ procfs_create_inferior (struct target_ops *ops, char *exec_file,
     close (fds[2]);
 
   inferior_ptid = do_attach (pid_to_ptid (pid));
-  procfs_find_new_threads (ops);
+  procfs_update_thread_list (ops);
 
   inf = current_inferior ();
   inferior_appeared (inf, pid);
@@ -1219,7 +1298,7 @@ procfs_create_inferior (struct target_ops *ops, char *exec_file,
 }
 
 static void
-procfs_stop (struct target_ops *self, ptid_t ptid)
+procfs_interrupt (struct target_ops *self, ptid_t ptid)
 {
   devctl (ctl_fd, DCMD_PROC_STOP, NULL, 0, 0);
 }
@@ -1263,7 +1342,7 @@ get_regset (int regset, char *buf, int bufsize, int *regsize)
   return dev_set;
 }
 
-void
+static void
 procfs_store_registers (struct target_ops *ops,
 			struct regcache *regcache, int regno)
 {
@@ -1343,13 +1422,6 @@ procfs_pass_signals (struct target_ops *self,
       if (target_signo < numsigs && pass_signals[target_signo])
         sigdelset (&run.trace, signo);
     }
-}
-
-static struct tidinfo *
-procfs_thread_info (pid_t pid, short tid)
-{
-/* NYI */
-  return NULL;
 }
 
 static char *
@@ -1440,11 +1512,12 @@ init_procfs_targets (void)
   t->to_mourn_inferior = procfs_mourn_inferior;
   t->to_pass_signals = procfs_pass_signals;
   t->to_thread_alive = procfs_thread_alive;
-  t->to_find_new_threads = procfs_find_new_threads;
+  t->to_update_thread_list = procfs_update_thread_list;
   t->to_pid_to_str = procfs_pid_to_str;
-  t->to_stop = procfs_stop;
+  t->to_interrupt = procfs_interrupt;
   t->to_have_continuable_watchpoint = 1;
   t->to_extra_thread_info = nto_extra_thread_info;
+  t->to_pid_to_exec_file = procfs_pid_to_exec_file;
 
   nto_native_ops = t;
 
@@ -1463,6 +1536,8 @@ init_procfs_targets (void)
 }
 
 #define OSTYPE_NTO 1
+
+extern initialize_file_ftype _initialize_procfs;
 
 void
 _initialize_procfs (void)
@@ -1492,16 +1567,16 @@ _initialize_procfs (void)
 
 
 static int
-procfs_hw_watchpoint (int addr, int len, int type)
+procfs_hw_watchpoint (int addr, int len, enum target_hw_bp_type type)
 {
   procfs_break brk;
 
   switch (type)
     {
-    case 1:			/* Read.  */
+    case hw_read:
       brk.type = _DEBUG_BREAK_RD;
       break;
-    case 2:			/* Read/Write.  */
+    case hw_access:
       brk.type = _DEBUG_BREAK_RW;
       break;
     default:			/* Modify.  */
@@ -1523,14 +1598,16 @@ procfs_hw_watchpoint (int addr, int len, int type)
 
 static int
 procfs_can_use_hw_breakpoint (struct target_ops *self,
-			      int type, int cnt, int othertype)
+			      enum bptype type,
+			      int cnt, int othertype)
 {
   return 1;
 }
 
 static int
 procfs_remove_hw_watchpoint (struct target_ops *self,
-			     CORE_ADDR addr, int len, int type,
+			     CORE_ADDR addr, int len,
+			     enum target_hw_bp_type type,
 			     struct expression *cond)
 {
   return procfs_hw_watchpoint (addr, -1, type);
@@ -1538,7 +1615,8 @@ procfs_remove_hw_watchpoint (struct target_ops *self,
 
 static int
 procfs_insert_hw_watchpoint (struct target_ops *self,
-			     CORE_ADDR addr, int len, int type,
+			     CORE_ADDR addr, int len,
+			     enum target_hw_bp_type type,
 			     struct expression *cond)
 {
   return procfs_hw_watchpoint (addr, len, type);
@@ -1547,5 +1625,21 @@ procfs_insert_hw_watchpoint (struct target_ops *self,
 static int
 procfs_stopped_by_watchpoint (struct target_ops *ops)
 {
-  return 0;
+  /* NOTE: nto_stopped_by_watchpoint will be called ONLY while we are
+     stopped due to a SIGTRAP.  This assumes gdb works in 'all-stop' mode;
+     future gdb versions will likely run in 'non-stop' mode in which case
+     we will have to store/examine statuses per thread in question.
+     Until then, this will work fine.  */
+
+  struct inferior *inf = current_inferior ();
+  struct nto_inferior_data *inf_data;
+
+  gdb_assert (inf != NULL);
+
+  inf_data = nto_inferior_data (inf);
+
+  return inf_data->stopped_flags
+	 & (_DEBUG_FLAG_TRACE_RD
+	    | _DEBUG_FLAG_TRACE_WR
+	    | _DEBUG_FLAG_TRACE_MODIFY);
 }

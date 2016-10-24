@@ -1,6 +1,6 @@
 /* YACC parser for C++ names, for GDB.
 
-   Copyright (C) 2003-2014 Free Software Foundation, Inc.
+   Copyright (C) 2003-2016 Free Software Foundation, Inc.
 
    Parts of the lexer are based on c-exp.y from GDB.
 
@@ -69,7 +69,7 @@ d_grab (void)
     {
       if (demangle_info->next == NULL)
 	{
-	  more = malloc (sizeof (struct demangle_info));
+	  more = XNEW (struct demangle_info);
 	  more->next = NULL;
 	  demangle_info->next = more;
 	}
@@ -277,9 +277,9 @@ make_name (const char *name, int len)
     const char *opname;
   }
 
-%type <comp> exp exp1 type start start_opt operator colon_name
+%type <comp> exp exp1 type start start_opt oper colon_name
 %type <comp> unqualified_name colon_ext_name
-%type <comp> template template_arg
+%type <comp> templ template_arg
 %type <comp> builtin_type
 %type <comp> typespec_2 array_indicator
 %type <comp> colon_ext_only ext_only_name
@@ -432,14 +432,14 @@ function
 
 demangler_special
 		:	DEMANGLER_SPECIAL start
-			{ $$ = make_empty ($1);
+			{ $$ = make_empty ((enum demangle_component_type) $1);
 			  d_left ($$) = $2;
 			  d_right ($$) = NULL; }
 		|	CONSTRUCTION_VTABLE start CONSTRUCTION_IN start
 			{ $$ = fill_comp (DEMANGLE_COMPONENT_CONSTRUCTION_VTABLE, $2, $4); }
 		;
 
-operator	:	OPERATOR NEW
+oper	:	OPERATOR NEW
 			{
 			  /* Match the whitespacing of cplus_demangle_operators.
 			     It would abort on unrecognized string otherwise.  */
@@ -528,7 +528,7 @@ operator	:	OPERATOR NEW
 		   since it's not clear that it's parseable.  */
 conversion_op
 		:	OPERATOR typespec_2
-			{ $$ = fill_comp (DEMANGLE_COMPONENT_CAST, $2, NULL); }
+			{ $$ = fill_comp (DEMANGLE_COMPONENT_CONVERSION, $2, NULL); }
 		;
 
 conversion_op_name
@@ -554,8 +554,8 @@ conversion_op_name
 
 /* DEMANGLE_COMPONENT_NAME */
 /* This accepts certain invalid placements of '~'.  */
-unqualified_name:	operator
-		|	operator '<' template_params '>'
+unqualified_name:	oper
+		|	oper '<' template_params '>'
 			{ $$ = fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp); }
 		|	'~' NAME
 			{ $$ = make_dtor (gnu_v3_complete_object_dtor, $2); }
@@ -579,9 +579,9 @@ colon_name	:	name
 name		:	nested_name NAME %prec NAME
 			{ $$ = $1.comp; d_right ($1.last) = $2; }
 		|	NAME %prec NAME
-		|	nested_name template %prec NAME
+		|	nested_name templ %prec NAME
 			{ $$ = $1.comp; d_right ($1.last) = $2; }
-		|	template %prec NAME
+		|	templ %prec NAME
 		;
 
 colon_ext_name	:	colon_name
@@ -611,13 +611,13 @@ nested_name	:	NAME COLONCOLON
 			  d_left ($$.last) = $2;
 			  d_right ($$.last) = NULL;
 			}
-		|	template COLONCOLON
+		|	templ COLONCOLON
 			{ $$.comp = make_empty (DEMANGLE_COMPONENT_QUAL_NAME);
 			  d_left ($$.comp) = $1;
 			  d_right ($$.comp) = NULL;
 			  $$.last = $$.comp;
 			}
-		|	nested_name template COLONCOLON
+		|	nested_name templ COLONCOLON
 			{ $$.comp = $1.comp;
 			  d_right ($1.last) = make_empty (DEMANGLE_COMPONENT_QUAL_NAME);
 			  $$.last = d_right ($1.last);
@@ -628,7 +628,7 @@ nested_name	:	NAME COLONCOLON
 
 /* DEMANGLE_COMPONENT_TEMPLATE */
 /* DEMANGLE_COMPONENT_TEMPLATE_ARGLIST */
-template	:	NAME '<' template_params '>'
+templ	:	NAME '<' template_params '>'
 			{ $$ = fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp); }
 		;
 
@@ -1977,7 +1977,7 @@ yyerror (char *msg)
 static struct demangle_info *
 allocate_info (void)
 {
-  struct demangle_info *info = malloc (sizeof (struct demangle_info));
+  struct demangle_info *info = XNEW (struct demangle_info);
 
   info->next = NULL;
   info->used = 0;
@@ -2007,7 +2007,7 @@ cp_new_demangle_parse_info (void)
 {
   struct demangle_parse_info *info;
 
-  info = malloc (sizeof (struct demangle_parse_info));
+  info = XNEW (struct demangle_parse_info);
   info->info = NULL;
   info->tree = NULL;
   obstack_init (&info->obstack);

@@ -1,7 +1,7 @@
 /* libbfd.h -- Declarations used by bfd library *implementation*.
    (This include file is not for users of the library.)
 
-   Copyright (C) 1990-2014 Free Software Foundation, Inc.
+   Copyright (C) 1990-2016 Free Software Foundation, Inc.
 
    Written by Cygnus Support.
 
@@ -23,6 +23,10 @@
    MA 02110-1301, USA.  */
 
 #include "hashtab.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Align an address upward to a boundary, expressed as a number of bytes.
    E.g. align to an 8-byte boundary with argument of 8.  Take care never
@@ -145,6 +149,29 @@ bfd_boolean bfd_slurp_bsd_armap_f2
   (bfd *abfd);
 #define bfd_slurp_bsd_armap bfd_slurp_armap
 #define bfd_slurp_coff_armap bfd_slurp_armap
+bfd_boolean _bfd_archive_64_bit_slurp_armap
+  (bfd *);
+bfd_boolean _bfd_archive_64_bit_write_armap
+  (bfd *, unsigned int, struct orl *, unsigned int, int);
+#define _bfd_archive_64_bit_slurp_extended_name_table \
+  _bfd_slurp_extended_name_table
+#define _bfd_archive_64_bit_construct_extended_name_table \
+  _bfd_archive_coff_construct_extended_name_table
+#define _bfd_archive_64_bit_truncate_arname \
+  bfd_dont_truncate_arname
+#define _bfd_archive_64_bit_read_ar_hdr \
+  _bfd_generic_read_ar_hdr
+#define _bfd_archive_64_bit_write_ar_hdr \
+  _bfd_generic_write_ar_hdr
+#define _bfd_archive_64_bit_openr_next_archived_file \
+  bfd_generic_openr_next_archived_file
+#define _bfd_archive_64_bit_get_elt_at_index \
+  _bfd_generic_get_elt_at_index
+#define _bfd_archive_64_bit_generic_stat_arch_elt \
+  bfd_generic_stat_arch_elt
+#define _bfd_archive_64_bit_update_armap_timestamp \
+  bfd_true
+
 bfd_boolean _bfd_slurp_extended_name_table
   (bfd *abfd);
 extern bfd_boolean _bfd_construct_extended_name_table
@@ -392,6 +419,8 @@ extern bfd_boolean _bfd_vms_lib_ia64_mkarchive (bfd *abfd);
   ((void (*) (bfd *, void *, asymbol *, bfd_print_symbol_type)) bfd_void)
 #define _bfd_nosymbols_get_symbol_info \
   ((void (*) (bfd *, asymbol *, symbol_info *)) bfd_void)
+#define _bfd_nosymbols_get_symbol_version_string \
+  ((const char *(*) (bfd *, asymbol *, bfd_boolean *)) bfd_nullvoidptr)
 #define _bfd_nosymbols_bfd_is_local_label_name \
   ((bfd_boolean (*) (bfd *, const char *)) bfd_false)
 #define _bfd_nosymbols_bfd_is_target_special_symbol \
@@ -493,6 +522,8 @@ extern bfd_boolean _bfd_generic_set_section_contents
 #define _bfd_nolink_bfd_define_common_symbol \
   ((bfd_boolean (*) (bfd *, struct bfd_link_info *, \
 		     struct bfd_link_hash_entry *)) bfd_false)
+#define _bfd_nolink_bfd_link_check_relocs \
+  _bfd_generic_link_check_relocs
 
 /* Routines to use for BFD_JUMP_TABLE_DYNAMIC for targets which do not
    have dynamic symbols or relocs.  Use BFD_JUMP_TABLE_DYNAMIC

@@ -1,5 +1,5 @@
 /* Target definitions for NN-bit ELF
-   Copyright (C) 1993-2014 Free Software Foundation, Inc.
+   Copyright (C) 1993-2016 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -66,6 +66,10 @@
 #ifndef bfd_elfNN_get_symbol_info
 #define bfd_elfNN_get_symbol_info	_bfd_elf_get_symbol_info
 #endif
+#ifndef bfd_elfNN_get_symbol_version_string
+#define bfd_elfNN_get_symbol_version_string \
+  _bfd_elf_get_symbol_version_string
+#endif
 #define bfd_elfNN_canonicalize_symtab	_bfd_elf_canonicalize_symtab
 #define bfd_elfNN_get_symtab_upper_bound _bfd_elf_get_symtab_upper_bound
 #define bfd_elfNN_make_empty_symbol	_bfd_elf_make_empty_symbol
@@ -113,8 +117,14 @@
 #ifndef elf_backend_caches_rawsize
 #define elf_backend_caches_rawsize 0
 #endif
+#ifndef elf_backend_extern_protected_data
+#define elf_backend_extern_protected_data 0
+#endif
 #ifndef elf_backend_stack_align
 #define elf_backend_stack_align 16
+#endif
+#ifndef elf_backend_strtab_flags
+#define elf_backend_strtab_flags 0
 #endif
 
 #define bfd_elfNN_bfd_debug_info_start	bfd_void
@@ -240,6 +250,10 @@
 #ifndef bfd_elfNN_bfd_link_hash_table_create
 #define bfd_elfNN_bfd_link_hash_table_create _bfd_elf_link_hash_table_create
 #endif
+#ifndef bfd_elfNN_bfd_copy_link_hash_symbol_type
+#define bfd_elfNN_bfd_copy_link_hash_symbol_type \
+  _bfd_elf_copy_link_hash_symbol_type
+#endif
 #ifndef bfd_elfNN_bfd_link_add_symbols
 #define bfd_elfNN_bfd_link_add_symbols	bfd_elf_link_add_symbols
 #endif
@@ -256,6 +270,10 @@
 #define bfd_elfNN_bfd_link_hash_table_create \
   _bfd_generic_link_hash_table_create
 #endif
+#ifndef bfd_elfNN_bfd_copy_link_hash_symbol_type
+#define bfd_elfNN_bfd_copy_link_hash_symbol_type \
+  _bfd_generic_copy_link_hash_symbol_type
+#endif
 #ifndef bfd_elfNN_bfd_link_add_symbols
 #define bfd_elfNN_bfd_link_add_symbols	_bfd_generic_link_add_symbols
 #endif
@@ -268,13 +286,12 @@
 #define bfd_elfNN_bfd_link_just_syms	_bfd_elf_link_just_syms
 #endif
 
-#ifndef bfd_elfNN_bfd_copy_link_hash_symbol_type
-#define bfd_elfNN_bfd_copy_link_hash_symbol_type \
-  _bfd_elf_copy_link_hash_symbol_type
-#endif
-
 #ifndef bfd_elfNN_bfd_link_split_section
 #define bfd_elfNN_bfd_link_split_section _bfd_generic_link_split_section
+#endif
+
+#ifndef bfd_elfNN_bfd_link_check_relocs
+#define bfd_elfNN_bfd_link_check_relocs  _bfd_elf_link_check_relocs
 #endif
 
 #ifndef bfd_elfNN_archive_p
@@ -531,6 +548,9 @@
 #ifndef elf_backend_count_relocs
 #define elf_backend_count_relocs		NULL
 #endif
+#ifndef elf_backend_count_additional_relocs
+#define elf_backend_count_additional_relocs	NULL
+#endif
 #ifndef elf_backend_sort_relocs_p
 #define elf_backend_sort_relocs_p		NULL
 #endif
@@ -665,6 +685,22 @@
 #define elf_backend_maybe_function_sym _bfd_elf_maybe_function_sym
 #endif
 
+#ifndef elf_backend_get_reloc_section
+#define elf_backend_get_reloc_section _bfd_elf_get_reloc_section
+#endif
+
+#ifndef elf_backend_copy_special_section_fields
+#define elf_backend_copy_special_section_fields NULL
+#endif
+
+#ifndef elf_backend_compact_eh_encoding
+#define elf_backend_compact_eh_encoding NULL
+#endif
+
+#ifndef elf_backend_cant_unwind_opcode
+#define elf_backend_cant_unwind_opcode 0
+#endif
+
 #ifndef elf_match_priority
 #define elf_match_priority \
   (ELF_ARCH == bfd_arch_unknown ? 2 : ELF_OSABI == ELFOSABI_NONE ? 1 : 0)
@@ -736,6 +772,7 @@ static struct elf_backend_data elfNN_bed =
   elf_backend_ignore_undef_symbol,
   elf_backend_emit_relocs,
   elf_backend_count_relocs,
+  elf_backend_count_additional_relocs,
   elf_backend_sort_relocs_p,
   elf_backend_grok_prstatus,
   elf_backend_grok_psinfo,
@@ -762,6 +799,8 @@ static struct elf_backend_data elfNN_bed =
   elf_backend_hash_symbol,
   elf_backend_is_function_type,
   elf_backend_maybe_function_sym,
+  elf_backend_get_reloc_section,
+  elf_backend_copy_special_section_fields,
   elf_backend_link_order_error_handler,
   elf_backend_relplt_name,
   ELF_MACHINE_ALT1,
@@ -776,8 +815,11 @@ static struct elf_backend_data elfNN_bed =
   elf_backend_obj_attrs_section_type,
   elf_backend_obj_attrs_order,
   elf_backend_obj_attrs_handle_unknown,
+  elf_backend_compact_eh_encoding,
+  elf_backend_cant_unwind_opcode,
   elf_backend_static_tls_alignment,
   elf_backend_stack_align,
+  elf_backend_strtab_flags,
   elf_backend_collect,
   elf_backend_type_change_ok,
   elf_backend_may_use_rel_p,
@@ -797,7 +839,8 @@ static struct elf_backend_data elfNN_bed =
   elf_backend_want_dynbss,
   elf_backend_want_p_paddr_set_to_zero,
   elf_backend_default_execstack,
-  elf_backend_caches_rawsize
+  elf_backend_caches_rawsize,
+  elf_backend_extern_protected_data
 };
 
 /* Forward declaration for use when initialising alternative_target field.  */
@@ -822,7 +865,8 @@ const bfd_target TARGET_BIG_SYM =
 
   /* object_flags: mask of all file flags */
   (HAS_RELOC | EXEC_P | HAS_LINENO | HAS_DEBUG | HAS_SYMS | HAS_LOCALS
-   | DYNAMIC | WP_TEXT | D_PAGED | BFD_COMPRESS | BFD_DECOMPRESS),
+   | DYNAMIC | WP_TEXT | D_PAGED | BFD_COMPRESS | BFD_DECOMPRESS
+   | BFD_COMPRESS_GABI | BFD_CONVERT_ELF_COMMON | BFD_USE_ELF_STT_COMMON),
 
   /* section_flags: mask of all section flags */
   (SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_RELOC | SEC_READONLY
@@ -882,6 +926,8 @@ const bfd_target TARGET_BIG_SYM =
   BFD_JUMP_TABLE_CORE (bfd_elfNN),
 #ifdef bfd_elfNN_archive_functions
   BFD_JUMP_TABLE_ARCHIVE (bfd_elfNN_archive),
+#elif defined USE_64_BIT_ARCHIVE
+  BFD_JUMP_TABLE_ARCHIVE (_bfd_archive_64_bit),
 #else
   BFD_JUMP_TABLE_ARCHIVE (_bfd_archive_coff),
 #endif
@@ -920,7 +966,8 @@ const bfd_target TARGET_LITTLE_SYM =
 
   /* object_flags: mask of all file flags */
   (HAS_RELOC | EXEC_P | HAS_LINENO | HAS_DEBUG | HAS_SYMS | HAS_LOCALS
-   | DYNAMIC | WP_TEXT | D_PAGED | BFD_COMPRESS | BFD_DECOMPRESS),
+   | DYNAMIC | WP_TEXT | D_PAGED | BFD_COMPRESS | BFD_DECOMPRESS
+   | BFD_COMPRESS_GABI | BFD_CONVERT_ELF_COMMON | BFD_USE_ELF_STT_COMMON),
 
   /* section_flags: mask of all section flags */
   (SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_RELOC | SEC_READONLY
@@ -980,6 +1027,8 @@ const bfd_target TARGET_LITTLE_SYM =
   BFD_JUMP_TABLE_CORE (bfd_elfNN),
 #ifdef bfd_elfNN_archive_functions
   BFD_JUMP_TABLE_ARCHIVE (bfd_elfNN_archive),
+#elif defined USE_64_BIT_ARCHIVE
+  BFD_JUMP_TABLE_ARCHIVE (_bfd_archive_64_bit),
 #else
   BFD_JUMP_TABLE_ARCHIVE (_bfd_archive_coff),
 #endif

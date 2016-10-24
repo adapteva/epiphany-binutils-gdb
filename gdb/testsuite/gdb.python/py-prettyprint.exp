@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2014 Free Software Foundation, Inc.
+# Copyright (C) 2008-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -92,6 +92,10 @@ proc run_lang_tests {exefile lang} {
     gdb_test "print cstring" " = \"const string\""
 
     gdb_test "print estring" " = \"embedded x\\\\201\\\\202\\\\203\\\\204\""
+    if { ![is_address_zero_readable] } {
+	    gdb_test "print estring3" \
+		" = <error reading variable: Cannot create a lazy string with address 0x0, and a non-zero length.>"
+    }
 
     gdb_test_no_output "python pp_ls_encoding = 'UTF-8'"
     gdb_test "print estring2" "\"embedded \", <incomplete sequence \\\\302>"
@@ -108,12 +112,14 @@ proc run_lang_tests {exefile lang} {
 	"print nstype on one line"
 
     gdb_continue_to_end
-
-    remote_file host delete ${remote_python_file}
 }
 
-run_lang_tests "${binfile}" "c"
-run_lang_tests "${binfile}-cxx" "c++"
+if { [run_lang_tests "${binfile}" "c"] == -1 } {
+    return
+}
+if { [run_lang_tests "${binfile}-cxx" "c++"] == -1 } {
+    return
+}
 
 # Run various other tests.
 
@@ -155,5 +161,3 @@ gdb_test_no_output "python enable_lookup_function ()"
 
 gdb_test "print ss" " = a=< a=<1> b=<$hex>> b=< a=<2> b=<$hex>>" \
     "print ss enabled #2"
-
-remote_file host delete ${remote_python_file}

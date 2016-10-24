@@ -1,6 +1,6 @@
 /* Definitions for frame unwinder, for GDB, the GNU debugger.
 
-   Copyright (C) 2003-2014 Free Software Foundation, Inc.
+   Copyright (C) 2003-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -64,7 +64,8 @@ void
 frame_unwind_prepend_unwinder (struct gdbarch *gdbarch,
 				const struct frame_unwind *unwinder)
 {
-  struct frame_unwind_table *table = gdbarch_data (gdbarch, frame_unwind_data);
+  struct frame_unwind_table *table
+    = (struct frame_unwind_table *) gdbarch_data (gdbarch, frame_unwind_data);
   struct frame_unwind_table_entry *entry;
 
   /* Insert the new entry at the start of the list.  */
@@ -78,7 +79,8 @@ void
 frame_unwind_append_unwinder (struct gdbarch *gdbarch,
 			      const struct frame_unwind *unwinder)
 {
-  struct frame_unwind_table *table = gdbarch_data (gdbarch, frame_unwind_data);
+  struct frame_unwind_table *table
+    = (struct frame_unwind_table *) gdbarch_data (gdbarch, frame_unwind_data);
   struct frame_unwind_table_entry **ip;
 
   /* Find the end of the list and insert the new entry there.  */
@@ -96,27 +98,30 @@ frame_unwind_try_unwinder (struct frame_info *this_frame, void **this_cache,
                           const struct frame_unwind *unwinder)
 {
   struct cleanup *old_cleanup;
-  volatile struct gdb_exception ex;
   int res = 0;
 
   old_cleanup = frame_prepare_for_sniffer (this_frame, unwinder);
 
-  TRY_CATCH (ex, RETURN_MASK_ERROR)
+  TRY
     {
       res = unwinder->sniffer (unwinder, this_frame, this_cache);
     }
-  if (ex.reason < 0 && ex.error == NOT_AVAILABLE_ERROR)
+  CATCH (ex, RETURN_MASK_ERROR)
     {
-      /* This usually means that not even the PC is available,
-        thus most unwinders aren't able to determine if they're
-        the best fit.  Keep trying.  Fallback prologue unwinders
-        should always accept the frame.  */
-      do_cleanups (old_cleanup);
-      return 0;
+      if (ex.error == NOT_AVAILABLE_ERROR)
+	{
+	  /* This usually means that not even the PC is available,
+	     thus most unwinders aren't able to determine if they're
+	     the best fit.  Keep trying.  Fallback prologue unwinders
+	     should always accept the frame.  */
+	  do_cleanups (old_cleanup);
+	  return 0;
+	}
+      throw_exception (ex);
     }
-  else if (ex.reason < 0)
-    throw_exception (ex);
-  else if (res)
+  END_CATCH
+
+  if (res)
     {
       discard_cleanups (old_cleanup);
       return 1;
@@ -137,7 +142,8 @@ void
 frame_unwind_find_by_frame (struct frame_info *this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
-  struct frame_unwind_table *table = gdbarch_data (gdbarch, frame_unwind_data);
+  struct frame_unwind_table *table
+    = (struct frame_unwind_table *) gdbarch_data (gdbarch, frame_unwind_data);
   struct frame_unwind_table_entry *entry;
   const struct frame_unwind *unwinder_from_target;
 

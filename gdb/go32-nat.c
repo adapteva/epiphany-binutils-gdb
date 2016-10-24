@@ -1,5 +1,5 @@
 /* Native debugging support for Intel x86 running DJGPP.
-   Copyright (C) 1997-2014 Free Software Foundation, Inc.
+   Copyright (C) 1997-2016 Free Software Foundation, Inc.
    Written by Robert Hoehne.
 
    This file is part of GDB.
@@ -587,10 +587,12 @@ go32_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
   else
     res = read_child (memaddr, readbuf, len);
 
-  if (res <= 0)
+  /* read_child and write_child return zero on success, non-zero on
+     failure.  */
+  if (res != 0)
     return TARGET_XFER_E_IO;
 
-  *xfered_len = res;
+  *xfered_len = len;
   return TARGET_XFER_OK;
 }
 
@@ -696,7 +698,7 @@ go32_create_inferior (struct target_ops *ops, char *exec_file,
   xfree (cmdline);
 
   if (result != 0)
-    error (_("Load failed for image %s", exec_file);
+    error (_("Load failed for image %s"), exec_file);
 
   edi_init (start_state);
 #if __DJGPP_MINOR__ < 3

@@ -1,6 +1,6 @@
 /* Interface between gdb and its extension languages.
 
-   Copyright (C) 2014 Free Software Foundation, Inc.
+   Copyright (C) 2014-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -47,6 +47,12 @@ typedef void script_sourcer_func (const struct extension_language_defn *,
 typedef void objfile_script_sourcer_func
   (const struct extension_language_defn *,
    struct objfile *, FILE *stream, const char *filename);
+
+/* A function to execute a script for an objfile.
+   Any exceptions are not caught, and are passed to the caller.  */
+typedef void objfile_script_executor_func
+  (const struct extension_language_defn *,
+   struct objfile *, const char *name, const char *script);
 
 /* Enum of each extension(/scripting) language.  */
 
@@ -197,6 +203,9 @@ extern script_sourcer_func *ext_lang_script_sourcer
 extern objfile_script_sourcer_func *ext_lang_objfile_script_sourcer
   (const struct extension_language_defn *);
 
+extern objfile_script_executor_func *ext_lang_objfile_script_executor
+  (const struct extension_language_defn *);
+
 extern int ext_lang_auto_load_enabled (const struct extension_language_defn *);
 
 /* Wrappers for each extension language API function that iterate over all
@@ -217,7 +226,7 @@ extern void free_ext_lang_type_printers (struct ext_lang_type_printers *);
 
 extern int apply_ext_lang_val_pretty_printer
   (struct type *type, const gdb_byte *valaddr,
-   int embedded_offset, CORE_ADDR address,
+   LONGEST embedded_offset, CORE_ADDR address,
    struct ui_file *stream, int recurse,
    const struct value *val, const struct value_print_options *options,
    const struct language_defn *language);
@@ -250,5 +259,9 @@ extern xmethod_worker_vec *get_matching_xmethod_workers
   (struct type *, const char *);
 
 extern struct type **get_xmethod_arg_types (struct xmethod_worker *, int *);
+
+extern struct type *get_xmethod_result_type (struct xmethod_worker *,
+					     struct value *object,
+					     struct value **args, int nargs);
 
 #endif /* EXTENSION_H */

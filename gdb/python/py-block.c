@@ -1,6 +1,6 @@
 /* Python interface to blocks.
 
-   Copyright (C) 2008-2014 Free Software Foundation, Inc.
+   Copyright (C) 2008-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -78,7 +78,7 @@ typedef struct {
       }									\
   } while (0)
 
-static PyTypeObject block_syms_iterator_object_type
+extern PyTypeObject block_syms_iterator_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("block_syms_iterator_object");
 static const struct objfile_data *blpy_objfile_data_key;
 
@@ -256,7 +256,8 @@ set_block (block_object *obj, const struct block *block,
   if (objfile)
     {
       obj->objfile = objfile;
-      obj->next = objfile_data (objfile, blpy_objfile_data_key);
+      obj->next = ((struct blpy_block_object *)
+		   objfile_data (objfile, blpy_objfile_data_key));
       if (obj->next)
 	obj->next->prev = obj;
       set_objfile_data (objfile, blpy_objfile_data_key, obj);
@@ -372,24 +373,25 @@ gdbpy_block_for_pc (PyObject *self, PyObject *args)
 {
   gdb_py_ulongest pc;
   const struct block *block = NULL;
-  struct obj_section *section = NULL;
-  struct symtab *symtab = NULL;
-  volatile struct gdb_exception except;
+  struct compunit_symtab *cust = NULL;
 
   if (!PyArg_ParseTuple (args, GDB_PY_LLU_ARG, &pc))
     return NULL;
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
+  TRY
     {
-      section = find_pc_mapped_section (pc);
-      symtab = find_pc_sect_symtab (pc, section);
+      cust = find_pc_compunit_symtab (pc);
 
-      if (symtab != NULL && symtab->objfile != NULL)
+      if (cust != NULL && COMPUNIT_OBJFILE (cust) != NULL)
 	block = block_for_pc (pc);
     }
-  GDB_PY_HANDLE_EXCEPTION (except);
+  CATCH (except, RETURN_MASK_ALL)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+  END_CATCH
 
-  if (!symtab || symtab->objfile == NULL)
+  if (cust == NULL || COMPUNIT_OBJFILE (cust) == NULL)
     {
       PyErr_SetString (PyExc_RuntimeError,
 		       _("Cannot locate object file for block."));
@@ -397,7 +399,7 @@ gdbpy_block_for_pc (PyObject *self, PyObject *args)
     }
 
   if (block)
-    return block_to_block_object (block, symtab->objfile);
+    return block_to_block_object (block, COMPUNIT_OBJFILE (cust));
 
   Py_RETURN_NONE;
 }
@@ -410,7 +412,7 @@ gdbpy_block_for_pc (PyObject *self, PyObject *args)
 static void
 del_objfile_blocks (struct objfile *objfile, void *datum)
 {
-  block_object *obj = datum;
+  block_object *obj = (block_object *) datum;
 
   while (obj)
     {
@@ -517,7 +519,7 @@ Return true if this block iterator is valid, false if not." },
   {NULL}  /* Sentinel */
 };
 
-static PyTypeObject block_syms_iterator_object_type = {
+PyTypeObject block_syms_iterator_object_type = {
   PyVarObject_HEAD_INIT (NULL, 0)
   "gdb.BlockIterator",		  /*tp_name*/
   sizeof (block_syms_iterator_object),	      /*tp_basicsize*/

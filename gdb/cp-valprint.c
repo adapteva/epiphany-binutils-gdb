@@ -1,6 +1,6 @@
 /* Support for printing C++ values for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -80,7 +80,7 @@ static void cp_print_static_field (struct type *, struct value *,
 				   const struct value_print_options *);
 
 static void cp_print_value (struct type *, struct type *,
-			    const gdb_byte *, int,
+			    const gdb_byte *, LONGEST,
 			    CORE_ADDR, struct ui_file *,
 			    int, const struct value *,
 			    const struct value_print_options *,
@@ -88,7 +88,7 @@ static void cp_print_value (struct type *, struct type *,
 
 
 /* GCC versions after 2.4.5 use this.  */
-const char vtbl_ptr_name[] = "__vtbl_ptr_type";
+EXPORTED_CONST char vtbl_ptr_name[] = "__vtbl_ptr_type";
 
 /* Return truth value for assertion that TYPE is of the type
    "pointer to virtual function".  */
@@ -96,9 +96,9 @@ const char vtbl_ptr_name[] = "__vtbl_ptr_type";
 int
 cp_is_vtbl_ptr_type (struct type *type)
 {
-  const char *typename = type_name_no_tag (type);
+  const char *type_name = type_name_no_tag (type);
 
-  return (typename != NULL && !strcmp (typename, vtbl_ptr_name));
+  return (type_name != NULL && !strcmp (type_name, vtbl_ptr_name));
 }
 
 /* Return truth value for the assertion that TYPE is of the type
@@ -154,7 +154,7 @@ cp_is_vtbl_member (struct type *type)
 
 void
 cp_print_value_fields (struct type *type, struct type *real_type,
-		       const gdb_byte *valaddr, int offset,
+		       const gdb_byte *valaddr, LONGEST offset,
 		       CORE_ADDR address, struct ui_file *stream,
 		       int recurse, const struct value *val,
 		       const struct value_print_options *options,
@@ -165,7 +165,7 @@ cp_print_value_fields (struct type *type, struct type *real_type,
   int fields_seen = 0;
   static int last_set_recurse = -1;
 
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
   
   if (recurse == 0)
     {
@@ -313,18 +313,21 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 		}
 	      else if (field_is_static (&TYPE_FIELD (type, i)))
 		{
-		  volatile struct gdb_exception ex;
 		  struct value *v = NULL;
 
-		  TRY_CATCH (ex, RETURN_MASK_ERROR)
+		  TRY
 		    {
 		      v = value_static_field (type, i);
 		    }
 
-		  if (ex.reason < 0)
-		    fprintf_filtered (stream,
-				      _("<error reading variable: %s>"),
-				      ex.message);
+		  CATCH (ex, RETURN_MASK_ERROR)
+		    {
+		      fprintf_filtered (stream,
+					_("<error reading variable: %s>"),
+					ex.message);
+		    }
+		  END_CATCH
+
 		  cp_print_static_field (TYPE_FIELD_TYPE (type, i),
 					 v, stream, recurse + 1,
 					 options);
@@ -370,7 +373,7 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 	      /* In effect, a pop of the printed-statics stack.  */
 
 	      void *free_to_ptr =
-		obstack_next_free (&dont_print_statmem_obstack) -
+		(char *) obstack_next_free (&dont_print_statmem_obstack) -
 		(obstack_final_size - statmem_obstack_initial_size);
 
 	      obstack_free (&dont_print_statmem_obstack,
@@ -385,7 +388,7 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 	      if (obstack_final_size > stat_array_obstack_initial_size)
 		{
 		  void *free_to_ptr =
-		    obstack_next_free (&dont_print_stat_array_obstack)
+		    (char *) obstack_next_free (&dont_print_stat_array_obstack)
 		    - (obstack_final_size
 		       - stat_array_obstack_initial_size);
 
@@ -414,7 +417,7 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 
 void
 cp_print_value_fields_rtti (struct type *type,
-			    const gdb_byte *valaddr, int offset,
+			    const gdb_byte *valaddr, LONGEST offset,
 			    CORE_ADDR address,
 			    struct ui_file *stream, int recurse,
 			    const struct value *val,
@@ -431,7 +434,8 @@ cp_print_value_fields_rtti (struct type *type,
 				     TARGET_CHAR_BIT * TYPE_LENGTH (type)))
     {
       struct value *value;
-      int full, top, using_enc;
+      int full, using_enc;
+      LONGEST top;
 
       /* Ugh, we have to convert back to a value here.  */
       value = value_from_contents_and_address (type, valaddr + offset,
@@ -456,7 +460,7 @@ cp_print_value_fields_rtti (struct type *type,
 
 static void
 cp_print_value (struct type *type, struct type *real_type,
-		const gdb_byte *valaddr, int offset,
+		const gdb_byte *valaddr, LONGEST offset,
 		CORE_ADDR address, struct ui_file *stream,
 		int recurse, const struct value *val,
 		const struct value_print_options *options,
@@ -466,7 +470,7 @@ cp_print_value (struct type *type, struct type *real_type,
     = (struct type **) obstack_next_free (&dont_print_vb_obstack);
   struct obstack tmp_obstack = dont_print_vb_obstack;
   int i, n_baseclasses = TYPE_N_BASECLASSES (type);
-  int thisoffset;
+  LONGEST thisoffset;
   struct type *thistype;
 
   if (dont_print_vb == 0)
@@ -480,13 +484,12 @@ cp_print_value (struct type *type, struct type *real_type,
 
   for (i = 0; i < n_baseclasses; i++)
     {
-      int boffset = 0;
-      int skip;
+      LONGEST boffset = 0;
+      int skip = 0;
       struct type *baseclass = check_typedef (TYPE_BASECLASS (type, i));
       const char *basename = TYPE_NAME (baseclass);
       const gdb_byte *base_valaddr = NULL;
       const struct value *base_val = NULL;
-      volatile struct gdb_exception ex;
 
       if (BASETYPE_VIA_VIRTUAL (type, i))
 	{
@@ -506,18 +509,21 @@ cp_print_value (struct type *type, struct type *real_type,
       thisoffset = offset;
       thistype = real_type;
 
-      TRY_CATCH (ex, RETURN_MASK_ERROR)
+      TRY
 	{
 	  boffset = baseclass_offset (type, i, valaddr, offset, address, val);
 	}
-      if (ex.reason < 0 && ex.error == NOT_AVAILABLE_ERROR)
-	skip = -1;
-      else if (ex.reason < 0)
-	skip = 1;
-      else
- 	{
-	  skip = 0;
+      CATCH (ex, RETURN_MASK_ERROR)
+	{
+	  if (ex.error == NOT_AVAILABLE_ERROR)
+	    skip = -1;
+	  else
+	    skip = 1;
+	}
+      END_CATCH
 
+      if (skip == 0)
+	{
 	  if (BASETYPE_VIA_VIRTUAL (type, i))
 	    {
 	      /* The virtual base class pointer might have been
@@ -530,7 +536,7 @@ cp_print_value (struct type *type, struct type *real_type,
 		  gdb_byte *buf;
 		  struct cleanup *back_to;
 
-		  buf = xmalloc (TYPE_LENGTH (baseclass));
+		  buf = (gdb_byte *) xmalloc (TYPE_LENGTH (baseclass));
 		  back_to = make_cleanup (xfree, buf);
 
 		  if (target_read_memory (address + boffset, buf,
@@ -664,7 +670,7 @@ cp_print_static_field (struct type *type,
       addr = value_address (val);
       obstack_grow (&dont_print_statmem_obstack, (char *) &addr,
 		    sizeof (CORE_ADDR));
-      CHECK_TYPEDEF (type);
+      type = check_typedef (type);
       cp_print_value_fields (type, value_enclosing_type (val),
 			     value_contents_for_printing (val),
 			     value_embedded_offset (val), addr,
@@ -709,27 +715,26 @@ cp_print_static_field (struct type *type,
 	     &opts, current_language);
 }
 
-
-/* Find the field in *DOMAIN, or its non-virtual base classes, with
-   bit offset OFFSET.  Set *DOMAIN to the containing type and *FIELDNO
+/* Find the field in *SELF, or its non-virtual base classes, with
+   bit offset OFFSET.  Set *SELF to the containing type and *FIELDNO
    to the containing field number.  If OFFSET is not exactly at the
-   start of some field, set *DOMAIN to NULL.  */
+   start of some field, set *SELF to NULL.  */
 
 static void
-cp_find_class_member (struct type **domain_p, int *fieldno,
+cp_find_class_member (struct type **self_p, int *fieldno,
 		      LONGEST offset)
 {
-  struct type *domain;
+  struct type *self;
   unsigned int i;
   unsigned len;
 
-  *domain_p = check_typedef (*domain_p);
-  domain = *domain_p;
-  len = TYPE_NFIELDS (domain);
+  *self_p = check_typedef (*self_p);
+  self = *self_p;
+  len = TYPE_NFIELDS (self);
 
-  for (i = TYPE_N_BASECLASSES (domain); i < len; i++)
+  for (i = TYPE_N_BASECLASSES (self); i < len; i++)
     {
-      LONGEST bitpos = TYPE_FIELD_BITPOS (domain, i);
+      LONGEST bitpos = TYPE_FIELD_BITPOS (self, i);
 
       QUIT;
       if (offset == bitpos)
@@ -739,20 +744,20 @@ cp_find_class_member (struct type **domain_p, int *fieldno,
 	}
     }
 
-  for (i = 0; i < TYPE_N_BASECLASSES (domain); i++)
+  for (i = 0; i < TYPE_N_BASECLASSES (self); i++)
     {
-      LONGEST bitpos = TYPE_FIELD_BITPOS (domain, i);
-      LONGEST bitsize = 8 * TYPE_LENGTH (TYPE_FIELD_TYPE (domain, i));
+      LONGEST bitpos = TYPE_FIELD_BITPOS (self, i);
+      LONGEST bitsize = 8 * TYPE_LENGTH (TYPE_FIELD_TYPE (self, i));
 
       if (offset >= bitpos && offset < bitpos + bitsize)
 	{
-	  *domain_p = TYPE_FIELD_TYPE (domain, i);
-	  cp_find_class_member (domain_p, fieldno, offset - bitpos);
+	  *self_p = TYPE_FIELD_TYPE (self, i);
+	  cp_find_class_member (self_p, fieldno, offset - bitpos);
 	  return;
 	}
     }
 
-  *domain_p = NULL;
+  *self_p = NULL;
 }
 
 void
@@ -761,10 +766,10 @@ cp_print_class_member (const gdb_byte *valaddr, struct type *type,
 {
   enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
 
-  /* VAL is a byte offset into the structure type DOMAIN.
+  /* VAL is a byte offset into the structure type SELF_TYPE.
      Find the name of the field for that offset and
      print it.  */
-  struct type *domain = TYPE_DOMAIN_TYPE (type);
+  struct type *self_type = TYPE_SELF_TYPE (type);
   LONGEST val;
   int fieldno;
 
@@ -788,20 +793,20 @@ cp_print_class_member (const gdb_byte *valaddr, struct type *type,
       return;
     }
 
-  cp_find_class_member (&domain, &fieldno, val << 3);
+  cp_find_class_member (&self_type, &fieldno, val << 3);
 
-  if (domain != NULL)
+  if (self_type != NULL)
     {
       const char *name;
 
       fputs_filtered (prefix, stream);
-      name = type_name_no_tag (domain);
+      name = type_name_no_tag (self_type);
       if (name)
 	fputs_filtered (name, stream);
       else
-	c_type_print_base (domain, stream, 0, 0, &type_print_raw_options);
+	c_type_print_base (self_type, stream, 0, 0, &type_print_raw_options);
       fprintf_filtered (stream, "::");
-      fputs_filtered (TYPE_FIELD_NAME (domain, fieldno), stream);
+      fputs_filtered (TYPE_FIELD_NAME (self_type, fieldno), stream);
     }
   else
     fprintf_filtered (stream, "%ld", (long) val);

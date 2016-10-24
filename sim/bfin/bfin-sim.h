@@ -1,6 +1,6 @@
 /* Simulator for Analog Devices Blackfin processors.
 
-   Copyright (C) 2005-2014 Free Software Foundation, Inc.
+   Copyright (C) 2005-2016 Free Software Foundation, Inc.
    Contributed by Analog Devices, Inc.
 
    This file is part of simulators.
@@ -318,7 +318,7 @@ do { \
 				 (void *)&__v, __taddr, __bytes); \
   if (__cnt != __bytes) \
     mmu_process_fault (cpu, __taddr, true, false, false, true); \
-  TRACE_CORE (cpu, __taddr, __bytes, write_map, __v); \
+  BFIN_TRACE_CORE (cpu, __taddr, __bytes, write_map, __v); \
 } while (0)
 #define PUT_BYTE(taddr, v) __PUT_MEM(taddr, v, 8)
 #define PUT_WORD(taddr, v) __PUT_MEM(taddr, v, 16)
@@ -334,7 +334,7 @@ do { \
 				(void *)&__ret, __taddr, __bytes); \
   if (__cnt != __bytes) \
     mmu_process_fault (cpu, __taddr, false, inst, false, true); \
-  TRACE_CORE (cpu, __taddr, __bytes, map, __ret); \
+  BFIN_TRACE_CORE (cpu, __taddr, __bytes, map, __ret); \
   __ret; \
 })
 #define _GET_MEM(taddr, size) __GET_MEM(taddr, size, false, read_map)

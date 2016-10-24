@@ -1,6 +1,6 @@
 /* Interface between gdb and its extension languages.
 
-   Copyright (C) 2014 Free Software Foundation, Inc.
+   Copyright (C) 2014-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,6 +22,7 @@
 
 #include "defs.h"
 #include <signal.h>
+#include "target.h"
 #include "auto-load.h"
 #include "breakpoint.h"
 #include "event-top.h"
@@ -61,6 +62,7 @@ static const struct extension_language_script_ops
 {
   source_gdb_script,
   source_gdb_objfile_script,
+  NULL, /* objfile_script_executor */
   auto_load_gdb_scripts_enabled
 };
 
@@ -286,6 +288,21 @@ ext_lang_objfile_script_sourcer (const struct extension_language_defn *extlang)
   return extlang->script_ops->objfile_script_sourcer;
 }
 
+/* Return the objfile script "executor" function for EXTLANG.
+   This is the function that executes a script for a particular objfile.
+   If support for this language isn't compiled in, NULL is returned.
+   The extension language is not required to implement this function.  */
+
+objfile_script_executor_func *
+ext_lang_objfile_script_executor
+  (const struct extension_language_defn *extlang)
+{
+  if (extlang->script_ops == NULL)
+    return NULL;
+
+  return extlang->script_ops->objfile_script_executor;
+}
+
 /* Return non-zero if auto-loading of EXTLANG scripts is enabled.
    Zero is returned if support for this language isn't compiled in.  */
 
@@ -480,7 +497,7 @@ free_ext_lang_type_printers (struct ext_lang_type_printers *printers)
 
 int
 apply_ext_lang_val_pretty_printer (struct type *type, const gdb_byte *valaddr,
-				   int embedded_offset, CORE_ADDR address,
+				   LONGEST embedded_offset, CORE_ADDR address,
 				   struct ui_file *stream, int recurse,
 				   const struct value *val,
 				   const struct value_print_options *options,
@@ -691,7 +708,7 @@ static void
 install_gdb_sigint_handler (struct signal_handler *previous)
 {
   /* Save here to simplify comparison.  */
-  RETSIGTYPE (*handle_sigint_for_compare) () = handle_sigint;
+  sighandler_t handle_sigint_for_compare = handle_sigint;
 
   previous->handler = signal (SIGINT, handle_sigint);
   if (previous->handler != handle_sigint_for_compare)
@@ -730,19 +747,24 @@ set_active_ext_lang (const struct extension_language_defn *now_active)
     = XCNEW (struct active_ext_lang_state);
 
   previous->ext_lang = active_ext_lang;
+  previous->sigint_handler.handler_saved = 0;
   active_ext_lang = now_active;
 
-  /* If the newly active extension language uses cooperative SIGINT handling
-     then ensure GDB's SIGINT handler is installed.  */
-  if (now_active->language == EXT_LANG_GDB
-      || now_active->ops->check_quit_flag != NULL)
-    install_gdb_sigint_handler (&previous->sigint_handler);
+  if (target_terminal_is_ours ())
+    {
+      /* If the newly active extension language uses cooperative SIGINT
+	 handling then ensure GDB's SIGINT handler is installed.  */
+      if (now_active->language == EXT_LANG_GDB
+	  || now_active->ops->check_quit_flag != NULL)
+	install_gdb_sigint_handler (&previous->sigint_handler);
 
-  /* If there's a SIGINT recorded in the cooperative extension languages,
-     move it to the new language, or save it in GDB's global flag if the newly
-     active extension language doesn't use cooperative SIGINT handling.  */
-  if (check_quit_flag ())
-    set_quit_flag ();
+      /* If there's a SIGINT recorded in the cooperative extension languages,
+	 move it to the new language, or save it in GDB's global flag if the
+	 newly active extension language doesn't use cooperative SIGINT
+	 handling.  */
+      if (check_quit_flag ())
+	set_quit_flag ();
+    }
 
   return previous;
 }
@@ -752,40 +774,22 @@ set_active_ext_lang (const struct extension_language_defn *now_active)
 void
 restore_active_ext_lang (struct active_ext_lang_state *previous)
 {
-  const struct extension_language_defn *current = active_ext_lang;
-
   active_ext_lang = previous->ext_lang;
 
-  /* Restore the previous SIGINT handler if one was saved.  */
-  if (previous->sigint_handler.handler_saved)
-    install_sigint_handler (&previous->sigint_handler);
-
-  /* If there's a SIGINT recorded in the cooperative extension languages,
-     move it to the new language, or save it in GDB's global flag if the newly
-     active extension language doesn't use cooperative SIGINT handling.  */
-  if (check_quit_flag ())
-    set_quit_flag ();
-
-  xfree (previous);
-}
-
-/* Clear the quit flag.
-   The flag is cleared in all extension languages,
-   not just the currently active one.  */
-
-void
-clear_quit_flag (void)
-{
-  int i;
-  const struct extension_language_defn *extlang;
-
-  ALL_ENABLED_EXTENSION_LANGUAGES (i, extlang)
+  if (target_terminal_is_ours ())
     {
-      if (extlang->ops->clear_quit_flag != NULL)
-	extlang->ops->clear_quit_flag (extlang);
-    }
+      /* Restore the previous SIGINT handler if one was saved.  */
+      if (previous->sigint_handler.handler_saved)
+	install_sigint_handler (&previous->sigint_handler);
 
-  quit_flag = 0;
+      /* If there's a SIGINT recorded in the cooperative extension languages,
+	 move it to the new language, or save it in GDB's global flag if the
+	 newly active extension language doesn't use cooperative SIGINT
+	 handling.  */
+      if (check_quit_flag ())
+	set_quit_flag ();
+    }
+  xfree (previous);
 }
 
 /* Set the quit flag.
@@ -803,7 +807,16 @@ set_quit_flag (void)
       && active_ext_lang->ops->set_quit_flag != NULL)
     active_ext_lang->ops->set_quit_flag (active_ext_lang);
   else
-    quit_flag = 1;
+    {
+      quit_flag = 1;
+
+      /* Now wake up the event loop, or any interruptible_select.  Do
+	 this after setting the flag, because signals on Windows
+	 actually run on a separate thread, and thus otherwise the
+	 main code could be woken up and find quit_flag still
+	 clear.  */
+      quit_serial_event_set ();
+    }
 }
 
 /* Return true if the quit flag has been set, false otherwise.
@@ -827,6 +840,10 @@ check_quit_flag (void)
   /* This is written in a particular way to avoid races.  */
   if (quit_flag)
     {
+      /* No longer need to wake up the event loop or any
+	 interruptible_select.  The caller handles the quit
+	 request.  */
+      quit_serial_event_clear ();
       quit_flag = 0;
       result = 1;
     }
@@ -946,6 +963,31 @@ get_xmethod_arg_types (struct xmethod_worker *worker, int *nargs)
     }
 
   return type_array;
+}
+
+/* Return the type of the result of the xmethod encapsulated in WORKER.
+   OBJECT, ARGS, NARGS are the same as for invoke_xmethod.  */
+
+struct type *
+get_xmethod_result_type (struct xmethod_worker *worker,
+			 struct value *object, struct value **args, int nargs)
+{
+  enum ext_lang_rc rc;
+  struct type *result_type;
+  const struct extension_language_defn *extlang = worker->extlang;
+
+  gdb_assert (extlang->ops->get_xmethod_arg_types != NULL);
+
+  rc = extlang->ops->get_xmethod_result_type (extlang, worker,
+					      object, args, nargs,
+					      &result_type);
+  if (rc == EXT_LANG_RC_ERROR)
+    {
+      error (_("Error while fetching result type of an xmethod worker "
+	       "defined in %s."), extlang->capitalized_name);
+    }
+
+  return result_type;
 }
 
 /* Invokes the xmethod encapsulated in WORKER and returns the result.

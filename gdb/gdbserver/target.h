@@ -1,5 +1,5 @@
 /* Target operations for the remote server for GDB.
-   Copyright (C) 2002-2014 Free Software Foundation, Inc.
+   Copyright (C) 2002-2016 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -21,14 +21,15 @@
 #ifndef TARGET_H
 #define TARGET_H
 
+#include <sys/types.h> /* for mode_t */
 #include "target/target.h"
 #include "target/resume.h"
 #include "target/wait.h"
 #include "target/waitstatus.h"
 #include "mem-break.h"
+#include "btrace-common.h"
 
 struct emit_ops;
-struct btrace_target_info;
 struct buffer;
 struct process_info;
 
@@ -73,6 +74,10 @@ struct target_ops
      process with the process list.  */
 
   int (*create_inferior) (char *program, char **args);
+
+  /* Do additional setup after a new process is created, including
+     exec-wrapper completion.  */
+  void (*post_create_inferior) (void);
 
   /* Attach to a running process.
 
@@ -207,6 +212,24 @@ struct target_ops
   int (*remove_point) (enum raw_bkpt_type type, CORE_ADDR addr,
 		       int size, struct raw_breakpoint *bp);
 
+  /* Returns 1 if the target stopped because it executed a software
+     breakpoint instruction, 0 otherwise.  */
+  int (*stopped_by_sw_breakpoint) (void);
+
+  /* Returns true if the target knows whether a trap was caused by a
+     SW breakpoint triggering.  */
+  int (*supports_stopped_by_sw_breakpoint) (void);
+
+  /* Returns 1 if the target stopped for a hardware breakpoint.  */
+  int (*stopped_by_hw_breakpoint) (void);
+
+  /* Returns true if the target knows whether a trap was caused by a
+     HW breakpoint triggering.  */
+  int (*supports_stopped_by_hw_breakpoint) (void);
+
+  /* Returns true if the target can do hardware single step.  */
+  int (*supports_hardware_single_step) (void);
+
   /* Returns 1 if target was stopped due to a watchpoint hit, 0 otherwise.  */
 
   int (*stopped_by_watchpoint) (void);
@@ -262,6 +285,18 @@ struct target_ops
   /* Returns true if the target supports multi-process debugging.  */
   int (*supports_multi_process) (void);
 
+  /* Returns true if fork events are supported.  */
+  int (*supports_fork_events) (void);
+
+  /* Returns true if vfork events are supported.  */
+  int (*supports_vfork_events) (void);
+
+  /* Returns true if exec events are supported.  */
+  int (*supports_exec_events) (void);
+
+  /* Allows target to re-initialize connection-specific settings.  */
+  void (*handle_new_gdb_connection) (void);
+
   /* If not NULL, target-specific routine to process monitor command.
      Returns 1 if handled, or 0 to perform default processing.  */
   int (*handle_monitor_command) (char *);
@@ -273,8 +308,9 @@ struct target_ops
   int (*read_loadmap) (const char *annex, CORE_ADDR offset,
 		       unsigned char *myaddr, unsigned int len);
 
-  /* Target specific qSupported support.  */
-  void (*process_qsupported) (const char *);
+  /* Target specific qSupported support.  FEATURES is an array of
+     features with COUNT elements.  */
+  void (*process_qsupported) (char **features, int count);
 
   /* Return 1 if the target supports tracepoints, 0 (or leave the
      callback NULL) otherwise.  */
@@ -303,9 +339,6 @@ struct target_ops
      pair should not end up resuming threads that were stopped before
      the pause call.  */
   void (*unpause_all) (int unfreeze);
-
-  /* Cancel all pending breakpoints hits in all threads.  */
-  void (*cancel_breakpoints) (void);
 
   /* Stabilize all threads.  That is, force them out of jump pads.  */
   void (*stabilize_threads) (void);
@@ -358,24 +391,89 @@ struct target_ops
   int (*supports_agent) (void);
 
   /* Check whether the target supports branch tracing.  */
-  int (*supports_btrace) (struct target_ops *);
+  int (*supports_btrace) (struct target_ops *, enum btrace_format);
 
-  /* Enable branch tracing for @ptid and allocate a branch trace target
-     information struct for reading and for disabling branch trace.  */
-  struct btrace_target_info *(*enable_btrace) (ptid_t ptid);
+  /* Enable branch tracing for PTID based on CONF and allocate a branch trace
+     target information struct for reading and for disabling branch trace.  */
+  struct btrace_target_info *(*enable_btrace)
+    (ptid_t ptid, const struct btrace_config *conf);
 
   /* Disable branch tracing.
      Returns zero on success, non-zero otherwise.  */
   int (*disable_btrace) (struct btrace_target_info *tinfo);
 
-  /* Read branch trace data into buffer.  We use an int to specify the type
-     to break a cyclic dependency.
+  /* Read branch trace data into buffer.
      Return 0 on success; print an error message into BUFFER and return -1,
      otherwise.  */
-  int (*read_btrace) (struct btrace_target_info *, struct buffer *, int type);
+  int (*read_btrace) (struct btrace_target_info *, struct buffer *,
+		      enum btrace_read_type type);
+
+  /* Read the branch trace configuration into BUFFER.
+     Return 0 on success; print an error message into BUFFER and return -1
+     otherwise.  */
+  int (*read_btrace_conf) (const struct btrace_target_info *, struct buffer *);
 
   /* Return true if target supports range stepping.  */
   int (*supports_range_stepping) (void);
+
+  /* Return the full absolute name of the executable file that was
+     run to create the process PID.  If the executable file cannot
+     be determined, NULL is returned.  Otherwise, a pointer to a
+     character string containing the pathname is returned.  This
+     string should be copied into a buffer by the client if the string
+     will not be immediately used, or if it must persist.  */
+  char *(*pid_to_exec_file) (int pid);
+
+  /* Multiple-filesystem-aware open.  Like open(2), but operating in
+     the filesystem as it appears to process PID.  Systems where all
+     processes share a common filesystem should set this to NULL.
+     If NULL, the caller should fall back to open(2).  */
+  int (*multifs_open) (int pid, const char *filename,
+		       int flags, mode_t mode);
+
+  /* Multiple-filesystem-aware unlink.  Like unlink(2), but operates
+     in the filesystem as it appears to process PID.  Systems where
+     all processes share a common filesystem should set this to NULL.
+     If NULL, the caller should fall back to unlink(2).  */
+  int (*multifs_unlink) (int pid, const char *filename);
+
+  /* Multiple-filesystem-aware readlink.  Like readlink(2), but
+     operating in the filesystem as it appears to process PID.
+     Systems where all processes share a common filesystem should
+     set this to NULL.  If NULL, the caller should fall back to
+     readlink(2).  */
+  ssize_t (*multifs_readlink) (int pid, const char *filename,
+			       char *buf, size_t bufsiz);
+
+  /* Return the breakpoint kind for this target based on PC.  The PCPTR is
+     adjusted to the real memory location in case a flag (e.g., the Thumb bit on
+     ARM) was present in the PC.  */
+  int (*breakpoint_kind_from_pc) (CORE_ADDR *pcptr);
+
+  /* Return the software breakpoint from KIND.  KIND can have target
+     specific meaning like the Z0 kind parameter.
+     SIZE is set to the software breakpoint's length in memory.  */
+  const gdb_byte *(*sw_breakpoint_from_kind) (int kind, int *size);
+
+  /* Return the thread's name, or NULL if the target is unable to determine it.
+     The returned value must not be freed by the caller.  */
+  const char *(*thread_name) (ptid_t thread);
+
+  /* Return the breakpoint kind for this target based on the current
+     processor state (e.g. the current instruction mode on ARM) and the
+     PC.  The PCPTR is adjusted to the real memory location in case a flag
+     (e.g., the Thumb bit on ARM) is present in the PC.  */
+  int (*breakpoint_kind_from_current_state) (CORE_ADDR *pcptr);
+
+  /* Returns true if the target can software single step.  */
+  int (*supports_software_single_step) (void);
+
+  /* Return 1 if the target supports catch syscall, 0 (or leave the
+     callback NULL) otherwise.  */
+  int (*supports_catch_syscall) (void);
+
+  /* Return tdesc index for IPA.  */
+  int (*get_ipa_tdesc_idx) (void);
 };
 
 extern struct target_ops *the_target;
@@ -385,10 +483,36 @@ void set_target_ops (struct target_ops *);
 #define create_inferior(program, args) \
   (*the_target->create_inferior) (program, args)
 
+#define target_post_create_inferior()			 \
+  do							 \
+    {							 \
+      if (the_target->post_create_inferior != NULL)	 \
+	(*the_target->post_create_inferior) ();		 \
+    } while (0)
+
 #define myattach(pid) \
   (*the_target->attach) (pid)
 
 int kill_inferior (int);
+
+#define target_supports_fork_events() \
+  (the_target->supports_fork_events ? \
+   (*the_target->supports_fork_events) () : 0)
+
+#define target_supports_vfork_events() \
+  (the_target->supports_vfork_events ? \
+   (*the_target->supports_vfork_events) () : 0)
+
+#define target_supports_exec_events() \
+  (the_target->supports_exec_events ? \
+   (*the_target->supports_exec_events) () : 0)
+
+#define target_handle_new_gdb_connection()		 \
+  do							 \
+    {							 \
+      if (the_target->handle_new_gdb_connection != NULL) \
+	(*the_target->handle_new_gdb_connection) ();	 \
+    } while (0)
 
 #define detach_inferior(pid) \
   (*the_target->detach) (pid)
@@ -418,12 +542,20 @@ int kill_inferior (int);
   (the_target->supports_multi_process ? \
    (*the_target->supports_multi_process) () : 0)
 
-#define target_process_qsupported(query)		\
+#define target_process_qsupported(features, count)	\
   do							\
     {							\
       if (the_target->process_qsupported)		\
-	the_target->process_qsupported (query);		\
+	the_target->process_qsupported (features, count); \
     } while (0)
+
+#define target_supports_catch_syscall()              	\
+  (the_target->supports_catch_syscall ?			\
+   (*the_target->supports_catch_syscall) () : 0)
+
+#define target_get_ipa_tdesc_idx()			\
+  (the_target->get_ipa_tdesc_idx			\
+   ? (*the_target->get_ipa_tdesc_idx) () : 0)
 
 #define target_supports_tracepoints()			\
   (the_target->supports_tracepoints			\
@@ -451,13 +583,6 @@ int kill_inferior (int);
     {						\
       if (the_target->unpause_all)		\
 	(*the_target->unpause_all) (unfreeze);	\
-    } while (0)
-
-#define cancel_breakpoints()			\
-  do						\
-    {						\
-      if (the_target->cancel_breakpoints)     	\
-	(*the_target->cancel_breakpoints) ();  	\
     } while (0)
 
 #define stabilize_threads()			\
@@ -499,12 +624,12 @@ int kill_inferior (int);
   (the_target->supports_agent ? \
    (*the_target->supports_agent) () : 0)
 
-#define target_supports_btrace()			\
+#define target_supports_btrace(format)			\
   (the_target->supports_btrace				\
-   ? (*the_target->supports_btrace) (the_target) : 0)
+   ? (*the_target->supports_btrace) (the_target, format) : 0)
 
-#define target_enable_btrace(ptid) \
-  (*the_target->enable_btrace) (ptid)
+#define target_enable_btrace(ptid, conf) \
+  (*the_target->enable_btrace) (ptid, conf)
 
 #define target_disable_btrace(tinfo) \
   (*the_target->disable_btrace) (tinfo)
@@ -512,9 +637,46 @@ int kill_inferior (int);
 #define target_read_btrace(tinfo, buffer, type)	\
   (*the_target->read_btrace) (tinfo, buffer, type)
 
+#define target_read_btrace_conf(tinfo, buffer)	\
+  (*the_target->read_btrace_conf) (tinfo, buffer)
+
 #define target_supports_range_stepping() \
   (the_target->supports_range_stepping ? \
    (*the_target->supports_range_stepping) () : 0)
+
+#define target_supports_stopped_by_sw_breakpoint() \
+  (the_target->supports_stopped_by_sw_breakpoint ? \
+   (*the_target->supports_stopped_by_sw_breakpoint) () : 0)
+
+#define target_stopped_by_sw_breakpoint() \
+  (the_target->stopped_by_sw_breakpoint ? \
+   (*the_target->stopped_by_sw_breakpoint) () : 0)
+
+#define target_supports_stopped_by_hw_breakpoint() \
+  (the_target->supports_stopped_by_hw_breakpoint ? \
+   (*the_target->supports_stopped_by_hw_breakpoint) () : 0)
+
+#define target_supports_hardware_single_step() \
+  (the_target->supports_hardware_single_step ? \
+   (*the_target->supports_hardware_single_step) () : 0)
+
+#define target_stopped_by_hw_breakpoint() \
+  (the_target->stopped_by_hw_breakpoint ? \
+   (*the_target->stopped_by_hw_breakpoint) () : 0)
+
+#define target_breakpoint_kind_from_pc(pcptr) \
+  (the_target->breakpoint_kind_from_pc \
+   ? (*the_target->breakpoint_kind_from_pc) (pcptr) \
+   : default_breakpoint_kind_from_pc (pcptr))
+
+#define target_breakpoint_kind_from_current_state(pcptr) \
+  (the_target->breakpoint_kind_from_current_state \
+   ? (*the_target->breakpoint_kind_from_current_state) (pcptr) \
+   : target_breakpoint_kind_from_pc (pcptr))
+
+#define target_supports_software_single_step() \
+  (the_target->supports_software_single_step ? \
+   (*the_target->supports_software_single_step) () : 0)
 
 /* Start non-stop mode, returns 0 on success, -1 on failure.   */
 
@@ -523,29 +685,31 @@ int start_non_stop (int nonstop);
 ptid_t mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
 	       int connected_wait);
 
-#define prepare_to_access_memory()		\
-  (the_target->prepare_to_access_memory		\
-   ? (*the_target->prepare_to_access_memory) () \
-   : 0)
+/* Prepare to read or write memory from the inferior process.  See the
+   corresponding target_ops methods for more details.  */
 
-#define done_accessing_memory()				\
-  do							\
-    {							\
-      if (the_target->done_accessing_memory)     	\
-	(*the_target->done_accessing_memory) ();  	\
-    } while (0)
+int prepare_to_access_memory (void);
+void done_accessing_memory (void);
 
 #define target_core_of_thread(ptid)		\
   (the_target->core_of_thread ? (*the_target->core_of_thread) (ptid) \
    : -1)
+
+#define target_thread_name(ptid)                                \
+  (the_target->thread_name ? (*the_target->thread_name) (ptid)  \
+   : NULL)
 
 int read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len);
 
 int write_inferior_memory (CORE_ADDR memaddr, const unsigned char *myaddr,
 			   int len);
 
-void set_desired_thread (int id);
+int set_desired_thread (int id);
 
 const char *target_pid_to_str (ptid_t);
+
+int target_can_do_hardware_single_step (void);
+
+int default_breakpoint_kind_from_pc (CORE_ADDR *pcptr);
 
 #endif /* TARGET_H */

@@ -1,6 +1,6 @@
 /* Output generating routines for GDB.
 
-   Copyright (C) 1999-2014 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions.
    Written by Fernando Nasser for Cygnus.
@@ -32,7 +32,8 @@ struct ui_file;
 
 /* FIXME: This should not be a global but something passed down from main.c
    or top.c.  */
-extern struct ui_out *current_uiout;
+extern struct ui_out **current_ui_current_uiout_ptr (void);
+#define current_uiout (*current_ui_current_uiout_ptr ())
 
 /* alignment enum */
 enum ui_align

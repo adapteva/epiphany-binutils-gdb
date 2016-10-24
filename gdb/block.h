@@ -1,6 +1,6 @@
 /* Code dealing with blocks for GDB.
 
-   Copyright (C) 2003-2014 Free Software Foundation, Inc.
+   Copyright (C) 2003-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,7 +25,7 @@
 /* Opaque declarations.  */
 
 struct symbol;
-struct symtab;
+struct compunit_symtab;
 struct block_namespace_info;
 struct using_direct;
 struct obstack;
@@ -82,25 +82,14 @@ struct block
 
   struct dictionary *dict;
 
-  /* Used for language-specific info.  */
+  /* Contains information about namespace-related info relevant to this block:
+     using directives and the current namespace scope.  */
 
-  union
-  {
-    struct
-    {
-      /* Contains information about namespace-related info relevant to
-	 this block: using directives and the current namespace
-	 scope.  */
-      
-      struct block_namespace_info *namespace;
-    }
-    cplus_specific;
-  }
-  language_specific;
+  struct block_namespace_info *namespace_info;
 };
 
 /* The global block is singled out so that we can provide a back-link
-   to the primary symtab.  */
+   to the compunit symtab.  */
 
 struct global_block
 {
@@ -108,10 +97,9 @@ struct global_block
 
   struct block block;
 
-  /* This holds a pointer to the primary symtab holding this
-     block.  */
+  /* This holds a pointer to the compunit symtab holding this block.  */
 
-  struct symtab *symtab;
+  struct compunit_symtab *compunit_symtab;
 };
 
 #define BLOCK_START(bl)		(bl)->startaddr
@@ -119,7 +107,7 @@ struct global_block
 #define BLOCK_FUNCTION(bl)	(bl)->function
 #define BLOCK_SUPERBLOCK(bl)	(bl)->superblock
 #define BLOCK_DICT(bl)		(bl)->dict
-#define BLOCK_NAMESPACE(bl)   (bl)->language_specific.cplus_specific.namespace
+#define BLOCK_NAMESPACE(bl)	(bl)->namespace_info
 
 struct blockvector
 {
@@ -137,6 +125,14 @@ struct blockvector
 #define BLOCKVECTOR_BLOCK(blocklist,n) (blocklist)->block[n]
 #define BLOCKVECTOR_MAP(blocklist) ((blocklist)->map)
 
+/* Return the objfile of BLOCK, which must be non-NULL.  */
+
+extern struct objfile *block_objfile (const struct block *block);
+
+/* Return the architecture of BLOCK, which must be non-NULL.  */
+
+extern struct gdbarch *block_gdbarch (const struct block *block);
+
 extern struct symbol *block_linkage_function (const struct block *);
 
 extern struct symbol *block_containing_function (const struct block *);
@@ -148,10 +144,9 @@ extern int contained_in (const struct block *, const struct block *);
 extern const struct blockvector *blockvector_for_pc (CORE_ADDR,
 					       const struct block **);
 
-extern const struct blockvector *blockvector_for_pc_sect (CORE_ADDR, 
-							  struct obj_section *,
-							  const struct block **,
-							  struct symtab *);
+extern const struct blockvector *
+  blockvector_for_pc_sect (CORE_ADDR, struct obj_section *,
+			   const struct block **, struct compunit_symtab *);
 
 extern int blockvector_contains_pc (const struct blockvector *bv, CORE_ADDR pc);
 
@@ -170,7 +165,7 @@ extern void block_set_scope (struct block *block, const char *scope,
 extern struct using_direct *block_using (const struct block *block);
 
 extern void block_set_using (struct block *block,
-			     struct using_direct *using,
+			     struct using_direct *using_decl,
 			     struct obstack *obstack);
 
 extern const struct block *block_static_block (const struct block *block);
@@ -181,7 +176,19 @@ extern struct block *allocate_block (struct obstack *obstack);
 
 extern struct block *allocate_global_block (struct obstack *obstack);
 
-extern void set_block_symtab (struct block *, struct symtab *);
+extern void set_block_compunit_symtab (struct block *,
+				       struct compunit_symtab *);
+
+/* Return a property to evaluate the static link associated to BLOCK.
+
+   In the context of nested functions (available in Pascal, Ada and GNU C, for
+   instance), a static link (as in DWARF's DW_AT_static_link attribute) for a
+   function is a way to get the frame corresponding to the enclosing function.
+
+   Note that only objfile-owned and function-level blocks can have a static
+   link.  Return NULL if there is no such property.  */
+
+extern struct dynamic_prop *block_static_link (const struct block *block);
 
 /* A block iterator.  This structure should be treated as though it
    were opaque; it is only defined here because we want to support
@@ -190,11 +197,11 @@ extern void set_block_symtab (struct block *, struct symtab *);
 struct block_iterator
 {
   /* If we're iterating over a single block, this holds the block.
-     Otherwise, it holds the canonical symtab.  */
+     Otherwise, it holds the canonical compunit.  */
 
   union
   {
-    struct symtab *symtab;
+    struct compunit_symtab *compunit_symtab;
     const struct block *block;
   } d;
 
@@ -271,13 +278,70 @@ extern struct symbol *block_iter_match_next (const char *name,
 					     symbol_compare_ftype *compare,
 					     struct block_iterator *iterator);
 
-/* Macro to loop through all symbols in a block BL, in no particular
-   order.  ITER helps keep track of the iteration, and should be a
+/* Search BLOCK for symbol NAME in DOMAIN.  */
+
+extern struct symbol *block_lookup_symbol (const struct block *block,
+					   const char *name,
+					   const domain_enum domain);
+
+/* Search BLOCK for symbol NAME in DOMAIN but only in primary symbol table of
+   BLOCK.  BLOCK must be STATIC_BLOCK or GLOBAL_BLOCK.  Function is useful if
+   one iterates all global/static blocks of an objfile.  */
+
+extern struct symbol *block_lookup_symbol_primary (const struct block *block,
+						   const char *name,
+						   const domain_enum domain);
+
+/* The type of the MATCHER argument to block_find_symbol.  */
+
+typedef int (block_symbol_matcher_ftype) (struct symbol *, void *);
+
+/* Find symbol NAME in BLOCK and in DOMAIN that satisfies MATCHER.
+   DATA is passed unchanged to MATCHER.
+   BLOCK must be STATIC_BLOCK or GLOBAL_BLOCK.  */
+
+extern struct symbol *block_find_symbol (const struct block *block,
+					 const char *name,
+					 const domain_enum domain,
+					 block_symbol_matcher_ftype *matcher,
+					 void *data);
+
+/* A matcher function for block_find_symbol to find only symbols with
+   non-opaque types.  */
+
+extern int block_find_non_opaque_type (struct symbol *sym, void *data);
+
+/* A matcher function for block_find_symbol to prefer symbols with
+   non-opaque types.  The way to use this function is as follows:
+
+   struct symbol *with_opaque = NULL;
+   struct symbol *sym
+     = block_find_symbol (block, name, domain,
+                          block_find_non_opaque_type_preferred, &with_opaque);
+
+   At this point if SYM is non-NULL then a non-opaque type has been found.
+   Otherwise, if WITH_OPAQUE is non-NULL then an opaque type has been found.
+   Otherwise, the symbol was not found.  */
+
+extern int block_find_non_opaque_type_preferred (struct symbol *sym,
+						 void *data);
+
+/* Macro to loop through all symbols in BLOCK, in no particular
+   order.  ITER helps keep track of the iteration, and must be a
    struct block_iterator.  SYM points to the current symbol.  */
 
 #define ALL_BLOCK_SYMBOLS(block, iter, sym)		\
   for ((sym) = block_iterator_first ((block), &(iter));	\
        (sym);						\
        (sym) = block_iterator_next (&(iter)))
+
+/* Macro to loop through all symbols with name NAME in BLOCK,
+   in no particular order.  ITER helps keep track of the iteration, and
+   must be a struct block_iterator.  SYM points to the current symbol.  */
+
+#define ALL_BLOCK_SYMBOLS_WITH_NAME(block, name, iter, sym)		\
+  for ((sym) = block_iter_name_first ((block), (name), &(iter));	\
+       (sym) != NULL;							\
+       (sym) = block_iter_name_next ((name), &(iter)))
 
 #endif /* BLOCK_H */

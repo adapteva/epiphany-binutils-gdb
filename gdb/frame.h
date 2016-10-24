@@ -1,6 +1,6 @@
 /* Definitions for dealing with stack frames, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -68,6 +68,8 @@
    stack *address, ...
 
    */
+
+#include "language.h"
 
 struct symtab_and_line;
 struct frame_unwind;
@@ -763,8 +765,6 @@ extern void args_info (char *, int);
 
 extern void locals_info (char *, int);
 
-extern void (*deprecated_selected_frame_level_changed_hook) (int);
-
 extern void return_command (char *, int);
 
 /* Set FRAME's unwinder temporarily, so that we can call a sniffer.
@@ -815,5 +815,20 @@ extern struct frame_info *create_new_frame (CORE_ADDR base, CORE_ADDR pc);
 
 extern int frame_unwinder_is (struct frame_info *fi,
 			      const struct frame_unwind *unwinder);
+
+/* Return the language of FRAME.  */
+
+extern enum language get_frame_language (struct frame_info *frame);
+
+/* Return the first non-tailcall frame above FRAME or FRAME if it is not a
+   tailcall frame.  Return NULL if FRAME is the start of a tailcall-only
+   chain.  */
+
+extern struct frame_info *skip_tailcall_frames (struct frame_info *frame);
+
+/* Return the first frame above FRAME or FRAME of which the code is
+   writable.  */
+
+extern struct frame_info *skip_unwritable_frames (struct frame_info *frame);
 
 #endif /* !defined (FRAME_H)  */

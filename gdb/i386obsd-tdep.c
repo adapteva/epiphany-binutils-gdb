@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/i386.
 
-   Copyright (C) 1988-2014 Free Software Foundation, Inc.
+   Copyright (C) 1988-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -92,7 +92,7 @@ i386obsd_sigtramp_p (struct frame_info *this_frame)
     return 0;
 
   /* Allocate buffer.  */
-  buf = alloca (buflen);
+  buf = (gdb_byte *) alloca (buflen);
 
   /* Loop over all offsets.  */
   for (offset = i386obsd_sigreturn_offset; *offset != -1; offset++)
@@ -141,7 +141,7 @@ i386obsd_aout_supply_regset (const struct regset *regset,
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   const struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  const gdb_byte *gregs = regs;
+  const gdb_byte *gregs = (const gdb_byte *) regs;
 
   gdb_assert (len >= tdep->sizeof_gregset + I387_SIZEOF_FSAVE);
 
@@ -348,7 +348,7 @@ i386obsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   int i;
 
   if (*this_cache)
-    return *this_cache;
+    return (struct trad_frame_cache *) *this_cache;
 
   cache = trad_frame_cache_zalloc (this_frame);
   *this_cache = cache;
@@ -357,7 +357,7 @@ i386obsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   sp = get_frame_register_unsigned (this_frame, I386_ESP_REGNUM);
 
   find_pc_partial_function (func, &name, NULL, NULL);
-  if (name && strncmp (name, "Xintr", 5) == 0)
+  if (name && startswith (name, "Xintr"))
     addr = sp + 8;		/* It's an interrupt frame.  */
   else
     addr = sp;
@@ -420,8 +420,8 @@ i386obsd_trapframe_sniffer (const struct frame_unwind *self,
   find_pc_partial_function (get_frame_pc (this_frame), &name, NULL, NULL);
   return (name && (strcmp (name, "calltrap") == 0
 		   || strcmp (name, "syscall1") == 0
-		   || strncmp (name, "Xintr", 5) == 0
-		   || strncmp (name, "Xsoft", 5) == 0));
+		   || startswith (name, "Xintr")
+		   || startswith (name, "Xsoft")));
 }
 
 static const struct frame_unwind i386obsd_trapframe_unwind = {
@@ -489,8 +489,6 @@ i386obsd_aout_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 static void
 i386obsd_elf_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-
   /* It's still OpenBSD.  */
   i386obsd_init_abi (info, gdbarch);
 

@@ -1,5 +1,5 @@
 /* UI_FILE - a generic STDIO like output stream.
-   Copyright (C) 1999-2014 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -77,7 +77,7 @@ extern void set_ui_file_put (struct ui_file *stream, ui_file_put_ftype *put);
 
 typedef void (ui_file_delete_ftype) (struct ui_file * stream);
 extern void set_ui_file_data (struct ui_file *stream, void *data,
-			      ui_file_delete_ftype *delete);
+			      ui_file_delete_ftype *to_delete);
 
 typedef int (ui_file_fseek_ftype) (struct ui_file *stream, long offset,
 				   int whence);
@@ -97,6 +97,12 @@ extern int ui_file_isatty (struct ui_file *);
 
 extern void ui_file_write (struct ui_file *file, const char *buf,
 			   long length_buf);
+
+/* A wrapper for ui_file_write that is suitable for use by
+   ui_file_put.  */
+
+extern void ui_file_write_for_put (void *data, const char *buffer,
+				   long length_buffer);
 
 extern void ui_file_write_async_safe (struct ui_file *file, const char *buf,
 				      long length_buf);
@@ -129,8 +135,8 @@ extern struct ui_file *mem_fileopen (void);
 /* Open/create a STDIO based UI_FILE using the already open FILE.  */
 extern struct ui_file *stdio_fileopen (FILE *file);
 
-/* Create a ui_file from stderr.  */
-extern struct ui_file *stderr_fileopen (void);
+/* Likewise, for stderr-like streams.  */
+extern struct ui_file *stderr_fileopen (FILE *file);
 
 
 /* Open NAME returning an STDIO based UI_FILE.  */

@@ -1,7 +1,7 @@
 /* Get info from stack frames; convert between frames, blocks,
    functions and pc values.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -195,9 +195,8 @@ find_pc_partial_function_gnu_ifunc (CORE_ADDR pc, const char **name,
   struct obj_section *section;
   struct symbol *f;
   struct bound_minimal_symbol msymbol;
-  struct symtab *symtab = NULL;
+  struct compunit_symtab *compunit_symtab = NULL;
   struct objfile *objfile;
-  int i;
   CORE_ADDR mapped_pc;
 
   /* To ensure that the symbol returned belongs to the correct setion
@@ -220,13 +219,17 @@ find_pc_partial_function_gnu_ifunc (CORE_ADDR pc, const char **name,
   ALL_OBJFILES (objfile)
   {
     if (objfile->sf)
-      symtab = objfile->sf->qf->find_pc_sect_symtab (objfile, msymbol,
-						     mapped_pc, section, 0);
-    if (symtab)
+      {
+	compunit_symtab
+	  = objfile->sf->qf->find_pc_sect_compunit_symtab (objfile, msymbol,
+							   mapped_pc, section,
+							   0);
+      }
+    if (compunit_symtab != NULL)
       break;
   }
 
-  if (symtab)
+  if (compunit_symtab != NULL)
     {
       /* Checking whether the msymbol has a larger value is for the
 	 "pathological" case mentioned in print_frame_info.  */

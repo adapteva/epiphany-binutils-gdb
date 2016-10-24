@@ -1,6 +1,6 @@
 /* addrmap.c --- implementation of address map data structure.
 
-   Copyright (C) 2007-2014 Free Software Foundation, Inc.
+   Copyright (C) 2007-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -29,14 +29,14 @@
    implementation.  */
 struct addrmap_funcs
 {
-  void (*set_empty) (struct addrmap *this,
+  void (*set_empty) (struct addrmap *self,
                      CORE_ADDR start, CORE_ADDR end_inclusive,
                      void *obj);
-  void *(*find) (struct addrmap *this, CORE_ADDR addr);
-  struct addrmap *(*create_fixed) (struct addrmap *this,
+  void *(*find) (struct addrmap *self, CORE_ADDR addr);
+  struct addrmap *(*create_fixed) (struct addrmap *self,
                                    struct obstack *obstack);
-  void (*relocate) (struct addrmap *this, CORE_ADDR offset);
-  int (*foreach) (struct addrmap *this, addrmap_foreach_fn fn, void *data);
+  void (*relocate) (struct addrmap *self, CORE_ADDR offset);
+  int (*foreach) (struct addrmap *self, addrmap_foreach_fn fn, void *data);
 };
 
 
@@ -113,7 +113,7 @@ struct addrmap_fixed
 
 
 static void
-addrmap_fixed_set_empty (struct addrmap *this,
+addrmap_fixed_set_empty (struct addrmap *self,
                    CORE_ADDR start, CORE_ADDR end_inclusive,
                    void *obj)
 {
@@ -124,9 +124,9 @@ addrmap_fixed_set_empty (struct addrmap *this,
 
 
 static void *
-addrmap_fixed_find (struct addrmap *this, CORE_ADDR addr)
+addrmap_fixed_find (struct addrmap *self, CORE_ADDR addr)
 {
-  struct addrmap_fixed *map = (struct addrmap_fixed *) this;
+  struct addrmap_fixed *map = (struct addrmap_fixed *) self;
   struct addrmap_transition *bottom = &map->transitions[0];
   struct addrmap_transition *top = &map->transitions[map->num_transitions - 1];
 
@@ -157,7 +157,7 @@ addrmap_fixed_find (struct addrmap *this, CORE_ADDR addr)
 
 
 static struct addrmap *
-addrmap_fixed_create_fixed (struct addrmap *this, struct obstack *obstack)
+addrmap_fixed_create_fixed (struct addrmap *self, struct obstack *obstack)
 {
   internal_error (__FILE__, __LINE__,
                   _("addrmap_create_fixed is not implemented yet "
@@ -166,9 +166,9 @@ addrmap_fixed_create_fixed (struct addrmap *this, struct obstack *obstack)
 
 
 static void
-addrmap_fixed_relocate (struct addrmap *this, CORE_ADDR offset)
+addrmap_fixed_relocate (struct addrmap *self, CORE_ADDR offset)
 {
-  struct addrmap_fixed *map = (struct addrmap_fixed *) this;
+  struct addrmap_fixed *map = (struct addrmap_fixed *) self;
   size_t i;
 
   for (i = 0; i < map->num_transitions; i++)
@@ -177,10 +177,10 @@ addrmap_fixed_relocate (struct addrmap *this, CORE_ADDR offset)
 
 
 static int
-addrmap_fixed_foreach (struct addrmap *this, addrmap_foreach_fn fn,
+addrmap_fixed_foreach (struct addrmap *self, addrmap_foreach_fn fn,
 		       void *data)
 {
-  struct addrmap_fixed *map = (struct addrmap_fixed *) this;
+  struct addrmap_fixed *map = (struct addrmap_fixed *) self;
   size_t i;
 
   for (i = 0; i < map->num_transitions; i++)
@@ -244,7 +244,7 @@ struct addrmap_mutable
 static splay_tree_key
 allocate_key (struct addrmap_mutable *map, CORE_ADDR addr)
 {
-  CORE_ADDR *key = obstack_alloc (map->obstack, sizeof (*key));
+  CORE_ADDR *key = XOBNEW (map->obstack, CORE_ADDR);
 
   *key = addr;
   return (splay_tree_key) key;
@@ -315,26 +315,26 @@ addrmap_splay_tree_insert (struct addrmap_mutable *map,
    tree node at ADDR, even if it would represent a "transition" from
    one value to the same value.  */
 static void
-force_transition (struct addrmap_mutable *this, CORE_ADDR addr)
+force_transition (struct addrmap_mutable *self, CORE_ADDR addr)
 {
   splay_tree_node n
-    = addrmap_splay_tree_lookup (this, addr);
+    = addrmap_splay_tree_lookup (self, addr);
 
   if (! n)
     {
-      n = addrmap_splay_tree_predecessor (this, addr);
-      addrmap_splay_tree_insert (this, addr,
+      n = addrmap_splay_tree_predecessor (self, addr);
+      addrmap_splay_tree_insert (self, addr,
                                  n ? addrmap_node_value (n) : NULL);
     }
 }
 
 
 static void
-addrmap_mutable_set_empty (struct addrmap *this,
+addrmap_mutable_set_empty (struct addrmap *self,
                            CORE_ADDR start, CORE_ADDR end_inclusive,
                            void *obj)
 {
-  struct addrmap_mutable *map = (struct addrmap_mutable *) this;
+  struct addrmap_mutable *map = (struct addrmap_mutable *) self;
   splay_tree_node n, next;
   void *prior_value;
 
@@ -384,7 +384,7 @@ addrmap_mutable_set_empty (struct addrmap *this,
 
 
 static void *
-addrmap_mutable_find (struct addrmap *this, CORE_ADDR addr)
+addrmap_mutable_find (struct addrmap *self, CORE_ADDR addr)
 {
   /* Not needed yet.  */
   internal_error (__FILE__, __LINE__,
@@ -422,24 +422,24 @@ splay_foreach_copy (splay_tree_node n, void *closure)
 
 
 static struct addrmap *
-addrmap_mutable_create_fixed (struct addrmap *this, struct obstack *obstack)
+addrmap_mutable_create_fixed (struct addrmap *self, struct obstack *obstack)
 {
-  struct addrmap_mutable *mutable = (struct addrmap_mutable *) this;
+  struct addrmap_mutable *mutable_obj = (struct addrmap_mutable *) self;
   struct addrmap_fixed *fixed;
   size_t num_transitions;
+  size_t alloc_len;
 
   /* Count the number of transitions in the tree.  */
   num_transitions = 0;
-  splay_tree_foreach (mutable->tree, splay_foreach_count, &num_transitions);
+  splay_tree_foreach (mutable_obj->tree, splay_foreach_count, &num_transitions);
 
   /* Include an extra entry for the transition at zero (which fixed
      maps have, but mutable maps do not.)  */
   num_transitions++;
 
-  fixed = obstack_alloc (obstack,
-                         (sizeof (*fixed)
-                          + (num_transitions
-                             * sizeof (fixed->transitions[0]))));
+  alloc_len = sizeof (*fixed)
+	      + (num_transitions * sizeof (fixed->transitions[0]));
+  fixed = (struct addrmap_fixed *) obstack_alloc (obstack, alloc_len);
   fixed->addrmap.funcs = &addrmap_fixed_funcs;
   fixed->num_transitions = 1;
   fixed->transitions[0].addr = 0;
@@ -447,7 +447,7 @@ addrmap_mutable_create_fixed (struct addrmap *this, struct obstack *obstack)
 
   /* Copy all entries from the splay tree to the array, in order 
      of increasing address.  */
-  splay_tree_foreach (mutable->tree, splay_foreach_copy, fixed);
+  splay_tree_foreach (mutable_obj->tree, splay_foreach_copy, fixed);
 
   /* We should have filled the array.  */
   gdb_assert (fixed->num_transitions == num_transitions);
@@ -457,7 +457,7 @@ addrmap_mutable_create_fixed (struct addrmap *this, struct obstack *obstack)
 
 
 static void
-addrmap_mutable_relocate (struct addrmap *this, CORE_ADDR offset)
+addrmap_mutable_relocate (struct addrmap *self, CORE_ADDR offset)
 {
   /* Not needed yet.  */
   internal_error (__FILE__, __LINE__,
@@ -479,7 +479,8 @@ struct mutable_foreach_data
 static int
 addrmap_mutable_foreach_worker (splay_tree_node node, void *data)
 {
-  struct mutable_foreach_data *foreach_data = data;
+  struct mutable_foreach_data *foreach_data
+    = (struct mutable_foreach_data *) data;
 
   return foreach_data->fn (foreach_data->data,
 			   addrmap_node_key (node),
@@ -488,15 +489,15 @@ addrmap_mutable_foreach_worker (splay_tree_node node, void *data)
 
 
 static int
-addrmap_mutable_foreach (struct addrmap *this, addrmap_foreach_fn fn,
+addrmap_mutable_foreach (struct addrmap *self, addrmap_foreach_fn fn,
 			 void *data)
 {
-  struct addrmap_mutable *mutable = (struct addrmap_mutable *) this;
+  struct addrmap_mutable *mutable_obj = (struct addrmap_mutable *) self;
   struct mutable_foreach_data foreach_data;
 
   foreach_data.fn = fn;
   foreach_data.data = data;
-  return splay_tree_foreach (mutable->tree, addrmap_mutable_foreach_worker,
+  return splay_tree_foreach (mutable_obj->tree, addrmap_mutable_foreach_worker,
 			     &foreach_data);
 }
 
@@ -514,7 +515,7 @@ static const struct addrmap_funcs addrmap_mutable_funcs =
 static void *
 splay_obstack_alloc (int size, void *closure)
 {
-  struct addrmap_mutable *map = closure;
+  struct addrmap_mutable *map = (struct addrmap_mutable *) closure;
   splay_tree_node n;
 
   /* We should only be asked to allocate nodes and larger things.
@@ -536,8 +537,8 @@ splay_obstack_alloc (int size, void *closure)
 static void
 splay_obstack_free (void *obj, void *closure)
 {
-  struct addrmap_mutable *map = closure;
-  splay_tree_node n = obj;
+  struct addrmap_mutable *map = (struct addrmap_mutable *) closure;
+  splay_tree_node n = (splay_tree_node) obj;
 
   /* We've asserted in the allocation function that we only allocate
      nodes or larger things, so it should be safe to put whatever
@@ -567,7 +568,7 @@ splay_compare_CORE_ADDR_ptr (splay_tree_key ak, splay_tree_key bk)
 struct addrmap *
 addrmap_create_mutable (struct obstack *obstack)
 {
-  struct addrmap_mutable *map = obstack_alloc (obstack, sizeof (*map));
+  struct addrmap_mutable *map = XOBNEW (obstack, struct addrmap_mutable);
 
   map->addrmap.funcs = &addrmap_mutable_funcs;
   map->obstack = obstack;

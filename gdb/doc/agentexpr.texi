@@ -7,7 +7,7 @@
 
 @c This file is part of the GDB manual.
 @c
-@c Copyright (C) 2003-2014 Free Software Foundation, Inc.
+@c Copyright (C) 2003-2016 Free Software Foundation, Inc.
 @c
 @c See the file gdb.texinfo for copying conditions.
 
@@ -353,8 +353,7 @@ byte unsigned integer following the @code{ext} bytecode.
 
 @item @code{zero_ext} (0x2a) @var{n}: @var{a} @result{} @var{a}, zero-extended from @var{n} bits
 Pop an unsigned value from the stack; zero all but the bottom @var{n}
-bits.  This means that all bits to the left of bit @var{n-1} (where the
-least significant bit is bit 0) are set to the value of bit @var{n-1}.
+bits.
 
 The number of source bits to preserve, @var{n}, is encoded as a single
 byte unsigned integer following the @code{zero_ext} bytecode.
@@ -461,7 +460,7 @@ alignment within the bytecode stream; thus, on machines where fetching a
 16-bit on an unaligned address raises an exception, you should fetch the
 register number one byte at a time.
 
-@item @code{setv} (0x2d) @var{n}: @result{} @var{v}
+@item @code{setv} (0x2d) @var{n}: @var{v} @result{} @var{v}
 Set trace state variable number @var{n} to the value found on the top
 of the stack.  The stack is unchanged, so that the value is readily
 available if the assignment is part of a larger expression.  The

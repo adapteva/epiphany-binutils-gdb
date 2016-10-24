@@ -23,17 +23,7 @@
 
 #include "bfd.h"
 
-#ifndef INLINE
-#ifdef __GNUC__
-#define INLINE inline
-#else
-#define INLINE
-#endif
-#endif
 
-
-host_callback *mn10300_callback;
-int mn10300_debug;
 struct _state State;
 
 
@@ -84,18 +74,37 @@ static const OPTION mn10300_options[] =
 /* For compatibility */
 SIM_DESC simulator;
 
+static sim_cia
+mn10300_pc_get (sim_cpu *cpu)
+{
+  return PC;
+}
+
+static void
+mn10300_pc_set (sim_cpu *cpu, sim_cia pc)
+{
+  PC = pc;
+}
+
+static int mn10300_reg_fetch (SIM_CPU *, int, unsigned char *, int);
+static int mn10300_reg_store (SIM_CPU *, int, unsigned char *, int);
+
 /* These default values correspond to expected usage for the chip.  */
 
 SIM_DESC
 sim_open (SIM_OPEN_KIND kind,
 	  host_callback *cb,
 	  struct bfd *abfd,
-	  char **argv)
+	  char * const *argv)
 {
+  int i;
   SIM_DESC sd = sim_state_alloc (kind, cb);
-  mn10300_callback = cb;
 
   SIM_ASSERT (STATE_MAGIC (sd) == SIM_MAGIC_NUMBER);
+
+  /* The cpu data is kept in a separately allocated chunk of memory.  */
+  if (sim_cpu_alloc_all (sd, 1, /*cgen_cpu_max_extra_bytes ()*/0) != SIM_RC_OK)
+    return 0;
 
   /* for compatibility */
   simulator = sd;
@@ -116,9 +125,7 @@ sim_open (SIM_OPEN_KIND kind,
   sim_do_command (sd, "memory region 0,0x100000");
   sim_do_command (sd, "memory region 0x40000000,0x200000");
 
-  /* getopt will print the error message so we just have to exit if this fails.
-     FIXME: Hmmm...  in the case of gdb we need getopt to call
-     print_filtered.  */
+  /* The parser will print an error message for us, so we silently return.  */
   if (sim_parse_args (sd, argv) != SIM_RC_OK)
     {
       /* Uninstall the modules to avoid memory leaks,
@@ -297,22 +304,25 @@ sim_open (SIM_OPEN_KIND kind,
 /*   STATE_CPU (sd, 0)->psw_mask = (PSW_NP | PSW_EP | PSW_ID | PSW_SAT */
 /* 			     | PSW_CY | PSW_OV | PSW_S | PSW_Z); */
 
+  /* CPU specific initialization.  */
+  for (i = 0; i < MAX_NR_PROCESSORS; ++i)
+    {
+      SIM_CPU *cpu = STATE_CPU (sd, i);
+
+      CPU_REG_FETCH (cpu) = mn10300_reg_fetch;
+      CPU_REG_STORE (cpu) = mn10300_reg_store;
+      CPU_PC_FETCH (cpu) = mn10300_pc_get;
+      CPU_PC_STORE (cpu) = mn10300_pc_set;
+    }
+
   return sd;
 }
-
-
-void
-sim_close (SIM_DESC sd, int quitting)
-{
-  sim_module_uninstall (sd);
-}
-
 
 SIM_RC
 sim_create_inferior (SIM_DESC sd,
 		     struct bfd *prog_bfd,
-		     char **argv,
-		     char **env)
+		     char * const *argv,
+		     char * const *env)
 {
   memset (&State, 0, sizeof (State));
   if (prog_bfd != NULL) {
@@ -320,7 +330,7 @@ sim_create_inferior (SIM_DESC sd,
   } else {
     PC = 0;
   }
-  CIA_SET (STATE_CPU (sd, 0), (unsigned64) PC);
+  CPU_PC_SET (STATE_CPU (sd, 0), (unsigned64) PC);
 
   if (STATE_ARCHITECTURE (sd)->mach == bfd_mach_am33_2)
     PSW |= PSW_FE;
@@ -331,71 +341,25 @@ sim_create_inferior (SIM_DESC sd,
 /* FIXME These would more efficient to use than load_mem/store_mem,
    but need to be changed to use the memory map.  */
 
-uint8
-get_byte (uint8 *x)
+static int
+mn10300_reg_fetch (SIM_CPU *cpu, int rn, unsigned char *memory, int length)
 {
-  return *x;
-}
-
-uint16
-get_half (uint8 *x)
-{
-  uint8 *a = x;
-  return (a[1] << 8) + (a[0]);
-}
-
-uint32
-get_word (uint8 *x)
-{
-  uint8 *a = x;
-  return (a[3]<<24) + (a[2]<<16) + (a[1]<<8) + (a[0]);
-}
-
-void
-put_byte (uint8 *addr, uint8 data)
-{
-  uint8 *a = addr;
-  a[0] = data;
-}
-
-void
-put_half (uint8 *addr, uint16 data)
-{
-  uint8 *a = addr;
-  a[0] = data & 0xff;
-  a[1] = (data >> 8) & 0xff;
-}
-
-void
-put_word (uint8 *addr, uint32 data)
-{
-  uint8 *a = addr;
-  a[0] = data & 0xff;
-  a[1] = (data >> 8) & 0xff;
-  a[2] = (data >> 16) & 0xff;
-  a[3] = (data >> 24) & 0xff;
-}
-
-int
-sim_fetch_register (SIM_DESC sd,
-		    int rn,
-		    unsigned char *memory,
-		    int length)
-{
-  put_word (memory, State.regs[rn]);
+  reg_t reg = State.regs[rn];
+  uint8 *a = memory;
+  a[0] = reg;
+  a[1] = reg >> 8;
+  a[2] = reg >> 16;
+  a[3] = reg >> 24;
   return length;
 }
  
-int
-sim_store_register (SIM_DESC sd,
-		    int rn,
-		    unsigned char *memory,
-		    int length)
+static int
+mn10300_reg_store (SIM_CPU *cpu, int rn, unsigned char *memory, int length)
 {
-  State.regs[rn] = get_word (memory);
+  uint8 *a = memory;
+  State.regs[rn] = (a[3] << 24) + (a[2] << 16) + (a[1] << 8) + a[0];
   return length;
 }
-
 
 void
 mn10300_core_signal (SIM_DESC sd,
@@ -449,15 +413,12 @@ program_interrupt (SIM_DESC sd,
 
   /* avoid infinite recursion */
   if (in_interrupt)
-    {
-      (*mn10300_callback->printf_filtered) (mn10300_callback, 
-					    "ERROR: recursion in program_interrupt during software exception dispatch.");
-    }
+    sim_io_printf (sd, "ERROR: recursion in program_interrupt during software exception dispatch.");
   else
     {
       in_interrupt = 1;
       /* copy NMI handler code from dv-mn103cpu.c */
-      store_word (SP - 4, CIA_GET (cpu));
+      store_word (SP - 4, CPU_PC_GET (cpu));
       store_half (SP - 8, PSW);
 
       /* Set the SYSEF flag in NMICR by backdoor method.  See
@@ -471,7 +432,7 @@ program_interrupt (SIM_DESC sd,
 
   PSW &= ~PSW_IE;
   SP = SP - 8;
-  CIA_SET (cpu, 0x40000008);
+  CPU_PC_SET (cpu, 0x40000008);
 
   in_interrupt = 0;
   sim_engine_halt(sd, cpu, NULL, cia, sim_stopped, sig);
@@ -486,7 +447,7 @@ mn10300_cpu_exception_trigger(SIM_DESC sd, sim_cpu* cpu, address_word cia)
   if(State.exc_suspended > 0)
     sim_io_eprintf(sd, "Warning, nested exception triggered (%d)\n", State.exc_suspended); 
 
-  CIA_SET (cpu, cia);
+  CPU_PC_SET (cpu, cia);
   memcpy(State.exc_trigger_regs, State.regs, sizeof(State.exc_trigger_regs));
   State.exc_suspended = 0;
 }
@@ -502,7 +463,7 @@ mn10300_cpu_exception_suspend(SIM_DESC sd, sim_cpu* cpu, int exception)
 
   memcpy(State.exc_suspend_regs, State.regs, sizeof(State.exc_suspend_regs));
   memcpy(State.regs, State.exc_trigger_regs, sizeof(State.regs));
-  CIA_SET (cpu, PC); /* copy PC back from new State.regs */
+  CPU_PC_SET (cpu, PC); /* copy PC back from new State.regs */
   State.exc_suspended = exception;
 }
 
@@ -524,7 +485,7 @@ mn10300_cpu_exception_resume(SIM_DESC sd, sim_cpu* cpu, int exception)
 		       State.exc_suspended, exception); 
       
       memcpy(State.regs, State.exc_suspend_regs, sizeof(State.regs)); 
-      CIA_SET (cpu, PC); /* copy PC back from new State.regs */
+      CPU_PC_SET (cpu, PC); /* copy PC back from new State.regs */
     }
   else if(exception != 0 && State.exc_suspended == 0)
     {
@@ -613,7 +574,7 @@ reg2val_64 (const void *reg, sim_fpu *val)
 /* Round the given sim_fpu value to double precision, following the
    target platform rounding and denormalization conventions.  On
    AM33/2.0, round_near is the only rounding mode.  */
-int
+static int
 round_64 (sim_fpu *val)
 {
   return sim_fpu_round_64 (val, sim_fpu_round_near, sim_fpu_denorm_zero);
@@ -641,7 +602,7 @@ fp_double_prec = {
 
 /* Check whether overflow, underflow or inexact exceptions should be
    raised.  */
-int
+static int
 fpu_status_ok (sim_fpu_status stat)
 {
   if ((stat & sim_fpu_status_overflow)

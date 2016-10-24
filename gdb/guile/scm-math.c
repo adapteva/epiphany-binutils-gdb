@@ -1,6 +1,6 @@
 /* GDB/Scheme support for math operations on values.
 
-   Copyright (C) 2008-2014 Free Software Foundation, Inc.
+   Copyright (C) 2008-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -83,7 +83,6 @@ vlscm_unop (enum valscm_unary_opcode opcode, SCM x, const char *func_name)
   struct value *res_val = NULL;
   SCM except_scm;
   struct cleanup *cleanups;
-  volatile struct gdb_exception except;
 
   cleanups = make_cleanup_value_free_to_mark (value_mark ());
 
@@ -95,7 +94,7 @@ vlscm_unop (enum valscm_unary_opcode opcode, SCM x, const char *func_name)
       gdbscm_throw (except_scm);
     }
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
+  TRY
     {
       switch (opcode)
 	{
@@ -128,7 +127,11 @@ vlscm_unop (enum valscm_unary_opcode opcode, SCM x, const char *func_name)
 	  gdb_assert_not_reached ("unsupported operation");
 	}
     }
-  GDBSCM_HANDLE_GDB_EXCEPTION_WITH_CLEANUPS (except, cleanups);
+  CATCH (except, RETURN_MASK_ALL)
+    {
+      GDBSCM_HANDLE_GDB_EXCEPTION_WITH_CLEANUPS (except, cleanups);
+    }
+  END_CATCH
 
   gdb_assert (res_val != NULL);
   result = vlscm_scm_from_value (res_val);
@@ -156,7 +159,6 @@ vlscm_binop (enum valscm_binary_opcode opcode, SCM x, SCM y,
   struct value *res_val = NULL;
   SCM except_scm;
   struct cleanup *cleanups;
-  volatile struct gdb_exception except;
 
   cleanups = make_cleanup_value_free_to_mark (value_mark ());
 
@@ -175,7 +177,7 @@ vlscm_binop (enum valscm_binary_opcode opcode, SCM x, SCM y,
       gdbscm_throw (except_scm);
     }
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
+  TRY
     {
       switch (opcode)
 	{
@@ -184,9 +186,9 @@ vlscm_binop (enum valscm_binary_opcode opcode, SCM x, SCM y,
 	    struct type *ltype = value_type (arg1);
 	    struct type *rtype = value_type (arg2);
 
-	    CHECK_TYPEDEF (ltype);
+	    ltype = check_typedef (ltype);
 	    ltype = STRIP_REFERENCE (ltype);
-	    CHECK_TYPEDEF (rtype);
+	    rtype = check_typedef (rtype);
 	    rtype = STRIP_REFERENCE (rtype);
 
 	    if (TYPE_CODE (ltype) == TYPE_CODE_PTR
@@ -204,9 +206,9 @@ vlscm_binop (enum valscm_binary_opcode opcode, SCM x, SCM y,
 	    struct type *ltype = value_type (arg1);
 	    struct type *rtype = value_type (arg2);
 
-	    CHECK_TYPEDEF (ltype);
+	    ltype = check_typedef (ltype);
 	    ltype = STRIP_REFERENCE (ltype);
-	    CHECK_TYPEDEF (rtype);
+	    rtype = check_typedef (rtype);
 	    rtype = STRIP_REFERENCE (rtype);
 
 	    if (TYPE_CODE (ltype) == TYPE_CODE_PTR
@@ -264,7 +266,11 @@ vlscm_binop (enum valscm_binary_opcode opcode, SCM x, SCM y,
 	  gdb_assert_not_reached ("unsupported operation");
 	}
     }
-  GDBSCM_HANDLE_GDB_EXCEPTION_WITH_CLEANUPS (except, cleanups);
+  CATCH (except, RETURN_MASK_ALL)
+    {
+      GDBSCM_HANDLE_GDB_EXCEPTION_WITH_CLEANUPS (except, cleanups);
+    }
+  END_CATCH
 
   gdb_assert (res_val != NULL);
   result = vlscm_scm_from_value (res_val);
@@ -441,7 +447,7 @@ vlscm_rich_compare (int op, SCM x, SCM y, const char *func_name)
   int result = 0;
   SCM except_scm;
   struct cleanup *cleanups;
-  volatile struct gdb_exception except;
+  struct gdb_exception except = exception_none;
 
   cleanups = make_cleanup_value_free_to_mark (value_mark ());
 
@@ -460,7 +466,7 @@ vlscm_rich_compare (int op, SCM x, SCM y, const char *func_name)
       gdbscm_throw (except_scm);
     }
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
+  TRY
     {
       switch (op)
 	{
@@ -487,6 +493,12 @@ vlscm_rich_compare (int op, SCM x, SCM y, const char *func_name)
 	  gdb_assert_not_reached ("invalid <gdb:value> comparison");
       }
     }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      except = ex;
+    }
+  END_CATCH
+
   do_cleanups (cleanups);
   GDBSCM_HANDLE_GDB_EXCEPTION (except);
 
@@ -742,7 +754,6 @@ vlscm_convert_typed_value_from_scheme (const char *func_name,
 {
   struct value *value = NULL;
   SCM except_scm = SCM_BOOL_F;
-  volatile struct gdb_exception except;
 
   if (type == NULL)
     {
@@ -752,7 +763,7 @@ vlscm_convert_typed_value_from_scheme (const char *func_name,
 
   *except_scmp = SCM_BOOL_F;
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
+  TRY
     {
       if (vlscm_is_value (obj))
 	{
@@ -859,8 +870,11 @@ vlscm_convert_typed_value_from_scheme (const char *func_name,
 	  value = NULL;
 	}
     }
-  if (except.reason < 0)
-    except_scm = gdbscm_scm_from_gdb_exception (except);
+  CATCH (except, RETURN_MASK_ALL)
+    {
+      except_scm = gdbscm_scm_from_gdb_exception (except);
+    }
+  END_CATCH
 
   if (gdbscm_is_true (except_scm))
     {
@@ -891,99 +905,99 @@ vlscm_convert_value_from_scheme (const char *func_name,
 
 static const scheme_function math_functions[] =
 {
-  { "value-add", 2, 0, 0, gdbscm_value_add,
+  { "value-add", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_add),
     "\
 Return a + b." },
 
-  { "value-sub", 2, 0, 0, gdbscm_value_sub,
+  { "value-sub", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_sub),
     "\
 Return a - b." },
 
-  { "value-mul", 2, 0, 0, gdbscm_value_mul,
+  { "value-mul", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_mul),
     "\
 Return a * b." },
 
-  { "value-div", 2, 0, 0, gdbscm_value_div,
+  { "value-div", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_div),
     "\
 Return a / b." },
 
-  { "value-rem", 2, 0, 0, gdbscm_value_rem,
+  { "value-rem", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_rem),
     "\
 Return a % b." },
 
-  { "value-mod", 2, 0, 0, gdbscm_value_mod,
+  { "value-mod", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_mod),
     "\
 Return a mod b.  See Knuth 1.2.4." },
 
-  { "value-pow", 2, 0, 0, gdbscm_value_pow,
+  { "value-pow", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_pow),
     "\
 Return pow (x, y)." },
 
-  { "value-not", 1, 0, 0, gdbscm_value_not,
+  { "value-not", 1, 0, 0, as_a_scm_t_subr (gdbscm_value_not),
     "\
 Return !a." },
 
-  { "value-neg", 1, 0, 0, gdbscm_value_neg,
+  { "value-neg", 1, 0, 0, as_a_scm_t_subr (gdbscm_value_neg),
     "\
 Return -a." },
 
-  { "value-pos", 1, 0, 0, gdbscm_value_pos,
+  { "value-pos", 1, 0, 0, as_a_scm_t_subr (gdbscm_value_pos),
     "\
 Return a." },
 
-  { "value-abs", 1, 0, 0, gdbscm_value_abs,
+  { "value-abs", 1, 0, 0, as_a_scm_t_subr (gdbscm_value_abs),
     "\
 Return abs (a)." },
 
-  { "value-lsh", 2, 0, 0, gdbscm_value_lsh,
+  { "value-lsh", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_lsh),
     "\
 Return a << b." },
 
-  { "value-rsh", 2, 0, 0, gdbscm_value_rsh,
+  { "value-rsh", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_rsh),
     "\
 Return a >> b." },
 
-  { "value-min", 2, 0, 0, gdbscm_value_min,
+  { "value-min", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_min),
     "\
 Return min (a, b)." },
 
-  { "value-max", 2, 0, 0, gdbscm_value_max,
+  { "value-max", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_max),
     "\
 Return max (a, b)." },
 
-  { "value-lognot", 1, 0, 0, gdbscm_value_lognot,
+  { "value-lognot", 1, 0, 0, as_a_scm_t_subr (gdbscm_value_lognot),
     "\
 Return ~a." },
 
-  { "value-logand", 2, 0, 0, gdbscm_value_logand,
+  { "value-logand", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_logand),
     "\
 Return a & b." },
 
-  { "value-logior", 2, 0, 0, gdbscm_value_logior,
+  { "value-logior", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_logior),
     "\
 Return a | b." },
 
-  { "value-logxor", 2, 0, 0, gdbscm_value_logxor,
+  { "value-logxor", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_logxor),
     "\
 Return a ^ b." },
 
-  { "value=?", 2, 0, 0, gdbscm_value_eq_p,
+  { "value=?", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_eq_p),
     "\
 Return a == b." },
 
-  { "value<?", 2, 0, 0, gdbscm_value_lt_p,
+  { "value<?", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_lt_p),
     "\
 Return a < b." },
 
-  { "value<=?", 2, 0, 0, gdbscm_value_le_p,
+  { "value<=?", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_le_p),
     "\
 Return a <= b." },
 
-  { "value>?", 2, 0, 0, gdbscm_value_gt_p,
+  { "value>?", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_gt_p),
     "\
 Return a > b." },
 
-  { "value>=?", 2, 0, 0, gdbscm_value_ge_p,
+  { "value>=?", 2, 0, 0, as_a_scm_t_subr (gdbscm_value_ge_p),
     "\
 Return a >= b." },
 

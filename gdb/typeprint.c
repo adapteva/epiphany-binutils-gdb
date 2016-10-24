@@ -1,6 +1,6 @@
 /* Language independent support for printing types for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -87,7 +87,7 @@ struct typedef_hash_table
 static hashval_t
 hash_typedef_field (const void *p)
 {
-  const struct typedef_field *tf = p;
+  const struct typedef_field *tf = (const struct typedef_field *) p;
   struct type *t = check_typedef (tf->type);
 
   return htab_hash_string (TYPE_SAFE_NAME (t));
@@ -98,8 +98,8 @@ hash_typedef_field (const void *p)
 static int
 eq_typedef_field (const void *a, const void *b)
 {
-  const struct typedef_field *tfa = a;
-  const struct typedef_field *tfb = b;
+  const struct typedef_field *tfa = (const struct typedef_field *) a;
+  const struct typedef_field *tfb = (const struct typedef_field *) b;
 
   return types_equal (tfa->type, tfb->type);
 }
@@ -195,7 +195,7 @@ free_typedef_hash (struct typedef_hash_table *table)
 static void
 do_free_typedef_hash (void *arg)
 {
-  free_typedef_hash (arg);
+  free_typedef_hash ((struct typedef_hash_table *) arg);
 }
 
 /* Return a new cleanup that frees TABLE.  */
@@ -211,7 +211,7 @@ make_cleanup_free_typedef_hash (struct typedef_hash_table *table)
 static int
 copy_typedef_hash_element (void **slot, void *nt)
 {
-  htab_t new_table = nt;
+  htab_t new_table = (htab_t) nt;
   void **new_slot;
 
   new_slot = htab_find_slot (new_table, *slot, INSERT);
@@ -242,7 +242,7 @@ copy_typedef_hash (struct typedef_hash_table *table)
 static void
 do_free_global_table (void *arg)
 {
-  struct type_print_options *flags = arg;
+  struct type_print_options *flags = (struct type_print_options *) arg;
 
   free_typedef_hash (flags->global_typedefs);
   free_ext_lang_type_printers (flags->global_printers);
@@ -281,7 +281,7 @@ find_global_typedef (const struct type_print_options *flags,
   slot = htab_find_slot (flags->global_typedefs->table, &tf, INSERT);
   if (*slot != NULL)
     {
-      new_tf = *slot;
+      new_tf = (struct typedef_field *) *slot;
       return new_tf->name;
     }
 
@@ -297,8 +297,9 @@ find_global_typedef (const struct type_print_options *flags,
 
   if (applied != NULL)
     {
-      new_tf->name = obstack_copy0 (&flags->global_typedefs->storage, applied,
-				    strlen (applied));
+      new_tf->name
+	= (const char *) obstack_copy0 (&flags->global_typedefs->storage,
+					applied, strlen (applied));
       xfree (applied);
     }
 
@@ -319,7 +320,8 @@ find_typedef_in_hash (const struct type_print_options *flags, struct type *t)
 
       tf.name = NULL;
       tf.type = t;
-      found = htab_find (flags->local_typedefs->table, &tf);
+      found = (struct typedef_field *) htab_find (flags->local_typedefs->table,
+						  &tf);
 
       if (found != NULL)
 	return found->name;
@@ -335,9 +337,9 @@ find_typedef_in_hash (const struct type_print_options *flags, struct type *t)
    NEW is the new name for a type TYPE.  */
 
 void
-typedef_print (struct type *type, struct symbol *new, struct ui_file *stream)
+typedef_print (struct type *type, struct symbol *newobj, struct ui_file *stream)
 {
-  LA_PRINT_TYPEDEF (type, new, stream);
+  LA_PRINT_TYPEDEF (type, newobj, stream);
 }
 
 /* The default way to print a typedef.  */
@@ -372,18 +374,20 @@ type_to_string (struct type *type)
   char *s = NULL;
   struct ui_file *stb;
   struct cleanup *old_chain;
-  volatile struct gdb_exception except;
 
   stb = mem_fileopen ();
   old_chain = make_cleanup_ui_file_delete (stb);
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
+  TRY
     {
       type_print (type, "", stb, -1);
       s = ui_file_xstrdup (stb, NULL);
     }
-  if (except.reason < 0)
-    s = NULL;
+  CATCH (except, RETURN_MASK_ALL)
+    {
+      s = NULL;
+    }
+  END_CATCH
 
   do_cleanups (old_chain);
 
@@ -402,7 +406,7 @@ whatis_exp (char *exp, int show)
   struct type *real_type = NULL;
   struct type *type;
   int full = 0;
-  int top = -1;
+  LONGEST top = -1;
   int using_enc = 0;
   struct value_print_options opts;
   struct type_print_options flags = default_ptype_flags;
@@ -461,9 +465,9 @@ whatis_exp (char *exp, int show)
     {
       if (((TYPE_CODE (type) == TYPE_CODE_PTR)
 	   || (TYPE_CODE (type) == TYPE_CODE_REF))
-	  && (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_CLASS))
+	  && (TYPE_CODE (TYPE_TARGET_TYPE (type)) == TYPE_CODE_STRUCT))
         real_type = value_rtti_indirect_type (val, &full, &top, &using_enc);
-      else if (TYPE_CODE (type) == TYPE_CODE_CLASS)
+      else if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
 	real_type = value_rtti_type (val, &full, &top, &using_enc);
     }
 
@@ -499,9 +503,9 @@ whatis_command (char *exp, int from_tty)
 /* TYPENAME is either the name of a type, or an expression.  */
 
 static void
-ptype_command (char *typename, int from_tty)
+ptype_command (char *type_name, int from_tty)
 {
-  whatis_exp (typename, 1);
+  whatis_exp (type_name, 1);
 }
 
 /* Print integral scalar data VAL, of type TYPE, onto stdio stream STREAM.
@@ -522,7 +526,7 @@ print_type_scalar (struct type *type, LONGEST val, struct ui_file *stream)
   unsigned int i;
   unsigned len;
 
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
 
   switch (TYPE_CODE (type))
     {
@@ -592,16 +596,16 @@ print_type_scalar (struct type *type, LONGEST val, struct ui_file *stream)
    and whatis_command().  */
 
 void
-maintenance_print_type (char *typename, int from_tty)
+maintenance_print_type (char *type_name, int from_tty)
 {
   struct value *val;
   struct type *type;
   struct cleanup *old_chain;
   struct expression *expr;
 
-  if (typename != NULL)
+  if (type_name != NULL)
     {
-      expr = parse_expression (typename);
+      expr = parse_expression (type_name);
       old_chain = make_cleanup (free_current_contents, &expr);
       if (expr->elts[0].opcode == OP_TYPE)
 	{
@@ -723,3 +727,20 @@ Show printing of typedefs defined in classes."), NULL,
 			   show_print_type_typedefs,
 			   &setprinttypelist, &showprinttypelist);
 }
+
+/* Print <not allocated> status to stream STREAM.  */
+
+void
+val_print_not_allocated (struct ui_file *stream)
+{
+  fprintf_filtered (stream, _("<not allocated>"));
+}
+
+/* Print <not associated> status to stream STREAM.  */
+
+void
+val_print_not_associated (struct ui_file *stream)
+{
+  fprintf_filtered (stream, _("<not associated>"));
+}
+

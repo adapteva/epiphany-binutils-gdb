@@ -1,6 +1,6 @@
 /* Work with executable files, for GDB. 
 
-   Copyright (C) 1988-2014 Free Software Foundation, Inc.
+   Copyright (C) 1988-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -42,6 +42,7 @@
 
 #include <ctype.h>
 #include <sys/stat.h>
+#include "solist.h"
 
 void (*deprecated_file_changed_hook) (char *);
 
@@ -134,6 +135,115 @@ exec_file_clear (int from_tty)
     printf_unfiltered (_("No executable file now.\n"));
 }
 
+/* Returns non-zero if exceptions E1 and E2 are equal.  Returns zero
+   otherwise.  */
+
+static int
+exception_print_same (struct gdb_exception e1, struct gdb_exception e2)
+{
+  const char *msg1 = e1.message;
+  const char *msg2 = e2.message;
+
+  if (msg1 == NULL)
+    msg1 = "";
+  if (msg2 == NULL)
+    msg2 = "";
+
+  return (e1.reason == e2.reason
+	  && e1.error == e2.error
+	  && strcmp (e1.message, e2.message) == 0);
+}
+
+/* See gdbcore.h.  */
+
+void
+exec_file_locate_attach (int pid, int from_tty)
+{
+  char *exec_file, *full_exec_path = NULL;
+  struct cleanup *old_chain;
+  struct gdb_exception prev_err = exception_none;
+
+  /* Do nothing if we already have an executable filename.  */
+  exec_file = (char *) get_exec_file (0);
+  if (exec_file != NULL)
+    return;
+
+  /* Try to determine a filename from the process itself.  */
+  exec_file = target_pid_to_exec_file (pid);
+  if (exec_file == NULL)
+    {
+      warning (_("No executable has been specified and target does not "
+		 "support\n"
+		 "determining executable automatically.  "
+		 "Try using the \"file\" command."));
+      return;
+    }
+
+  /* If gdb_sysroot is not empty and the discovered filename
+     is absolute then prefix the filename with gdb_sysroot.  */
+  if (*gdb_sysroot != '\0' && IS_ABSOLUTE_PATH (exec_file))
+    {
+      full_exec_path = exec_file_find (exec_file, NULL);
+      if (full_exec_path == NULL)
+	return;
+    }
+  else
+    {
+      /* It's possible we don't have a full path, but rather just a
+	 filename.  Some targets, such as HP-UX, don't provide the
+	 full path, sigh.
+
+	 Attempt to qualify the filename against the source path.
+	 (If that fails, we'll just fall back on the original
+	 filename.  Not much more we can do...)  */
+      if (!source_full_path_of (exec_file, &full_exec_path))
+	full_exec_path = xstrdup (exec_file);
+    }
+
+  old_chain = make_cleanup (xfree, full_exec_path);
+  make_cleanup (free_current_contents, &prev_err.message);
+
+  /* exec_file_attach and symbol_file_add_main may throw an error if the file
+     cannot be opened either locally or remotely.
+
+     This happens for example, when the file is first found in the local
+     sysroot (above), and then disappears (a TOCTOU race), or when it doesn't
+     exist in the target filesystem, or when the file does exist, but
+     is not readable.
+
+     Even without a symbol file, the remote-based debugging session should
+     continue normally instead of ending abruptly.  Hence we catch thrown
+     errors/exceptions in the following code.  */
+  TRY
+    {
+      exec_file_attach (full_exec_path, from_tty);
+    }
+  CATCH (err, RETURN_MASK_ERROR)
+    {
+      if (err.message != NULL)
+	warning ("%s", err.message);
+
+      prev_err = err;
+
+      /* Save message so it doesn't get trashed by the catch below.  */
+      prev_err.message = xstrdup (err.message);
+    }
+  END_CATCH
+
+  TRY
+    {
+      symbol_file_add_main (full_exec_path, from_tty);
+    }
+  CATCH (err, RETURN_MASK_ERROR)
+    {
+      if (!exception_print_same (prev_err, err))
+	warning ("%s", err.message);
+    }
+  END_CATCH
+
+  do_cleanups (old_chain);
+}
+
 /* Set FILENAME as the new exec file.
 
    This function is intended to be behave essentially the same
@@ -176,36 +286,66 @@ exec_file_attach (const char *filename, int from_tty)
     }
   else
     {
+      int load_via_target = 0;
       char *scratch_pathname, *canonical_pathname;
       int scratch_chan;
       struct target_section *sections = NULL, *sections_end = NULL;
       char **matching;
 
-      scratch_chan = openp (getenv ("PATH"), OPF_TRY_CWD_FIRST, filename,
-		   write_files ? O_RDWR | O_BINARY : O_RDONLY | O_BINARY,
-			    &scratch_pathname);
-#if defined(__GO32__) || defined(_WIN32) || defined(__CYGWIN__)
-      if (scratch_chan < 0)
+      if (is_target_filename (filename))
 	{
-	  char *exename = alloca (strlen (filename) + 5);
-
-	  strcat (strcpy (exename, filename), ".exe");
-	  scratch_chan = openp (getenv ("PATH"), OPF_TRY_CWD_FIRST, exename,
-	     write_files ? O_RDWR | O_BINARY : O_RDONLY | O_BINARY,
-	     &scratch_pathname);
+	  if (target_filesystem_is_local ())
+	    filename += strlen (TARGET_SYSROOT_PREFIX);
+	  else
+	    load_via_target = 1;
 	}
+
+      if (load_via_target)
+	{
+	  /* gdb_bfd_fopen does not support "target:" filenames.  */
+	  if (write_files)
+	    warning (_("writing into executable files is "
+		       "not supported for %s sysroots"),
+		     TARGET_SYSROOT_PREFIX);
+
+	  scratch_pathname = xstrdup (filename);
+	  make_cleanup (xfree, scratch_pathname);
+
+	  scratch_chan = -1;
+
+	  canonical_pathname = scratch_pathname;
+	}
+      else
+	{
+	  scratch_chan = openp (getenv ("PATH"), OPF_TRY_CWD_FIRST,
+				filename, write_files ?
+				O_RDWR | O_BINARY : O_RDONLY | O_BINARY,
+				&scratch_pathname);
+#if defined(__GO32__) || defined(_WIN32) || defined(__CYGWIN__)
+	  if (scratch_chan < 0)
+	    {
+	      char *exename = (char *) alloca (strlen (filename) + 5);
+
+	      strcat (strcpy (exename, filename), ".exe");
+	      scratch_chan = openp (getenv ("PATH"), OPF_TRY_CWD_FIRST,
+				    exename, write_files ?
+				    O_RDWR | O_BINARY
+				    : O_RDONLY | O_BINARY,
+				    &scratch_pathname);
+	    }
 #endif
-      if (scratch_chan < 0)
-	perror_with_name (filename);
+	  if (scratch_chan < 0)
+	    perror_with_name (filename);
 
-      make_cleanup (xfree, scratch_pathname);
+	  make_cleanup (xfree, scratch_pathname);
 
-      /* gdb_bfd_open (and its variants) prefers canonicalized pathname for
-	 better BFD caching.  */
-      canonical_pathname = gdb_realpath (scratch_pathname);
-      make_cleanup (xfree, canonical_pathname);
+	  /* gdb_bfd_open (and its variants) prefers canonicalized
+	     pathname for better BFD caching.  */
+	  canonical_pathname = gdb_realpath (scratch_pathname);
+	  make_cleanup (xfree, canonical_pathname);
+	}
 
-      if (write_files)
+      if (write_files && !load_via_target)
 	exec_bfd = gdb_bfd_fopen (canonical_pathname, gnutarget,
 				  FOPEN_RUB, scratch_chan);
       else
@@ -213,12 +353,17 @@ exec_file_attach (const char *filename, int from_tty)
 
       if (!exec_bfd)
 	{
-	  error (_("\"%s\": could not open as an executable file: %s"),
+	  error (_("\"%s\": could not open as an executable file: %s."),
 		 scratch_pathname, bfd_errmsg (bfd_get_error ()));
 	}
 
+      /* gdb_realpath_keepfile resolves symlinks on the local
+	 filesystem and so cannot be used for "target:" files.  */
       gdb_assert (exec_filename == NULL);
-      exec_filename = gdb_realpath_keepfile (scratch_pathname);
+      if (load_via_target)
+	exec_filename = xstrdup (bfd_get_filename (exec_bfd));
+      else
+	exec_filename = gdb_realpath_keepfile (scratch_pathname);
 
       if (!bfd_check_format_matches (exec_bfd, bfd_object, &matching))
 	{
@@ -378,8 +523,8 @@ resize_section_table (struct target_section_table *table, int adjustment)
 
   if (new_count)
     {
-      table->sections = xrealloc (table->sections,
-				  sizeof (struct target_section) * new_count);
+      table->sections = XRESIZEVEC (struct target_section, table->sections,
+				    new_count);
       table->sections_end = table->sections + new_count;
     }
   else
@@ -400,7 +545,7 @@ build_section_table (struct bfd *some_bfd, struct target_section **start,
   count = bfd_count_sections (some_bfd);
   if (*start)
     xfree (* start);
-  *start = (struct target_section *) xmalloc (count * sizeof (**start));
+  *start = XNEWVEC (struct target_section, count);
   *end = *start;
   bfd_map_over_sections (some_bfd, add_to_section_table, (char *) end);
   if (*end > *start + count)

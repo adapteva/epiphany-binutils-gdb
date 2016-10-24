@@ -1,5 +1,5 @@
 /* YACC parser for Pascal expressions, for GDB.
-   Copyright (C) 2000-2014 Free Software Foundation, Inc.
+   Copyright (C) 2000-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -58,65 +58,10 @@
 
 #define parse_type(ps) builtin_type (parse_gdbarch (ps))
 
-/* Remap normal yacc parser interface names (yyparse, yylex, yyerror, etc),
-   as well as gratuitiously global symbol names, so we can have multiple
-   yacc generated parsers in gdb.  Note that these are only the variables
-   produced by yacc.  If other parser generators (bison, byacc, etc) produce
-   additional global names that conflict at link time, then those parser
-   generators need to be fixed instead of adding those names to this list.  */
-
-#define	yymaxdepth pascal_maxdepth
-#define	yyparse	pascal_parse_internal
-#define	yylex	pascal_lex
-#define	yyerror	pascal_error
-#define	yylval	pascal_lval
-#define	yychar	pascal_char
-#define	yydebug	pascal_debug
-#define	yypact	pascal_pact
-#define	yyr1	pascal_r1
-#define	yyr2	pascal_r2
-#define	yydef	pascal_def
-#define	yychk	pascal_chk
-#define	yypgo	pascal_pgo
-#define	yyact	pascal_act
-#define	yyexca	pascal_exca
-#define yyerrflag pascal_errflag
-#define yynerrs	pascal_nerrs
-#define	yyps	pascal_ps
-#define	yypv	pascal_pv
-#define	yys	pascal_s
-#define	yy_yys	pascal_yys
-#define	yystate	pascal_state
-#define	yytmp	pascal_tmp
-#define	yyv	pascal_v
-#define	yy_yyv	pascal_yyv
-#define	yyval	pascal_val
-#define	yylloc	pascal_lloc
-#define yyreds	pascal_reds		/* With YYDEBUG defined */
-#define yytoks	pascal_toks		/* With YYDEBUG defined */
-#define yyname	pascal_name		/* With YYDEBUG defined */
-#define yyrule	pascal_rule		/* With YYDEBUG defined */
-#define yylhs	pascal_yylhs
-#define yylen	pascal_yylen
-#define yydefred pascal_yydefred
-#define yydgoto	pascal_yydgoto
-#define yysindex pascal_yysindex
-#define yyrindex pascal_yyrindex
-#define yygindex pascal_yygindex
-#define yytable	 pascal_yytable
-#define yycheck	 pascal_yycheck
-#define yyss	pascal_yyss
-#define yysslim	pascal_yysslim
-#define yyssp	pascal_yyssp
-#define yystacksize pascal_yystacksize
-#define yyvs	pascal_yyvs
-#define yyvsp	pascal_yyvsp
-
-#ifndef YYDEBUG
-#define	YYDEBUG 1		/* Default to yydebug support */
-#endif
-
-#define YYFPRINTF parser_fprintf
+/* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
+   etc).  */
+#define GDB_YY_REMAP_PREFIX pascal_
+#include "yy-remap.h"
 
 /* The state of the parser, used internally when we are parsing the
    expression.  */
@@ -364,7 +309,7 @@ exp	:	exp '['
 			      struct stoken stringsval;
 			      char *buf;
 
-			      buf = alloca (strlen (arrayname) + 1);
+			      buf = (char *) alloca (strlen (arrayname) + 1);
 			      stringsval.ptr = buf;
 			      stringsval.length = strlen (arrayname);
 			      strcpy (buf, arrayname);
@@ -410,8 +355,8 @@ exp	:	type '(' exp ')' %prec UNARY
 			    {
 			      /* Allow automatic dereference of classes.  */
 			      if ((TYPE_CODE (current_type) == TYPE_CODE_PTR)
-				  && (TYPE_CODE (TYPE_TARGET_TYPE (current_type)) == TYPE_CODE_CLASS)
-				  && (TYPE_CODE ($1) == TYPE_CODE_CLASS))
+				  && (TYPE_CODE (TYPE_TARGET_TYPE (current_type)) == TYPE_CODE_STRUCT)
+				  && (TYPE_CODE ($1) == TYPE_CODE_STRUCT))
 				write_exp_elt_opcode (pstate, UNOP_IND);
 			    }
 			  write_exp_elt_opcode (pstate, UNOP_CAST);
@@ -596,7 +541,7 @@ exp	:	SIZEOF '(' type ')'	%prec UNARY
 			  write_exp_elt_type (pstate,
 					    parse_type (pstate)->builtin_int);
 			  current_type = parse_type (pstate)->builtin_int;
-			  CHECK_TYPEDEF ($3);
+			  $3 = check_typedef ($3);
 			  write_exp_elt_longcst (pstate,
 						 (LONGEST) TYPE_LENGTH ($3));
 			  write_exp_elt_opcode (pstate, OP_LONG); }
@@ -668,14 +613,14 @@ exp	:	THIS
 
 block	:	BLOCKNAME
 			{
-			  if ($1.sym != 0)
-			      $$ = SYMBOL_BLOCK_VALUE ($1.sym);
+			  if ($1.sym.symbol != 0)
+			      $$ = SYMBOL_BLOCK_VALUE ($1.sym.symbol);
 			  else
 			    {
 			      struct symtab *tem =
 				  lookup_symtab (copy_name ($1.stoken));
 			      if (tem)
-				$$ = BLOCKVECTOR_BLOCK (BLOCKVECTOR (tem),
+				$$ = BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (tem),
 							STATIC_BLOCK);
 			      else
 				error (_("No file or function \"%s\"."),
@@ -687,7 +632,8 @@ block	:	BLOCKNAME
 block	:	block COLONCOLON name
 			{ struct symbol *tem
 			    = lookup_symbol (copy_name ($3), $1,
-					     VAR_DOMAIN, NULL);
+					     VAR_DOMAIN, NULL).symbol;
+
 			  if (!tem || SYMBOL_CLASS (tem) != LOC_BLOCK)
 			    error (_("No function \"%s\" in specified context."),
 				   copy_name ($3));
@@ -695,23 +641,24 @@ block	:	block COLONCOLON name
 	;
 
 variable:	block COLONCOLON name
-			{ struct symbol *sym;
+			{ struct block_symbol sym;
+
 			  sym = lookup_symbol (copy_name ($3), $1,
 					       VAR_DOMAIN, NULL);
-			  if (sym == 0)
+			  if (sym.symbol == 0)
 			    error (_("No symbol \"%s\" in specified context."),
 				   copy_name ($3));
 
 			  write_exp_elt_opcode (pstate, OP_VAR_VALUE);
-			  /* block_found is set by lookup_symbol.  */
-			  write_exp_elt_block (pstate, block_found);
-			  write_exp_elt_sym (pstate, sym);
+			  write_exp_elt_block (pstate, sym.block);
+			  write_exp_elt_sym (pstate, sym.symbol);
 			  write_exp_elt_opcode (pstate, OP_VAR_VALUE); }
 	;
 
 qualified_name:	typebase COLONCOLON name
 			{
 			  struct type *type = $1;
+
 			  if (TYPE_CODE (type) != TYPE_CODE_STRUCT
 			      && TYPE_CODE (type) != TYPE_CODE_UNION)
 			    error (_("`%s' is not defined as an aggregate type."),
@@ -733,7 +680,7 @@ variable:	qualified_name
 
 			  sym =
 			    lookup_symbol (name, (const struct block *) NULL,
-					   VAR_DOMAIN, NULL);
+					   VAR_DOMAIN, NULL).symbol;
 			  if (sym)
 			    {
 			      write_exp_elt_opcode (pstate, OP_VAR_VALUE);
@@ -757,26 +704,23 @@ variable:	qualified_name
 	;
 
 variable:	name_not_typename
-			{ struct symbol *sym = $1.sym;
+			{ struct block_symbol sym = $1.sym;
 
-			  if (sym)
+			  if (sym.symbol)
 			    {
-			      if (symbol_read_needs_frame (sym))
+			      if (symbol_read_needs_frame (sym.symbol))
 				{
 				  if (innermost_block == 0
-				      || contained_in (block_found,
+				      || contained_in (sym.block,
 						       innermost_block))
-				    innermost_block = block_found;
+				    innermost_block = sym.block;
 				}
 
 			      write_exp_elt_opcode (pstate, OP_VAR_VALUE);
-			      /* We want to use the selected frame, not
-				 another more inner frame which happens to
-				 be in the same block.  */
-			      write_exp_elt_block (pstate, NULL);
-			      write_exp_elt_sym (pstate, sym);
+			      write_exp_elt_block (pstate, sym.block);
+			      write_exp_elt_sym (pstate, sym.symbol);
 			      write_exp_elt_opcode (pstate, OP_VAR_VALUE);
-			      current_type = sym->type; }
+			      current_type = sym.symbol->type; }
 			  else if ($1.is_a_field_of_this)
 			    {
 			      struct value * this_val;
@@ -785,9 +729,9 @@ variable:	name_not_typename
 			         not inadvertently convert from a method call
 				 to data ref.  */
 			      if (innermost_block == 0
-				  || contained_in (block_found,
+				  || contained_in (sym.block,
 						   innermost_block))
-				innermost_block = block_found;
+				innermost_block = sym.block;
 			      write_exp_elt_opcode (pstate, OP_THIS);
 			      write_exp_elt_opcode (pstate, OP_THIS);
 			      write_exp_elt_opcode (pstate, STRUCTOP_PTR);
@@ -1103,7 +1047,7 @@ pop_current_type (void)
 
 struct token
 {
-  char *operator;
+  char *oper;
   int token;
   enum exp_opcode opcode;
 };
@@ -1173,8 +1117,8 @@ yylex (void)
   /* See if it is a special token of length 3.  */
   if (explen > 2)
     for (i = 0; i < sizeof (tokentab3) / sizeof (tokentab3[0]); i++)
-      if (strncasecmp (tokstart, tokentab3[i].operator, 3) == 0
-          && (!isalpha (tokentab3[i].operator[0]) || explen == 3
+      if (strncasecmp (tokstart, tokentab3[i].oper, 3) == 0
+          && (!isalpha (tokentab3[i].oper[0]) || explen == 3
               || (!isalpha (tokstart[3])
 		  && !isdigit (tokstart[3]) && tokstart[3] != '_')))
         {
@@ -1186,8 +1130,8 @@ yylex (void)
   /* See if it is a special token of length 2.  */
   if (explen > 1)
   for (i = 0; i < sizeof (tokentab2) / sizeof (tokentab2[0]); i++)
-      if (strncasecmp (tokstart, tokentab2[i].operator, 2) == 0
-          && (!isalpha (tokentab2[i].operator[0]) || explen == 2
+      if (strncasecmp (tokstart, tokentab2[i].oper, 2) == 0
+          && (!isalpha (tokentab2[i].oper[0]) || explen == 2
               || (!isalpha (tokstart[2])
 		  && !isdigit (tokstart[2]) && tokstart[2] != '_')))
         {
@@ -1508,7 +1452,7 @@ yylex (void)
 	  static const char this_name[] = "this";
 
 	  if (lookup_symbol (this_name, expression_context_block,
-			     VAR_DOMAIN, NULL))
+			     VAR_DOMAIN, NULL).symbol)
 	    {
 	      free (uptokstart);
 	      return THIS;
@@ -1531,7 +1475,7 @@ yylex (void)
         so in expression to enter hexadecimal values
         we still need to use C syntax with 0xff  */
       write_dollar_variable (pstate, yylval.sval);
-      tmp = alloca (namelen + 1);
+      tmp = (char *) alloca (namelen + 1);
       memcpy (tmp, tokstart, namelen);
       tmp[namelen] = '\0';
       intvar = lookup_only_internalvar (tmp + 1);
@@ -1551,14 +1495,14 @@ yylex (void)
     int is_a_field = 0;
     int hextype;
 
-
+    is_a_field_of_this.type = NULL;
     if (search_field && current_type)
       is_a_field = (lookup_struct_elt_type (current_type, tmp, 1) != NULL);
     if (is_a_field)
       sym = NULL;
     else
       sym = lookup_symbol (tmp, expression_context_block,
-			   VAR_DOMAIN, &is_a_field_of_this);
+			   VAR_DOMAIN, &is_a_field_of_this).symbol;
     /* second chance uppercased (as Free Pascal does).  */
     if (!sym && is_a_field_of_this.type == NULL && !is_a_field)
       {
@@ -1573,7 +1517,7 @@ yylex (void)
 	 sym = NULL;
        else
 	 sym = lookup_symbol (tmp, expression_context_block,
-			      VAR_DOMAIN, &is_a_field_of_this);
+			      VAR_DOMAIN, &is_a_field_of_this).symbol;
       }
     /* Third chance Capitalized (as GPC does).  */
     if (!sym && is_a_field_of_this.type == NULL && !is_a_field)
@@ -1595,18 +1539,24 @@ yylex (void)
 	 sym = NULL;
        else
 	 sym = lookup_symbol (tmp, expression_context_block,
-			      VAR_DOMAIN, &is_a_field_of_this);
+			      VAR_DOMAIN, &is_a_field_of_this).symbol;
       }
 
-    if (is_a_field)
+    if (is_a_field || (is_a_field_of_this.type != NULL))
       {
 	tempbuf = (char *) realloc (tempbuf, namelen + 1);
 	strncpy (tempbuf, tmp, namelen);
 	tempbuf [namelen] = 0;
 	yylval.sval.ptr = tempbuf;
 	yylval.sval.length = namelen;
+	yylval.ssym.sym.symbol = NULL;
+	yylval.ssym.sym.block = NULL;
 	free (uptokstart);
-	return FIELDNAME;
+        yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
+	if (is_a_field)
+	  return FIELDNAME;
+	else
+	  return NAME;
       }
     /* Call lookup_symtab, not lookup_partial_symtab, in case there are
        no psymtabs (coff, xcoff, or some future change to blow away the
@@ -1614,7 +1564,8 @@ yylex (void)
     if ((sym && SYMBOL_CLASS (sym) == LOC_BLOCK)
         || lookup_symtab (tmp))
       {
-	yylval.ssym.sym = sym;
+	yylval.ssym.sym.symbol = sym;
+	yylval.ssym.sym.block = NULL;
 	yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
 	free (uptokstart);
 	return BLOCKNAME;
@@ -1670,7 +1621,9 @@ yylex (void)
 		      struct symbol *cur_sym;
 		      /* As big as the whole rest of the expression, which is
 			 at least big enough.  */
-		      char *ncopy = alloca (strlen (tmp)+strlen (namestart)+3);
+		      char *ncopy
+			= (char *) alloca (strlen (tmp) + strlen (namestart)
+					   + 3);
 		      char *tmp1;
 
 		      tmp1 = ncopy;
@@ -1681,7 +1634,7 @@ yylex (void)
 		      memcpy (tmp1, namestart, p - namestart);
 		      tmp1[p - namestart] = '\0';
 		      cur_sym = lookup_symbol (ncopy, expression_context_block,
-					       VAR_DOMAIN, NULL);
+					       VAR_DOMAIN, NULL).symbol;
 		      if (cur_sym)
 			{
 			  if (SYMBOL_CLASS (cur_sym) == LOC_TYPEDEF)
@@ -1710,8 +1663,8 @@ yylex (void)
 	  return TYPENAME;
         }
     yylval.tsym.type
-      = language_lookup_primitive_type_by_name (parse_language (pstate),
-						parse_gdbarch (pstate), tmp);
+      = language_lookup_primitive_type (parse_language (pstate),
+					parse_gdbarch (pstate), tmp);
     if (yylval.tsym.type != NULL)
       {
 	free (uptokstart);
@@ -1729,7 +1682,8 @@ yylex (void)
 	hextype = parse_number (pstate, tokstart, namelen, 0, &newlval);
 	if (hextype == INT)
 	  {
-	    yylval.ssym.sym = sym;
+	    yylval.ssym.sym.symbol = sym;
+	    yylval.ssym.sym.block = NULL;
 	    yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
 	    free (uptokstart);
 	    return NAME_OR_INT;
@@ -1738,8 +1692,8 @@ yylex (void)
 
     free(uptokstart);
     /* Any other kind of symbol.  */
-    yylval.ssym.sym = sym;
-    yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
+    yylval.ssym.sym.symbol = sym;
+    yylval.ssym.sym.block = NULL;
     return NAME;
   }
 }

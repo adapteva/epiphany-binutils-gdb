@@ -1,6 +1,6 @@
 /* Target-dependent code for Xilinx MicroBlaze.
 
-   Copyright (C) 2009-2014 Free Software Foundation, Inc.
+   Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -134,30 +134,6 @@ microblaze_fetch_instruction (CORE_ADDR pc)
   return extract_unsigned_integer (buf, 4, byte_order);
 }
 
-
-static CORE_ADDR
-microblaze_push_dummy_code (struct gdbarch *gdbarch, CORE_ADDR sp,
-			    CORE_ADDR funcaddr,
-			    struct value **args, int nargs,
-			    struct type *value_type,
-			    CORE_ADDR *real_pc, CORE_ADDR *bp_addr,
-			    struct regcache *regcache)
-{
-  error (_("push_dummy_code not implemented"));
-  return sp;
-}
-
-
-static CORE_ADDR
-microblaze_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
-			    struct regcache *regcache, CORE_ADDR bp_addr,
-			    int nargs, struct value **args, CORE_ADDR sp,
-			    int struct_return, CORE_ADDR struct_addr)
-{
-  error (_("store_arguments not implemented"));
-  return sp;
-}
-
 static const gdb_byte *
 microblaze_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pc, 
 			       int *len)
@@ -465,7 +441,7 @@ microblaze_frame_cache (struct frame_info *next_frame, void **this_cache)
   int rn;
 
   if (*this_cache)
-    return *this_cache;
+    return (struct microblaze_frame_cache *) *this_cache;
 
   cache = microblaze_alloc_frame_cache ();
   *this_cache = cache;
@@ -662,8 +638,9 @@ static int dwarf2_to_reg_map[78] =
 static int
 microblaze_dwarf2_reg_to_regnum (struct gdbarch *gdbarch, int reg)
 {
-  gdb_assert ((size_t) reg < sizeof (dwarf2_to_reg_map));
-  return dwarf2_to_reg_map[reg];
+  if (reg >= 0 && reg < sizeof (dwarf2_to_reg_map))
+    return dwarf2_to_reg_map[reg];
+  return -1;
 }
 
 static void
@@ -749,8 +726,6 @@ microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Call dummy code.  */
   set_gdbarch_call_dummy_location (gdbarch, ON_STACK);
-  set_gdbarch_push_dummy_code (gdbarch, microblaze_push_dummy_code);
-  set_gdbarch_push_dummy_call (gdbarch, microblaze_push_dummy_call);
 
   set_gdbarch_return_value (gdbarch, microblaze_return_value);
   set_gdbarch_stabs_argument_has_addr

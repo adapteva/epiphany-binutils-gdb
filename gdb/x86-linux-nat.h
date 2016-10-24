@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux x86 (i386 and x86-64).
 
-   Copyright (C) 1999-2014 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,16 +20,6 @@
 #ifndef X86_LINUX_NAT_H
 #define X86_LINUX_NAT_H 1
 
-#ifndef PTRACE_GETREGSET
-#define PTRACE_GETREGSET	0x4204
-#endif
-
-#ifndef PTRACE_SETREGSET
-#define PTRACE_SETREGSET	0x4205
-#endif
-
-/* Does the current host support PTRACE_GETREGSET?  */
-extern int have_ptrace_getregset;
 
 
 /* Helper for ps_get_thread_area.  Sets BASE_ADDR to a pointer to

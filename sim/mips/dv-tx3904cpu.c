@@ -1,6 +1,6 @@
 /*  This file is part of the program GDB, the GNU debugger.
     
-    Copyright (C) 1998-2014 Free Software Foundation, Inc.
+    Copyright (C) 1998-2016 Free Software Foundation, Inc.
     Contributed by Cygnus Solutions.
     
     This program is free software; you can redistribute it and/or modify
@@ -141,28 +141,25 @@ deliver_tx3904cpu_interrupt (struct hw *me,
   struct tx3904cpu *controller = hw_data (me);
   SIM_DESC sd = hw_system (me);
   sim_cpu *cpu = STATE_CPU (sd, 0); /* NB: fix CPU 0. */
-  address_word cia = CIA_GET (cpu);
-
-#define CPU cpu
-#define SD current_state
+  address_word cia = CPU_PC_GET (cpu);
 
   if (controller->pending_reset)
     {
       controller->pending_reset = 0;
-      HW_TRACE ((me, "reset pc=0x%08lx", (long) CIA_GET (cpu)));
+      HW_TRACE ((me, "reset pc=0x%08lx", (long) CPU_PC_GET (cpu)));
       SignalExceptionNMIReset();
     }
   else if (controller->pending_nmi)
     {
       controller->pending_nmi = 0;
-      HW_TRACE ((me, "nmi pc=0x%08lx", (long) CIA_GET (cpu)));
+      HW_TRACE ((me, "nmi pc=0x%08lx", (long) CPU_PC_GET (cpu)));
       SignalExceptionNMIReset();
     }
   else if (controller->pending_level)
     {
       HW_TRACE ((me, "interrupt level=%d pc=0x%08lx sr=0x%08lx",
 		 controller->pending_level,
-		 (long) CIA_GET (cpu), (long) SR));
+		 (long) CPU_PC_GET (cpu), (long) SR));
 
       /* Clear CAUSE register.  It may stay this way if the interrupt
 	 was cleared with a negative pending_level. */
@@ -190,8 +187,6 @@ deliver_tx3904cpu_interrupt (struct hw *me,
 	    }
 	} /* interrupt set */
     }
-#undef CPU cpu
-#undef SD current_state
 }
 
 

@@ -1,4 +1,4 @@
-#   Copyright 2002-2014 Free Software Foundation, Inc.
+#   Copyright 2002-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -209,6 +209,13 @@ gdb_test continue \
 gdb_test continue \
 "Continuing\\..*system 4:.*OK$stop_msg" \
 "System with invalid command returns 127"
+
+# Prepare the directory for rename tests in case that test_system
+# failed to create.
+set dir1 [file join $outdir "dir1.fileio.test" "subdir.fileio.test"]
+remote_exec host "mkdir -p $dir1"
+set dir1 [file join $outdir "dir2.fileio.test"]
+remote_exec host "mkdir $dir1"
 
 gdb_test continue \
 "Continuing\\..*rename 1:.*OK$stop_msg" \

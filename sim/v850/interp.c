@@ -18,22 +18,12 @@
 
 #include "bfd.h"
 
-#ifndef INLINE
-#ifdef __GNUC__
-#define INLINE inline
-#else
-#define INLINE
-#endif
-#endif
-
 static const char * get_insn_name (sim_cpu *, int);
 
-/* For compatibility */
+/* For compatibility.  */
 SIM_DESC simulator;
 
-
-
-/* v850 interrupt model */
+/* V850 interrupt model.  */
 
 enum interrupt_type
 {
@@ -48,7 +38,8 @@ enum interrupt_type
   num_int_types
 };
 
-const char *interrupt_names[] = {
+const char *interrupt_names[] =
+{
   "reset",
   "nmi",
   "intov1",
@@ -61,9 +52,7 @@ const char *interrupt_names[] = {
 };
 
 static void
-do_interrupt (sd, data)
-     SIM_DESC sd;
-     void *data;
+do_interrupt (SIM_DESC sd, void *data)
 {
   const char **interrupt_name = (const char**)data;
   enum interrupt_type inttype;
@@ -187,18 +176,36 @@ get_insn_name (sim_cpu *cpu, int i)
 
 uint32 OP[4];
 
+static sim_cia
+v850_pc_get (sim_cpu *cpu)
+{
+  return PC;
+}
+
+static void
+v850_pc_set (sim_cpu *cpu, sim_cia pc)
+{
+  PC = pc;
+}
+
+static int v850_reg_fetch (SIM_CPU *, int, unsigned char *, int);
+static int v850_reg_store (SIM_CPU *, int, unsigned char *, int);
 
 SIM_DESC
-sim_open (kind, cb, abfd, argv)
-     SIM_OPEN_KIND kind;
-     host_callback *cb;
-     struct bfd *abfd;
-     char **argv;
+sim_open (SIM_OPEN_KIND    kind,
+	  host_callback *  cb,
+	  struct bfd *     abfd,
+	  char * const *   argv)
 {
+  int i;
   SIM_DESC sd = sim_state_alloc (kind, cb);
   int mach;
 
   SIM_ASSERT (STATE_MAGIC (sd) == SIM_MAGIC_NUMBER);
+
+  /* The cpu data is kept in a separately allocated chunk of memory.  */
+  if (sim_cpu_alloc_all (sd, 1, /*cgen_cpu_max_extra_bytes ()*/0) != SIM_RC_OK)
+    return 0;
 
   /* for compatibility */
   simulator = sd;
@@ -227,9 +234,7 @@ sim_open (kind, cb, abfd, argv)
   /* similarly if in the internal RAM region */
   sim_do_command (sd, "memory region 0xffe000,0x1000,1024");
 
-  /* getopt will print the error message so we just have to exit if this fails.
-     FIXME: Hmmm...  in the case of gdb we need getopt to call
-     print_filtered.  */
+  /* The parser will print an error message for us, so we silently return.  */
   if (sim_parse_args (sd, argv) != SIM_RC_OK)
     {
       /* Uninstall the modules to avoid memory leaks,
@@ -287,24 +292,25 @@ sim_open (kind, cb, abfd, argv)
       break;
     }
 
+  /* CPU specific initialization.  */
+  for (i = 0; i < MAX_NR_PROCESSORS; ++i)
+    {
+      SIM_CPU *cpu = STATE_CPU (sd, i);
+
+      CPU_REG_FETCH (cpu) = v850_reg_fetch;
+      CPU_REG_STORE (cpu) = v850_reg_store;
+      CPU_PC_FETCH (cpu) = v850_pc_get;
+      CPU_PC_STORE (cpu) = v850_pc_set;
+    }
+
   return sd;
 }
 
-
-void
-sim_close (sd, quitting)
-     SIM_DESC sd;
-     int quitting;
-{
-  sim_module_uninstall (sd);
-}
-
 SIM_RC
-sim_create_inferior (sd, prog_bfd, argv, env)
-     SIM_DESC sd;
-     struct bfd *prog_bfd;
-     char **argv;
-     char **env;
+sim_create_inferior (SIM_DESC      sd,
+		     struct bfd *  prog_bfd,
+		     char * const *argv,
+		     char * const *env)
 {
   memset (&State, 0, sizeof (State));
   if (prog_bfd != NULL)
@@ -312,24 +318,16 @@ sim_create_inferior (sd, prog_bfd, argv, env)
   return SIM_RC_OK;
 }
 
-int
-sim_fetch_register (sd, rn, memory, length)
-     SIM_DESC sd;
-     int rn;
-     unsigned char *memory;
-     int length;
+static int
+v850_reg_fetch (SIM_CPU *cpu, int rn, unsigned char *memory, int length)
 {
   *(unsigned32*)memory = H2T_4 (State.regs[rn]);
   return -1;
 }
- 
-int
-sim_store_register (sd, rn, memory, length)
-     SIM_DESC sd;
-     int rn;
-     unsigned char *memory;
-     int length;
+
+static int
+v850_reg_store (SIM_CPU *cpu, int rn, unsigned char *memory, int length)
 {
-  State.regs[rn] = T2H_4 (*(unsigned32*)memory);
+  State.regs[rn] = T2H_4 (*(unsigned32 *) memory);
   return length;
 }

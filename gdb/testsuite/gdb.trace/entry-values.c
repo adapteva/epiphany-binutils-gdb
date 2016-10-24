@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2012-2014 Free Software Foundation, Inc.
+   Copyright 2012-2016 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,23 +15,19 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-asm (".section	\".text\"");
-asm (".balign 8");
-asm ("foo_start: .globl foo_start");
-
 int
 foo (int i, int j)
 {
+  asm ("foo_label: .globl foo_label");
   return 0;
 }
-
-asm ("bar_start: .globl bar_start");
 
 int
 bar (int i)
 {
   int j = 2;
 
+  asm ("bar_label: .globl bar_label");
   return foo (i, j);
 }
 

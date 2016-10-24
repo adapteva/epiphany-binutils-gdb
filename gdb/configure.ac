@@ -1,5 +1,5 @@
 dnl Autoconf configure script for GDB, the GNU debugger.
-dnl Copyright (C) 1995-2014 Free Software Foundation, Inc.
+dnl Copyright (C) 1995-2016 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -27,6 +27,8 @@ AM_MAINTAINER_MODE
 . $srcdir/../bfd/development.sh
 
 AC_PROG_CC
+AC_PROG_CXX
+
 AC_USE_SYSTEM_EXTENSIONS
 ACX_LARGEFILE
 AM_PROG_CC_STDC
@@ -35,6 +37,9 @@ AM_PROG_INSTALL_STRIP
 AC_CONFIG_AUX_DIR(..)
 AC_CANONICAL_SYSTEM
 AC_ARG_PROGRAM
+
+# See if we are building with C++, and substitute COMPILER.
+GDB_AC_BUILD_WITH_CXX
 
 # Dependency checking.
 ZW_CREATE_DEPDIR
@@ -51,11 +56,18 @@ esac
 AM_CONDITIONAL(GMAKE, test "$MAKE_IS_GNU" = yes)
 AC_PROG_MAKE_SET
 
+gnulib_extra_configure_args=
+# If large-file support is disabled, make sure gnulib does the same.
+if test "$enable_largefile" = no; then
+gnulib_extra_configure_args="$gnulib_extra_configure_args --disable-largefile"
+fi
+
 # Configure gnulib.  We need to build gnulib under some other
 # directory not "gnulib", to avoid the problem of both GDB and
 # GDBserver wanting to build it in the same directory, when building
 # in the source dir.
-ACX_CONFIGURE_DIR(["gnulib"], ["build-gnulib"])
+ACX_CONFIGURE_DIR(["gnulib"], ["build-gnulib"],
+                  ["$gnulib_extra_configure_args"])
 
 dnl List of object files and targets accumulated by configure.
 
@@ -197,6 +209,10 @@ else
 fi
 
 . $srcdir/configure.host
+
+# Add in the common host objects.
+. $srcdir/common/common.host
+gdb_host_obs="$gdb_host_obs $common_host_obs"
 
 # Accumulate some settings from configure.tgt over all enabled targets
 
@@ -518,8 +534,11 @@ AC_SEARCH_LIBS(socketpair, socket)
 # Link in zlib if we can.  This allows us to read compressed debug sections.
 AM_ZLIB
 
-# On HP/UX we may need libxpdl for dlgetmodinfo (used by solib-pa64.c).
-AC_SEARCH_LIBS(dlgetmodinfo, [dl xpdl])
+# On FreeBSD we may need libutil for kinfo_getvmmap (used by fbsd-nat.c).
+# On GNU/kFreeBSD systems, FreeBSD libutil is renamed to libutil-freebsd.
+AC_SEARCH_LIBS(kinfo_getvmmap, util util-freebsd,
+  [AC_DEFINE(HAVE_KINFO_GETVMMAP, 1,
+            [Define to 1 if your system has the kinfo_getvmmap function. ])])
 
 AM_ICONV
 
@@ -545,33 +564,6 @@ AS_HELP_STRING([--with-iconv-bin=PATH], [specify where to find the iconv program
                     [Path of directory of iconv program.])
  GDB_AC_DEFINE_RELOCATABLE(ICONV_BIN, iconv, ${iconv_bin})
 ])
-
-# On alpha-osf, it appears that libtermcap and libcurses are not compatible.
-# There is a very specific comment in /usr/include/curses.h explaining that
-# termcap routines built into libcurses must not be used.
-#
-# The symptoms we observed so far is GDB unexpectedly changing
-# the terminal settings when tgetent is called - this is particularly
-# visible as the output is missing carriage returns, and so rapidly
-# becomes very hard to read.
-#
-# The readline configure script has already decided that libtermcap
-# was enough for its purposes, and so decided to build readline using
-# libtermcap.  Since the TUI mode requires curses, building GDB with
-# TUI enabled results in both libraries to be used at the same time,
-# which is not allowed.  This basically means that GDB with TUI is
-# broken on alpha-osf.
-
-case $host_os in
-  osf* )
-    if test x"$enable_tui" = xyes; then
-      AC_MSG_ERROR([Building GDB with TUI mode is not supported on this host])
-    fi
-    if test x"$enable_tui" = xauto; then
-      enable_tui=no
-    fi
-    ;;
-esac
 
 # For the TUI, we need enhanced curses functionality.
 if test x"$enable_tui" != xno; then
@@ -626,17 +618,13 @@ case $host_os in
   go32* | *djgpp*)
     ac_cv_search_tgetent="none required"
     ;;
-  *mingw32*)
-    ac_cv_search_tgetent="none required"
-    CONFIG_OBS="$CONFIG_OBS windows-termcap.o"
-    ;;
 esac
 
 # These are the libraries checked by Readline.
 AC_SEARCH_LIBS(tgetent, [termcap tinfo curses ncurses])
 
 if test "$ac_cv_search_tgetent" = no; then
-  AC_MSG_ERROR([no termcap library found])
+  CONFIG_OBS="$CONFIG_OBS stub-termcap.o"
 fi
 
 AC_ARG_WITH([system-readline],
@@ -1037,6 +1025,14 @@ else
   CONFIG_OBS="$CONFIG_OBS python.o"
   CONFIG_SRCS="$CONFIG_SRCS python/python.c"
 fi
+
+# Work around Python http://bugs.python.org/issue10112.  See also
+# http://bugs.python.org/issue11410, otherwise -Wl,--dynamic-list has
+# no effect.  Note that the only test after this that uses Python is
+# the -rdynamic/-Wl,--dynamic-list test, and we do want that one to be
+# run without -export-dynamic too.
+PYTHON_LIBS=`echo $PYTHON_LIBS | sed -e 's/-Xlinker -export-dynamic//'`
+
 AC_SUBST(PYTHON_CFLAGS)
 AC_SUBST(PYTHON_CPPFLAGS)
 AC_SUBST(PYTHON_LIBS)
@@ -1100,6 +1096,11 @@ AC_DEFUN([AC_TRY_LIBGUILE],
                     GUILE_CPPFLAGS=$new_CPPFLAGS
                     GUILE_LIBS=$new_LIBS],
                    [found_usable_guile=no])
+    dnl scm_set_automatic_finalization_enabled added in Guile 2.2.
+    AC_CHECK_FUNC(scm_set_automatic_finalization_enabled,
+      AC_DEFINE(HAVE_GUILE_MANUAL_FINALIZATION, 1,
+                [Define if Guile supports manual finalization.])
+    )
     CPPFLAGS=$save_CPPFLAGS
     LIBS=$save_LIBS
     if test "${found_usable_guile}" = no; then
@@ -1250,6 +1251,40 @@ if test "$ENABLE_LIBMCHECK" = "yes" \
   AC_MSG_WARN(--enable-libmcheck may lead to spurious crashes if threads are used in python)
 fi
 
+AC_ARG_WITH(intel_pt,
+  AS_HELP_STRING([--with-intel-pt], [include Intel Processor Trace support (auto/yes/no)]),
+  [], [with_intel_pt=auto])
+AC_MSG_CHECKING([whether to use intel pt])
+AC_MSG_RESULT([$with_intel_pt])
+
+if test "${with_intel_pt}" = no; then
+  AC_MSG_WARN([Intel Processor Trace support disabled; some features may be unavailable.])
+  HAVE_LIBIPT=no
+else
+  AC_PREPROC_IFELSE(AC_LANG_SOURCE([[
+#include <linux/perf_event.h>
+#ifndef PERF_ATTR_SIZE_VER5
+# error
+#endif
+  ]]), [perf_event=yes], [perf_event=no])
+  if test "$perf_event" != yes; then
+    if test "$with_intel_pt" = yes; then
+      AC_MSG_ERROR([linux/perf_event.h missing or too old])
+    else
+      AC_MSG_WARN([linux/perf_event.h missing or too old; some features may be unavailable.])
+    fi
+  fi
+
+  AC_LIB_HAVE_LINKFLAGS([ipt], [], [#include "intel-pt.h"], [pt_insn_alloc_decoder (0);])
+  if test "$HAVE_LIBIPT" != yes; then
+    if test "$with_intel_pt" = yes; then
+      AC_MSG_ERROR([libipt is missing or unusable])
+    else
+      AC_MSG_WARN([libipt is missing or unusable; some features may be unavailable.])
+    fi
+  fi
+fi
+
 # ------------------------- #
 # Checks for header files.  #
 # ------------------------- #
@@ -1298,6 +1333,8 @@ AC_CHECK_HEADERS(term.h, [], [],
 # Checks for declarations.  #
 # ------------------------- #
 
+libiberty_INIT
+
 AC_CHECK_DECLS([free, malloc, realloc, snprintf])
 AM_LC_MESSAGES
 
@@ -1311,7 +1348,6 @@ AC_CHECK_MEMBERS([struct stat.st_blocks, struct stat.st_blksize])
 # Checks for types.  #
 # ------------------ #
 
-AC_TYPE_SIGNAL
 AC_CHECK_TYPES(socklen_t, [], [],
 [#include <sys/types.h>
 #include <sys/socket.h>
@@ -1329,88 +1365,20 @@ AC_C_BIGENDIAN
 # Checks for library functions.  #
 # ------------------------------ #
 
-AC_FUNC_ALLOCA
 AC_FUNC_MMAP
 AC_FUNC_VFORK
-AC_CHECK_FUNCS([canonicalize_file_name realpath getrusage getuid getgid \
-		pipe poll pread pread64 pwrite readlink resize_term \
+AC_CHECK_FUNCS([getauxval getrusage getuid getgid \
+		pipe poll pread pread64 pwrite resize_term \
 		sbrk setpgid setpgrp setsid \
 		sigaction sigprocmask sigsetmask socketpair \
 		ttrace wborder wresize setlocale iconvlist libiconvlist btowc \
-		setrlimit getrlimit posix_madvise waitpid lstat \
-		ptrace64 sigaltstack])
+		setrlimit getrlimit posix_madvise waitpid \
+		ptrace64 sigaltstack mkdtemp setns])
 AM_LANGINFO_CODESET
 GDB_AC_COMMON
 
-# Check the return and argument types of ptrace.  No canned test for
-# this, so roll our own.
-gdb_ptrace_headers='
-#include <sys/types.h>
-#if HAVE_SYS_PTRACE_H
-# include <sys/ptrace.h>
-#endif
-#if HAVE_UNISTD_H
-# include <unistd.h>
-#endif
-'
-# There is no point in checking if we don't have a prototype.
-AC_CHECK_DECLS(ptrace, [], [
-  : ${gdb_cv_func_ptrace_ret='int'}
-  : ${gdb_cv_func_ptrace_args='int,int,long,long'}
-], $gdb_ptrace_headers)
-# Check return type.  Varargs (used on GNU/Linux) conflict with the
-# empty argument list, so check for that explicitly.
-AC_CACHE_CHECK([return type of ptrace], gdb_cv_func_ptrace_ret,
-  AC_TRY_COMPILE($gdb_ptrace_headers,
-    [extern long ptrace (enum __ptrace_request, ...);],
-    gdb_cv_func_ptrace_ret='long',
-    AC_TRY_COMPILE($gdb_ptrace_headers,
-      [extern int ptrace ();],
-      gdb_cv_func_ptrace_ret='int',
-      gdb_cv_func_ptrace_ret='long')))
-AC_DEFINE_UNQUOTED(PTRACE_TYPE_RET, $gdb_cv_func_ptrace_ret,
-  [Define as the return type of ptrace.])
-# Check argument types.
-AC_CACHE_CHECK([types of arguments for ptrace], gdb_cv_func_ptrace_args, [
-  AC_TRY_COMPILE($gdb_ptrace_headers,
-    [extern long ptrace (enum __ptrace_request, ...);],
-    [gdb_cv_func_ptrace_args='int,int,long,long'],[
-for gdb_arg1 in 'int' 'long'; do
- for gdb_arg2 in 'pid_t' 'int' 'long'; do
-  for gdb_arg3 in 'int *' 'caddr_t' 'int' 'long' 'void *'; do
-   for gdb_arg4 in 'int' 'long' 'void *'; do
-     AC_TRY_COMPILE($gdb_ptrace_headers, [
-extern $gdb_cv_func_ptrace_ret
-  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4);
-], [gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4";
-    break 4;])
-    for gdb_arg5 in 'int *' 'int' 'long'; do
-     AC_TRY_COMPILE($gdb_ptrace_headers, [
-extern $gdb_cv_func_ptrace_ret
-  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4, $gdb_arg5);
-], [
-gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4,$gdb_arg5";
-    break 5;])
-    done
-   done
-  done
- done
-done
-# Provide a safe default value.
-: ${gdb_cv_func_ptrace_args='int,int,long,long'}
-])])
-ac_save_IFS=$IFS; IFS=','
-set dummy `echo "$gdb_cv_func_ptrace_args" | sed 's/\*/\*/g'`
-IFS=$ac_save_IFS
-shift
-AC_DEFINE_UNQUOTED(PTRACE_TYPE_ARG3, $[3],
-  [Define to the type of arg 3 for ptrace.])
-AC_DEFINE_UNQUOTED(PTRACE_TYPE_ARG4, $[4],
-  [Define to the type of arg 4 for ptrace.])
-if test -n "$[5]"; then
-  AC_DEFINE_UNQUOTED(PTRACE_TYPE_ARG5, $[5],
-    [Define to the type of arg 5 for ptrace.])
-fi
+# Check the return and argument types of ptrace.
+GDB_AC_PTRACE
 
 dnl AC_FUNC_SETPGRP does not work when cross compiling
 dnl Instead, assume we will have a prototype for setpgrp if cross compiling.
@@ -1489,7 +1457,8 @@ fi
 # See if <machine/reg.h> supports the %fs and %gs i386 segment registers.
 # Older i386 BSD's don't have the r_fs and r_gs members of `struct reg'.
 AC_CHECK_MEMBERS([struct reg.r_fs, struct reg.r_gs], [], [],
-                 [#include <machine/reg.h>])
+                 [#include <sys/types.h>
+#include <machine/reg.h>])
 
 # See if <sys/user.h> supports the %fs_base and %gs_bas amd64 segment registers.
 # Older amd64 Linux's don't have the fs_base and gs_base members of
@@ -1550,6 +1519,18 @@ if test $gdb_cv_have_pt_getxmmregs = yes; then
   AC_DEFINE(HAVE_PT_GETXMMREGS, 1,
   [Define if sys/ptrace.h defines the PT_GETXMMREGS request.])
 fi
+
+# See if <sys/ptrace.h> supports LWP names on FreeBSD
+# Older FreeBSD versions don't have the pl_tdname member of
+# `struct ptrace_lwpinfo'.
+AC_CHECK_MEMBERS([struct ptrace_lwpinfo.pl_tdname], [], [],
+                 [#include <sys/ptrace.h>])
+
+# See if <sys/ptrace.h> supports syscall fields on FreeBSD.  The
+# pl_syscall_code member of `struct ptrace_lwpinfo' was added in
+# FreeBSD 10.3.
+AC_CHECK_MEMBERS([struct ptrace_lwpinfo.pl_syscall_code], [], [],
+                 [#include <sys/ptrace.h>])
 
 # Detect which type of /proc is in use, such as for Solaris.
 
@@ -1751,13 +1732,21 @@ if test "${gdb_native}" = yes; then
      # libpythonX.Y.a would get its symbols required for
      # pythonX.Y/lib-dynload/*.so modules hidden by -Wl,--dynamic-list.
      # Problem does not happen for the recommended libpythonX.Y.so linkage.
+
+     # Note the workaround for Python
+     # http://bugs.python.org/issue10112 earlier has removed
+     # -export-dynamic from PYTHON_LIBS.  That's exactly what we want
+     # here too, as otherwise it'd make this -Wl,--dynamic-list test
+     # always pass.
      old_CFLAGS="$CFLAGS"
      CFLAGS="$CFLAGS $PYTHON_CFLAGS"
      old_LIBS="$LIBS"
      LIBS="$LIBS $PYTHON_LIBS"
+     old_CPPFLAGS="$CPPFLAGS"
+     CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
      AC_RUN_IFELSE(
        AC_LANG_PROGRAM(
-         [#include "]${have_libpython}[/Python.h"],
+         [#include "Python.h"],
          [int err;
           Py_Initialize ();
           err = PyRun_SimpleString ("import itertools\n");
@@ -1766,6 +1755,7 @@ if test "${gdb_native}" = yes; then
        [dynamic_list=true], [], [true])
      LIBS="$old_LIBS"
      CFLAGS="$old_CFLAGS"
+     CPPFLAGS="$old_CPPFLAGS"
    fi
    LDFLAGS="$old_LDFLAGS"
 fi
@@ -1891,25 +1881,6 @@ if test "x$gdb_cv_thread_db_h_has_td_notls" = "xyes"; then
             [Define if <thread_db.h> has the TD_NOTLS error code.])
 fi
 
-dnl See if we have a sys/syscall header file that has __NR_tkill.
-if test "x$ac_cv_header_sys_syscall_h" = "xyes"; then
-   AC_CACHE_CHECK([whether <sys/syscall.h> has __NR_tkill],
-                  gdb_cv_sys_syscall_h_has_tkill,
-     AC_TRY_COMPILE(
-       [#include <sys/syscall.h>],
-       [int i = __NR_tkill;],
-       gdb_cv_sys_syscall_h_has_tkill=yes,
-       gdb_cv_sys_syscall_h_has_tkill=no
-     )
-   )
-fi
-dnl See if we can issue tkill syscall.
-if test "x$gdb_cv_sys_syscall_h_has_tkill" = "xyes"; then
-  AC_CHECK_FUNC(syscall,
-    AC_DEFINE(HAVE_TKILL_SYSCALL, 1, [Define if you support the tkill syscall.])
-  )
-fi
-
 dnl Check if we can disable the virtual address space randomization.
 dnl The functionality of setarch -R.
 AC_CHECK_DECLS([ADDR_NO_RANDOMIZE],,, [#include <sys/personality.h>])
@@ -1965,86 +1936,7 @@ GDB_AC_WITH_DIR(SYSTEM_GDBINIT, system-gdbinit,
     [automatically load a system-wide gdbinit file],
     [])
 
-AC_ARG_ENABLE(werror,
-  AS_HELP_STRING([--enable-werror], [treat compile warnings as errors]),
-  [case "${enableval}" in
-     yes | y) ERROR_ON_WARNING="yes" ;;
-     no | n)  ERROR_ON_WARNING="no" ;;
-     *) AC_MSG_ERROR(bad value ${enableval} for --enable-werror) ;;
-   esac])
-
-# Enable -Werror by default when using gcc.  Turn it off for releases.
-if test "${GCC}" = yes -a -z "${ERROR_ON_WARNING}" && $development; then
-    ERROR_ON_WARNING=yes
-fi
-
-WERROR_CFLAGS=""
-if test "${ERROR_ON_WARNING}" = yes ; then
-    WERROR_CFLAGS="-Werror"
-fi
-
-build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
--Wpointer-sign \
--Wno-unused -Wunused-value -Wunused-function \
--Wno-switch -Wno-char-subscripts -Wmissing-prototypes \
--Wdeclaration-after-statement -Wempty-body -Wmissing-parameter-type \
--Wold-style-declaration -Wold-style-definition"
-
-# Enable -Wno-format by default when using gcc on mingw since many
-# GCC versions complain about %I64.
-case "${host}" in
-  *-*-mingw32*) build_warnings="$build_warnings -Wno-format" ;;
-  *) build_warnings="$build_warnings -Wformat-nonliteral" ;;
-esac
-
-AC_ARG_ENABLE(build-warnings,
-AS_HELP_STRING([--enable-build-warnings], [enable build-time compiler warnings if gcc is used]),
-[case "${enableval}" in
-  yes)	;;
-  no)	build_warnings="-w";;
-  ,*)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${build_warnings} ${t}";;
-  *,)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${t} ${build_warnings}";;
-  *)    build_warnings=`echo "${enableval}" | sed -e "s/,/ /g"`;;
-esac
-if test x"$silent" != x"yes" && test x"$build_warnings" != x""; then
-  echo "Setting compiler warning flags = $build_warnings" 6>&1
-fi])dnl
-AC_ARG_ENABLE(gdb-build-warnings,
-AS_HELP_STRING([--enable-gdb-build-warnings], [enable GDB specific build-time compiler warnings if gcc is used]),
-[case "${enableval}" in
-  yes)	;;
-  no)	build_warnings="-w";;
-  ,*)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${build_warnings} ${t}";;
-  *,)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${t} ${build_warnings}";;
-  *)    build_warnings=`echo "${enableval}" | sed -e "s/,/ /g"`;;
-esac
-if test x"$silent" != x"yes" && test x"$build_warnings" != x""; then
-  echo "Setting GDB specific compiler warning flags = $build_warnings" 6>&1
-fi])dnl
-WARN_CFLAGS=""
-if test "x${build_warnings}" != x -a "x$GCC" = xyes
-then
-    AC_MSG_CHECKING(compiler warning flags)
-    # Separate out the -Werror flag as some files just cannot be
-    # compiled with it enabled.
-    for w in ${build_warnings}; do
-	case $w in
-	-Werr*) WERROR_CFLAGS=-Werror ;;
-	*) # Check that GCC accepts it
-	    saved_CFLAGS="$CFLAGS"
-	    CFLAGS="$CFLAGS $w"
-	    AC_TRY_COMPILE([],[],WARN_CFLAGS="${WARN_CFLAGS} $w",)
-	    CFLAGS="$saved_CFLAGS"
-	esac
-    done
-    AC_MSG_RESULT(${WARN_CFLAGS} ${WERROR_CFLAGS})
-fi
-AC_SUBST(WARN_CFLAGS)
-AC_SUBST(WERROR_CFLAGS)
+AM_GDB_WARNINGS
 
 # In the Cygwin environment, we need some additional flags.
 AC_CACHE_CHECK([for cygwin], gdb_cv_os_cygwin,
@@ -2090,7 +1982,7 @@ AC_SUBST(WIN32LIBS)
 GDB_AC_CHECK_BFD([for ELF support in BFD], gdb_cv_var_elf,
                  [bfd_get_elf_phdr_upper_bound (NULL)], elf-bfd.h)
 if test $gdb_cv_var_elf = yes; then
-  CONFIG_OBS="$CONFIG_OBS elfread.o stap-probe.o"
+  CONFIG_OBS="$CONFIG_OBS elfread.o stap-probe.o dtrace-probe.o"
   AC_DEFINE(HAVE_ELF, 1,
 	    [Define if ELF support should be included.])
   # -ldl is provided by bfd/Makfile.am (LIBDL) <PLUGINS>.
@@ -2104,13 +1996,6 @@ GDB_AC_CHECK_BFD([for Mach-O support in BFD], gdb_cv_var_macho,
                  [bfd_mach_o_lookup_command (NULL, 0, NULL)], mach-o.h)
 if test $gdb_cv_var_macho = yes; then
   CONFIG_OBS="$CONFIG_OBS machoread.o"
-fi
-
-# Add SOM support to GDB, but only if BFD includes it.
-GDB_AC_CHECK_BFD([for SOM support in BFD], gdb_cv_var_som,
-                 [bfd_som_attach_aux_hdr (NULL, 0, NULL)], som.h)
-if test $gdb_cv_var_som = yes; then
-  CONFIG_OBS="$CONFIG_OBS somread.o"
 fi
 
 # Add any host-specific objects to GDB.
@@ -2294,6 +2179,14 @@ if test "${ignore_sim}" = "false"; then
     SIM="${gdb_sim}"
     SIM_OBS="remote-sim.o"
     AC_DEFINE(WITH_SIM, 1, [Define if the simulator is being linked in.])
+
+    # Some tdep code should only be compiled in when the ppc sim is
+    # built.  PR sim/13418.
+    case $target in
+      powerpc*-*-*)
+	AC_DEFINE(WITH_PPC_SIM, 1, [Define if the PPC simulator is being linked in.])
+	;;
+    esac
   fi
 fi
 AC_SUBST(SIM)
@@ -2416,6 +2309,7 @@ else
 			struct bt_ctf_event *event = NULL;
 			const struct bt_definition *scope;
 
+			pos.type = BT_SEEK_BEGIN;
 			bt_iter_set_pos (bt_ctf_get_iter (NULL), pos);
 			scope = bt_ctf_get_top_level_scope (event,
 			      				   BT_STREAM_EVENT_HEADER);
@@ -2460,21 +2354,15 @@ dnl  At the moment, we just assume it's UTF-8.
 AC_DEFINE(GDB_DEFAULT_HOST_CHARSET, "UTF-8",
           [Define to be a string naming the default host character set.])
 
-# Undo the $ec_script escaping suitable for Makefile.
-transform=`echo "$program_transform_name" | sed -e 's/[\\$][\\$]/\\$/g'`
-GDB_TRANSFORM_NAME=`echo gdb | sed -e "$transform"`
-if test "x$GDB_TRANSFORM_NAME" = x; then
-  GDB_TRANSFORM_NAME=gdb
+if $development; then
+  AC_DEFINE(GDB_SELF_TEST, 1,
+            [Define if self-testing features should be enabled])
 fi
-AC_SUBST(GDB_TRANSFORM_NAME)
-GCORE_TRANSFORM_NAME=`echo gcore | sed -e "$transform"`
-if test "x$GCORE_TRANSFORM_NAME" = x; then
-  GCORE_TRANSFORM_NAME=gcore
-fi
-AC_SUBST(GCORE_TRANSFORM_NAME)
-AC_CONFIG_FILES([gcore], [chmod +x gcore])
 
-AC_OUTPUT(Makefile gdb-gdb.gdb doc/Makefile data-directory/Makefile,
+GDB_AC_TRANSFORM([gdb], [GDB_TRANSFORM_NAME])
+GDB_AC_TRANSFORM([gcore], [GCORE_TRANSFORM_NAME])
+AC_CONFIG_FILES([gcore], [chmod +x gcore])
+AC_CONFIG_FILES([Makefile gdb-gdb.gdb doc/Makefile data-directory/Makefile],
 [
 case x$CONFIG_HEADERS in
 xconfig.h:config.in)
@@ -2482,4 +2370,4 @@ echo > stamp-h ;;
 esac
 ])
 
-exit 0
+AC_OUTPUT

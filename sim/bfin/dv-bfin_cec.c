@@ -1,6 +1,6 @@
 /* Blackfin Core Event Controller (CEC) model.
 
-   Copyright (C) 2010-2014 Free Software Foundation, Inc.
+   Copyright (C) 2010-2016 Free Software Foundation, Inc.
    Contributed by Analog Devices, Inc.
 
    This file is part of simulators.
@@ -82,6 +82,10 @@ bfin_cec_io_write_buffer (struct hw *me, const void *source,
   bu32 mmr_off;
   bu32 value;
 
+  /* Invalid access mode is higher priority than missing register.  */
+  if (!dv_bfin_mmr_require_32 (me, addr, nr_bytes, true))
+    return 0;
+
   value = dv_load_4 (source);
   mmr_off = addr - cec->base;
 
@@ -117,6 +121,10 @@ bfin_cec_io_read_buffer (struct hw *me, void *dest,
   struct bfin_cec *cec = hw_data (me);
   bu32 mmr_off;
   bu32 *valuep;
+
+  /* Invalid access mode is higher priority than missing register.  */
+  if (!dv_bfin_mmr_require_32 (me, addr, nr_bytes, false))
+    return 0;
 
   mmr_off = addr - cec->base;
   valuep = (void *)((unsigned long)cec + mmr_base() + mmr_off);
@@ -599,7 +607,7 @@ _cec_raise (SIM_CPU *cpu, struct bfin_cec *cec, int ivg)
       else
 	SET_PCREG (cec_get_evt (cpu, ivg));
 
-      TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC (to EVT%i):", ivg);
+      BFIN_TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC (to EVT%i):", ivg);
       BFIN_CPU_STATE.did_jump = true;
 
       /* Enable the global interrupt mask upon interrupt entry.  */
@@ -648,7 +656,7 @@ cec_latch (SIM_CPU *cpu, int ivg)
     {
       bu32 oldpc = PCREG;
       SET_PCREG (cec_read_ret_reg (cpu, ivg));
-      TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC");
+      BFIN_TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC");
       return;
     }
 
@@ -679,7 +687,7 @@ cec_return (SIM_CPU *cpu, int ivg)
   if (STATE_ENVIRONMENT (sd) != OPERATING_ENVIRONMENT)
     {
       SET_PCREG (cec_read_ret_reg (cpu, ivg));
-      TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC");
+      BFIN_TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC");
       return;
     }
 
@@ -744,9 +752,9 @@ cec_return (SIM_CPU *cpu, int ivg)
   /* XXX: Delayed clear shows bad PCREG register trace above ?  */
   SET_PCREG (newpc & ~1);
 
-  TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC (from EVT%i)", ivg);
+  BFIN_TRACE_BRANCH (cpu, oldpc, PCREG, -1, "CEC changed PC (from EVT%i)", ivg);
 
-  /* Update ipend after the TRACE_BRANCH so dv-bfin_trace
+  /* Update ipend after the BFIN_TRACE_BRANCH so dv-bfin_trace
      knows current CEC state wrt overflow.  */
   if (!snen)
     cec->ipend &= ~(1 << ivg);

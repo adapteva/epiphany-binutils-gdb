@@ -1,4 +1,4 @@
-# Copyright 1988-2014 Free Software Foundation, Inc.
+# Copyright 1988-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ proc do_steps_and_nexts {} {
 	# me with GCC 3.1 on i686-pc-linux-gnu when I compile with
 	# optimization.
 	gdb_test_multiple "list" "list" {
-	    -re ".*context = data.*$gdb_prompt $" {
+	    -re ".*context = \\(struct captured_main_args \\*\\) data.*$gdb_prompt $" {
 		set description "step over context initialization"
 		set command "step"
 	    }
@@ -205,6 +205,10 @@ proc do_steps_and_nexts {} {
 		set description "step over gdb_stderr initialization"
 		set command "step"
 	    }
+	    -re "ui = current_ui.*$gdb_prompt $" {
+		set description "step over top_level initialization"
+		set command "step"
+	    }
 	    -re ".*main.c.*No such file or directory.*$gdb_prompt $" {
 		setup_xfail "rs6000-*-aix3*"
 		fail "must be able to list source lines"
@@ -257,6 +261,7 @@ proc test_with_self { executable } {
     global decimal
     global timeout
     global INTERNAL_GDBFLAGS
+    global inferior_spawn_id gdb_spawn_id
 
     # load yourself into the debugger
     # This can take a relatively long time, particularly for testing where
@@ -288,9 +293,13 @@ proc test_with_self { executable } {
 	return -1
     }
 
+    # When GDB is built as a C++ program, disassemble shows the full
+    # prototype.
+    set cxx_main_args_re [string_to_regexp "(int, char**)"]
+
     # disassemble yourself
     gdb_test "x/10i main" \
-	    "x/10i.*main.*main.$decimal.*main.$decimal.*" \
+	    "x/10i.*main.*main($cxx_main_args_re)?.$decimal.*main($cxx_main_args_re)?.$decimal.*" \
 	    "Disassemble main"
 
     # Set a breakpoint at main
@@ -300,12 +309,8 @@ proc test_with_self { executable } {
 
     # We'll need this when we send a ^C to GDB.  Need to do it before we
     # run the program and gdb starts saving and restoring tty states.
-    # On Ultrix, we don't need it and it is really slow (because shell_escape
-    # doesn't use vfork).
-    if ![istarget "*-*-ultrix*"] then {
-	gdb_test "shell stty intr '^C'" ".*" \
-	    "set interrupt character in test_with_self"
-    }
+    gdb_test "shell stty intr '^C'" ".*" \
+	"set interrupt character in test_with_self"
 
     # FIXME: If we put this after the run to main, the first list
     # command doesn't print the same line as the current line where
@@ -406,40 +411,46 @@ proc test_with_self { executable } {
 
     # start the "xgdb" process
     if [target_info exists gdb,noinferiorio] {
-	# Maybe testing with a local extended-remote gdbserver.  With
-	# no way to interact with inferior GDB, all we can do is let
-	# it run.
+	# With no way to interact with the inferior GDB, all we can do
+	# is let it run.
 	send_gdb "continue\n"
 	# Wait a bit while the inferior gdb gets to its prompt.
 	sleep 1
     } else {
 	set test "xgdb is at prompt"
 	gdb_test_multiple "continue" $test {
+	    -i "$inferior_spawn_id"
 	    -re "GNU gdb \[0-9\.\]*.*Copyright \\(C\\) \[0-9\]* Free Software Foundation, Inc.*License GPLv3\\+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.*This is free software: you are free to change and redistribute it.*There is NO WARRANTY, to the extent permitted by law.  Type \"show copying\".*and \"show warranty\" for details.*This GDB was configured as .*$gdb_prompt $" {
 		pass $test
 	    }
 	}
 
 	# set xgdb prompt so we can tell which is which
-	gdb_test_multiple "set prompt (xgdb) " "Set xgdb_prompt" {
+	send_inferior "set prompt (xgdb) \n"
+	set msg "Set xgdb_prompt"
+	gdb_test_multiple "" $msg {
+	    -i "$inferior_spawn_id"
 	    -re "\[(\]xgdb\[)\].*\[(\]xgdb\[)\] $" {
-		pass "Set xgdb prompt"
+		pass $msg
 	    }
 	}
     }
 
     # kill the xgdb process
-    set description "send ^C to child process"
-    send_gdb "\003"
-    gdb_expect {
-	-re "Program received signal SIGINT.*$gdb_prompt $" {
-	    pass "$description"
-	}
-	-re ".*$gdb_prompt $" {
-	    fail "$description"
-	}
-	timeout {
-	    fail "$description (timeout)"
+    if ![target_info exists gdb,nointerrupts] {
+	set description "send ^C to child process"
+	send_gdb "\003"
+	# "Thread 1" is displayed iff Guile support is linked in.
+	gdb_expect {
+	    -re "(Thread .*|Program) received signal SIGINT.*$gdb_prompt $" {
+		pass "$description"
+	    }
+	    -re ".*$gdb_prompt $" {
+		fail "$description"
+	    }
+	    timeout {
+		fail "$description (timeout)"
+	    }
 	}
     }
     
@@ -447,6 +458,10 @@ proc test_with_self { executable } {
     gdb_test "signal SIGINT" \
 	"Continuing with signal SIGINT.*" \
 	"$description"
+
+    # Switch back to the GDB thread if Guile support is linked in.
+    # "signal SIGINT" could also switch the current thread.
+    gdb_test "thread 1" {\[Switching to thread 1 .*\].*}
     
     # get a stack trace
     #
@@ -458,15 +473,6 @@ proc test_with_self { executable } {
     gdb_test_multiple "backtrace" "$description" {
 	-re "#0.*(read|poll).*in main \\(.*\\) at .*gdb\\.c.*$gdb_prompt $" {
 	    pass "$description"
-	}
-	-re ".*$gdb_prompt $" {
-	    # On the alpha, we hit the infamous problem about gdb
-	    # being unable to get the frame pointer (mentioned in
-	    # gdb/README).  As it is intermittent, there is no way to
-	    # XFAIL it which will give us an XPASS if the problem goes
-	    # away.
-	    setup_xfail "alpha*-*-osf*"
-	    fail "$description"
 	}
     }
 

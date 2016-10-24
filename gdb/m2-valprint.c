@@ -1,6 +1,6 @@
 /* Support for printing Modula 2 values for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -81,7 +81,7 @@ m2_print_long_set (struct type *type, const gdb_byte *valaddr,
   struct type *target;
   int bitval;
 
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
 
   fprintf_filtered (stream, "{");
   len = TYPE_NFIELDS (type);
@@ -167,7 +167,7 @@ m2_print_unbounded_array (struct type *type, const gdb_byte *valaddr,
   LONGEST len;
   struct value *val;
 
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
   content_type = TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (type, 0));
 
   addr = unpack_pointer (TYPE_FIELD_TYPE (type, 0),
@@ -268,7 +268,7 @@ m2_print_array_contents (struct type *type, const gdb_byte *valaddr,
 			 const struct value_print_options *options,
 			 int len)
 {
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
 
   if (TYPE_LENGTH (type) > 0)
     {
@@ -301,7 +301,9 @@ static const struct generic_val_print_decorations m2_decorations =
   " * I",
   "TRUE",
   "FALSE",
-  "void"
+  "void",
+  "{",
+  "}"
 };
 
 /* See val_print for a description of the various parameters of this
@@ -319,7 +321,7 @@ m2_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
   struct type *elttype;
   CORE_ADDR addr;
 
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
   switch (TYPE_CODE (type))
     {
     case TYPE_CODE_ARRAY:
@@ -406,7 +408,7 @@ m2_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 
     case TYPE_CODE_SET:
       elttype = TYPE_INDEX_TYPE (type);
-      CHECK_TYPEDEF (elttype);
+      elttype = check_typedef (elttype);
       if (TYPE_STUB (elttype))
 	{
 	  fprintf_filtered (stream, _("<incomplete type>"));

@@ -1,5 +1,5 @@
 /* Low level interface to ptrace, for GDB when running under Unix.
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -79,6 +79,10 @@ struct terminal_info
    unimportant.  */
 static struct terminal_info our_terminal_info;
 
+/* Snapshot of our own tty state taken during initialization of GDB.
+   This is used as the initial tty state given to each new inferior.  */
+static serial_ttystate initial_gdb_ttystate;
+
 static struct terminal_info *get_inflow_inferior_data (struct inferior *);
 
 #ifdef PROCESS_GROUP_TYPE
@@ -97,8 +101,8 @@ inferior_process_group (void)
    we save our handlers in these two variables and set SIGINT and SIGQUIT
    to SIG_IGN.  */
 
-static void (*sigint_ours) ();
-static void (*sigquit_ours) ();
+static sighandler_t sigint_ours;
+static sighandler_t sigquit_ours;
 
 /* The name of the tty (from the `tty' command) that we're giving to
    the inferior when starting it up.  This is only (and should only
@@ -132,37 +136,24 @@ gdb_getpgrp (void)
 }
 #endif
 
-enum
+enum gdb_has_a_terminal_flag_enum
   {
     yes, no, have_not_checked
   }
 gdb_has_a_terminal_flag = have_not_checked;
 
-/* The value of the "interactive-mode" setting.  */
-static enum auto_boolean interactive_mode = AUTO_BOOLEAN_AUTO;
+/* Set the initial tty state that is to be inherited by new inferiors.  */
 
-/* Implement the "show interactive-mode" option.  */
-
-static void
-show_interactive_mode (struct ui_file *file, int from_tty,
-                       struct cmd_list_element *c,
-                       const char *value)
+void
+set_initial_gdb_ttystate (void)
 {
-  if (interactive_mode == AUTO_BOOLEAN_AUTO)
-    fprintf_filtered (file, "Debugger's interactive mode "
-		            "is %s (currently %s).\n",
-                      value, gdb_has_a_terminal () ? "on" : "off");
-  else
-    fprintf_filtered (file, "Debugger's interactive mode is %s.\n", value);
+  initial_gdb_ttystate = serial_get_tty_state (stdin_serial);
 }
 
 /* Does GDB have a terminal (on stdin)?  */
 int
 gdb_has_a_terminal (void)
 {
-  if (interactive_mode != AUTO_BOOLEAN_AUTO)
-    return interactive_mode == AUTO_BOOLEAN_TRUE;
-
   switch (gdb_has_a_terminal_flag)
     {
     case yes:
@@ -227,7 +218,7 @@ child_terminal_init_with_pgrp (int pgrp)
     {
       xfree (tinfo->ttystate);
       tinfo->ttystate = serial_copy_tty_state (stdin_serial,
-					       our_terminal_info.ttystate);
+					       initial_gdb_ttystate);
 
       /* Make sure that next time we call terminal_inferior (which will be
          before the program runs, as it needs to be), we install the new
@@ -307,9 +298,9 @@ child_terminal_inferior (struct target_ops *self)
 
       if (!job_control)
 	{
-	  sigint_ours = (void (*)()) signal (SIGINT, SIG_IGN);
+	  sigint_ours = signal (SIGINT, SIG_IGN);
 #ifdef SIGQUIT
-	  sigquit_ours = (void (*)()) signal (SIGQUIT, SIG_IGN);
+	  sigquit_ours = signal (SIGQUIT, SIG_IGN);
 #endif
 	}
 
@@ -400,18 +391,18 @@ child_terminal_ours_1 (int output_only)
 
   if (tinfo->run_terminal != NULL || gdb_has_a_terminal () == 0)
     return;
-
+  else
     {
 #ifdef SIGTTOU
       /* Ignore this signal since it will happen when we try to set the
          pgrp.  */
-      void (*osigttou) () = NULL;
+      sighandler_t osigttou = NULL;
 #endif
       int result;
 
 #ifdef SIGTTOU
       if (job_control)
-	osigttou = (void (*)()) signal (SIGTTOU, SIG_IGN);
+	osigttou = signal (SIGTTOU, SIG_IGN);
 #endif
 
       xfree (tinfo->ttystate);
@@ -494,7 +485,7 @@ static const struct inferior_data *inflow_inferior_data;
 static void
 inflow_inferior_data_cleanup (struct inferior *inf, void *arg)
 {
-  struct terminal_info *info = arg;
+  struct terminal_info *info = (struct terminal_info *) arg;
 
   xfree (info->run_terminal);
   xfree (info->ttystate);
@@ -509,7 +500,7 @@ get_inflow_inferior_data (struct inferior *inf)
 {
   struct terminal_info *info;
 
-  info = inferior_data (inf, inflow_inferior_data);
+  info = (struct terminal_info *) inferior_data (inf, inflow_inferior_data);
   if (info == NULL)
     {
       info = XCNEW (struct terminal_info);
@@ -530,7 +521,7 @@ inflow_inferior_exit (struct inferior *inf)
 {
   struct terminal_info *info;
 
-  info = inferior_data (inf, inflow_inferior_data);
+  info = (struct terminal_info *) inferior_data (inf, inflow_inferior_data);
   if (info != NULL)
     {
       xfree (info->run_terminal);
@@ -699,9 +690,9 @@ new_tty (void)
   tty = open ("/dev/tty", O_RDWR);
   if (tty > 0)
     {
-      void (*osigttou) ();
+      sighandler_t osigttou;
 
-      osigttou = (void (*)()) signal (SIGTTOU, SIG_IGN);
+      osigttou = signal (SIGTTOU, SIG_IGN);
       ioctl (tty, TIOCNOTTY, 0);
       close (tty);
       signal (SIGTTOU, osigttou);
@@ -776,7 +767,7 @@ pass_signal (int signo)
 #endif
 }
 
-static void (*osig) ();
+static sighandler_t osig;
 static int osig_set;
 
 void
@@ -787,7 +778,7 @@ set_sigint_trap (void)
 
   if (inf->attach_flag || tinfo->run_terminal)
     {
-      osig = (void (*)()) signal (SIGINT, pass_signal);
+      osig = signal (SIGINT, pass_signal);
       osig_set = 1;
     }
   else
@@ -886,20 +877,6 @@ _initialize_inflow (void)
 {
   add_info ("terminal", term_info,
 	    _("Print inferior's saved terminal status."));
-
-  add_setshow_auto_boolean_cmd ("interactive-mode", class_support,
-                                &interactive_mode, _("\
-Set whether GDB's standard input is a terminal."), _("\
-Show whether GDB's standard input is a terminal."), _("\
-If on, GDB assumes that standard input is a terminal.  In practice, it\n\
-means that GDB should wait for the user to answer queries associated to\n\
-commands entered at the command prompt.  If off, GDB assumes that standard\n\
-input is not a terminal, and uses the default answer to all queries.\n\
-If auto (the default), determine which mode to use based on the standard\n\
-input settings."),
-                        NULL,
-                        show_interactive_mode,
-                        &setlist, &showlist);
 
   terminal_is_ours = 1;
 

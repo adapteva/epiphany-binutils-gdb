@@ -1,5 +1,5 @@
 /* Replay a remote debug session logfile for GDB.
-   Copyright (C) 1996-2014 Free Software Foundation, Inc.
+   Copyright (C) 1996-2016 Free Software Foundation, Inc.
    Written by Fred Fish (fnf@cygnus.com) from pieces of gdbserver.
 
    This file is part of GDB.
@@ -48,12 +48,9 @@
 #if HAVE_NETINET_TCP_H
 #include <netinet/tcp.h>
 #endif
-#if HAVE_ALLOCA_H
+
 #include <alloca.h>
-#endif
-#if HAVE_MALLOC_H
-#include <malloc.h>
-#endif
+
 #if USE_WIN32API
 #include <winsock2.h>
 #endif
@@ -262,7 +259,7 @@ remote_open (char *name)
 }
 
 static int
-tohex (int ch)
+fromhex (int ch)
 {
   if (ch >= '0' && ch <= '9')
     {
@@ -325,11 +322,11 @@ logchar (FILE *fp)
 	  ch2 = fgetc (fp);
 	  fputc (ch2, stdout);
 	  fflush (stdout);
-	  ch = tohex (ch2) << 4;
+	  ch = fromhex (ch2) << 4;
 	  ch2 = fgetc (fp);
 	  fputc (ch2, stdout);
 	  fflush (stdout);
-	  ch |= tohex (ch2);
+	  ch |= fromhex (ch2);
 	  break;
 	default:
 	  /* Treat any other char as just itself */
@@ -410,7 +407,7 @@ static void
 gdbreplay_version (void)
 {
   printf ("GNU gdbreplay %s%s\n"
-	  "Copyright (C) 2014 Free Software Foundation, Inc.\n"
+	  "Copyright (C) 2016 Free Software Foundation, Inc.\n"
 	  "gdbreplay is free software, covered by "
 	  "the GNU General Public License.\n"
 	  "This gdbreplay was configured as \"%s\"\n",

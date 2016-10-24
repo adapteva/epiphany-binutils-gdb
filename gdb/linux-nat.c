@@ -1,6 +1,6 @@
 /* GNU/Linux native-dependent code common to multiple platforms.
 
-   Copyright (C) 2001-2014 Free Software Foundation, Inc.
+   Copyright (C) 2001-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -24,14 +24,13 @@
 #include "nat/linux-nat.h"
 #include "nat/linux-waitpid.h"
 #include "gdb_wait.h"
-#ifdef HAVE_TKILL_SYSCALL
 #include <unistd.h>
 #include <sys/syscall.h>
-#endif
-#include <sys/ptrace.h>
+#include "nat/gdb_ptrace.h"
 #include "linux-nat.h"
 #include "nat/linux-ptrace.h"
 #include "nat/linux-procfs.h"
+#include "nat/linux-personality.h"
 #include "linux-fork.h"
 #include "gdbthread.h"
 #include "gdbcmd.h"
@@ -65,46 +64,47 @@
 #include "target-descriptions.h"
 #include "filestuff.h"
 #include "objfiles.h"
+#include "nat/linux-namespaces.h"
+#include "fileio.h"
 
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
 #endif
-
-#ifdef HAVE_PERSONALITY
-# include <sys/personality.h>
-# if !HAVE_DECL_ADDR_NO_RANDOMIZE
-#  define ADDR_NO_RANDOMIZE 0x0040000
-# endif
-#endif /* HAVE_PERSONALITY */
 
 /* This comment documents high-level logic of this file.
 
 Waiting for events in sync mode
 ===============================
 
-When waiting for an event in a specific thread, we just use waitpid, passing
-the specific pid, and not passing WNOHANG.
+When waiting for an event in a specific thread, we just use waitpid,
+passing the specific pid, and not passing WNOHANG.
 
-When waiting for an event in all threads, waitpid is not quite good.  Prior to
-version 2.4, Linux can either wait for event in main thread, or in secondary
-threads.  (2.4 has the __WALL flag).  So, if we use blocking waitpid, we might
-miss an event.  The solution is to use non-blocking waitpid, together with
-sigsuspend.  First, we use non-blocking waitpid to get an event in the main 
-process, if any.  Second, we use non-blocking waitpid with the __WCLONED
-flag to check for events in cloned processes.  If nothing is found, we use
-sigsuspend to wait for SIGCHLD.  When SIGCHLD arrives, it means something
-happened to a child process -- and SIGCHLD will be delivered both for events
-in main debugged process and in cloned processes.  As soon as we know there's
-an event, we get back to calling nonblocking waitpid with and without 
-__WCLONED.
+When waiting for an event in all threads, waitpid is not quite good:
 
-Note that SIGCHLD should be blocked between waitpid and sigsuspend calls,
-so that we don't miss a signal.  If SIGCHLD arrives in between, when it's
-blocked, the signal becomes pending and sigsuspend immediately
-notices it and returns.
+- If the thread group leader exits while other threads in the thread
+  group still exist, waitpid(TGID, ...) hangs.  That waitpid won't
+  return an exit status until the other threads in the group are
+  reaped.
 
-Waiting for events in async mode
-================================
+- When a non-leader thread execs, that thread just vanishes without
+  reporting an exit (so we'd hang if we waited for it explicitly in
+  that case).  The exec event is instead reported to the TGID pid.
+
+The solution is to always use -1 and WNOHANG, together with
+sigsuspend.
+
+First, we use non-blocking waitpid to check for events.  If nothing is
+found, we use sigsuspend to wait for SIGCHLD.  When SIGCHLD arrives,
+it means something happened to a child process.  As soon as we know
+there's an event, we get back to calling nonblocking waitpid.
+
+Note that SIGCHLD should be blocked between waitpid and sigsuspend
+calls, so that we don't miss a signal.  If SIGCHLD arrives in between,
+when it's blocked, the signal becomes pending and sigsuspend
+immediately notices it and returns.
+
+Waiting for events in async mode (TARGET_WNOHANG)
+=================================================
 
 In async mode, GDB should always be ready to handle both user input
 and target events, so neither blocking waitpid nor sigsuspend are
@@ -163,11 +163,31 @@ We could use a real-time signal instead.  This would solve those problems; we
 could use PTRACE_GETSIGINFO to locate the specific stop signals sent by GDB.
 But we would still have to have some support for SIGSTOP, since PTRACE_ATTACH
 generates it, and there are races with trying to find a signal that is not
-blocked.  */
+blocked.
+
+Exec events
+===========
+
+The case of a thread group (process) with 3 or more threads, and a
+thread other than the leader execs is worth detailing:
+
+On an exec, the Linux kernel destroys all threads except the execing
+one in the thread group, and resets the execing thread's tid to the
+tgid.  No exit notification is sent for the execing thread -- from the
+ptracer's perspective, it appears as though the execing thread just
+vanishes.  Until we reap all other threads except the leader and the
+execing thread, the leader will be zombie, and the execing thread will
+be in `D (disc sleep)' state.  As soon as all other threads are
+reaped, the execing thread changes its tid to the tgid, and the
+previous (zombie) leader vanishes, giving place to the "new"
+leader.  */
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
 #endif
+
+/* Does the current host support PTRACE_GETREGSET?  */
+enum tribool have_ptrace_getregset = TRIBOOL_UNKNOWN;
 
 /* The single-threaded native GNU/Linux target_ops.  We save a pointer for
    the use of the multi-threaded target.  */
@@ -219,11 +239,17 @@ struct simple_pid_list
 };
 struct simple_pid_list *stopped_pids;
 
+/* Whether target_thread_events is in effect.  */
+static int report_thread_events;
+
 /* Async mode support.  */
 
 /* The read/write ends of the pipe registered as waitable file in the
    event loop.  */
 static int linux_nat_event_pipe[2] = { -1, -1 };
+
+/* True if we're currently in async mode.  */
+#define linux_is_async_p() (linux_nat_event_pipe[0] != -1)
 
 /* Flush the event pipe.  */
 
@@ -267,6 +293,7 @@ async_file_mark (void)
 static int kill_lwp (int lwpid, int signo);
 
 static int stop_callback (struct lwp_info *lp, void *data);
+static int resume_stopped_resumed_lwps (struct lwp_info *lp, void *data);
 
 static void block_child_signals (sigset_t *prev_mask);
 static void restore_child_signals_mask (sigset_t *prev_mask);
@@ -277,29 +304,69 @@ static void purge_lwp_list (int pid);
 static void delete_lwp (ptid_t ptid);
 static struct lwp_info *find_lwp_pid (ptid_t ptid);
 
+static int lwp_status_pending_p (struct lwp_info *lp);
+
+static int sigtrap_is_event (int status);
+static int (*linux_nat_status_is_event) (int status) = sigtrap_is_event;
+
+static void save_stop_reason (struct lwp_info *lp);
+
+
+/* LWP accessors.  */
+
+/* See nat/linux-nat.h.  */
+
+ptid_t
+ptid_of_lwp (struct lwp_info *lwp)
+{
+  return lwp->ptid;
+}
+
+/* See nat/linux-nat.h.  */
+
+void
+lwp_set_arch_private_info (struct lwp_info *lwp,
+			   struct arch_lwp_info *info)
+{
+  lwp->arch_private = info;
+}
+
+/* See nat/linux-nat.h.  */
+
+struct arch_lwp_info *
+lwp_arch_private_info (struct lwp_info *lwp)
+{
+  return lwp->arch_private;
+}
+
+/* See nat/linux-nat.h.  */
+
+int
+lwp_is_stopped (struct lwp_info *lwp)
+{
+  return lwp->stopped;
+}
+
+/* See nat/linux-nat.h.  */
+
+enum target_stop_reason
+lwp_stop_reason (struct lwp_info *lwp)
+{
+  return lwp->stop_reason;
+}
+
 
 /* Trivial list manipulation functions to keep track of a list of
    new stopped processes.  */
 static void
 add_to_pid_list (struct simple_pid_list **listp, int pid, int status)
 {
-  struct simple_pid_list *new_pid = xmalloc (sizeof (struct simple_pid_list));
+  struct simple_pid_list *new_pid = XNEW (struct simple_pid_list);
 
   new_pid->pid = pid;
   new_pid->status = status;
   new_pid->next = *listp;
   *listp = new_pid;
-}
-
-static int
-in_pid_list_p (struct simple_pid_list *list, int pid)
-{
-  struct simple_pid_list *p;
-
-  for (p = list; p != NULL; p = p->next)
-    if (p->pid == pid)
-      return 1;
-  return 0;
 }
 
 static int
@@ -320,26 +387,49 @@ pull_pid_from_list (struct simple_pid_list **listp, int pid, int *statusp)
   return 0;
 }
 
+/* Return the ptrace options that we want to try to enable.  */
+
+static int
+linux_nat_ptrace_options (int attached)
+{
+  int options = 0;
+
+  if (!attached)
+    options |= PTRACE_O_EXITKILL;
+
+  options |= (PTRACE_O_TRACESYSGOOD
+	      | PTRACE_O_TRACEVFORKDONE
+	      | PTRACE_O_TRACEVFORK
+	      | PTRACE_O_TRACEFORK
+	      | PTRACE_O_TRACEEXEC);
+
+  return options;
+}
+
 /* Initialize ptrace warnings and check for supported ptrace
-   features given PID.  */
+   features given PID.
+
+   ATTACHED should be nonzero iff we attached to the inferior.  */
 
 static void
-linux_init_ptrace (pid_t pid)
+linux_init_ptrace (pid_t pid, int attached)
 {
-  linux_enable_event_reporting (pid);
+  int options = linux_nat_ptrace_options (attached);
+
+  linux_enable_event_reporting (pid, options);
   linux_ptrace_init_warnings ();
 }
 
 static void
 linux_child_post_attach (struct target_ops *self, int pid)
 {
-  linux_init_ptrace (pid);
+  linux_init_ptrace (pid, 1);
 }
 
 static void
 linux_child_post_startup_inferior (struct target_ops *self, ptid_t ptid)
 {
-  linux_init_ptrace (ptid_get_pid (ptid));
+  linux_init_ptrace (ptid_get_pid (ptid), 0);
 }
 
 /* Return the number of known LWPs in the tgid given by PID.  */
@@ -362,7 +452,7 @@ num_lwps (int pid)
 static void
 delete_lwp_cleanup (void *lp_voidp)
 {
-  struct lwp_info *lp = lp_voidp;
+  struct lwp_info *lp = (struct lwp_info *) lp_voidp;
 
   delete_lwp (lp->ptid);
 }
@@ -381,20 +471,19 @@ linux_child_follow_fork (struct target_ops *ops, int follow_child,
       int status = W_STOPCODE (0);
       struct cleanup *old_chain;
       int has_vforked;
+      ptid_t parent_ptid, child_ptid;
       int parent_pid, child_pid;
 
       has_vforked = (inferior_thread ()->pending_follow.kind
 		     == TARGET_WAITKIND_VFORKED);
-      parent_pid = ptid_get_lwp (inferior_ptid);
-      if (parent_pid == 0)
-	parent_pid = ptid_get_pid (inferior_ptid);
-      child_pid
-	= ptid_get_pid (inferior_thread ()->pending_follow.value.related_pid);
-
+      parent_ptid = inferior_ptid;
+      child_ptid = inferior_thread ()->pending_follow.value.related_pid;
+      parent_pid = ptid_get_lwp (parent_ptid);
+      child_pid = ptid_get_lwp (child_ptid);
 
       /* We're already attached to the parent, by default.  */
       old_chain = save_inferior_ptid ();
-      inferior_ptid = ptid_build (child_pid, child_pid, 0);
+      inferior_ptid = child_ptid;
       child_lp = add_lwp (inferior_ptid);
       child_lp->stopped = 1;
       child_lp->last_resume_kind = resume_stop;
@@ -451,7 +540,7 @@ linux_child_follow_fork (struct target_ops *ops, int follow_child,
 	{
 	  struct lwp_info *parent_lp;
 
-	  parent_lp = find_lwp_pid (pid_to_ptid (parent_pid));
+	  parent_lp = find_lwp_pid (parent_ptid);
 	  gdb_assert (linux_supports_tracefork () >= 0);
 
 	  if (linux_supports_tracevforkdone ())
@@ -515,7 +604,7 @@ linux_child_follow_fork (struct target_ops *ops, int follow_child,
 
 	      /* If we're in async mode, need to tell the event loop
 		 there's something here to process.  */
-	      if (target_can_async_p ())
+	      if (target_is_async_p ())
 		async_file_mark ();
 	    }
 	}
@@ -588,41 +677,86 @@ linux_child_set_syscall_catchpoint (struct target_ops *self,
   return 0;
 }
 
-/* On GNU/Linux there are no real LWP's.  The closest thing to LWP's
-   are processes sharing the same VM space.  A multi-threaded process
-   is basically a group of such processes.  However, such a grouping
-   is almost entirely a user-space issue; the kernel doesn't enforce
-   such a grouping at all (this might change in the future).  In
-   general, we'll rely on the threads library (i.e. the GNU/Linux
-   Threads library) to provide such a grouping.
+/* List of known LWPs, keyed by LWP PID.  This speeds up the common
+   case of mapping a PID returned from the kernel to our corresponding
+   lwp_info data structure.  */
+static htab_t lwp_lwpid_htab;
 
-   It is perfectly well possible to write a multi-threaded application
-   without the assistance of a threads library, by using the clone
-   system call directly.  This module should be able to give some
-   rudimentary support for debugging such applications if developers
-   specify the CLONE_PTRACE flag in the clone system call, and are
-   using the Linux kernel 2.4 or above.
+/* Calculate a hash from a lwp_info's LWP PID.  */
 
-   Note that there are some peculiarities in GNU/Linux that affect
-   this code:
+static hashval_t
+lwp_info_hash (const void *ap)
+{
+  const struct lwp_info *lp = (struct lwp_info *) ap;
+  pid_t pid = ptid_get_lwp (lp->ptid);
 
-   - In general one should specify the __WCLONE flag to waitpid in
-     order to make it report events for any of the cloned processes
-     (and leave it out for the initial process).  However, if a cloned
-     process has exited the exit status is only reported if the
-     __WCLONE flag is absent.  Linux kernel 2.4 has a __WALL flag, but
-     we cannot use it since GDB must work on older systems too.
+  return iterative_hash_object (pid, 0);
+}
 
-   - When a traced, cloned process exits and is waited for by the
-     debugger, the kernel reassigns it to the original parent and
-     keeps it around as a "zombie".  Somehow, the GNU/Linux Threads
-     library doesn't notice this, which leads to the "zombie problem":
-     When debugged a multi-threaded process that spawns a lot of
-     threads will run out of processes, even if the threads exit,
-     because the "zombies" stay around.  */
+/* Equality function for the lwp_info hash table.  Compares the LWP's
+   PID.  */
 
-/* List of known LWPs.  */
+static int
+lwp_lwpid_htab_eq (const void *a, const void *b)
+{
+  const struct lwp_info *entry = (const struct lwp_info *) a;
+  const struct lwp_info *element = (const struct lwp_info *) b;
+
+  return ptid_get_lwp (entry->ptid) == ptid_get_lwp (element->ptid);
+}
+
+/* Create the lwp_lwpid_htab hash table.  */
+
+static void
+lwp_lwpid_htab_create (void)
+{
+  lwp_lwpid_htab = htab_create (100, lwp_info_hash, lwp_lwpid_htab_eq, NULL);
+}
+
+/* Add LP to the hash table.  */
+
+static void
+lwp_lwpid_htab_add_lwp (struct lwp_info *lp)
+{
+  void **slot;
+
+  slot = htab_find_slot (lwp_lwpid_htab, lp, INSERT);
+  gdb_assert (slot != NULL && *slot == NULL);
+  *slot = lp;
+}
+
+/* Head of doubly-linked list of known LWPs.  Sorted by reverse
+   creation order.  This order is assumed in some cases.  E.g.,
+   reaping status after killing alls lwps of a process: the leader LWP
+   must be reaped last.  */
 struct lwp_info *lwp_list;
+
+/* Add LP to sorted-by-reverse-creation-order doubly-linked list.  */
+
+static void
+lwp_list_add (struct lwp_info *lp)
+{
+  lp->next = lwp_list;
+  if (lwp_list != NULL)
+    lwp_list->prev = lp;
+  lwp_list = lp;
+}
+
+/* Remove LP from sorted-by-reverse-creation-order doubly-linked
+   list.  */
+
+static void
+lwp_list_remove (struct lwp_info *lp)
+{
+  /* Remove from sorted-by-creation-order list.  */
+  if (lp->next != NULL)
+    lp->next->prev = lp->prev;
+  if (lp->prev != NULL)
+    lp->prev->next = lp->next;
+  if (lp == lwp_list)
+    lwp_list = lp->next;
+}
+
 
 
 /* Original signal mask.  */
@@ -684,8 +818,8 @@ linux_nat_pass_signals (struct target_ops *self,
 
 /* Prototypes for local functions.  */
 static int stop_wait_callback (struct lwp_info *lp, void *data);
-static int linux_thread_alive (ptid_t ptid);
 static char *linux_child_pid_to_exec_file (struct target_ops *self, int pid);
+static int resume_stopped_resumed_lwps (struct lwp_info *lp, void *data);
 
 
 
@@ -698,31 +832,30 @@ lwp_free (struct lwp_info *lp)
   xfree (lp);
 }
 
+/* Traversal function for purge_lwp_list.  */
+
+static int
+lwp_lwpid_htab_remove_pid (void **slot, void *info)
+{
+  struct lwp_info *lp = (struct lwp_info *) *slot;
+  int pid = *(int *) info;
+
+  if (ptid_get_pid (lp->ptid) == pid)
+    {
+      htab_clear_slot (lwp_lwpid_htab, slot);
+      lwp_list_remove (lp);
+      lwp_free (lp);
+    }
+
+  return 1;
+}
+
 /* Remove all LWPs belong to PID from the lwp list.  */
 
 static void
 purge_lwp_list (int pid)
 {
-  struct lwp_info *lp, *lpprev, *lpnext;
-
-  lpprev = NULL;
-
-  for (lp = lwp_list; lp; lp = lpnext)
-    {
-      lpnext = lp->next;
-
-      if (ptid_get_pid (lp->ptid) == pid)
-	{
-	  if (lp == lwp_list)
-	    lwp_list = lp->next;
-	  else
-	    lpprev->next = lp->next;
-
-	  lwp_free (lp);
-	}
-      else
-	lpprev = lp;
-    }
+  htab_traverse_noresize (lwp_lwpid_htab, lwp_lwpid_htab_remove_pid, &pid);
 }
 
 /* Add the LWP specified by PTID to the list.  PTID is the first LWP
@@ -746,7 +879,7 @@ add_initial_lwp (ptid_t ptid)
 
   gdb_assert (ptid_lwp_p (ptid));
 
-  lp = (struct lwp_info *) xmalloc (sizeof (struct lwp_info));
+  lp = XNEW (struct lwp_info);
 
   memset (lp, 0, sizeof (struct lwp_info));
 
@@ -756,8 +889,11 @@ add_initial_lwp (ptid_t ptid)
   lp->ptid = ptid;
   lp->core = -1;
 
-  lp->next = lwp_list;
-  lwp_list = lp;
+  /* Add to sorted-by-reverse-creation-order list.  */
+  lwp_list_add (lp);
+
+  /* Add to keyed-by-pid htab.  */
+  lwp_lwpid_htab_add_lwp (lp);
 
   return lp;
 }
@@ -788,22 +924,24 @@ add_lwp (ptid_t ptid)
 static void
 delete_lwp (ptid_t ptid)
 {
-  struct lwp_info *lp, *lpprev;
+  struct lwp_info *lp;
+  void **slot;
+  struct lwp_info dummy;
 
-  lpprev = NULL;
-
-  for (lp = lwp_list; lp; lpprev = lp, lp = lp->next)
-    if (ptid_equal (lp->ptid, ptid))
-      break;
-
-  if (!lp)
+  dummy.ptid = ptid;
+  slot = htab_find_slot (lwp_lwpid_htab, &dummy, NO_INSERT);
+  if (slot == NULL)
     return;
 
-  if (lpprev)
-    lpprev->next = lp->next;
-  else
-    lwp_list = lp->next;
+  lp = *(struct lwp_info **) slot;
+  gdb_assert (lp != NULL);
 
+  htab_clear_slot (lwp_lwpid_htab, slot);
+
+  /* Remove from sorted-by-creation-order list.  */
+  lwp_list_remove (lp);
+
+  /* Release.  */
   lwp_free (lp);
 }
 
@@ -815,27 +953,23 @@ find_lwp_pid (ptid_t ptid)
 {
   struct lwp_info *lp;
   int lwp;
+  struct lwp_info dummy;
 
   if (ptid_lwp_p (ptid))
     lwp = ptid_get_lwp (ptid);
   else
     lwp = ptid_get_pid (ptid);
 
-  for (lp = lwp_list; lp; lp = lp->next)
-    if (lwp == ptid_get_lwp (lp->ptid))
-      return lp;
-
-  return NULL;
+  dummy.ptid = ptid_build (0, lwp, 0);
+  lp = (struct lwp_info *) htab_find (lwp_lwpid_htab, &dummy);
+  return lp;
 }
 
-/* Call CALLBACK with its second argument set to DATA for every LWP in
-   the list.  If CALLBACK returns 1 for a particular LWP, return a
-   pointer to the structure describing that LWP immediately.
-   Otherwise return NULL.  */
+/* See nat/linux-nat.h.  */
 
 struct lwp_info *
 iterate_over_lwps (ptid_t filter,
-		   int (*callback) (struct lwp_info *, void *),
+		   iterate_over_lwps_ftype callback,
 		   void *data)
 {
   struct lwp_info *lp, *lpnext;
@@ -846,7 +980,7 @@ iterate_over_lwps (ptid_t filter,
 
       if (ptid_match (lp->ptid, filter))
 	{
-	  if ((*callback) (lp, data))
+	  if ((*callback) (lp, data) != 0)
 	    return lp;
 	}
     }
@@ -902,8 +1036,7 @@ exit_lwp (struct lwp_info *lp)
    Returns a wait status for that LWP, to cache.  */
 
 static int
-linux_nat_post_attach_wait (ptid_t ptid, int first, int *cloned,
-			    int *signalled)
+linux_nat_post_attach_wait (ptid_t ptid, int first, int *signalled)
 {
   pid_t new_pid, pid = ptid_get_lwp (ptid);
   int status;
@@ -937,17 +1070,7 @@ linux_nat_post_attach_wait (ptid_t ptid, int first, int *cloned,
   /* Make sure the initial process is stopped.  The user-level threads
      layer might want to poke around in the inferior, and that won't
      work if things haven't stabilized yet.  */
-  new_pid = my_waitpid (pid, &status, 0);
-  if (new_pid == -1 && errno == ECHILD)
-    {
-      if (first)
-	warning (_("%s is a cloned process"), target_pid_to_str (ptid));
-
-      /* Try again with __WCLONE to check cloned processes.  */
-      new_pid = my_waitpid (pid, &status, __WCLONE);
-      *cloned = 1;
-    }
-
+  new_pid = my_waitpid (pid, &status, __WALL);
   gdb_assert (pid == new_pid);
 
   if (!WIFSTOPPED (status))
@@ -971,168 +1094,99 @@ linux_nat_post_attach_wait (ptid_t ptid, int first, int *cloned,
   return status;
 }
 
-/* Attach to the LWP specified by PID.  Return 0 if successful, -1 if
-   the new LWP could not be attached, or 1 if we're already auto
-   attached to this thread, but haven't processed the
-   PTRACE_EVENT_CLONE event of its parent thread, so we just ignore
-   its existance, without considering it an error.  */
-
-int
-lin_lwp_attach_lwp (ptid_t ptid)
-{
-  struct lwp_info *lp;
-  int lwpid;
-
-  gdb_assert (ptid_lwp_p (ptid));
-
-  lp = find_lwp_pid (ptid);
-  lwpid = ptid_get_lwp (ptid);
-
-  /* We assume that we're already attached to any LWP that has an id
-     equal to the overall process id, and to any LWP that is already
-     in our list of LWPs.  If we're not seeing exit events from threads
-     and we've had PID wraparound since we last tried to stop all threads,
-     this assumption might be wrong; fortunately, this is very unlikely
-     to happen.  */
-  if (lwpid != ptid_get_pid (ptid) && lp == NULL)
-    {
-      int status, cloned = 0, signalled = 0;
-
-      if (ptrace (PTRACE_ATTACH, lwpid, 0, 0) < 0)
-	{
-	  if (linux_supports_tracefork ())
-	    {
-	      /* If we haven't stopped all threads when we get here,
-		 we may have seen a thread listed in thread_db's list,
-		 but not processed the PTRACE_EVENT_CLONE yet.  If
-		 that's the case, ignore this new thread, and let
-		 normal event handling discover it later.  */
-	      if (in_pid_list_p (stopped_pids, lwpid))
-		{
-		  /* We've already seen this thread stop, but we
-		     haven't seen the PTRACE_EVENT_CLONE extended
-		     event yet.  */
-		  return 0;
-		}
-	      else
-		{
-		  int new_pid;
-		  int status;
-
-		  /* See if we've got a stop for this new child
-		     pending.  If so, we're already attached.  */
-		  new_pid = my_waitpid (lwpid, &status, WNOHANG);
-		  if (new_pid == -1 && errno == ECHILD)
-		    new_pid = my_waitpid (lwpid, &status, __WCLONE | WNOHANG);
-		  if (new_pid != -1)
-		    {
-		      if (WIFSTOPPED (status))
-			add_to_pid_list (&stopped_pids, lwpid, status);
-		      return 1;
-		    }
-		}
-	    }
-
-	  /* If we fail to attach to the thread, issue a warning,
-	     but continue.  One way this can happen is if thread
-	     creation is interrupted; as of Linux kernel 2.6.19, a
-	     bug may place threads in the thread list and then fail
-	     to create them.  */
-	  warning (_("Can't attach %s: %s"), target_pid_to_str (ptid),
-		   safe_strerror (errno));
-	  return -1;
-	}
-
-      if (debug_linux_nat)
-	fprintf_unfiltered (gdb_stdlog,
-			    "LLAL: PTRACE_ATTACH %s, 0, 0 (OK)\n",
-			    target_pid_to_str (ptid));
-
-      status = linux_nat_post_attach_wait (ptid, 0, &cloned, &signalled);
-      if (!WIFSTOPPED (status))
-	return 1;
-
-      lp = add_lwp (ptid);
-      lp->stopped = 1;
-      lp->cloned = cloned;
-      lp->signalled = signalled;
-      if (WSTOPSIG (status) != SIGSTOP)
-	{
-	  lp->resumed = 1;
-	  lp->status = status;
-	}
-
-      target_post_attach (ptid_get_lwp (lp->ptid));
-
-      if (debug_linux_nat)
-	{
-	  fprintf_unfiltered (gdb_stdlog,
-			      "LLAL: waitpid %s received %s\n",
-			      target_pid_to_str (ptid),
-			      status_to_str (status));
-	}
-    }
-  else
-    {
-      /* We assume that the LWP representing the original process is
-         already stopped.  Mark it as stopped in the data structure
-         that the GNU/linux ptrace layer uses to keep track of
-         threads.  Note that this won't have already been done since
-         the main thread will have, we assume, been stopped by an
-         attach from a different layer.  */
-      if (lp == NULL)
-	lp = add_lwp (ptid);
-      lp->stopped = 1;
-    }
-
-  lp->last_resume_kind = resume_stop;
-  return 0;
-}
-
 static void
 linux_nat_create_inferior (struct target_ops *ops, 
 			   char *exec_file, char *allargs, char **env,
 			   int from_tty)
 {
-#ifdef HAVE_PERSONALITY
-  int personality_orig = 0, personality_set = 0;
-#endif /* HAVE_PERSONALITY */
+  struct cleanup *restore_personality
+    = maybe_disable_address_space_randomization (disable_randomization);
 
   /* The fork_child mechanism is synchronous and calls target_wait, so
      we have to mask the async mode.  */
-
-#ifdef HAVE_PERSONALITY
-  if (disable_randomization)
-    {
-      errno = 0;
-      personality_orig = personality (0xffffffff);
-      if (errno == 0 && !(personality_orig & ADDR_NO_RANDOMIZE))
-	{
-	  personality_set = 1;
-	  personality (personality_orig | ADDR_NO_RANDOMIZE);
-	}
-      if (errno != 0 || (personality_set
-			 && !(personality (0xffffffff) & ADDR_NO_RANDOMIZE)))
-	warning (_("Error disabling address space randomization: %s"),
-		 safe_strerror (errno));
-    }
-#endif /* HAVE_PERSONALITY */
 
   /* Make sure we report all signals during startup.  */
   linux_nat_pass_signals (ops, 0, NULL);
 
   linux_ops->to_create_inferior (ops, exec_file, allargs, env, from_tty);
 
-#ifdef HAVE_PERSONALITY
-  if (personality_set)
+  do_cleanups (restore_personality);
+}
+
+/* Callback for linux_proc_attach_tgid_threads.  Attach to PTID if not
+   already attached.  Returns true if a new LWP is found, false
+   otherwise.  */
+
+static int
+attach_proc_task_lwp_callback (ptid_t ptid)
+{
+  struct lwp_info *lp;
+
+  /* Ignore LWPs we're already attached to.  */
+  lp = find_lwp_pid (ptid);
+  if (lp == NULL)
     {
-      errno = 0;
-      personality (personality_orig);
-      if (errno != 0)
-	warning (_("Error restoring address space randomization: %s"),
-		 safe_strerror (errno));
+      int lwpid = ptid_get_lwp (ptid);
+
+      if (ptrace (PTRACE_ATTACH, lwpid, 0, 0) < 0)
+	{
+	  int err = errno;
+
+	  /* Be quiet if we simply raced with the thread exiting.
+	     EPERM is returned if the thread's task still exists, and
+	     is marked as exited or zombie, as well as other
+	     conditions, so in that case, confirm the status in
+	     /proc/PID/status.  */
+	  if (err == ESRCH
+	      || (err == EPERM && linux_proc_pid_is_gone (lwpid)))
+	    {
+	      if (debug_linux_nat)
+		{
+		  fprintf_unfiltered (gdb_stdlog,
+				      "Cannot attach to lwp %d: "
+				      "thread is gone (%d: %s)\n",
+				      lwpid, err, safe_strerror (err));
+		}
+	    }
+	  else
+	    {
+	      warning (_("Cannot attach to lwp %d: %s"),
+		       lwpid,
+		       linux_ptrace_attach_fail_reason_string (ptid,
+							       err));
+	    }
+	}
+      else
+	{
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"PTRACE_ATTACH %s, 0, 0 (OK)\n",
+				target_pid_to_str (ptid));
+
+	  lp = add_lwp (ptid);
+
+	  /* The next time we wait for this LWP we'll see a SIGSTOP as
+	     PTRACE_ATTACH brings it to a halt.  */
+	  lp->signalled = 1;
+
+	  /* We need to wait for a stop before being able to make the
+	     next ptrace call on this LWP.  */
+	  lp->must_set_ptrace_flags = 1;
+
+	  /* So that wait collects the SIGSTOP.  */
+	  lp->resumed = 1;
+
+	  /* Also add the LWP to gdb's thread list, in case a
+	     matching libthread_db is not found (or the process uses
+	     raw clone).  */
+	  add_thread (lp->ptid);
+	  set_running (lp->ptid, 1);
+	  set_executing (lp->ptid, 1);
+	}
+
+      return 1;
     }
-#endif /* HAVE_PERSONALITY */
+  return 0;
 }
 
 static void
@@ -1141,16 +1195,15 @@ linux_nat_attach (struct target_ops *ops, const char *args, int from_tty)
   struct lwp_info *lp;
   int status;
   ptid_t ptid;
-  volatile struct gdb_exception ex;
 
   /* Make sure we report all signals during attach.  */
   linux_nat_pass_signals (ops, 0, NULL);
 
-  TRY_CATCH (ex, RETURN_MASK_ERROR)
+  TRY
     {
       linux_ops->to_attach (ops, args, from_tty);
     }
-  if (ex.reason < 0)
+  CATCH (ex, RETURN_MASK_ERROR)
     {
       pid_t pid = parse_pid_to_attach (args);
       struct buffer buffer;
@@ -1171,6 +1224,7 @@ linux_nat_attach (struct target_ops *ops, const char *args, int from_tty)
       else
 	throw_error (ex.error, "%s", message);
     }
+  END_CATCH
 
   /* The ptrace base target adds the main thread with (pid,0,0)
      format.  Decorate it with lwp info.  */
@@ -1182,8 +1236,7 @@ linux_nat_attach (struct target_ops *ops, const char *args, int from_tty)
   /* Add the initial process as the first LWP to the list.  */
   lp = add_initial_lwp (ptid);
 
-  status = linux_nat_post_attach_wait (lp->ptid, 1, &lp->cloned,
-				       &lp->signalled);
+  status = linux_nat_post_attach_wait (lp->ptid, 1, &lp->signalled);
   if (!WIFSTOPPED (status))
     {
       if (WIFEXITED (status))
@@ -1228,8 +1281,18 @@ linux_nat_attach (struct target_ops *ops, const char *args, int from_tty)
 
   lp->status = status;
 
+  /* We must attach to every LWP.  If /proc is mounted, use that to
+     find them now.  The inferior may be using raw clone instead of
+     using pthreads.  But even if it is using pthreads, thread_db
+     walks structures in the inferior's address space to find the list
+     of threads/LWPs, and those structures may well be corrupted.
+     Note that once thread_db is loaded, we'll still use it to list
+     threads and associate pthread info with each LWP.  */
+  linux_proc_attach_tgid_threads (ptid_get_pid (lp->ptid),
+				  attach_proc_task_lwp_callback);
+
   if (target_can_async_p ())
-    target_async (inferior_event_handler, 0);
+    target_async (1);
 }
 
 /* Get pending status of LP.  */
@@ -1263,13 +1326,16 @@ get_pending_status (struct lwp_info *lp, int *status)
     signo = GDB_SIGNAL_0; /* a pending ptrace event, not a real signal.  */
   else if (lp->status)
     signo = gdb_signal_from_host (WSTOPSIG (lp->status));
-  else if (non_stop && !is_executing (lp->ptid))
+  else if (target_is_non_stop_p () && !is_executing (lp->ptid))
     {
       struct thread_info *tp = find_thread_ptid (lp->ptid);
 
-      signo = tp->suspend.stop_signal;
+      if (tp->suspend.waitstatus_pending_p)
+	signo = tp->suspend.waitstatus.value.sig;
+      else
+	signo = tp->suspend.stop_signal;
     }
-  else if (!non_stop)
+  else if (!target_is_non_stop_p ())
     {
       struct target_waitstatus last;
       ptid_t last_ptid;
@@ -1402,7 +1468,7 @@ linux_nat_detach (struct target_ops *ops, const char *args, int from_tty)
 
       /* Put the signal number in ARGS so that inf_ptrace_detach will
 	 pass it along with PTRACE_DETACH.  */
-      tem = alloca (8);
+      tem = (char *) alloca (8);
       xsnprintf (tem, 8, "%d", (int) WSTOPSIG (status));
       args = tem;
       if (debug_linux_nat)
@@ -1428,6 +1494,93 @@ linux_nat_detach (struct target_ops *ops, const char *args, int from_tty)
     linux_ops->to_detach (ops, args, from_tty);
 }
 
+/* Resume execution of the inferior process.  If STEP is nonzero,
+   single-step it.  If SIGNAL is nonzero, give it that signal.  */
+
+static void
+linux_resume_one_lwp_throw (struct lwp_info *lp, int step,
+			    enum gdb_signal signo)
+{
+  lp->step = step;
+
+  /* stop_pc doubles as the PC the LWP had when it was last resumed.
+     We only presently need that if the LWP is stepped though (to
+     handle the case of stepping a breakpoint instruction).  */
+  if (step)
+    {
+      struct regcache *regcache = get_thread_regcache (lp->ptid);
+
+      lp->stop_pc = regcache_read_pc (regcache);
+    }
+  else
+    lp->stop_pc = 0;
+
+  if (linux_nat_prepare_to_resume != NULL)
+    linux_nat_prepare_to_resume (lp);
+  linux_ops->to_resume (linux_ops, lp->ptid, step, signo);
+
+  /* Successfully resumed.  Clear state that no longer makes sense,
+     and mark the LWP as running.  Must not do this before resuming
+     otherwise if that fails other code will be confused.  E.g., we'd
+     later try to stop the LWP and hang forever waiting for a stop
+     status.  Note that we must not throw after this is cleared,
+     otherwise handle_zombie_lwp_error would get confused.  */
+  lp->stopped = 0;
+  lp->core = -1;
+  lp->stop_reason = TARGET_STOPPED_BY_NO_REASON;
+  registers_changed_ptid (lp->ptid);
+}
+
+/* Called when we try to resume a stopped LWP and that errors out.  If
+   the LWP is no longer in ptrace-stopped state (meaning it's zombie,
+   or about to become), discard the error, clear any pending status
+   the LWP may have, and return true (we'll collect the exit status
+   soon enough).  Otherwise, return false.  */
+
+static int
+check_ptrace_stopped_lwp_gone (struct lwp_info *lp)
+{
+  /* If we get an error after resuming the LWP successfully, we'd
+     confuse !T state for the LWP being gone.  */
+  gdb_assert (lp->stopped);
+
+  /* We can't just check whether the LWP is in 'Z (Zombie)' state,
+     because even if ptrace failed with ESRCH, the tracee may be "not
+     yet fully dead", but already refusing ptrace requests.  In that
+     case the tracee has 'R (Running)' state for a little bit
+     (observed in Linux 3.18).  See also the note on ESRCH in the
+     ptrace(2) man page.  Instead, check whether the LWP has any state
+     other than ptrace-stopped.  */
+
+  /* Don't assume anything if /proc/PID/status can't be read.  */
+  if (linux_proc_pid_is_trace_stopped_nowarn (ptid_get_lwp (lp->ptid)) == 0)
+    {
+      lp->stop_reason = TARGET_STOPPED_BY_NO_REASON;
+      lp->status = 0;
+      lp->waitstatus.kind = TARGET_WAITKIND_IGNORE;
+      return 1;
+    }
+  return 0;
+}
+
+/* Like linux_resume_one_lwp_throw, but no error is thrown if the LWP
+   disappears while we try to resume it.  */
+
+static void
+linux_resume_one_lwp (struct lwp_info *lp, int step, enum gdb_signal signo)
+{
+  TRY
+    {
+      linux_resume_one_lwp_throw (lp, step, signo);
+    }
+  CATCH (ex, RETURN_MASK_ERROR)
+    {
+      if (!check_ptrace_stopped_lwp_gone (lp))
+	throw_exception (ex);
+    }
+  END_CATCH
+}
+
 /* Resume LP.  */
 
 static void
@@ -1435,7 +1588,7 @@ resume_lwp (struct lwp_info *lp, int step, enum gdb_signal signo)
 {
   if (lp->stopped)
     {
-      struct inferior *inf = find_inferior_pid (ptid_get_pid (lp->ptid));
+      struct inferior *inf = find_inferior_ptid (lp->ptid);
 
       if (inf->vfork_child != NULL)
 	{
@@ -1444,8 +1597,7 @@ resume_lwp (struct lwp_info *lp, int step, enum gdb_signal signo)
 				"RC: Not resuming %s (vfork parent)\n",
 				target_pid_to_str (lp->ptid));
 	}
-      else if (lp->status == 0
-	       && lp->waitstatus.kind == TARGET_WAITKIND_IGNORE)
+      else if (!lwp_status_pending_p (lp))
 	{
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
@@ -1456,14 +1608,7 @@ resume_lwp (struct lwp_info *lp, int step, enum gdb_signal signo)
 				 : "0"),
 				step ? "step" : "resume");
 
-	  if (linux_nat_prepare_to_resume != NULL)
-	    linux_nat_prepare_to_resume (lp);
-	  linux_ops->to_resume (linux_ops,
-				pid_to_ptid (ptid_get_lwp (lp->ptid)),
-				step, signo);
-	  lp->stopped = 0;
-	  lp->step = step;
-	  lp->stopped_by_watchpoint = 0;
+	  linux_resume_one_lwp (lp, step, signo);
 	}
       else
 	{
@@ -1557,7 +1702,6 @@ linux_nat_resume (struct target_ops *ops,
   gdb_assert (lp != NULL);
 
   /* Remember if we're stepping.  */
-  lp->step = step;
   lp->last_resume_kind = step ? resume_step : resume_continue;
 
   /* If we have a pending wait status for this thread, there is no
@@ -1587,7 +1731,7 @@ linux_nat_resume (struct target_ops *ops,
 	}
     }
 
-  if (lp->status || lp->waitstatus.kind != TARGET_WAITKIND_IGNORE)
+  if (lwp_status_pending_p (lp))
     {
       /* FIXME: What should we do if we are supposed to continue
 	 this thread with a signal?  */
@@ -1600,7 +1744,7 @@ linux_nat_resume (struct target_ops *ops,
 
       if (target_can_async_p ())
 	{
-	  target_async (inferior_event_handler, 0);
+	  target_async (1);
 	  /* Tell the event loop we have something to process.  */
 	  async_file_mark ();
 	}
@@ -1610,25 +1754,18 @@ linux_nat_resume (struct target_ops *ops,
   if (resume_many)
     iterate_over_lwps (ptid, linux_nat_resume_callback, lp);
 
-  /* Convert to something the lower layer understands.  */
-  ptid = pid_to_ptid (ptid_get_lwp (lp->ptid));
-
-  if (linux_nat_prepare_to_resume != NULL)
-    linux_nat_prepare_to_resume (lp);
-  linux_ops->to_resume (linux_ops, ptid, step, signo);
-  lp->stopped_by_watchpoint = 0;
-  lp->stopped = 0;
-
   if (debug_linux_nat)
     fprintf_unfiltered (gdb_stdlog,
 			"LLR: %s %s, %s (resume event thread)\n",
 			step ? "PTRACE_SINGLESTEP" : "PTRACE_CONT",
-			target_pid_to_str (ptid),
+			target_pid_to_str (lp->ptid),
 			(signo != GDB_SIGNAL_0
 			 ? strsignal (gdb_signal_to_host (signo)) : "0"));
 
+  linux_resume_one_lwp (lp, step, signo);
+
   if (target_can_async_p ())
-    target_async (inferior_event_handler, 0);
+    target_async (1);
 }
 
 /* Send a signal to an LWP.  */
@@ -1636,27 +1773,17 @@ linux_nat_resume (struct target_ops *ops,
 static int
 kill_lwp (int lwpid, int signo)
 {
-  /* Use tkill, if possible, in case we are using nptl threads.  If tkill
-     fails, then we are not using nptl threads and we should be using kill.  */
+  int ret;
 
-#ifdef HAVE_TKILL_SYSCALL
-  {
-    static int tkill_failed;
-
-    if (!tkill_failed)
-      {
-	int ret;
-
-	errno = 0;
-	ret = syscall (__NR_tkill, lwpid, signo);
-	if (errno != ENOSYS)
-	  return ret;
-	tkill_failed = 1;
-      }
-  }
-#endif
-
-  return kill (lwpid, signo);
+  errno = 0;
+  ret = syscall (__NR_tkill, lwpid, signo);
+  if (errno == ENOSYS)
+    {
+      /* If tkill fails, then we are not using nptl threads, a
+	 configuration we no longer support.  */
+      perror_with_name (("tkill"));
+    }
+  return ret;
 }
 
 /* Handle a GNU/Linux syscall trap wait response.  If we see a syscall
@@ -1708,17 +1835,17 @@ linux_handle_syscall_trap (struct lwp_info *lp, int stopping)
       return 1;
     }
 
+  /* Always update the entry/return state, even if this particular
+     syscall isn't interesting to the core now.  In async mode,
+     the user could install a new catchpoint for this syscall
+     between syscall enter/return, and we'll need to know to
+     report a syscall return if that happens.  */
+  lp->syscall_state = (lp->syscall_state == TARGET_WAITKIND_SYSCALL_ENTRY
+		       ? TARGET_WAITKIND_SYSCALL_RETURN
+		       : TARGET_WAITKIND_SYSCALL_ENTRY);
+
   if (catch_syscall_enabled ())
     {
-      /* Always update the entry/return state, even if this particular
-	 syscall isn't interesting to the core now.  In async mode,
-	 the user could install a new catchpoint for this syscall
-	 between syscall enter/return, and we'll need to know to
-	 report a syscall return if that happens.  */
-      lp->syscall_state = (lp->syscall_state == TARGET_WAITKIND_SYSCALL_ENTRY
-			   ? TARGET_WAITKIND_SYSCALL_RETURN
-			   : TARGET_WAITKIND_SYSCALL_ENTRY);
-
       if (catching_syscall_number (syscall_number))
 	{
 	  /* Alright, an event to report.  */
@@ -1781,14 +1908,7 @@ linux_handle_syscall_trap (struct lwp_info *lp, int stopping)
      subsequent syscall.  Simply resume using the inf-ptrace layer,
      which knows when to use PT_SYSCALL or PT_CONTINUE.  */
 
-  /* Note that gdbarch_get_syscall_number may access registers, hence
-     fill a regcache.  */
-  registers_changed ();
-  if (linux_nat_prepare_to_resume != NULL)
-    linux_nat_prepare_to_resume (lp);
-  linux_ops->to_resume (linux_ops, pid_to_ptid (ptid_get_lwp (lp->ptid)),
-			lp->step, GDB_SIGNAL_0);
-  lp->stopped = 0;
+  linux_resume_one_lwp (lp, lp->step, GDB_SIGNAL_0);
   return 1;
 }
 
@@ -1799,12 +1919,16 @@ linux_handle_syscall_trap (struct lwp_info *lp, int stopping)
    true, the new LWP remains stopped, otherwise it is continued.  */
 
 static int
-linux_handle_extended_wait (struct lwp_info *lp, int status,
-			    int stopping)
+linux_handle_extended_wait (struct lwp_info *lp, int status)
 {
   int pid = ptid_get_lwp (lp->ptid);
   struct target_waitstatus *ourstatus = &lp->waitstatus;
   int event = linux_ptrace_get_extended_event (status);
+
+  /* All extended events we currently use are mid-syscall.  Only
+     PTRACE_EVENT_STOP is delivered more like a signal-stop, but
+     you have to be using PTRACE_SEIZE to get that.  */
+  lp->syscall_state = TARGET_WAITKIND_SYSCALL_ENTRY;
 
   if (event == PTRACE_EVENT_FORK || event == PTRACE_EVENT_VFORK
       || event == PTRACE_EVENT_CLONE)
@@ -1819,8 +1943,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 	{
 	  /* The new child has a pending SIGSTOP.  We can't affect it until it
 	     hits the SIGSTOP, but we're already attached.  */
-	  ret = my_waitpid (new_pid, &status,
-			    (event == PTRACE_EVENT_CLONE) ? __WCLONE : 0);
+	  ret = my_waitpid (new_pid, &status, __WALL);
 	  if (ret == -1)
 	    perror_with_name (_("waiting for new child"));
 	  else if (ret != new_pid)
@@ -1870,7 +1993,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 	ourstatus->kind = TARGET_WAITKIND_FORKED;
       else if (event == PTRACE_EVENT_VFORK)
 	ourstatus->kind = TARGET_WAITKIND_VFORKED;
-      else
+      else if (event == PTRACE_EVENT_CLONE)
 	{
 	  struct lwp_info *new_lp;
 
@@ -1883,8 +2006,26 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 				pid, new_pid);
 
 	  new_lp = add_lwp (ptid_build (ptid_get_pid (lp->ptid), new_pid, 0));
-	  new_lp->cloned = 1;
 	  new_lp->stopped = 1;
+	  new_lp->resumed = 1;
+
+	  /* If the thread_db layer is active, let it record the user
+	     level thread id and status, and add the thread to GDB's
+	     list.  */
+	  if (!thread_db_notice_clone (lp->ptid, new_lp->ptid))
+	    {
+	      /* The process is not using thread_db.  Add the LWP to
+		 GDB's list.  */
+	      target_post_attach (ptid_get_lwp (new_lp->ptid));
+	      add_thread (new_lp->ptid);
+	    }
+
+	  /* Even if we're stopping the thread for some reason
+	     internal to this module, from the perspective of infrun
+	     and the user/frontend, this new thread is running until
+	     it next reports a stop.  */
+	  set_running (new_lp->ptid, 1);
+	  set_executing (new_lp->ptid, 1);
 
 	  if (WSTOPSIG (status) != SIGSTOP)
 	    {
@@ -1893,68 +2034,10 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 		 have a lower number than SIGSTOP (e.g. SIGUSR1).
 		 This is an unlikely case, and harder to handle for
 		 fork / vfork than for clone, so we do not try - but
-		 we handle it for clone events here.  We'll send
-		 the other signal on to the thread below.  */
+		 we handle it for clone events here.  */
 
 	      new_lp->signalled = 1;
-	    }
-	  else
-	    {
-	      struct thread_info *tp;
 
-	      /* When we stop for an event in some other thread, and
-		 pull the thread list just as this thread has cloned,
-		 we'll have seen the new thread in the thread_db list
-		 before handling the CLONE event (glibc's
-		 pthread_create adds the new thread to the thread list
-		 before clone'ing, and has the kernel fill in the
-		 thread's tid on the clone call with
-		 CLONE_PARENT_SETTID).  If that happened, and the core
-		 had requested the new thread to stop, we'll have
-		 killed it with SIGSTOP.  But since SIGSTOP is not an
-		 RT signal, it can only be queued once.  We need to be
-		 careful to not resume the LWP if we wanted it to
-		 stop.  In that case, we'll leave the SIGSTOP pending.
-		 It will later be reported as GDB_SIGNAL_0.  */
-	      tp = find_thread_ptid (new_lp->ptid);
-	      if (tp != NULL && tp->stop_requested)
-		new_lp->last_resume_kind = resume_stop;
-	      else
-		status = 0;
-	    }
-
-	  if (non_stop)
-	    {
-	      /* Add the new thread to GDB's lists as soon as possible
-		 so that:
-
-		 1) the frontend doesn't have to wait for a stop to
-		 display them, and,
-
-		 2) we tag it with the correct running state.  */
-
-	      /* If the thread_db layer is active, let it know about
-		 this new thread, and add it to GDB's list.  */
-	      if (!thread_db_attach_lwp (new_lp->ptid))
-		{
-		  /* We're not using thread_db.  Add it to GDB's
-		     list.  */
-		  target_post_attach (ptid_get_lwp (new_lp->ptid));
-		  add_thread (new_lp->ptid);
-		}
-
-	      if (!stopping)
-		{
-		  set_running (new_lp->ptid, 1);
-		  set_executing (new_lp->ptid, 1);
-		  /* thread_db_attach_lwp -> lin_lwp_attach_lwp forced
-		     resume_stop.  */
-		  new_lp->last_resume_kind = resume_continue;
-		}
-	    }
-
-	  if (status != 0)
-	    {
 	      /* We created NEW_LP so it cannot yet contain STATUS.  */
 	      gdb_assert (new_lp->status == 0);
 
@@ -1967,38 +2050,12 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 				    status_to_str (status));
 	      new_lp->status = status;
 	    }
-
-	  /* Note the need to use the low target ops to resume, to
-	     handle resuming with PT_SYSCALL if we have syscall
-	     catchpoints.  */
-	  if (!stopping)
+	  else if (report_thread_events)
 	    {
-	      new_lp->resumed = 1;
-
-	      if (status == 0)
-		{
-		  gdb_assert (new_lp->last_resume_kind == resume_continue);
-		  if (debug_linux_nat)
-		    fprintf_unfiltered (gdb_stdlog,
-					"LHEW: resuming new LWP %ld\n",
-					ptid_get_lwp (new_lp->ptid));
-		  if (linux_nat_prepare_to_resume != NULL)
-		    linux_nat_prepare_to_resume (new_lp);
-		  linux_ops->to_resume (linux_ops, pid_to_ptid (new_pid),
-					0, GDB_SIGNAL_0);
-		  new_lp->stopped = 0;
-		}
+	      new_lp->waitstatus.kind = TARGET_WAITKIND_THREAD_CREATED;
+	      new_lp->status = status;
 	    }
 
-	  if (debug_linux_nat)
-	    fprintf_unfiltered (gdb_stdlog,
-				"LHEW: resuming parent LWP %d\n", pid);
-	  if (linux_nat_prepare_to_resume != NULL)
-	    linux_nat_prepare_to_resume (lp);
-	  linux_ops->to_resume (linux_ops,
-				pid_to_ptid (ptid_get_lwp (lp->ptid)),
-				0, GDB_SIGNAL_0);
-	  lp->stopped = 0;
 	  return 1;
 	}
 
@@ -2016,6 +2073,10 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
       ourstatus->value.execd_pathname
 	= xstrdup (linux_child_pid_to_exec_file (NULL, pid));
 
+      /* The thread that execed must have been resumed, but, when a
+	 thread execs, it changes its tid to the tgid, and the old
+	 tgid thread might have not been resumed.  */
+      lp->resumed = 1;
       return 0;
     }
 
@@ -2036,9 +2097,8 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
       if (debug_linux_nat)
 	fprintf_unfiltered (gdb_stdlog,
 			    "LHEW: Got PTRACE_EVENT_VFORK_DONE "
-			    "from LWP %ld: resuming\n",
+			    "from LWP %ld: ignoring\n",
 			    ptid_get_lwp (lp->ptid));
-      ptrace (PTRACE_CONT, ptid_get_lwp (lp->ptid), 0, 0);
       return 1;
     }
 
@@ -2065,19 +2125,13 @@ wait_lwp (struct lwp_info *lp)
 
   for (;;)
     {
-      /* If my_waitpid returns 0 it means the __WCLONE vs. non-__WCLONE kind
-	 was right and we should just call sigsuspend.  */
-
-      pid = my_waitpid (ptid_get_lwp (lp->ptid), &status, WNOHANG);
-      if (pid == -1 && errno == ECHILD)
-	pid = my_waitpid (ptid_get_lwp (lp->ptid), &status, __WCLONE | WNOHANG);
+      pid = my_waitpid (ptid_get_lwp (lp->ptid), &status, __WALL | WNOHANG);
       if (pid == -1 && errno == ECHILD)
 	{
 	  /* The thread has previously exited.  We need to delete it
-	     now because, for some vendor 2.4 kernels with NPTL
-	     support backported, there won't be an exit event unless
-	     it is the main thread.  2.6 kernels will report an exit
-	     event for each thread that exits, as expected.  */
+	     now because if this was a non-leader thread execing, we
+	     won't get an exit event.  See comments on exec events at
+	     the top of the file.  */
 	  thread_dead = 1;
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog, "WL: %s vanished.\n",
@@ -2090,9 +2144,8 @@ wait_lwp (struct lwp_info *lp)
 	 Thread group leader may have exited in which case we'll lock up in
 	 waitpid if there are other threads, even if they are all zombies too.
 	 Basically, we're not supposed to use waitpid this way.
-	 __WCLONE is not applicable for the leader so we can't use that.
-	 LINUX_NAT_THREAD_ALIVE cannot be used here as it requires a STOPPED
-	 process; it gets ESRCH both for the zombie and for running processes.
+	  tkill(pid,0) cannot be used here as it gets ESRCH for both
+	 for zombie and running processes.
 
 	 As a workaround, check if we're waiting for the thread group leader and
 	 if it's a zombie, and avoid calling waitpid if it is.
@@ -2141,6 +2194,21 @@ wait_lwp (struct lwp_info *lp)
       /* Check if the thread has exited.  */
       if (WIFEXITED (status) || WIFSIGNALED (status))
 	{
+	  if (report_thread_events
+	      || ptid_get_pid (lp->ptid) == ptid_get_lwp (lp->ptid))
+	    {
+	      if (debug_linux_nat)
+		fprintf_unfiltered (gdb_stdlog, "WL: LWP %d exited.\n",
+				    ptid_get_pid (lp->ptid));
+
+	      /* If this is the leader exiting, it means the whole
+		 process is gone.  Store the status to report to the
+		 core.  Store it in lp->waitstatus, because lp->status
+		 would be ambiguous (W_EXITCODE(0,0) == 0).  */
+	      store_waitstatus (&lp->waitstatus, status);
+	      return 0;
+	    }
+
 	  thread_dead = 1;
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog, "WL: %s exited.\n",
@@ -2157,6 +2225,15 @@ wait_lwp (struct lwp_info *lp)
   gdb_assert (WIFSTOPPED (status));
   lp->stopped = 1;
 
+  if (lp->must_set_ptrace_flags)
+    {
+      struct inferior *inf = find_inferior_pid (ptid_get_pid (lp->ptid));
+      int options = linux_nat_ptrace_options (inf->attach_flag);
+
+      linux_enable_event_reporting (ptid_get_lwp (lp->ptid), options);
+      lp->must_set_ptrace_flags = 0;
+    }
+
   /* Handle GNU/Linux's syscall SIGTRAPs.  */
   if (WIFSTOPPED (status) && WSTOPSIG (status) == SYSCALL_SIGTRAP)
     {
@@ -2168,6 +2245,12 @@ wait_lwp (struct lwp_info *lp)
       if (linux_handle_syscall_trap (lp, 1))
 	return wait_lwp (lp);
     }
+  else
+    {
+      /* Almost all other ptrace-stops are known to be outside of system
+	 calls, with further exceptions in linux_handle_extended_wait.  */
+      lp->syscall_state = TARGET_WAITKIND_IGNORE;
+    }
 
   /* Handle GNU/Linux's extended waitstatus for trace events.  */
   if (WIFSTOPPED (status) && WSTOPSIG (status) == SIGTRAP
@@ -2177,8 +2260,8 @@ wait_lwp (struct lwp_info *lp)
 	fprintf_unfiltered (gdb_stdlog,
 			    "WL: Handling extended status 0x%06x\n",
 			    status);
-      if (linux_handle_extended_wait (lp, status, 1))
-	return wait_lwp (lp);
+      linux_handle_extended_wait (lp, status);
+      return 0;
     }
 
   return status;
@@ -2222,6 +2305,28 @@ void
 linux_stop_lwp (struct lwp_info *lwp)
 {
   stop_callback (lwp, NULL);
+}
+
+/* See linux-nat.h  */
+
+void
+linux_stop_and_wait_all_lwps (void)
+{
+  /* Stop all LWP's ...  */
+  iterate_over_lwps (minus_one_ptid, stop_callback, NULL);
+
+  /* ... and wait until all of them have reported back that
+     they're no longer running.  */
+  iterate_over_lwps (minus_one_ptid, stop_wait_callback, NULL);
+}
+
+/* See linux-nat.h  */
+
+void
+linux_unstop_all_lwps (void)
+{
+  iterate_over_lwps (minus_one_ptid,
+		     resume_stopped_resumed_lwps, &minus_one_ptid);
 }
 
 /* Return non-zero if LWP PID has a pending SIGINT.  */
@@ -2293,24 +2398,21 @@ maybe_clear_ignore_sigint (struct lwp_info *lp)
    soon as we see LP stop with a SIGTRAP.  If GDB changes the debug
    registers meanwhile, we have the cached data we can rely on.  */
 
-static void
-save_sigtrap (struct lwp_info *lp)
+static int
+check_stopped_by_watchpoint (struct lwp_info *lp)
 {
   struct cleanup *old_chain;
 
   if (linux_ops->to_stopped_by_watchpoint == NULL)
-    {
-      lp->stopped_by_watchpoint = 0;
-      return;
-    }
+    return 0;
 
   old_chain = save_inferior_ptid ();
   inferior_ptid = lp->ptid;
 
-  lp->stopped_by_watchpoint = linux_ops->to_stopped_by_watchpoint (linux_ops);
-
-  if (lp->stopped_by_watchpoint)
+  if (linux_ops->to_stopped_by_watchpoint (linux_ops))
     {
+      lp->stop_reason = TARGET_STOPPED_BY_WATCHPOINT;
+
       if (linux_ops->to_stopped_data_address != NULL)
 	lp->stopped_data_address_p =
 	  linux_ops->to_stopped_data_address (&current_target,
@@ -2320,9 +2422,11 @@ save_sigtrap (struct lwp_info *lp)
     }
 
   do_cleanups (old_chain);
+
+  return lp->stop_reason == TARGET_STOPPED_BY_WATCHPOINT;
 }
 
-/* See save_sigtrap.  */
+/* Returns true if the LWP had stopped for a watchpoint.  */
 
 static int
 linux_nat_stopped_by_watchpoint (struct target_ops *ops)
@@ -2331,7 +2435,7 @@ linux_nat_stopped_by_watchpoint (struct target_ops *ops)
 
   gdb_assert (lp != NULL);
 
-  return lp->stopped_by_watchpoint;
+  return lp->stop_reason == TARGET_STOPPED_BY_WATCHPOINT;
 }
 
 static int
@@ -2354,24 +2458,6 @@ sigtrap_is_event (int status)
   return WIFSTOPPED (status) && WSTOPSIG (status) == SIGTRAP;
 }
 
-/* SIGTRAP-like events recognizer.  */
-
-static int (*linux_nat_status_is_event) (int status) = sigtrap_is_event;
-
-/* Check for SIGTRAP-like events in LP.  */
-
-static int
-linux_nat_lp_status_is_event (struct lwp_info *lp)
-{
-  /* We check for lp->waitstatus in addition to lp->status, because we can
-     have pending process exits recorded in lp->status
-     and W_EXITCODE(0,0) == 0.  We should probably have an additional
-     lp->status_p flag.  */
-
-  return (lp->waitstatus.kind == TARGET_WAITKIND_IGNORE
-	  && linux_nat_status_is_event (lp->status));
-}
-
 /* Set alternative SIGTRAP-like events recognizer.  If
    breakpoint_inserted_here_p there then gdbarch_decr_pc_after_break will be
    applied.  */
@@ -2388,7 +2474,7 @@ linux_nat_set_status_is_event (struct target_ops *t,
 static int
 stop_wait_callback (struct lwp_info *lp, void *data)
 {
-  struct inferior *inf = find_inferior_pid (ptid_get_pid (lp->ptid));
+  struct inferior *inf = find_inferior_ptid (lp->ptid);
 
   /* If this is a vfork parent, bail out, it is not going to report
      any SIGSTOP until the vfork is done with.  */
@@ -2427,8 +2513,6 @@ stop_wait_callback (struct lwp_info *lp, void *data)
 	{
 	  /* The thread was stopped with a signal other than SIGSTOP.  */
 
-	  save_sigtrap (lp);
-
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
 				"SWC: Pending event %s in %s\n",
@@ -2438,6 +2522,7 @@ stop_wait_callback (struct lwp_info *lp, void *data)
 	  /* Save the sigtrap event.  */
 	  lp->status = status;
 	  gdb_assert (lp->signalled);
+	  save_stop_reason (lp);
 	}
       else
 	{
@@ -2446,7 +2531,7 @@ stop_wait_callback (struct lwp_info *lp, void *data)
 
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
-				"SWC: Delayed SIGSTOP caught for %s.\n",
+				"SWC: Expected SIGSTOP caught for %s.\n",
 				target_pid_to_str (lp->ptid));
 
 	  /* Reset SIGNALLED only after the stop_wait_callback call
@@ -2458,7 +2543,9 @@ stop_wait_callback (struct lwp_info *lp, void *data)
   return 0;
 }
 
-/* Return non-zero if LP has a wait status pending.  */
+/* Return non-zero if LP has a wait status pending.  Discard the
+   pending event and resume the LWP if the event that originally
+   caused the stop became uninteresting.  */
 
 static int
 status_callback (struct lwp_info *lp, void *data)
@@ -2468,31 +2555,56 @@ status_callback (struct lwp_info *lp, void *data)
   if (!lp->resumed)
     return 0;
 
-  if (lp->waitstatus.kind != TARGET_WAITKIND_IGNORE)
+  if (!lwp_status_pending_p (lp))
+    return 0;
+
+  if (lp->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT
+      || lp->stop_reason == TARGET_STOPPED_BY_HW_BREAKPOINT)
     {
-      /* A ptrace event, like PTRACE_FORK|VFORK|EXEC, syscall event,
-	 or a pending process exit.  Note that `W_EXITCODE(0,0) ==
-	 0', so a clean process exit can not be stored pending in
-	 lp->status, it is indistinguishable from
-	 no-pending-status.  */
-      return 1;
+      struct regcache *regcache = get_thread_regcache (lp->ptid);
+      CORE_ADDR pc;
+      int discard = 0;
+
+      pc = regcache_read_pc (regcache);
+
+      if (pc != lp->stop_pc)
+	{
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"SC: PC of %s changed.  was=%s, now=%s\n",
+				target_pid_to_str (lp->ptid),
+				paddress (target_gdbarch (), lp->stop_pc),
+				paddress (target_gdbarch (), pc));
+	  discard = 1;
+	}
+
+#if !USE_SIGTRAP_SIGINFO
+      else if (!breakpoint_inserted_here_p (get_regcache_aspace (regcache), pc))
+	{
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"SC: previous breakpoint of %s, at %s gone\n",
+				target_pid_to_str (lp->ptid),
+				paddress (target_gdbarch (), lp->stop_pc));
+
+	  discard = 1;
+	}
+#endif
+
+      if (discard)
+	{
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"SC: pending event of %s cancelled.\n",
+				target_pid_to_str (lp->ptid));
+
+	  lp->status = 0;
+	  linux_resume_one_lwp (lp, lp->step, GDB_SIGNAL_0);
+	  return 0;
+	}
     }
 
-  if (lp->status != 0)
-    return 1;
-
-  return 0;
-}
-
-/* Return non-zero if LP isn't stopped.  */
-
-static int
-running_callback (struct lwp_info *lp, void *data)
-{
-  return (!lp->stopped
-	  || ((lp->status != 0
-	       || lp->waitstatus.kind != TARGET_WAITKIND_IGNORE)
-	      && lp->resumed));
+  return 1;
 }
 
 /* Count the LWP's that have had events.  */
@@ -2500,12 +2612,12 @@ running_callback (struct lwp_info *lp, void *data)
 static int
 count_events_callback (struct lwp_info *lp, void *data)
 {
-  int *count = data;
+  int *count = (int *) data;
 
   gdb_assert (count != NULL);
 
-  /* Count only resumed LWPs that have a SIGTRAP event pending.  */
-  if (lp->resumed && linux_nat_lp_status_is_event (lp))
+  /* Select only resumed LWPs that have an event pending.  */
+  if (lp->resumed && lwp_status_pending_p (lp))
     (*count)++;
 
   return 0;
@@ -2523,82 +2635,197 @@ select_singlestep_lwp_callback (struct lwp_info *lp, void *data)
     return 0;
 }
 
-/* Select the Nth LWP that has had a SIGTRAP event.  */
+/* Returns true if LP has a status pending.  */
+
+static int
+lwp_status_pending_p (struct lwp_info *lp)
+{
+  /* We check for lp->waitstatus in addition to lp->status, because we
+     can have pending process exits recorded in lp->status and
+     W_EXITCODE(0,0) happens to be 0.  */
+  return lp->status != 0 || lp->waitstatus.kind != TARGET_WAITKIND_IGNORE;
+}
+
+/* Select the Nth LWP that has had an event.  */
 
 static int
 select_event_lwp_callback (struct lwp_info *lp, void *data)
 {
-  int *selector = data;
+  int *selector = (int *) data;
 
   gdb_assert (selector != NULL);
 
-  /* Select only resumed LWPs that have a SIGTRAP event pending.  */
-  if (lp->resumed && linux_nat_lp_status_is_event (lp))
+  /* Select only resumed LWPs that have an event pending.  */
+  if (lp->resumed && lwp_status_pending_p (lp))
     if ((*selector)-- == 0)
       return 1;
 
   return 0;
 }
 
-static int
-cancel_breakpoint (struct lwp_info *lp)
+/* Called when the LWP stopped for a signal/trap.  If it stopped for a
+   trap check what caused it (breakpoint, watchpoint, trace, etc.),
+   and save the result in the LWP's stop_reason field.  If it stopped
+   for a breakpoint, decrement the PC if necessary on the lwp's
+   architecture.  */
+
+static void
+save_stop_reason (struct lwp_info *lp)
 {
-  /* Arrange for a breakpoint to be hit again later.  We don't keep
-     the SIGTRAP status and don't forward the SIGTRAP signal to the
-     LWP.  We will handle the current event, eventually we will resume
-     this LWP, and this breakpoint will trap again.
-
-     If we do not do this, then we run the risk that the user will
-     delete or disable the breakpoint, but the LWP will have already
-     tripped on it.  */
-
-  struct regcache *regcache = get_thread_regcache (lp->ptid);
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct regcache *regcache;
+  struct gdbarch *gdbarch;
   CORE_ADDR pc;
+  CORE_ADDR sw_bp_pc;
+#if USE_SIGTRAP_SIGINFO
+  siginfo_t siginfo;
+#endif
 
-  pc = regcache_read_pc (regcache) - target_decr_pc_after_break (gdbarch);
-  if (breakpoint_inserted_here_p (get_regcache_aspace (regcache), pc))
+  gdb_assert (lp->stop_reason == TARGET_STOPPED_BY_NO_REASON);
+  gdb_assert (lp->status != 0);
+
+  if (!linux_nat_status_is_event (lp->status))
+    return;
+
+  regcache = get_thread_regcache (lp->ptid);
+  gdbarch = get_regcache_arch (regcache);
+
+  pc = regcache_read_pc (regcache);
+  sw_bp_pc = pc - gdbarch_decr_pc_after_break (gdbarch);
+
+#if USE_SIGTRAP_SIGINFO
+  if (linux_nat_get_siginfo (lp->ptid, &siginfo))
+    {
+      if (siginfo.si_signo == SIGTRAP)
+	{
+	  if (GDB_ARCH_IS_TRAP_BRKPT (siginfo.si_code)
+	      && GDB_ARCH_IS_TRAP_HWBKPT (siginfo.si_code))
+	    {
+	      /* The si_code is ambiguous on this arch -- check debug
+		 registers.  */
+	      if (!check_stopped_by_watchpoint (lp))
+		lp->stop_reason = TARGET_STOPPED_BY_SW_BREAKPOINT;
+	    }
+	  else if (GDB_ARCH_IS_TRAP_BRKPT (siginfo.si_code))
+	    {
+	      /* If we determine the LWP stopped for a SW breakpoint,
+		 trust it.  Particularly don't check watchpoint
+		 registers, because at least on s390, we'd find
+		 stopped-by-watchpoint as long as there's a watchpoint
+		 set.  */
+	      lp->stop_reason = TARGET_STOPPED_BY_SW_BREAKPOINT;
+	    }
+	  else if (GDB_ARCH_IS_TRAP_HWBKPT (siginfo.si_code))
+	    {
+	      /* This can indicate either a hardware breakpoint or
+		 hardware watchpoint.  Check debug registers.  */
+	      if (!check_stopped_by_watchpoint (lp))
+		lp->stop_reason = TARGET_STOPPED_BY_HW_BREAKPOINT;
+	    }
+	  else if (siginfo.si_code == TRAP_TRACE)
+	    {
+	      if (debug_linux_nat)
+		fprintf_unfiltered (gdb_stdlog,
+				    "CSBB: %s stopped by trace\n",
+				    target_pid_to_str (lp->ptid));
+
+	      /* We may have single stepped an instruction that
+		 triggered a watchpoint.  In that case, on some
+		 architectures (such as x86), instead of TRAP_HWBKPT,
+		 si_code indicates TRAP_TRACE, and we need to check
+		 the debug registers separately.  */
+	      check_stopped_by_watchpoint (lp);
+	    }
+	}
+    }
+#else
+  if ((!lp->step || lp->stop_pc == sw_bp_pc)
+      && software_breakpoint_inserted_here_p (get_regcache_aspace (regcache),
+					      sw_bp_pc))
+    {
+      /* The LWP was either continued, or stepped a software
+	 breakpoint instruction.  */
+      lp->stop_reason = TARGET_STOPPED_BY_SW_BREAKPOINT;
+    }
+
+  if (hardware_breakpoint_inserted_here_p (get_regcache_aspace (regcache), pc))
+    lp->stop_reason = TARGET_STOPPED_BY_HW_BREAKPOINT;
+
+  if (lp->stop_reason == TARGET_STOPPED_BY_NO_REASON)
+    check_stopped_by_watchpoint (lp);
+#endif
+
+  if (lp->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT)
     {
       if (debug_linux_nat)
 	fprintf_unfiltered (gdb_stdlog,
-			    "CB: Push back breakpoint for %s\n",
+			    "CSBB: %s stopped by software breakpoint\n",
 			    target_pid_to_str (lp->ptid));
 
       /* Back up the PC if necessary.  */
-      if (target_decr_pc_after_break (gdbarch))
-	regcache_write_pc (regcache, pc);
+      if (pc != sw_bp_pc)
+	regcache_write_pc (regcache, sw_bp_pc);
 
-      return 1;
+      /* Update this so we record the correct stop PC below.  */
+      pc = sw_bp_pc;
     }
-  return 0;
+  else if (lp->stop_reason == TARGET_STOPPED_BY_HW_BREAKPOINT)
+    {
+      if (debug_linux_nat)
+	fprintf_unfiltered (gdb_stdlog,
+			    "CSBB: %s stopped by hardware breakpoint\n",
+			    target_pid_to_str (lp->ptid));
+    }
+  else if (lp->stop_reason == TARGET_STOPPED_BY_WATCHPOINT)
+    {
+      if (debug_linux_nat)
+	fprintf_unfiltered (gdb_stdlog,
+			    "CSBB: %s stopped by hardware watchpoint\n",
+			    target_pid_to_str (lp->ptid));
+    }
+
+  lp->stop_pc = pc;
 }
 
+
+/* Returns true if the LWP had stopped for a software breakpoint.  */
+
 static int
-cancel_breakpoints_callback (struct lwp_info *lp, void *data)
+linux_nat_stopped_by_sw_breakpoint (struct target_ops *ops)
 {
-  struct lwp_info *event_lp = data;
+  struct lwp_info *lp = find_lwp_pid (inferior_ptid);
 
-  /* Leave the LWP that has been elected to receive a SIGTRAP alone.  */
-  if (lp == event_lp)
-    return 0;
+  gdb_assert (lp != NULL);
 
-  /* If a LWP other than the LWP that we're reporting an event for has
-     hit a GDB breakpoint (as opposed to some random trap signal),
-     then just arrange for it to hit it again later.  We don't keep
-     the SIGTRAP status and don't forward the SIGTRAP signal to the
-     LWP.  We will handle the current event, eventually we will resume
-     all LWPs, and this one will get its breakpoint trap again.
+  return lp->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT;
+}
 
-     If we do not do this, then we run the risk that the user will
-     delete or disable the breakpoint, but the LWP will have already
-     tripped on it.  */
+/* Implement the supports_stopped_by_sw_breakpoint method.  */
 
-  if (linux_nat_lp_status_is_event (lp)
-      && cancel_breakpoint (lp))
-    /* Throw away the SIGTRAP.  */
-    lp->status = 0;
+static int
+linux_nat_supports_stopped_by_sw_breakpoint (struct target_ops *ops)
+{
+  return USE_SIGTRAP_SIGINFO;
+}
 
-  return 0;
+/* Returns true if the LWP had stopped for a hardware
+   breakpoint/watchpoint.  */
+
+static int
+linux_nat_stopped_by_hw_breakpoint (struct target_ops *ops)
+{
+  struct lwp_info *lp = find_lwp_pid (inferior_ptid);
+
+  gdb_assert (lp != NULL);
+
+  return lp->stop_reason == TARGET_STOPPED_BY_HW_BREAKPOINT;
+}
+
+/* Implement the supports_stopped_by_hw_breakpoint method.  */
+
+static int
+linux_nat_supports_stopped_by_hw_breakpoint (struct target_ops *ops)
+{
+  return USE_SIGTRAP_SIGINFO;
 }
 
 /* Select one LWP out of those that have events pending.  */
@@ -2608,36 +2835,49 @@ select_event_lwp (ptid_t filter, struct lwp_info **orig_lp, int *status)
 {
   int num_events = 0;
   int random_selector;
-  struct lwp_info *event_lp;
+  struct lwp_info *event_lp = NULL;
 
   /* Record the wait status for the original LWP.  */
   (*orig_lp)->status = *status;
 
-  /* Give preference to any LWP that is being single-stepped.  */
-  event_lp = iterate_over_lwps (filter,
-				select_singlestep_lwp_callback, NULL);
-  if (event_lp != NULL)
+  /* In all-stop, give preference to the LWP that is being
+     single-stepped.  There will be at most one, and it will be the
+     LWP that the core is most interested in.  If we didn't do this,
+     then we'd have to handle pending step SIGTRAPs somehow in case
+     the core later continues the previously-stepped thread, as
+     otherwise we'd report the pending SIGTRAP then, and the core, not
+     having stepped the thread, wouldn't understand what the trap was
+     for, and therefore would report it to the user as a random
+     signal.  */
+  if (!target_is_non_stop_p ())
     {
-      if (debug_linux_nat)
-	fprintf_unfiltered (gdb_stdlog,
-			    "SEL: Select single-step %s\n",
-			    target_pid_to_str (event_lp->ptid));
+      event_lp = iterate_over_lwps (filter,
+				    select_singlestep_lwp_callback, NULL);
+      if (event_lp != NULL)
+	{
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"SEL: Select single-step %s\n",
+				target_pid_to_str (event_lp->ptid));
+	}
     }
-  else
+
+  if (event_lp == NULL)
     {
-      /* No single-stepping LWP.  Select one at random, out of those
-         which have had SIGTRAP events.  */
+      /* Pick one at random, out of those which have had events.  */
 
-      /* First see how many SIGTRAP events we have.  */
+      /* First see how many events we have.  */
       iterate_over_lwps (filter, count_events_callback, &num_events);
+      gdb_assert (num_events > 0);
 
-      /* Now randomly pick a LWP out of those that have had a SIGTRAP.  */
+      /* Now randomly pick a LWP out of those that have had
+	 events.  */
       random_selector = (int)
 	((num_events * (double) rand ()) / (RAND_MAX + 1.0));
 
       if (debug_linux_nat && num_events > 1)
 	fprintf_unfiltered (gdb_stdlog,
-			    "SEL: Found %d SIGTRAP events, selecting #%d\n",
+			    "SEL: Found %d events, selecting #%d\n",
 			    num_events, random_selector);
 
       event_lp = iterate_over_lwps (filter,
@@ -2664,75 +2904,14 @@ resumed_callback (struct lwp_info *lp, void *data)
   return lp->resumed;
 }
 
-/* Stop an active thread, verify it still exists, then resume it.  If
-   the thread ends up with a pending status, then it is not resumed,
-   and *DATA (really a pointer to int), is set.  */
-
-static int
-stop_and_resume_callback (struct lwp_info *lp, void *data)
-{
-  int *new_pending_p = data;
-
-  if (!lp->stopped)
-    {
-      ptid_t ptid = lp->ptid;
-
-      stop_callback (lp, NULL);
-      stop_wait_callback (lp, NULL);
-
-      /* Resume if the lwp still exists, and the core wanted it
-	 running.  */
-      lp = find_lwp_pid (ptid);
-      if (lp != NULL)
-	{
-	  if (lp->last_resume_kind == resume_stop
-	      && lp->status == 0)
-	    {
-	      /* The core wanted the LWP to stop.  Even if it stopped
-		 cleanly (with SIGSTOP), leave the event pending.  */
-	      if (debug_linux_nat)
-		fprintf_unfiltered (gdb_stdlog,
-				    "SARC: core wanted LWP %ld stopped "
-				    "(leaving SIGSTOP pending)\n",
-				    ptid_get_lwp (lp->ptid));
-	      lp->status = W_STOPCODE (SIGSTOP);
-	    }
-
-	  if (lp->status == 0)
-	    {
-	      if (debug_linux_nat)
-		fprintf_unfiltered (gdb_stdlog,
-				    "SARC: re-resuming LWP %ld\n",
-				    ptid_get_lwp (lp->ptid));
-	      resume_lwp (lp, lp->step, GDB_SIGNAL_0);
-	    }
-	  else
-	    {
-	      if (debug_linux_nat)
-		fprintf_unfiltered (gdb_stdlog,
-				    "SARC: not re-resuming LWP %ld "
-				    "(has pending)\n",
-				    ptid_get_lwp (lp->ptid));
-	      if (new_pending_p)
-		*new_pending_p = 1;
-	    }
-	}
-    }
-  return 0;
-}
-
 /* Check if we should go on and pass this event to common code.
-   Return the affected lwp if we are, or NULL otherwise.  If we stop
-   all lwps temporarily, we may end up with new pending events in some
-   other lwp.  In that case set *NEW_PENDING_P to true.  */
+   Return the affected lwp if we are, or NULL otherwise.  */
 
 static struct lwp_info *
-linux_nat_filter_event (int lwpid, int status, int *new_pending_p)
+linux_nat_filter_event (int lwpid, int status)
 {
   struct lwp_info *lp;
   int event = linux_ptrace_get_extended_event (status);
-
-  *new_pending_p = 0;
 
   lp = find_lwp_pid (pid_to_ptid (lwpid));
 
@@ -2766,6 +2945,10 @@ linux_nat_filter_event (int lwpid, int status, int *new_pending_p)
 
   if (WIFSTOPPED (status) && !lp)
     {
+      if (debug_linux_nat)
+	fprintf_unfiltered (gdb_stdlog,
+			    "LHEW: saving LWP %ld status %s in stopped_pids list\n",
+			    (long) lwpid, status_to_str (status));
       add_to_pid_list (&stopped_pids, lwpid, status);
       return NULL;
     }
@@ -2781,6 +2964,15 @@ linux_nat_filter_event (int lwpid, int status, int *new_pending_p)
      ever being continued.)  */
   lp->stopped = 1;
 
+  if (WIFSTOPPED (status) && lp->must_set_ptrace_flags)
+    {
+      struct inferior *inf = find_inferior_pid (ptid_get_pid (lp->ptid));
+      int options = linux_nat_ptrace_options (inf->attach_flag);
+
+      linux_enable_event_reporting (ptid_get_lwp (lp->ptid), options);
+      lp->must_set_ptrace_flags = 0;
+    }
+
   /* Handle GNU/Linux's syscall SIGTRAPs.  */
   if (WIFSTOPPED (status) && WSTOPSIG (status) == SYSCALL_SIGTRAP)
     {
@@ -2792,6 +2984,12 @@ linux_nat_filter_event (int lwpid, int status, int *new_pending_p)
       if (linux_handle_syscall_trap (lp, 0))
 	return NULL;
     }
+  else
+    {
+      /* Almost all other ptrace-stops are known to be outside of system
+	 calls, with further exceptions in linux_handle_extended_wait.  */
+      lp->syscall_state = TARGET_WAITKIND_IGNORE;
+    }
 
   /* Handle GNU/Linux's extended waitstatus for trace events.  */
   if (WIFSTOPPED (status) && WSTOPSIG (status) == SIGTRAP
@@ -2801,68 +2999,44 @@ linux_nat_filter_event (int lwpid, int status, int *new_pending_p)
 	fprintf_unfiltered (gdb_stdlog,
 			    "LLW: Handling extended status 0x%06x\n",
 			    status);
-      if (linux_handle_extended_wait (lp, status, 0))
+      if (linux_handle_extended_wait (lp, status))
 	return NULL;
     }
 
-  if (linux_nat_status_is_event (status))
-    save_sigtrap (lp);
-
   /* Check if the thread has exited.  */
-  if ((WIFEXITED (status) || WIFSIGNALED (status))
-      && num_lwps (ptid_get_pid (lp->ptid)) > 1)
+  if (WIFEXITED (status) || WIFSIGNALED (status))
     {
-      /* If this is the main thread, we must stop all threads and verify
-	 if they are still alive.  This is because in the nptl thread model
-	 on Linux 2.4, there is no signal issued for exiting LWPs
-	 other than the main thread.  We only get the main thread exit
-	 signal once all child threads have already exited.  If we
-	 stop all the threads and use the stop_wait_callback to check
-	 if they have exited we can determine whether this signal
-	 should be ignored or whether it means the end of the debugged
-	 application, regardless of which threading model is being
-	 used.  */
-      if (ptid_get_pid (lp->ptid) == ptid_get_lwp (lp->ptid))
+      if (!report_thread_events
+	  && num_lwps (ptid_get_pid (lp->ptid)) > 1)
 	{
-	  iterate_over_lwps (pid_to_ptid (ptid_get_pid (lp->ptid)),
-			     stop_and_resume_callback, new_pending_p);
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"LLW: %s exited.\n",
+				target_pid_to_str (lp->ptid));
+
+	  /* If there is at least one more LWP, then the exit signal
+	     was not the end of the debugged application and should be
+	     ignored.  */
+	  exit_lwp (lp);
+	  return NULL;
 	}
 
+      /* Note that even if the leader was ptrace-stopped, it can still
+	 exit, if e.g., some other thread brings down the whole
+	 process (calls `exit').  So don't assert that the lwp is
+	 resumed.  */
       if (debug_linux_nat)
 	fprintf_unfiltered (gdb_stdlog,
-			    "LLW: %s exited.\n",
-			    target_pid_to_str (lp->ptid));
+			    "LWP %ld exited (resumed=%d)\n",
+			    ptid_get_lwp (lp->ptid), lp->resumed);
 
-      if (num_lwps (ptid_get_pid (lp->ptid)) > 1)
-       {
-	 /* If there is at least one more LWP, then the exit signal
-	    was not the end of the debugged application and should be
-	    ignored.  */
-	 exit_lwp (lp);
-	 return NULL;
-       }
-    }
+      /* Dead LWP's aren't expected to reported a pending sigstop.  */
+      lp->signalled = 0;
 
-  /* Check if the current LWP has previously exited.  In the nptl
-     thread model, LWPs other than the main thread do not issue
-     signals when they exit so we must check whenever the thread has
-     stopped.  A similar check is made in stop_wait_callback().  */
-  if (num_lwps (ptid_get_pid (lp->ptid)) > 1 && !linux_thread_alive (lp->ptid))
-    {
-      ptid_t ptid = pid_to_ptid (ptid_get_pid (lp->ptid));
-
-      if (debug_linux_nat)
-	fprintf_unfiltered (gdb_stdlog,
-			    "LLW: %s exited.\n",
-			    target_pid_to_str (lp->ptid));
-
-      exit_lwp (lp);
-
-      /* Make sure there is at least one thread running.  */
-      gdb_assert (iterate_over_lwps (ptid, running_callback, NULL));
-
-      /* Discard the event.  */
-      return NULL;
+      /* Store the pending event in the waitstatus, because
+	 W_EXITCODE(0,0) == 0.  */
+      store_waitstatus (&lp->waitstatus, status);
+      return lp;
     }
 
   /* Make sure we don't report a SIGSTOP that we sent ourselves in
@@ -2870,35 +3044,28 @@ linux_nat_filter_event (int lwpid, int status, int *new_pending_p)
   if (lp->signalled
       && WIFSTOPPED (status) && WSTOPSIG (status) == SIGSTOP)
     {
-      if (debug_linux_nat)
-	fprintf_unfiltered (gdb_stdlog,
-			    "LLW: Delayed SIGSTOP caught for %s.\n",
-			    target_pid_to_str (lp->ptid));
-
       lp->signalled = 0;
 
-      if (lp->last_resume_kind != resume_stop)
+      if (lp->last_resume_kind == resume_stop)
 	{
-	  /* This is a delayed SIGSTOP.  */
-
-	  registers_changed ();
-
-	  if (linux_nat_prepare_to_resume != NULL)
-	    linux_nat_prepare_to_resume (lp);
-	  linux_ops->to_resume (linux_ops,
-				pid_to_ptid (ptid_get_lwp (lp->ptid)),
-				lp->step, GDB_SIGNAL_0);
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
-				"LLW: %s %s, 0, 0 (discard SIGSTOP)\n",
+				"LLW: resume_stop SIGSTOP caught for %s.\n",
+				target_pid_to_str (lp->ptid));
+	}
+      else
+	{
+	  /* This is a delayed SIGSTOP.  Filter out the event.  */
+
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"LLW: %s %s, 0, 0 (discard delayed SIGSTOP)\n",
 				lp->step ?
 				"PTRACE_SINGLESTEP" : "PTRACE_CONT",
 				target_pid_to_str (lp->ptid));
 
-	  lp->stopped = 0;
+	  linux_resume_one_lwp (lp, lp->step, GDB_SIGNAL_0);
 	  gdb_assert (lp->resumed);
-
-	  /* Discard the event.  */
 	  return NULL;
 	}
     }
@@ -2916,28 +3083,74 @@ linux_nat_filter_event (int lwpid, int status, int *new_pending_p)
       /* This is a delayed SIGINT.  */
       lp->ignore_sigint = 0;
 
-      registers_changed ();
-      if (linux_nat_prepare_to_resume != NULL)
-	linux_nat_prepare_to_resume (lp);
-      linux_ops->to_resume (linux_ops, pid_to_ptid (ptid_get_lwp (lp->ptid)),
-			    lp->step, GDB_SIGNAL_0);
+      linux_resume_one_lwp (lp, lp->step, GDB_SIGNAL_0);
       if (debug_linux_nat)
 	fprintf_unfiltered (gdb_stdlog,
 			    "LLW: %s %s, 0, 0 (discard SIGINT)\n",
 			    lp->step ?
 			    "PTRACE_SINGLESTEP" : "PTRACE_CONT",
 			    target_pid_to_str (lp->ptid));
-
-      lp->stopped = 0;
       gdb_assert (lp->resumed);
 
       /* Discard the event.  */
       return NULL;
     }
 
+  /* Don't report signals that GDB isn't interested in, such as
+     signals that are neither printed nor stopped upon.  Stopping all
+     threads can be a bit time-consuming so if we want decent
+     performance with heavily multi-threaded programs, especially when
+     they're using a high frequency timer, we'd better avoid it if we
+     can.  */
+  if (WIFSTOPPED (status))
+    {
+      enum gdb_signal signo = gdb_signal_from_host (WSTOPSIG (status));
+
+      if (!target_is_non_stop_p ())
+	{
+	  /* Only do the below in all-stop, as we currently use SIGSTOP
+	     to implement target_stop (see linux_nat_stop) in
+	     non-stop.  */
+	  if (signo == GDB_SIGNAL_INT && signal_pass_state (signo) == 0)
+	    {
+	      /* If ^C/BREAK is typed at the tty/console, SIGINT gets
+		 forwarded to the entire process group, that is, all LWPs
+		 will receive it - unless they're using CLONE_THREAD to
+		 share signals.  Since we only want to report it once, we
+		 mark it as ignored for all LWPs except this one.  */
+	      iterate_over_lwps (pid_to_ptid (ptid_get_pid (lp->ptid)),
+					      set_ignore_sigint, NULL);
+	      lp->ignore_sigint = 0;
+	    }
+	  else
+	    maybe_clear_ignore_sigint (lp);
+	}
+
+      /* When using hardware single-step, we need to report every signal.
+	 Otherwise, signals in pass_mask may be short-circuited
+	 except signals that might be caused by a breakpoint.  */
+      if (!lp->step
+	  && WSTOPSIG (status) && sigismember (&pass_mask, WSTOPSIG (status))
+	  && !linux_wstatus_maybe_breakpoint (status))
+	{
+	  linux_resume_one_lwp (lp, lp->step, signo);
+	  if (debug_linux_nat)
+	    fprintf_unfiltered (gdb_stdlog,
+				"LLW: %s %s, %s (preempt 'handle')\n",
+				lp->step ?
+				"PTRACE_SINGLESTEP" : "PTRACE_CONT",
+				target_pid_to_str (lp->ptid),
+				(signo != GDB_SIGNAL_0
+				 ? strsignal (gdb_signal_to_host (signo))
+				 : "0"));
+	  return NULL;
+	}
+    }
+
   /* An interesting event.  */
   gdb_assert (lp);
   lp->status = status;
+  save_stop_reason (lp);
   return lp;
 }
 
@@ -2977,18 +3190,8 @@ check_zombie_leaders (void)
 	     leader's exit status until all other threads are gone.
 
 	     - There are 3 or more threads in the group, and a thread
-	     other than the leader exec'd.  On an exec, the Linux
-	     kernel destroys all other threads (except the execing
-	     one) in the thread group, and resets the execing thread's
-	     tid to the tgid.  No exit notification is sent for the
-	     execing thread -- from the ptracer's perspective, it
-	     appears as though the execing thread just vanishes.
-	     Until we reap all other threads except the leader and the
-	     execing thread, the leader will be zombie, and the
-	     execing thread will be in `D (disc sleep)'.  As soon as
-	     all other threads are reaped, the execing thread changes
-	     it's tid to the tgid, and the previous (zombie) leader
-	     vanishes, giving place to the "new" leader.  We could try
+	     other than the leader exec'd.  See comments on exec
+	     events at the top of the file.  We could try
 	     distinguishing the exit and exec cases, by waiting once
 	     more, and seeing if something comes out, but it doesn't
 	     sound useful.  The previous leader _does_ go away, and
@@ -3006,12 +3209,36 @@ check_zombie_leaders (void)
     }
 }
 
+/* Convenience function that is called when the kernel reports an exit
+   event.  This decides whether to report the event to GDB as a
+   process exit event, a thread exit event, or to suppress the
+   event.  */
+
+static ptid_t
+filter_exit_event (struct lwp_info *event_child,
+		   struct target_waitstatus *ourstatus)
+{
+  ptid_t ptid = event_child->ptid;
+
+  if (num_lwps (ptid_get_pid (ptid)) > 1)
+    {
+      if (report_thread_events)
+	ourstatus->kind = TARGET_WAITKIND_THREAD_EXITED;
+      else
+	ourstatus->kind = TARGET_WAITKIND_IGNORE;
+
+      exit_lwp (event_child);
+    }
+
+  return ptid;
+}
+
 static ptid_t
 linux_nat_wait_1 (struct target_ops *ops,
 		  ptid_t ptid, struct target_waitstatus *ourstatus,
 		  int target_options)
 {
-  static sigset_t prev_mask;
+  sigset_t prev_mask;
   enum resume_kind last_resume_kind;
   struct lwp_info *lp;
   int status;
@@ -3036,56 +3263,20 @@ linux_nat_wait_1 (struct target_ops *ops,
   /* Make sure SIGCHLD is blocked until the sigsuspend below.  */
   block_child_signals (&prev_mask);
 
-retry:
-  lp = NULL;
-  status = 0;
-
   /* First check if there is a LWP with a wait status pending.  */
-  if (ptid_equal (ptid, minus_one_ptid) || ptid_is_pid (ptid))
-    {
-      /* Any LWP in the PTID group that's been resumed will do.  */
-      lp = iterate_over_lwps (ptid, status_callback, NULL);
-      if (lp)
-	{
-	  if (debug_linux_nat && lp->status)
-	    fprintf_unfiltered (gdb_stdlog,
-				"LLW: Using pending wait status %s for %s.\n",
-				status_to_str (lp->status),
-				target_pid_to_str (lp->ptid));
-	}
-    }
-  else if (ptid_lwp_p (ptid))
+  lp = iterate_over_lwps (ptid, status_callback, NULL);
+  if (lp != NULL)
     {
       if (debug_linux_nat)
-	fprintf_unfiltered (gdb_stdlog,
-			    "LLW: Waiting for specific LWP %s.\n",
-			    target_pid_to_str (ptid));
-
-      /* We have a specific LWP to check.  */
-      lp = find_lwp_pid (ptid);
-      gdb_assert (lp);
-
-      if (debug_linux_nat && lp->status)
 	fprintf_unfiltered (gdb_stdlog,
 			    "LLW: Using pending wait status %s for %s.\n",
 			    status_to_str (lp->status),
 			    target_pid_to_str (lp->ptid));
-
-      /* We check for lp->waitstatus in addition to lp->status,
-	 because we can have pending process exits recorded in
-	 lp->status and W_EXITCODE(0,0) == 0.  We should probably have
-	 an additional lp->status_p flag.  */
-      if (lp->status == 0 && lp->waitstatus.kind == TARGET_WAITKIND_IGNORE)
-	lp = NULL;
     }
 
-  if (!target_can_async_p ())
-    {
-      /* Causes SIGINT to be passed on to the attached process.  */
-      set_sigint_trap ();
-    }
-
-  /* But if we don't find a pending event, we'll have to wait.  */
+  /* But if we don't find a pending event, we'll have to wait.  Always
+     pull all events out of the kernel.  We'll randomly select an
+     event LWP out of all that have events, to prevent starvation.  */
 
   while (lp == NULL)
     {
@@ -3105,9 +3296,7 @@ retry:
 	   the TGID pid.  */
 
       errno = 0;
-      lwpid = my_waitpid (-1, &status,  __WCLONE | WNOHANG);
-      if (lwpid == 0 || (lwpid == -1 && errno == ECHILD))
-	lwpid = my_waitpid (-1, &status, WNOHANG);
+      lwpid = my_waitpid (-1, &status,  __WALL | WNOHANG);
 
       if (debug_linux_nat)
 	fprintf_unfiltered (gdb_stdlog,
@@ -3116,10 +3305,6 @@ retry:
 
       if (lwpid > 0)
 	{
-	  /* If this is true, then we paused LWPs momentarily, and may
-	     now have pending events to handle.  */
-	  int new_pending;
-
 	  if (debug_linux_nat)
 	    {
 	      fprintf_unfiltered (gdb_stdlog,
@@ -3127,100 +3312,22 @@ retry:
 				  (long) lwpid, status_to_str (status));
 	    }
 
-	  lp = linux_nat_filter_event (lwpid, status, &new_pending);
-
-	  /* STATUS is now no longer valid, use LP->STATUS instead.  */
-	  status = 0;
-
-	  if (lp && !ptid_match (lp->ptid, ptid))
-	    {
-	      gdb_assert (lp->resumed);
-
-	      if (debug_linux_nat)
-		fprintf_unfiltered (gdb_stdlog,
-				    "LWP %ld got an event %06x, "
-				    "leaving pending.\n",
-				    ptid_get_lwp (lp->ptid), lp->status);
-
-	      if (WIFSTOPPED (lp->status))
-		{
-		  if (WSTOPSIG (lp->status) != SIGSTOP)
-		    {
-		      /* Cancel breakpoint hits.  The breakpoint may
-			 be removed before we fetch events from this
-			 process to report to the core.  It is best
-			 not to assume the moribund breakpoints
-			 heuristic always handles these cases --- it
-			 could be too many events go through to the
-			 core before this one is handled.  All-stop
-			 always cancels breakpoint hits in all
-			 threads.  */
-		      if (non_stop
-			  && linux_nat_lp_status_is_event (lp)
-			  && cancel_breakpoint (lp))
-			{
-			  /* Throw away the SIGTRAP.  */
-			  lp->status = 0;
-
-			  if (debug_linux_nat)
-			    fprintf_unfiltered (gdb_stdlog,
-						"LLW: LWP %ld hit a "
-						"breakpoint while "
-						"waiting for another "
-						"process; "
-						"cancelled it\n",
-						ptid_get_lwp (lp->ptid));
-			}
-		    }
-		  else
-		    lp->signalled = 0;
-		}
-	      else if (WIFEXITED (lp->status) || WIFSIGNALED (lp->status))
-		{
-		  if (debug_linux_nat)
-		    fprintf_unfiltered (gdb_stdlog,
-					"Process %ld exited while stopping "
-					"LWPs\n",
-					ptid_get_lwp (lp->ptid));
-
-		  /* This was the last lwp in the process.  Since
-		     events are serialized to GDB core, and we can't
-		     report this one right now, but GDB core and the
-		     other target layers will want to be notified
-		     about the exit code/signal, leave the status
-		     pending for the next time we're able to report
-		     it.  */
-
-		  /* Dead LWP's aren't expected to reported a pending
-		     sigstop.  */
-		  lp->signalled = 0;
-
-		  /* Store the pending event in the waitstatus as
-		     well, because W_EXITCODE(0,0) == 0.  */
-		  store_waitstatus (&lp->waitstatus, lp->status);
-		}
-
-	      /* Keep looking.  */
-	      lp = NULL;
-	    }
-
-	  if (new_pending)
-	    {
-	      /* Some LWP now has a pending event.  Go all the way
-		 back to check it.  */
-	      goto retry;
-	    }
-
-	  if (lp)
-	    {
-	      /* We got an event to report to the core.  */
-	      break;
-	    }
-
+	  linux_nat_filter_event (lwpid, status);
 	  /* Retry until nothing comes out of waitpid.  A single
 	     SIGCHLD can indicate more than one child stopped.  */
 	  continue;
 	}
+
+      /* Now that we've pulled all events out of the kernel, resume
+	 LWPs that don't have an interesting event to report.  */
+      iterate_over_lwps (minus_one_ptid,
+			 resume_stopped_resumed_lwps, &minus_one_ptid);
+
+      /* ... and find an LWP with a status to report to the core, if
+	 any.  */
+      lp = iterate_over_lwps (ptid, status_callback, NULL);
+      if (lp != NULL)
+	break;
 
       /* Check for zombie thread group leaders.  Those can't be reaped
 	 until all other threads in the thread group are.  */
@@ -3234,9 +3341,6 @@ retry:
 	    fprintf_unfiltered (gdb_stdlog, "LLW: exit (no resumed LWP)\n");
 
 	  ourstatus->kind = TARGET_WAITKIND_NO_RESUMED;
-
-	  if (!target_can_async_p ())
-	    clear_sigint_trap ();
 
 	  restore_child_signals_mask (&prev_mask);
 	  return minus_one_ptid;
@@ -3263,83 +3367,12 @@ retry:
       sigsuspend (&suspend_mask);
     }
 
-  if (!target_can_async_p ())
-    clear_sigint_trap ();
-
   gdb_assert (lp);
 
   status = lp->status;
   lp->status = 0;
 
-  /* Don't report signals that GDB isn't interested in, such as
-     signals that are neither printed nor stopped upon.  Stopping all
-     threads can be a bit time-consuming so if we want decent
-     performance with heavily multi-threaded programs, especially when
-     they're using a high frequency timer, we'd better avoid it if we
-     can.  */
-
-  if (WIFSTOPPED (status))
-    {
-      enum gdb_signal signo = gdb_signal_from_host (WSTOPSIG (status));
-
-      /* When using hardware single-step, we need to report every signal.
-	 Otherwise, signals in pass_mask may be short-circuited.  */
-      if (!lp->step
-	  && WSTOPSIG (status) && sigismember (&pass_mask, WSTOPSIG (status)))
-	{
-	  /* FIMXE: kettenis/2001-06-06: Should we resume all threads
-	     here?  It is not clear we should.  GDB may not expect
-	     other threads to run.  On the other hand, not resuming
-	     newly attached threads may cause an unwanted delay in
-	     getting them running.  */
-	  registers_changed ();
-	  if (linux_nat_prepare_to_resume != NULL)
-	    linux_nat_prepare_to_resume (lp);
-	  linux_ops->to_resume (linux_ops,
-				pid_to_ptid (ptid_get_lwp (lp->ptid)),
-				lp->step, signo);
-	  if (debug_linux_nat)
-	    fprintf_unfiltered (gdb_stdlog,
-				"LLW: %s %s, %s (preempt 'handle')\n",
-				lp->step ?
-				"PTRACE_SINGLESTEP" : "PTRACE_CONT",
-				target_pid_to_str (lp->ptid),
-				(signo != GDB_SIGNAL_0
-				 ? strsignal (gdb_signal_to_host (signo))
-				 : "0"));
-	  lp->stopped = 0;
-	  goto retry;
-	}
-
-      if (!non_stop)
-	{
-	  /* Only do the below in all-stop, as we currently use SIGINT
-	     to implement target_stop (see linux_nat_stop) in
-	     non-stop.  */
-	  if (signo == GDB_SIGNAL_INT && signal_pass_state (signo) == 0)
-	    {
-	      /* If ^C/BREAK is typed at the tty/console, SIGINT gets
-		 forwarded to the entire process group, that is, all LWPs
-		 will receive it - unless they're using CLONE_THREAD to
-		 share signals.  Since we only want to report it once, we
-		 mark it as ignored for all LWPs except this one.  */
-	      iterate_over_lwps (pid_to_ptid (ptid_get_pid (ptid)),
-					      set_ignore_sigint, NULL);
-	      lp->ignore_sigint = 0;
-	    }
-	  else
-	    maybe_clear_ignore_sigint (lp);
-	}
-    }
-
-  /* This LWP is stopped now.  */
-  lp->stopped = 1;
-
-  if (debug_linux_nat)
-    fprintf_unfiltered (gdb_stdlog, "LLW: Candidate event %s in %s.\n",
-			status_to_str (status), target_pid_to_str (lp->ptid));
-
-  if (!non_stop)
+  if (!target_is_non_stop_p ())
     {
       /* Now stop all other LWP's ...  */
       iterate_over_lwps (minus_one_ptid, stop_callback, NULL);
@@ -3347,33 +3380,48 @@ retry:
       /* ... and wait until all of them have reported back that
 	 they're no longer running.  */
       iterate_over_lwps (minus_one_ptid, stop_wait_callback, NULL);
+    }
 
-      /* If we're not waiting for a specific LWP, choose an event LWP
-	 from among those that have had events.  Giving equal priority
-	 to all LWPs that have had events helps prevent
-	 starvation.  */
-      if (ptid_equal (ptid, minus_one_ptid) || ptid_is_pid (ptid))
-	select_event_lwp (ptid, &lp, &status);
+  /* If we're not waiting for a specific LWP, choose an event LWP from
+     among those that have had events.  Giving equal priority to all
+     LWPs that have had events helps prevent starvation.  */
+  if (ptid_equal (ptid, minus_one_ptid) || ptid_is_pid (ptid))
+    select_event_lwp (ptid, &lp, &status);
 
-      /* Now that we've selected our final event LWP, cancel any
-	 breakpoints in other LWPs that have hit a GDB breakpoint.
-	 See the comment in cancel_breakpoints_callback to find out
-	 why.  */
-      iterate_over_lwps (minus_one_ptid, cancel_breakpoints_callback, lp);
+  gdb_assert (lp != NULL);
 
-      /* We'll need this to determine whether to report a SIGSTOP as
-	 TARGET_WAITKIND_0.  Need to take a copy because
-	 resume_clear_callback clears it.  */
-      last_resume_kind = lp->last_resume_kind;
+  /* Now that we've selected our final event LWP, un-adjust its PC if
+     it was a software breakpoint, and we can't reliably support the
+     "stopped by software breakpoint" stop reason.  */
+  if (lp->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT
+      && !USE_SIGTRAP_SIGINFO)
+    {
+      struct regcache *regcache = get_thread_regcache (lp->ptid);
+      struct gdbarch *gdbarch = get_regcache_arch (regcache);
+      int decr_pc = gdbarch_decr_pc_after_break (gdbarch);
 
+      if (decr_pc != 0)
+	{
+	  CORE_ADDR pc;
+
+	  pc = regcache_read_pc (regcache);
+	  regcache_write_pc (regcache, pc + decr_pc);
+	}
+    }
+
+  /* We'll need this to determine whether to report a SIGSTOP as
+     GDB_SIGNAL_0.  Need to take a copy because resume_clear_callback
+     clears it.  */
+  last_resume_kind = lp->last_resume_kind;
+
+  if (!target_is_non_stop_p ())
+    {
       /* In all-stop, from the core's perspective, all LWPs are now
 	 stopped until a new resume action is sent over.  */
       iterate_over_lwps (minus_one_ptid, resume_clear_callback, NULL);
     }
   else
     {
-      /* See above.  */
-      last_resume_kind = lp->last_resume_kind;
       resume_clear_callback (lp, NULL);
     }
 
@@ -3414,6 +3462,9 @@ retry:
   else
     lp->core = linux_common_core_of_thread (lp->ptid);
 
+  if (ourstatus->kind == TARGET_WAITKIND_EXITED)
+    return filter_exit_event (lp, ourstatus);
+
   return lp->ptid;
 }
 
@@ -3423,41 +3474,66 @@ retry:
 static int
 resume_stopped_resumed_lwps (struct lwp_info *lp, void *data)
 {
-  ptid_t *wait_ptid_p = data;
+  ptid_t *wait_ptid_p = (ptid_t *) data;
 
-  if (lp->stopped
-      && lp->resumed
-      && lp->status == 0
-      && lp->waitstatus.kind == TARGET_WAITKIND_IGNORE)
+  if (!lp->stopped)
+    {
+      if (debug_linux_nat)
+	fprintf_unfiltered (gdb_stdlog,
+			    "RSRL: NOT resuming LWP %s, not stopped\n",
+			    target_pid_to_str (lp->ptid));
+    }
+  else if (!lp->resumed)
+    {
+      if (debug_linux_nat)
+	fprintf_unfiltered (gdb_stdlog,
+			    "RSRL: NOT resuming LWP %s, not resumed\n",
+			    target_pid_to_str (lp->ptid));
+    }
+  else if (lwp_status_pending_p (lp))
+    {
+      if (debug_linux_nat)
+	fprintf_unfiltered (gdb_stdlog,
+			    "RSRL: NOT resuming LWP %s, has pending status\n",
+			    target_pid_to_str (lp->ptid));
+    }
+  else
     {
       struct regcache *regcache = get_thread_regcache (lp->ptid);
       struct gdbarch *gdbarch = get_regcache_arch (regcache);
-      CORE_ADDR pc = regcache_read_pc (regcache);
 
-      gdb_assert (is_executing (lp->ptid));
-
-      /* Don't bother if there's a breakpoint at PC that we'd hit
-	 immediately, and we're not waiting for this LWP.  */
-      if (!ptid_match (lp->ptid, *wait_ptid_p))
+      TRY
 	{
-	  if (breakpoint_inserted_here_p (get_regcache_aspace (regcache), pc))
-	    return 0;
+	  CORE_ADDR pc = regcache_read_pc (regcache);
+	  int leave_stopped = 0;
+
+	  /* Don't bother if there's a breakpoint at PC that we'd hit
+	     immediately, and we're not waiting for this LWP.  */
+	  if (!ptid_match (lp->ptid, *wait_ptid_p))
+	    {
+	      if (breakpoint_inserted_here_p (get_regcache_aspace (regcache), pc))
+		leave_stopped = 1;
+	    }
+
+	  if (!leave_stopped)
+	    {
+	      if (debug_linux_nat)
+		fprintf_unfiltered (gdb_stdlog,
+				    "RSRL: resuming stopped-resumed LWP %s at "
+				    "%s: step=%d\n",
+				    target_pid_to_str (lp->ptid),
+				    paddress (gdbarch, pc),
+				    lp->step);
+
+	      linux_resume_one_lwp_throw (lp, lp->step, GDB_SIGNAL_0);
+	    }
 	}
-
-      if (debug_linux_nat)
-	fprintf_unfiltered (gdb_stdlog,
-			    "RSRL: resuming stopped-resumed LWP %s at %s: step=%d\n",
-			    target_pid_to_str (lp->ptid),
-			    paddress (gdbarch, pc),
-			    lp->step);
-
-      registers_changed ();
-      if (linux_nat_prepare_to_resume != NULL)
-	linux_nat_prepare_to_resume (lp);
-      linux_ops->to_resume (linux_ops, pid_to_ptid (ptid_get_lwp (lp->ptid)),
-			    lp->step, GDB_SIGNAL_0);
-      lp->stopped = 0;
-      lp->stopped_by_watchpoint = 0;
+      CATCH (ex, RETURN_MASK_ERROR)
+	{
+	  if (!check_ptrace_stopped_lwp_gone (lp))
+	    throw_exception (ex);
+	}
+      END_CATCH
     }
 
   return 0;
@@ -3483,7 +3559,7 @@ linux_nat_wait (struct target_ops *ops,
     }
 
   /* Flush the async file first.  */
-  if (target_can_async_p ())
+  if (target_is_async_p ())
     async_file_flush ();
 
   /* Resume LWPs that are currently stopped without any pending status
@@ -3493,7 +3569,7 @@ linux_nat_wait (struct target_ops *ops,
      specific_process, for example, see linux_nat_wait_1), and
      meanwhile the event became uninteresting.  Don't bother resuming
      LWPs we're not going to wait for if they'd stop immediately.  */
-  if (non_stop)
+  if (target_is_non_stop_p ())
     iterate_over_lwps (minus_one_ptid, resume_stopped_resumed_lwps, &ptid);
 
   event_ptid = linux_nat_wait_1 (ops, ptid, ourstatus, target_options);
@@ -3501,131 +3577,134 @@ linux_nat_wait (struct target_ops *ops,
   /* If we requested any event, and something came out, assume there
      may be more.  If we requested a specific lwp or process, also
      assume there may be more.  */
-  if (target_can_async_p ()
+  if (target_is_async_p ()
       && ((ourstatus->kind != TARGET_WAITKIND_IGNORE
 	   && ourstatus->kind != TARGET_WAITKIND_NO_RESUMED)
 	  || !ptid_equal (ptid, minus_one_ptid)))
     async_file_mark ();
 
-  /* Get ready for the next event.  */
-  if (target_can_async_p ())
-    target_async (inferior_event_handler, 0);
-
   return event_ptid;
 }
 
-static int
-kill_callback (struct lwp_info *lp, void *data)
+/* Kill one LWP.  */
+
+static void
+kill_one_lwp (pid_t pid)
 {
   /* PTRACE_KILL may resume the inferior.  Send SIGKILL first.  */
 
   errno = 0;
-  kill_lwp (ptid_get_lwp (lp->ptid), SIGKILL);
+  kill_lwp (pid, SIGKILL);
   if (debug_linux_nat)
     {
       int save_errno = errno;
 
       fprintf_unfiltered (gdb_stdlog,
-			  "KC:  kill (SIGKILL) %s, 0, 0 (%s)\n",
-			  target_pid_to_str (lp->ptid),
+			  "KC:  kill (SIGKILL) %ld, 0, 0 (%s)\n", (long) pid,
 			  save_errno ? safe_strerror (save_errno) : "OK");
     }
 
   /* Some kernels ignore even SIGKILL for processes under ptrace.  */
 
   errno = 0;
-  ptrace (PTRACE_KILL, ptid_get_lwp (lp->ptid), 0, 0);
+  ptrace (PTRACE_KILL, pid, 0, 0);
   if (debug_linux_nat)
     {
       int save_errno = errno;
 
       fprintf_unfiltered (gdb_stdlog,
-			  "KC:  PTRACE_KILL %s, 0, 0 (%s)\n",
-			  target_pid_to_str (lp->ptid),
+			  "KC:  PTRACE_KILL %ld, 0, 0 (%s)\n", (long) pid,
 			  save_errno ? safe_strerror (save_errno) : "OK");
     }
-
-  return 0;
 }
 
-static int
-kill_wait_callback (struct lwp_info *lp, void *data)
+/* Wait for an LWP to die.  */
+
+static void
+kill_wait_one_lwp (pid_t pid)
 {
-  pid_t pid;
+  pid_t res;
 
   /* We must make sure that there are no pending events (delayed
      SIGSTOPs, pending SIGTRAPs, etc.) to make sure the current
      program doesn't interfere with any following debugging session.  */
 
-  /* For cloned processes we must check both with __WCLONE and
-     without, since the exit status of a cloned process isn't reported
-     with __WCLONE.  */
-  if (lp->cloned)
-    {
-      do
-	{
-	  pid = my_waitpid (ptid_get_lwp (lp->ptid), NULL, __WCLONE);
-	  if (pid != (pid_t) -1)
-	    {
-	      if (debug_linux_nat)
-		fprintf_unfiltered (gdb_stdlog,
-				    "KWC: wait %s received unknown.\n",
-				    target_pid_to_str (lp->ptid));
-	      /* The Linux kernel sometimes fails to kill a thread
-		 completely after PTRACE_KILL; that goes from the stop
-		 point in do_fork out to the one in
-		 get_signal_to_deliever and waits again.  So kill it
-		 again.  */
-	      kill_callback (lp, NULL);
-	    }
-	}
-      while (pid == ptid_get_lwp (lp->ptid));
-
-      gdb_assert (pid == -1 && errno == ECHILD);
-    }
-
   do
     {
-      pid = my_waitpid (ptid_get_lwp (lp->ptid), NULL, 0);
-      if (pid != (pid_t) -1)
+      res = my_waitpid (pid, NULL, __WALL);
+      if (res != (pid_t) -1)
 	{
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
-				"KWC: wait %s received unk.\n",
-				target_pid_to_str (lp->ptid));
-	  /* See the call to kill_callback above.  */
-	  kill_callback (lp, NULL);
+				"KWC: wait %ld received unknown.\n",
+				(long) pid);
+	  /* The Linux kernel sometimes fails to kill a thread
+	     completely after PTRACE_KILL; that goes from the stop
+	     point in do_fork out to the one in get_signal_to_deliver
+	     and waits again.  So kill it again.  */
+	  kill_one_lwp (pid);
 	}
     }
-  while (pid == ptid_get_lwp (lp->ptid));
+  while (res == pid);
 
-  gdb_assert (pid == -1 && errno == ECHILD);
+  gdb_assert (res == -1 && errno == ECHILD);
+}
+
+/* Callback for iterate_over_lwps.  */
+
+static int
+kill_callback (struct lwp_info *lp, void *data)
+{
+  kill_one_lwp (ptid_get_lwp (lp->ptid));
   return 0;
+}
+
+/* Callback for iterate_over_lwps.  */
+
+static int
+kill_wait_callback (struct lwp_info *lp, void *data)
+{
+  kill_wait_one_lwp (ptid_get_lwp (lp->ptid));
+  return 0;
+}
+
+/* Kill the fork children of any threads of inferior INF that are
+   stopped at a fork event.  */
+
+static void
+kill_unfollowed_fork_children (struct inferior *inf)
+{
+  struct thread_info *thread;
+
+  ALL_NON_EXITED_THREADS (thread)
+    if (thread->inf == inf)
+      {
+	struct target_waitstatus *ws = &thread->pending_follow;
+
+	if (ws->kind == TARGET_WAITKIND_FORKED
+	    || ws->kind == TARGET_WAITKIND_VFORKED)
+	  {
+	    ptid_t child_ptid = ws->value.related_pid;
+	    int child_pid = ptid_get_pid (child_ptid);
+	    int child_lwp = ptid_get_lwp (child_ptid);
+
+	    kill_one_lwp (child_lwp);
+	    kill_wait_one_lwp (child_lwp);
+
+	    /* Let the arch-specific native code know this process is
+	       gone.  */
+	    linux_nat_forget_process (child_pid);
+	  }
+      }
 }
 
 static void
 linux_nat_kill (struct target_ops *ops)
 {
-  struct target_waitstatus last;
-  ptid_t last_ptid;
-  int status;
-
   /* If we're stopped while forking and we haven't followed yet,
      kill the other task.  We need to do this first because the
      parent will be sleeping if this is a vfork.  */
-
-  get_last_target_status (&last_ptid, &last);
-
-  if (last.kind == TARGET_WAITKIND_FORKED
-      || last.kind == TARGET_WAITKIND_VFORKED)
-    {
-      ptrace (PT_KILL, ptid_get_pid (last.value.related_pid), 0, 0);
-      wait (&status);
-
-      /* Let the arch-specific native code know this process is
-	 gone.  */
-      linux_nat_forget_process (ptid_get_pid (last.value.related_pid));
-    }
+  kill_unfollowed_fork_children (current_inferior ());
 
   if (forks_exist_p ())
     linux_fork_killall ();
@@ -3779,33 +3858,35 @@ linux_nat_xfer_partial (struct target_ops *ops, enum target_object object,
 }
 
 static int
-linux_thread_alive (ptid_t ptid)
-{
-  int err, tmp_errno;
-
-  gdb_assert (ptid_lwp_p (ptid));
-
-  /* Send signal 0 instead of anything ptrace, because ptracing a
-     running thread errors out claiming that the thread doesn't
-     exist.  */
-  err = kill_lwp (ptid_get_lwp (ptid), 0);
-  tmp_errno = errno;
-  if (debug_linux_nat)
-    fprintf_unfiltered (gdb_stdlog,
-			"LLTA: KILL(SIG0) %s (%s)\n",
-			target_pid_to_str (ptid),
-			err ? safe_strerror (tmp_errno) : "OK");
-
-  if (err != 0)
-    return 0;
-
-  return 1;
-}
-
-static int
 linux_nat_thread_alive (struct target_ops *ops, ptid_t ptid)
 {
-  return linux_thread_alive (ptid);
+  /* As long as a PTID is in lwp list, consider it alive.  */
+  return find_lwp_pid (ptid) != NULL;
+}
+
+/* Implement the to_update_thread_list target method for this
+   target.  */
+
+static void
+linux_nat_update_thread_list (struct target_ops *ops)
+{
+  struct lwp_info *lwp;
+
+  /* We add/delete threads from the list as clone/exit events are
+     processed, so just try deleting exited threads still in the
+     thread list.  */
+  delete_exited_threads ();
+
+  /* Update the processor core that each lwp/thread was last seen
+     running on.  */
+  ALL_LWPS (lwp)
+    {
+      /* Avoid accessing /proc if the thread hasn't run since we last
+	 time we fetched the thread's core.  Accessing /proc becomes
+	 noticeably expensive when we have thousands of LWPs.  */
+      if (lwp->core == -1)
+	lwp->core = linux_common_core_of_thread (lwp->ptid);
+    }
 }
 
 static char *
@@ -3824,41 +3905,10 @@ linux_nat_pid_to_str (struct target_ops *ops, ptid_t ptid)
   return normal_pid_to_str (ptid);
 }
 
-static char *
+static const char *
 linux_nat_thread_name (struct target_ops *self, struct thread_info *thr)
 {
-  int pid = ptid_get_pid (thr->ptid);
-  long lwp = ptid_get_lwp (thr->ptid);
-#define FORMAT "/proc/%d/task/%ld/comm"
-  char buf[sizeof (FORMAT) + 30];
-  FILE *comm_file;
-  char *result = NULL;
-
-  snprintf (buf, sizeof (buf), FORMAT, pid, lwp);
-  comm_file = gdb_fopen_cloexec (buf, "r");
-  if (comm_file)
-    {
-      /* Not exported by the kernel, so we define it here.  */
-#define COMM_LEN 16
-      static char line[COMM_LEN + 1];
-
-      if (fgets (line, sizeof (line), comm_file))
-	{
-	  char *nl = strchr (line, '\n');
-
-	  if (nl)
-	    *nl = '\0';
-	  if (*line != '\0')
-	    result = line;
-	}
-
-      fclose (comm_file);
-    }
-
-#undef COMM_LEN
-#undef FORMAT
-
-  return result;
+  return linux_proc_tid_get_name (thr->ptid);
 }
 
 /* Accepts an integer PID; Returns a string representing a file that
@@ -3867,15 +3917,7 @@ linux_nat_thread_name (struct target_ops *self, struct thread_info *thr)
 static char *
 linux_child_pid_to_exec_file (struct target_ops *self, int pid)
 {
-  static char buf[PATH_MAX];
-  char name[PATH_MAX];
-
-  xsnprintf (name, PATH_MAX, "/proc/%d/exe", pid);
-  memset (buf, 0, PATH_MAX);
-  if (readlink (name, buf, PATH_MAX - 1) <= 0)
-    strcpy (buf, name);
-
-  return buf;
+  return linux_proc_pid_to_exec_file (pid);
 }
 
 /* Implement the to_xfer_partial interface for memory reads using the /proc
@@ -3894,7 +3936,7 @@ linux_proc_xfer_partial (struct target_ops *ops, enum target_object object,
   char filename[64];
 
   if (object != TARGET_OBJECT_MEMORY || !readbuf)
-    return 0;
+    return TARGET_XFER_EOF;
 
   /* Don't bother for one word.  */
   if (len < 3 * sizeof (long))
@@ -4118,13 +4160,13 @@ linux_proc_pending_signals (int pid, sigset_t *pending,
 	 Unfortunately some Red Hat kernels include the shared pending
 	 queue but not the ShdPnd status field.  */
 
-      if (strncmp (buffer, "SigPnd:\t", 8) == 0)
+      if (startswith (buffer, "SigPnd:\t"))
 	add_line_to_sigset (buffer + 8, pending);
-      else if (strncmp (buffer, "ShdPnd:\t", 8) == 0)
+      else if (startswith (buffer, "ShdPnd:\t"))
 	add_line_to_sigset (buffer + 8, pending);
-      else if (strncmp (buffer, "SigBlk:\t", 8) == 0)
+      else if (startswith (buffer, "SigBlk:\t"))
 	add_line_to_sigset (buffer + 8, blocked);
-      else if (strncmp (buffer, "SigIgn:\t", 8) == 0)
+      else if (startswith (buffer, "SigIgn:\t"))
 	add_line_to_sigset (buffer + 8, ignored);
     }
 
@@ -4309,10 +4351,7 @@ linux_trad_target (CORE_ADDR (*register_u_offset)(struct gdbarch *, int, int))
 static int
 linux_nat_is_async_p (struct target_ops *ops)
 {
-  /* NOTE: palves 2008-03-21: We're only async when the user requests
-     it explicitly with the "set target-async" command.
-     Someday, linux will always be async.  */
-  return target_async_permitted;
+  return linux_is_async_p ();
 }
 
 /* target_can_async_p implementation.  */
@@ -4328,6 +4367,14 @@ linux_nat_can_async_p (struct target_ops *ops)
 
 static int
 linux_nat_supports_non_stop (struct target_ops *self)
+{
+  return 1;
+}
+
+/* to_always_non_stop_p implementation.  */
+
+static int
+linux_nat_always_non_stop_p (struct target_ops *self)
 {
   return 1;
 }
@@ -4362,20 +4409,12 @@ static int async_terminal_is_ours = 1;
 static void
 linux_nat_terminal_inferior (struct target_ops *self)
 {
-  if (!target_is_async_p ())
-    {
-      /* Async mode is disabled.  */
-      child_terminal_inferior (self);
-      return;
-    }
-
   child_terminal_inferior (self);
 
   /* Calls to target_terminal_*() are meant to be idempotent.  */
   if (!async_terminal_is_ours)
     return;
 
-  delete_file_handler (input_fd);
   async_terminal_is_ours = 0;
   set_sigint_trap ();
 }
@@ -4392,13 +4431,6 @@ linux_nat_terminal_inferior (struct target_ops *self)
 static void
 linux_nat_terminal_ours (struct target_ops *self)
 {
-  if (!target_is_async_p ())
-    {
-      /* Async mode is disabled.  */
-      child_terminal_ours (self);
-      return;
-    }
-
   /* GDB should never give the terminal to the inferior if the
      inferior is running in the background (run&, continue&, etc.),
      but claiming it sure should.  */
@@ -4408,13 +4440,8 @@ linux_nat_terminal_ours (struct target_ops *self)
     return;
 
   clear_sigint_trap ();
-  add_file_handler (input_fd, stdin_event_handler, 0);
   async_terminal_is_ours = 1;
 }
-
-static void (*async_client_callback) (enum inferior_event_type event_type,
-				      void *context);
-static void *async_client_context;
 
 /* SIGCHLD handler that serves two purposes: In non-stop/async mode,
    so we notice when any child changes state, and notify the
@@ -4443,7 +4470,7 @@ sigchld_handler (int signo)
 static void
 handle_target_event (int error, gdb_client_data client_data)
 {
-  (*async_client_callback) (INF_REG_EVENT, async_client_context);
+  inferior_event_handler (INF_REG_EVENT, NULL);
 }
 
 /* Create/destroy the target events pipe.  Returns previous state.  */
@@ -4451,7 +4478,7 @@ handle_target_event (int error, gdb_client_data client_data)
 static int
 linux_async_pipe (int enable)
 {
-  int previous = (linux_nat_event_pipe[0] != -1);
+  int previous = linux_is_async_p ();
 
   if (previous != enable)
     {
@@ -4487,15 +4514,10 @@ linux_async_pipe (int enable)
 /* target_async implementation.  */
 
 static void
-linux_nat_async (struct target_ops *ops,
-		 void (*callback) (enum inferior_event_type event_type,
-				   void *context),
-		 void *context)
+linux_nat_async (struct target_ops *ops, int enable)
 {
-  if (callback != NULL)
+  if (enable)
     {
-      async_client_callback = callback;
-      async_client_context = context;
       if (!linux_async_pipe (1))
 	{
 	  add_file_handler (linux_nat_event_pipe[0],
@@ -4507,8 +4529,6 @@ linux_nat_async (struct target_ops *ops,
     }
   else
     {
-      async_client_callback = callback;
-      async_client_context = context;
       delete_file_handler (linux_nat_event_pipe[0]);
       linux_async_pipe (0);
     }
@@ -4565,10 +4585,7 @@ linux_nat_stop_lwp (struct lwp_info *lwp, void *data)
 static void
 linux_nat_stop (struct target_ops *self, ptid_t ptid)
 {
-  if (non_stop)
-    iterate_over_lwps (ptid, linux_nat_stop_lwp, NULL);
-  else
-    linux_ops->to_stop (linux_ops, ptid);
+  iterate_over_lwps (ptid, linux_nat_stop_lwp, NULL);
 }
 
 static void
@@ -4576,7 +4593,7 @@ linux_nat_close (struct target_ops *self)
 {
   /* Unregister from the event loop.  */
   if (linux_nat_is_async_p (self))
-    linux_nat_async (self, NULL, NULL);
+    linux_nat_async (self, 0);
 
   if (linux_ops->to_close)
     linux_ops->to_close (linux_ops);
@@ -4628,6 +4645,113 @@ linux_nat_core_of_thread (struct target_ops *ops, ptid_t ptid)
   return -1;
 }
 
+/* Implementation of to_filesystem_is_local.  */
+
+static int
+linux_nat_filesystem_is_local (struct target_ops *ops)
+{
+  struct inferior *inf = current_inferior ();
+
+  if (inf->fake_pid_p || inf->pid == 0)
+    return 1;
+
+  return linux_ns_same (inf->pid, LINUX_NS_MNT);
+}
+
+/* Convert the INF argument passed to a to_fileio_* method
+   to a process ID suitable for passing to its corresponding
+   linux_mntns_* function.  If INF is non-NULL then the
+   caller is requesting the filesystem seen by INF.  If INF
+   is NULL then the caller is requesting the filesystem seen
+   by the GDB.  We fall back to GDB's filesystem in the case
+   that INF is non-NULL but its PID is unknown.  */
+
+static pid_t
+linux_nat_fileio_pid_of (struct inferior *inf)
+{
+  if (inf == NULL || inf->fake_pid_p || inf->pid == 0)
+    return getpid ();
+  else
+    return inf->pid;
+}
+
+/* Implementation of to_fileio_open.  */
+
+static int
+linux_nat_fileio_open (struct target_ops *self,
+		       struct inferior *inf, const char *filename,
+		       int flags, int mode, int warn_if_slow,
+		       int *target_errno)
+{
+  int nat_flags;
+  mode_t nat_mode;
+  int fd;
+
+  if (fileio_to_host_openflags (flags, &nat_flags) == -1
+      || fileio_to_host_mode (mode, &nat_mode) == -1)
+    {
+      *target_errno = FILEIO_EINVAL;
+      return -1;
+    }
+
+  fd = linux_mntns_open_cloexec (linux_nat_fileio_pid_of (inf),
+				 filename, nat_flags, nat_mode);
+  if (fd == -1)
+    *target_errno = host_to_fileio_error (errno);
+
+  return fd;
+}
+
+/* Implementation of to_fileio_readlink.  */
+
+static char *
+linux_nat_fileio_readlink (struct target_ops *self,
+			   struct inferior *inf, const char *filename,
+			   int *target_errno)
+{
+  char buf[PATH_MAX];
+  int len;
+  char *ret;
+
+  len = linux_mntns_readlink (linux_nat_fileio_pid_of (inf),
+			      filename, buf, sizeof (buf));
+  if (len < 0)
+    {
+      *target_errno = host_to_fileio_error (errno);
+      return NULL;
+    }
+
+  ret = (char *) xmalloc (len + 1);
+  memcpy (ret, buf, len);
+  ret[len] = '\0';
+  return ret;
+}
+
+/* Implementation of to_fileio_unlink.  */
+
+static int
+linux_nat_fileio_unlink (struct target_ops *self,
+			 struct inferior *inf, const char *filename,
+			 int *target_errno)
+{
+  int ret;
+
+  ret = linux_mntns_unlink (linux_nat_fileio_pid_of (inf),
+			    filename);
+  if (ret == -1)
+    *target_errno = host_to_fileio_error (errno);
+
+  return ret;
+}
+
+/* Implementation of the to_thread_events method.  */
+
+static void
+linux_nat_thread_events (struct target_ops *ops, int enable)
+{
+  report_thread_events = enable;
+}
+
 void
 linux_nat_add_target (struct target_ops *t)
 {
@@ -4649,16 +4773,23 @@ linux_nat_add_target (struct target_ops *t)
   t->to_kill = linux_nat_kill;
   t->to_mourn_inferior = linux_nat_mourn_inferior;
   t->to_thread_alive = linux_nat_thread_alive;
+  t->to_update_thread_list = linux_nat_update_thread_list;
   t->to_pid_to_str = linux_nat_pid_to_str;
   t->to_thread_name = linux_nat_thread_name;
   t->to_has_thread_control = tc_schedlock;
   t->to_thread_address_space = linux_nat_thread_address_space;
   t->to_stopped_by_watchpoint = linux_nat_stopped_by_watchpoint;
   t->to_stopped_data_address = linux_nat_stopped_data_address;
+  t->to_stopped_by_sw_breakpoint = linux_nat_stopped_by_sw_breakpoint;
+  t->to_supports_stopped_by_sw_breakpoint = linux_nat_supports_stopped_by_sw_breakpoint;
+  t->to_stopped_by_hw_breakpoint = linux_nat_stopped_by_hw_breakpoint;
+  t->to_supports_stopped_by_hw_breakpoint = linux_nat_supports_stopped_by_hw_breakpoint;
+  t->to_thread_events = linux_nat_thread_events;
 
   t->to_can_async_p = linux_nat_can_async_p;
   t->to_is_async_p = linux_nat_is_async_p;
   t->to_supports_non_stop = linux_nat_supports_non_stop;
+  t->to_always_non_stop_p = linux_nat_always_non_stop_p;
   t->to_async = linux_nat_async;
   t->to_terminal_inferior = linux_nat_terminal_inferior;
   t->to_terminal_ours = linux_nat_terminal_ours;
@@ -4666,7 +4797,6 @@ linux_nat_add_target (struct target_ops *t)
   super_close = t->to_close;
   t->to_close = linux_nat_close;
 
-  /* Methods for non-stop support.  */
   t->to_stop = linux_nat_stop;
 
   t->to_supports_multi_process = linux_nat_supports_multi_process;
@@ -4675,6 +4805,11 @@ linux_nat_add_target (struct target_ops *t)
     = linux_nat_supports_disable_randomization;
 
   t->to_core_of_thread = linux_nat_core_of_thread;
+
+  t->to_filesystem_is_local = linux_nat_filesystem_is_local;
+  t->to_fileio_open = linux_nat_fileio_open;
+  t->to_fileio_readlink = linux_nat_fileio_readlink;
+  t->to_fileio_unlink = linux_nat_fileio_unlink;
 
   /* We don't change the stratum; this target will sit at
      process_stratum and thread_db will set at thread_stratum.  This
@@ -4769,6 +4904,15 @@ linux_nat_get_siginfo (ptid_t ptid, siginfo_t *siginfo)
   return 1;
 }
 
+/* See nat/linux-nat.h.  */
+
+ptid_t
+current_lwp_ptid (void)
+{
+  gdb_assert (ptid_lwp_p (inferior_ptid));
+  return inferior_ptid;
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_linux_nat;
 
@@ -4783,6 +4927,15 @@ Enables printf debugging output."),
 			     NULL,
 			     show_debug_linux_nat,
 			     &setdebuglist, &showdebuglist);
+
+  add_setshow_boolean_cmd ("linux-namespaces", class_maintenance,
+			   &debug_linux_namespaces, _("\
+Set debugging of GNU/Linux namespaces module."), _("\
+Show debugging of GNU/Linux namespaces module."), _("\
+Enables printf debugging output."),
+			   NULL,
+			   NULL,
+			   &setdebuglist, &showdebuglist);
 
   /* Save this mask as the default.  */
   sigprocmask (SIG_SETMASK, NULL, &normal_mask);
@@ -4801,13 +4954,7 @@ Enables printf debugging output."),
 
   sigemptyset (&blocked_mask);
 
-  /* Do not enable PTRACE_O_TRACEEXIT until GDB is more prepared to
-     support read-only process state.  */
-  linux_ptrace_set_additional_flags (PTRACE_O_TRACESYSGOOD
-				     | PTRACE_O_TRACEVFORKDONE
-				     | PTRACE_O_TRACEVFORK
-				     | PTRACE_O_TRACEFORK
-				     | PTRACE_O_TRACEEXEC);
+  lwp_lwpid_htab_create ();
 }
 
 
@@ -4815,70 +4962,16 @@ Enables printf debugging output."),
    the GNU/Linux Threads library and therefore doesn't really belong
    here.  */
 
-/* Read variable NAME in the target and return its value if found.
-   Otherwise return zero.  It is assumed that the type of the variable
-   is `int'.  */
-
-static int
-get_signo (const char *name)
-{
-  struct bound_minimal_symbol ms;
-  int signo;
-
-  ms = lookup_minimal_symbol (name, NULL, NULL);
-  if (ms.minsym == NULL)
-    return 0;
-
-  if (target_read_memory (BMSYMBOL_VALUE_ADDRESS (ms), (gdb_byte *) &signo,
-			  sizeof (signo)) != 0)
-    return 0;
-
-  return signo;
-}
-
 /* Return the set of signals used by the threads library in *SET.  */
 
 void
 lin_thread_get_thread_signals (sigset_t *set)
 {
-  struct sigaction action;
-  int restart, cancel;
-
-  sigemptyset (&blocked_mask);
   sigemptyset (set);
 
-  restart = get_signo ("__pthread_sig_restart");
-  cancel = get_signo ("__pthread_sig_cancel");
-
-  /* LinuxThreads normally uses the first two RT signals, but in some legacy
-     cases may use SIGUSR1/SIGUSR2.  NPTL always uses RT signals, but does
-     not provide any way for the debugger to query the signal numbers -
-     fortunately they don't change!  */
-
-  if (restart == 0)
-    restart = __SIGRTMIN;
-
-  if (cancel == 0)
-    cancel = __SIGRTMIN + 1;
-
-  sigaddset (set, restart);
-  sigaddset (set, cancel);
-
-  /* The GNU/Linux Threads library makes terminating threads send a
-     special "cancel" signal instead of SIGCHLD.  Make sure we catch
-     those (to prevent them from terminating GDB itself, which is
-     likely to be their default action) and treat them the same way as
-     SIGCHLD.  */
-
-  action.sa_handler = sigchld_handler;
-  sigemptyset (&action.sa_mask);
-  action.sa_flags = SA_RESTART;
-  sigaction (cancel, &action, NULL);
-
-  /* We block the "cancel" signal throughout this code ...  */
-  sigaddset (&blocked_mask, cancel);
-  sigprocmask (SIG_BLOCK, &blocked_mask, NULL);
-
-  /* ... except during a sigsuspend.  */
-  sigdelset (&suspend_mask, cancel);
+  /* NPTL reserves the first two RT signals, but does not provide any
+     way for the debugger to query the signal numbers - fortunately
+     they don't change.  */
+  sigaddset (set, __SIGRTMIN);
+  sigaddset (set, __SIGRTMIN + 1);
 }

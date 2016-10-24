@@ -1,6 +1,6 @@
 /* Objective-C language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 2002-2014 Free Software Foundation, Inc.
+   Copyright (C) 2002-2016 Free Software Foundation, Inc.
 
    Contributed by Apple Computer, Inc.
    Written by Michael Snyder.
@@ -65,7 +65,7 @@ struct objc_class {
 
 struct objc_super {
   CORE_ADDR receiver;
-  CORE_ADDR class;
+  CORE_ADDR theclass;
 };
 
 struct objc_method {
@@ -85,7 +85,7 @@ lookup_struct_typedef (char *name, const struct block *block, int noerr)
 {
   struct symbol *sym;
 
-  sym = lookup_symbol (name, block, STRUCT_DOMAIN, 0);
+  sym = lookup_symbol (name, block, STRUCT_DOMAIN, 0).symbol;
 
   if (sym == NULL)
     {
@@ -226,7 +226,7 @@ objc_demangle (const char *mangled, int options)
      (mangled[1] == 'i' || mangled[1] == 'c') &&
       mangled[2] == '_')
     {
-      cp = demangled = xmalloc(strlen(mangled) + 2);
+      cp = demangled = (char *) xmalloc (strlen (mangled) + 2);
 
       if (mangled[1] == 'i')
 	*cp++ = '-';		/* for instance method */
@@ -279,6 +279,15 @@ objc_demangle (const char *mangled, int options)
     }
   else
     return NULL;	/* Not an objc mangled name.  */
+}
+
+/* la_sniff_from_mangled_name for ObjC.  */
+
+static int
+objc_sniff_from_mangled_name (const char *mangled, char **demangled)
+{
+  *demangled = objc_demangle (mangled, 0);
+  return *demangled != NULL;
 }
 
 /* Determine if we are currently in the Objective-C dispatch function.
@@ -350,6 +359,11 @@ static const struct op_print objc_op_print_tab[] =
     {NULL, OP_NULL, PREC_NULL, 0}
 };
 
+static const char *objc_extensions[] =
+{
+  ".m", NULL
+};
+
 const struct language_defn objc_language_defn = {
   "objective-c",		/* Language name */
   "Objective-C",
@@ -358,9 +372,10 @@ const struct language_defn objc_language_defn = {
   case_sensitive_on,
   array_row_major,
   macro_expansion_c,
+  objc_extensions,
   &exp_descriptor_standard,
   c_parse,
-  c_error,
+  c_yyerror,
   null_post_parser,
   c_printchar,		       /* Print a character constant */
   c_printstr,		       /* Function to print string constant */
@@ -375,6 +390,7 @@ const struct language_defn objc_language_defn = {
   basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
   basic_lookup_transparent_type,/* lookup_transparent_type */
   objc_demangle,		/* Language specific symbol demangler */
+  objc_sniff_from_mangled_name,
   NULL,				/* Language specific
 				   class_name_from_physname */
   objc_op_print_tab,		/* Expression operators for printing */
@@ -389,6 +405,8 @@ const struct language_defn objc_language_defn = {
   NULL,				/* la_get_symbol_name_cmp */
   iterate_over_symbols,
   &default_varobj_ops,
+  NULL,
+  NULL,
   LANG_MAGIC
 };
 
@@ -411,16 +429,15 @@ static char *msglist_sel;
 void
 start_msglist(void)
 {
-  struct selname *new = 
-    (struct selname *) xmalloc (sizeof (struct selname));
+  struct selname *newobj = XNEW (struct selname);
 
-  new->next = selname_chain;
-  new->msglist_len = msglist_len;
-  new->msglist_sel = msglist_sel;
+  newobj->next = selname_chain;
+  newobj->msglist_len = msglist_len;
+  newobj->msglist_sel = msglist_sel;
   msglist_len = 0;
   msglist_sel = (char *)xmalloc(1);
   *msglist_sel = 0;
-  selname_chain = new;
+  selname_chain = newobj;
 }
 
 void
@@ -624,7 +641,7 @@ selectors_info (char *regexp, int from_tty)
       printf_filtered (_("Selectors matching \"%s\":\n\n"), 
 		       regexp ? regexp : "*");
 
-      sym_arr = alloca (matches * sizeof (struct symbol *));
+      sym_arr = XALLOCAVEC (struct symbol *, matches);
       matches = 0;
       ALL_MSYMBOLS (objfile, msymbol)
 	{
@@ -761,7 +778,7 @@ classes_info (char *regexp, int from_tty)
     {
       printf_filtered (_("Classes matching \"%s\":\n\n"), 
 		       regexp ? regexp : "*");
-      sym_arr = alloca (matches * sizeof (struct symbol *));
+      sym_arr = XALLOCAVEC (struct symbol *, matches);
       matches = 0;
       ALL_MSYMBOLS (objfile, msymbol)
 	{
@@ -854,7 +871,7 @@ parse_selector (char *method, char **selector)
 }
 
 static char * 
-parse_method (char *method, char *type, char **class, 
+parse_method (char *method, char *type, char **theclass,
 	      char **category, char **selector)
 {
   char *s1 = NULL;
@@ -867,7 +884,7 @@ parse_method (char *method, char *type, char **class,
   char *nselector = NULL;
 
   gdb_assert (type != NULL);
-  gdb_assert (class != NULL);
+  gdb_assert (theclass != NULL);
   gdb_assert (category != NULL);
   gdb_assert (selector != NULL);
   
@@ -939,8 +956,8 @@ parse_method (char *method, char *type, char **class,
 
   if (type != NULL)
     *type = ntype;
-  if (class != NULL)
-    *class = nclass;
+  if (theclass != NULL)
+    *theclass = nclass;
   if (category != NULL)
     *category = ncategory;
   if (selector != NULL)
@@ -950,7 +967,7 @@ parse_method (char *method, char *type, char **class,
 }
 
 static void
-find_methods (char type, const char *class, const char *category, 
+find_methods (char type, const char *theclass, const char *category, 
 	      const char *selector,
 	      VEC (const_char_ptr) **symbol_names)
 {
@@ -980,7 +997,7 @@ find_methods (char type, const char *class, const char *category,
 
       unsigned int objfile_csym = 0;
 
-      objc_csym = objfile_data (objfile, objc_objfile_data);
+      objc_csym = (unsigned int *) objfile_data (objfile, objc_objfile_data);
       if (objc_csym != NULL && *objc_csym == 0)
 	/* There are no ObjC symbols in this objfile.  Skip it entirely.  */
 	continue;
@@ -1005,7 +1022,7 @@ find_methods (char type, const char *class, const char *category,
 	  while ((strlen (symname) + 1) >= tmplen)
 	    {
 	      tmplen = (tmplen == 0) ? 1024 : tmplen * 2;
-	      tmp = xrealloc (tmp, tmplen);
+	      tmp = (char *) xrealloc (tmp, tmplen);
 	    }
 	  strcpy (tmp, symname);
 
@@ -1016,8 +1033,8 @@ find_methods (char type, const char *class, const char *category,
 	  if ((type != '\0') && (ntype != type))
 	    continue;
 
-	  if ((class != NULL) 
-	      && ((nclass == NULL) || (strcmp (class, nclass) != 0)))
+	  if ((theclass != NULL)
+	      && ((nclass == NULL) || (strcmp (theclass, nclass) != 0)))
 	    continue;
 
 	  if ((category != NULL) && 
@@ -1033,8 +1050,7 @@ find_methods (char type, const char *class, const char *category,
 
       if (objc_csym == NULL)
 	{
-	  objc_csym = obstack_alloc (&objfile->objfile_obstack,
-				     sizeof (*objc_csym));
+	  objc_csym = XOBNEW (&objfile->objfile_obstack, unsigned int);
 	  *objc_csym = objfile_csym;
 	  set_objfile_data (objfile, objc_objfile_data, objc_csym);
 	}
@@ -1110,7 +1126,7 @@ const char *
 find_imps (const char *method, VEC (const_char_ptr) **symbol_names)
 {
   char type = '\0';
-  char *class = NULL;
+  char *theclass = NULL;
   char *category = NULL;
   char *selector = NULL;
 
@@ -1123,7 +1139,7 @@ find_imps (const char *method, VEC (const_char_ptr) **symbol_names)
 
   buf = (char *) alloca (strlen (method) + 1);
   strcpy (buf, method);
-  tmp = parse_method (buf, &type, &class, &category, &selector);
+  tmp = parse_method (buf, &type, &theclass, &category, &selector);
 
   if (tmp == NULL)
     {
@@ -1136,13 +1152,14 @@ find_imps (const char *method, VEC (const_char_ptr) **symbol_names)
       selector_case = 1;
     }
 
-  find_methods (type, class, category, selector, symbol_names);
+  find_methods (type, theclass, category, selector, symbol_names);
 
   /* If we hit the "selector" case, and we found some methods, then
      add the selector itself as a symbol, if it exists.  */
   if (selector_case && !VEC_empty (const_char_ptr, *symbol_names))
     {
-      struct symbol *sym = lookup_symbol (selector, NULL, VAR_DOMAIN, 0);
+      struct symbol *sym = lookup_symbol (selector, NULL, VAR_DOMAIN,
+					  0).symbol;
 
       if (sym != NULL) 
 	VEC_safe_push (const_char_ptr, *symbol_names,
@@ -1415,34 +1432,34 @@ read_objc_super (struct gdbarch *gdbarch, CORE_ADDR addr,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   super->receiver = read_memory_unsigned_integer (addr, 4, byte_order);
-  super->class = read_memory_unsigned_integer (addr + 4, 4, byte_order);
+  super->theclass = read_memory_unsigned_integer (addr + 4, 4, byte_order);
 };
 
 static void 
 read_objc_class (struct gdbarch *gdbarch, CORE_ADDR addr,
-		 struct objc_class *class)
+		 struct objc_class *theclass)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
-  class->isa = read_memory_unsigned_integer (addr, 4, byte_order);
-  class->super_class = read_memory_unsigned_integer (addr + 4, 4, byte_order);
-  class->name = read_memory_unsigned_integer (addr + 8, 4, byte_order);
-  class->version = read_memory_unsigned_integer (addr + 12, 4, byte_order);
-  class->info = read_memory_unsigned_integer (addr + 16, 4, byte_order);
-  class->instance_size = read_memory_unsigned_integer (addr + 18, 4,
+  theclass->isa = read_memory_unsigned_integer (addr, 4, byte_order);
+  theclass->super_class = read_memory_unsigned_integer (addr + 4, 4, byte_order);
+  theclass->name = read_memory_unsigned_integer (addr + 8, 4, byte_order);
+  theclass->version = read_memory_unsigned_integer (addr + 12, 4, byte_order);
+  theclass->info = read_memory_unsigned_integer (addr + 16, 4, byte_order);
+  theclass->instance_size = read_memory_unsigned_integer (addr + 18, 4,
 						       byte_order);
-  class->ivars = read_memory_unsigned_integer (addr + 24, 4, byte_order);
-  class->methods = read_memory_unsigned_integer (addr + 28, 4, byte_order);
-  class->cache = read_memory_unsigned_integer (addr + 32, 4, byte_order);
-  class->protocols = read_memory_unsigned_integer (addr + 36, 4, byte_order);
+  theclass->ivars = read_memory_unsigned_integer (addr + 24, 4, byte_order);
+  theclass->methods = read_memory_unsigned_integer (addr + 28, 4, byte_order);
+  theclass->cache = read_memory_unsigned_integer (addr + 32, 4, byte_order);
+  theclass->protocols = read_memory_unsigned_integer (addr + 36, 4, byte_order);
 }
 
 static CORE_ADDR
 find_implementation_from_class (struct gdbarch *gdbarch,
-				CORE_ADDR class, CORE_ADDR sel)
+				CORE_ADDR theclass, CORE_ADDR sel)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  CORE_ADDR subclass = class;
+  CORE_ADDR subclass = theclass;
 
   while (subclass != 0) 
     {
@@ -1561,10 +1578,10 @@ resolve_msgsend_super (CORE_ADDR pc, CORE_ADDR *new_pc)
   sel = gdbarch_fetch_pointer_argument (gdbarch, frame, 1, ptr_type);
 
   read_objc_super (gdbarch, super, &sstr);
-  if (sstr.class == 0)
+  if (sstr.theclass == 0)
     return 0;
   
-  res = find_implementation_from_class (gdbarch, sstr.class, sel);
+  res = find_implementation_from_class (gdbarch, sstr.theclass, sel);
   if (new_pc != 0)
     *new_pc = res;
   if (res == 0)
@@ -1589,10 +1606,10 @@ resolve_msgsend_super_stret (CORE_ADDR pc, CORE_ADDR *new_pc)
   sel = gdbarch_fetch_pointer_argument (gdbarch, frame, 2, ptr_type);
 
   read_objc_super (gdbarch, super, &sstr);
-  if (sstr.class == 0)
+  if (sstr.theclass == 0)
     return 0;
   
-  res = find_implementation_from_class (gdbarch, sstr.class, sel);
+  res = find_implementation_from_class (gdbarch, sstr.theclass, sel);
   if (new_pc != 0)
     *new_pc = res;
   if (res == 0)

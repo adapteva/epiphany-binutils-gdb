@@ -1,6 +1,6 @@
 /* Main header file for the bfd library -- portable access to object files.
 
-   Copyright (C) 1990-2014 Free Software Foundation, Inc.
+   Copyright (C) 1990-2016 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.
 
@@ -272,7 +272,7 @@ alent;
 /* Object and core file sections.  */
 
 #define	align_power(addr, align)	\
-  (((addr) + ((bfd_vma) 1 << (align)) - 1) & ((bfd_vma) -1 << (align)))
+  (((addr) + ((bfd_vma) 1 << (align)) - 1) & (-((bfd_vma) 1 << (align))))
 
 typedef struct bfd_section *sec_ptr;
 
@@ -437,6 +437,16 @@ extern void bfd_hash_traverse
    this size.  */
 extern unsigned long bfd_hash_set_default_size (unsigned long);
 
+/* Types of compressed DWARF debug sections.  We currently support
+   zlib.  */
+enum compressed_debug_section_type
+{
+  COMPRESS_DEBUG_NONE = 0,
+  COMPRESS_DEBUG = 1 << 0,
+  COMPRESS_DEBUG_GNU_ZLIB = COMPRESS_DEBUG | 1 << 1,
+  COMPRESS_DEBUG_GABI_ZLIB = COMPRESS_DEBUG | 1 << 2
+};
+
 /* This structure is used to keep track of stabs in sections
    information while linking.  */
 
@@ -501,7 +511,6 @@ extern void warn_deprecated (const char *, const char *, int, const char *);
 #define bfd_get_file_flags(abfd) ((abfd)->flags)
 #define bfd_applicable_file_flags(abfd) ((abfd)->xvec->object_flags)
 #define bfd_applicable_section_flags(abfd) ((abfd)->xvec->section_flags)
-#define bfd_my_archive(abfd) ((abfd)->my_archive)
 #define bfd_has_map(abfd) ((abfd)->has_armap)
 #define bfd_is_thin_archive(abfd) ((abfd)->is_thin_archive)
 
@@ -809,12 +818,6 @@ struct internal_syment;
 union internal_auxent;
 #endif
 
-extern bfd_boolean bfd_coff_get_syment
-  (bfd *, struct bfd_symbol *, struct internal_syment *);
-
-extern bfd_boolean bfd_coff_get_auxent
-  (bfd *, struct bfd_symbol *, int, union internal_auxent *);
-
 extern bfd_boolean bfd_coff_set_symbol_class
   (bfd *, struct bfd_symbol *, unsigned int);
 
@@ -843,6 +846,23 @@ extern bfd_boolean bfd_elf32_arm_vfp11_erratum_scan
   (bfd *, struct bfd_link_info *);
 
 extern void bfd_elf32_arm_vfp11_fix_veneer_locations
+  (bfd *, struct bfd_link_info *);
+
+/* ARM STM STM32L4XX erratum workaround support.  */
+typedef enum
+{
+  BFD_ARM_STM32L4XX_FIX_NONE,
+  BFD_ARM_STM32L4XX_FIX_DEFAULT,
+  BFD_ARM_STM32L4XX_FIX_ALL
+} bfd_arm_stm32l4xx_fix;
+
+extern void bfd_elf32_arm_set_stm32l4xx_fix
+  (bfd *, struct bfd_link_info *);
+
+extern bfd_boolean bfd_elf32_arm_stm32l4xx_erratum_scan
+  (bfd *, struct bfd_link_info *);
+
+extern void bfd_elf32_arm_stm32l4xx_fix_veneer_locations
   (bfd *, struct bfd_link_info *);
 
 /* ARM Interworking support.  Called from linker.  */
@@ -874,13 +894,16 @@ extern bfd_boolean bfd_elf32_arm_process_before_allocation
 
 void bfd_elf32_arm_set_target_relocs
   (bfd *, struct bfd_link_info *, int, char *, int, int, bfd_arm_vfp11_fix,
-   int, int, int, int, int);
+   bfd_arm_stm32l4xx_fix, int, int, int, int, int);
 
 extern bfd_boolean bfd_elf32_arm_get_bfd_for_interworking
   (bfd *, struct bfd_link_info *);
 
 extern bfd_boolean bfd_elf32_arm_add_glue_sections_to_bfd
   (bfd *, struct bfd_link_info *);
+
+extern void bfd_elf32_arm_keep_private_stub_output_sections
+  (struct bfd_link_info *);
 
 /* ELF ARM mapping symbol support.  */
 #define BFD_ARM_SPECIAL_SYM_TYPE_MAP	(1 << 0)
@@ -913,7 +936,8 @@ extern void elf32_arm_next_input_section
   (struct bfd_link_info *, struct bfd_section *);
 extern bfd_boolean elf32_arm_size_stubs
   (bfd *, bfd *, struct bfd_link_info *, bfd_signed_vma,
-   struct bfd_section * (*) (const char *, struct bfd_section *, unsigned int),
+   struct bfd_section * (*) (const char *, struct bfd_section *,
+			     struct bfd_section *, unsigned int),
    void (*) (void));
 extern bfd_boolean elf32_arm_build_stubs
   (struct bfd_link_info *);
@@ -926,13 +950,6 @@ extern bfd_boolean elf32_arm_fix_exidx_coverage
 extern bfd_boolean elf32_tic6x_fix_exidx_coverage
 (struct bfd_section **, unsigned int, struct bfd_link_info *, bfd_boolean);
 
-/* PowerPC @tls opcode transform/validate.  */
-extern unsigned int _bfd_elf_ppc_at_tls_transform
-  (unsigned int, unsigned int);
-/* PowerPC @tprel opcode transform/validate.  */
-extern unsigned int _bfd_elf_ppc_at_tprel_transform
-  (unsigned int, unsigned int);
-
 extern void bfd_elf64_aarch64_init_maps
   (bfd *);
 
@@ -940,10 +957,10 @@ extern void bfd_elf32_aarch64_init_maps
   (bfd *);
 
 extern void bfd_elf64_aarch64_set_options
-  (bfd *, struct bfd_link_info *, int, int, int, int);
+  (bfd *, struct bfd_link_info *, int, int, int, int, int, int);
 
 extern void bfd_elf32_aarch64_set_options
-  (bfd *, struct bfd_link_info *, int, int, int, int);
+  (bfd *, struct bfd_link_info *, int, int, int, int, int, int);
 
 /* ELF AArch64 mapping symbol support.  */
 #define BFD_AARCH64_SPECIAL_SYM_TYPE_MAP	(1 << 0)
@@ -995,22 +1012,9 @@ extern void bfd_elf32_ia64_after_parse
 extern void bfd_elf64_ia64_after_parse
   (int);
 
-/* This structure is used for a comdat section, as in PE.  A comdat
-   section is associated with a particular symbol.  When the linker
-   sees a comdat section, it keeps only one of the sections with a
-   given name and associated with a given symbol.  */
+/* V850 Note manipulation routines.  */
+extern bfd_boolean v850_elf_create_sections
+  (struct bfd_link_info *);
 
-struct coff_comdat_info
-{
-  /* The name of the symbol associated with a comdat section.  */
-  const char *name;
-
-  /* The local symbol table index of the symbol associated with a
-     comdat section.  This is only meaningful to the object file format
-     specific code; it is not an index into the list returned by
-     bfd_canonicalize_symtab.  */
-  long symbol;
-};
-
-extern struct coff_comdat_info * bfd_coff_get_comdat_section
-  (bfd *, struct bfd_section *);
+extern bfd_boolean v850_elf_set_note
+  (bfd *, unsigned int, unsigned int);

@@ -5,6 +5,9 @@ sinclude(../common/acinclude.m4)
 
 SIM_AC_COMMON
 
-AC_CHECK_HEADERS(stdlib.h time.h sys/param.h)
+SIM_AC_OPTION_ENDIAN(BIG)
+SIM_AC_OPTION_ALIGNMENT(NONSTRICT_ALIGNMENT)
+
+AC_CHECK_HEADERS(sys/param.h)
 
 SIM_AC_OUTPUT

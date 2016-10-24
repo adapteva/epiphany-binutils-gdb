@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002-2014 Free Software Foundation, Inc.
+   Copyright 2002-2016 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -94,7 +94,6 @@ struct _sim_events {
   SIM_ELAPSED_TIME resume_wallclock;
   signed64 time_of_event;
   signed64 time_from_event;
-  int trace;
 };
 
 
@@ -155,7 +154,8 @@ extern sim_event *sim_events_watch_clock
    true.
 
    HOST_ADDR: pointer into the host address space.
-   BYTE_ORDER: 0 - host endian; BIG_ENDIAN; LITTLE_ENDIAN */
+   BYTE_ORDER: BFD_ENDIAN_UNKNOWN - host endian; BFD_ENDIAN_BIG;
+	       BFD_ENDIAN_LITTLE.  */
 
 extern sim_event *sim_events_watch_sim
 (SIM_DESC sd,
@@ -174,7 +174,8 @@ extern sim_event *sim_events_watch_sim
    true.
 
    CORE_ADDR/MAP: pointer into the target address space.
-   BYTE_ORDER: 0 - current target endian; BIG_ENDIAN; LITTLE_ENDIAN */
+   BYTE_ORDER: BFD_ENDIAN_UNKNOWN - host endian; BFD_ENDIAN_BIG;
+	       BFD_ENDIAN_LITTLE.  */
 
 extern sim_event *sim_events_watch_core
 (SIM_DESC sd,

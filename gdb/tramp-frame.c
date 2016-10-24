@@ -1,6 +1,6 @@
 /* Signal trampoline unwinder, for GDB the GNU Debugger.
 
-   Copyright (C) 2004-2014 Free Software Foundation, Inc.
+   Copyright (C) 2004-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -43,7 +43,8 @@ static struct trad_frame_cache *
 tramp_frame_cache (struct frame_info *this_frame,
 		   void **this_cache)
 {
-  struct tramp_frame_cache *tramp_cache = (*this_cache);
+  struct tramp_frame_cache *tramp_cache
+    = (struct tramp_frame_cache *) *this_cache;
 
   if (tramp_cache->trad_cache == NULL)
     {
@@ -85,6 +86,10 @@ tramp_frame_start (const struct tramp_frame *tramp,
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int ti;
+
+  /* Check if we can use this trampoline.  */
+  if (tramp->validate && !tramp->validate (tramp, this_frame, &pc))
+    return 0;
 
   /* Search through the trampoline for one that matches the
      instruction sequence around PC.  */

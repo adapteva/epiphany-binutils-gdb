@@ -4,14 +4,14 @@
 #ifndef SIM_MAIN_H
 #define SIM_MAIN_H
 
-#define USING_SIM_BASE_H /* FIXME: quick hack */
-
-struct _sim_cpu; /* FIXME: should be in sim-basics.h */
-typedef struct _sim_cpu SIM_CPU;
-
 /* sim-basics.h includes config.h but cgen-types.h must be included before
    sim-basics.h and cgen-types.h needs config.h.  */
 #include "config.h"
+
+/* This is a global setting.  Different cpu families can't mix-n-match -scache
+   and -pbb.  However some cpu families may use -simple while others use
+   one of -scache/-pbb. ???? */
+#define WITH_SCACHE_PBB 1
 
 #include "symcat.h"
 #include "sim-basics.h"
@@ -23,15 +23,8 @@ typedef struct _sim_cpu SIM_CPU;
 /* Pull in IQ2000_{DATA,INSN}_{MASK,VALUE}.  */
 #include "elf/iq2000.h"
 
-/* These must be defined before sim-base.h.  */
-typedef USI sim_cia;
-
-#define CIA_GET(cpu)     CPU_PC_GET (cpu)
-#define CIA_SET(cpu,val) CPU_PC_SET ((cpu), (val))
-
 #include "sim-base.h"
 #include "cgen-sim.h"
-#include "iq2000-sim.h"
 
 /* The _sim_cpu struct.  */
 
@@ -57,8 +50,7 @@ struct _sim_cpu {
 /* The sim_state struct.  */
 
 struct sim_state {
-  sim_cpu *cpu;
-#define STATE_CPU(sd, n) (/*&*/ (sd)->cpu)
+  sim_cpu *cpu[MAX_NR_PROCESSORS];
 
   CGEN_STATE cgen_state;
 

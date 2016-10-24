@@ -1,5 +1,5 @@
 /* MI Command Set - stack commands.
-   Copyright (C) 2000-2014 Free Software Foundation, Inc.
+   Copyright (C) 2000-2016 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions (a Red Hat company).
 
    This file is part of GDB.
@@ -51,6 +51,22 @@ mi_cmd_enable_frame_filters (char *command, char **argv, int argc)
   if (argc != 0)
     error (_("-enable-frame-filters: no arguments allowed"));
   frame_filters = 1;
+}
+
+/* Like apply_ext_lang_frame_filter, but take a print_values */
+
+static enum ext_lang_bt_status
+mi_apply_ext_lang_frame_filter (struct frame_info *frame, int flags,
+				enum print_values print_values,
+				struct ui_out *out,
+				int frame_low, int frame_high)
+{
+  /* ext_lang_frame_args's MI options are compatible with MI print
+     values.  */
+  return apply_ext_lang_frame_filter (frame, flags,
+				      (enum ext_lang_frame_args) print_values,
+				      out,
+				      frame_low, frame_high);
 }
 
 /* Print a list of the stack frames.  Args can be none, in which case
@@ -199,14 +215,12 @@ mi_cmd_stack_list_locals (char *command, char **argv, int argc)
   struct frame_info *frame;
   int raw_arg = 0;
   enum ext_lang_bt_status result = EXT_LANG_BT_ERROR;
-  int print_value;
+  enum print_values print_value;
   int oind = 0;
   int skip_unavailable = 0;
-  int i;
 
   if (argc > 1)
     {
-      int i;
       enum opt
       {
 	NO_FRAME_FILTERS,
@@ -252,8 +266,8 @@ mi_cmd_stack_list_locals (char *command, char **argv, int argc)
      {
        int flags = PRINT_LEVEL | PRINT_LOCALS;
 
-       result = apply_ext_lang_frame_filter (frame, flags, print_value,
-					     current_uiout, 0, 0);
+       result = mi_apply_ext_lang_frame_filter (frame, flags, print_value,
+						current_uiout, 0, 0);
      }
 
    /* Run the inbuilt backtrace if there are no filters registered, or
@@ -358,9 +372,9 @@ mi_cmd_stack_list_args (char *command, char **argv, int argc)
       if (py_frame_low == -1)
 	py_frame_low++;
 
-      result = apply_ext_lang_frame_filter (get_current_frame (), flags,
-					    print_values, current_uiout,
-					    py_frame_low, frame_high);
+      result = mi_apply_ext_lang_frame_filter (get_current_frame (), flags,
+					       print_values, current_uiout,
+					       py_frame_low, frame_high);
     }
 
      /* Run the inbuilt backtrace if there are no filters registered, or
@@ -396,13 +410,12 @@ mi_cmd_stack_list_variables (char *command, char **argv, int argc)
   struct frame_info *frame;
   int raw_arg = 0;
   enum ext_lang_bt_status result = EXT_LANG_BT_ERROR;
-  int print_value;
+  enum print_values print_value;
   int oind = 0;
   int skip_unavailable = 0;
 
   if (argc > 1)
     {
-      int i;
       enum opt
       {
 	NO_FRAME_FILTERS,
@@ -448,8 +461,9 @@ mi_cmd_stack_list_variables (char *command, char **argv, int argc)
      {
        int flags = PRINT_LEVEL | PRINT_ARGS | PRINT_LOCALS;
 
-       result = apply_ext_lang_frame_filter (frame, flags, print_value,
-					     current_uiout, 0, 0);
+       result = mi_apply_ext_lang_frame_filter (frame, flags,
+						print_value,
+						current_uiout, 0, 0);
      }
 
    /* Run the inbuilt backtrace if there are no filters registered, or
@@ -520,15 +534,13 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 
   if (arg->val || arg->error)
     {
-      volatile struct gdb_exception except;
+      const char *error_message = NULL;
 
       if (arg->error)
-	except.message = arg->error;
+	error_message = arg->error;
       else
 	{
-	  /* TRY_CATCH has two statements, wrap it in a block.  */
-
-	  TRY_CATCH (except, RETURN_MASK_ERROR)
+	  TRY
 	    {
 	      struct value_print_options opts;
 
@@ -537,10 +549,15 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 	      common_val_print (arg->val, stb, 0, &opts,
 				language_def (SYMBOL_LANGUAGE (arg->sym)));
 	    }
+	  CATCH (except, RETURN_MASK_ERROR)
+	    {
+	      error_message = except.message;
+	    }
+	  END_CATCH
 	}
-      if (except.message)
+      if (error_message != NULL)
 	fprintf_filtered (stb, _("<error reading variable: %s>"),
-			  except.message);
+			  error_message);
       ui_out_field_stream (uiout, "value", stb);
     }
 
@@ -628,7 +645,7 @@ list_args_or_locals (enum what_to_list what, enum print_values values,
 	      if (SYMBOL_IS_ARGUMENT (sym))
 		sym2 = lookup_symbol (SYMBOL_LINKAGE_NAME (sym),
 				      block, VAR_DOMAIN,
-				      NULL);
+				      NULL).symbol;
 	      else
 		sym2 = sym;
 	      gdb_assert (sym2 != NULL);

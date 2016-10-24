@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2014 Free Software Foundation, Inc.
+# Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,12 +12,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-# There's no support for `set follow-fork-mode' in the remote
-# protocol.
-if { [is_remote target] } {
-    return 0
-}
 
 # Only GNU/Linux is known to support `set follow-fork-mode child'.
 #
@@ -46,7 +40,7 @@ gdb_test "continue" "Catchpoint.*" "1, get to the fork event"
 
 gdb_test "info threads" " Thread .* Thread .* Thread .* Thread .*" "1, multiple threads found"
 
-gdb_test "thread 2" ".*" "1, switched away from event thread"
+gdb_test "thread 1" ".*" "1, switched away from event thread"
 
 gdb_test "continue" "Not resuming.*" "1, refused to resume"
 

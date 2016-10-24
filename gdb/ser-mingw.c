@@ -1,6 +1,6 @@
 /* Serial interface for local (hardwired) serial ports on Windows systems
 
-   Copyright (C) 2006-2014 Free Software Foundation, Inc.
+   Copyright (C) 2006-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -44,7 +44,8 @@ struct ser_windows_state
 /* CancelIo is not available for Windows 95 OS, so we need to use
    LoadLibrary/GetProcAddress to avoid a startup failure.  */
 #define CancelIo dyn_CancelIo
-static BOOL WINAPI (*CancelIo) (HANDLE);
+typedef BOOL WINAPI (CancelIo_ftype) (HANDLE);
+static CancelIo_ftype *CancelIo;
 
 /* Open up a real live device for serial I/O.  */
 
@@ -87,8 +88,7 @@ ser_windows_open (struct serial *scb, const char *name)
       return -1;
     }
 
-  state = xmalloc (sizeof (struct ser_windows_state));
-  memset (state, 0, sizeof (struct ser_windows_state));
+  state = XCNEW (struct ser_windows_state);
   scb->state = state;
 
   /* Create a manual reset event to watch the input buffer.  */
@@ -153,7 +153,6 @@ ser_windows_raw (struct serial *scb)
   if (GetCommState (h, &state) == 0)
     return;
 
-  state.fParity = FALSE;
   state.fOutxCtsFlow = FALSE;
   state.fOutxDsrFlow = FALSE;
   state.fDtrControl = DTR_CONTROL_ENABLE;
@@ -163,7 +162,6 @@ ser_windows_raw (struct serial *scb)
   state.fNull = FALSE;
   state.fAbortOnError = FALSE;
   state.ByteSize = 8;
-  state.Parity = NOPARITY;
 
   scb->current_timeout = 0;
 
@@ -198,6 +196,40 @@ ser_windows_setstopbits (struct serial *scb, int num)
   return (SetCommState (h, &state) != 0) ? 0 : -1;
 }
 
+/* Implement the "setparity" serial_ops callback.  */
+
+static int
+ser_windows_setparity (struct serial *scb, int parity)
+{
+  HANDLE h = (HANDLE) _get_osfhandle (scb->fd);
+  DCB state;
+
+  if (GetCommState (h, &state) == 0)
+    return -1;
+
+  switch (parity)
+    {
+    case GDBPARITY_NONE:
+      state.Parity = NOPARITY;
+      state.fParity = FALSE;
+      break;
+    case GDBPARITY_ODD:
+      state.Parity = ODDPARITY;
+      state.fParity = TRUE;
+      break;
+    case GDBPARITY_EVEN:
+      state.Parity = EVENPARITY;
+      state.fParity = TRUE;
+      break;
+    default:
+      internal_warning (__FILE__, __LINE__,
+			"Incorrect parity value: %d", parity);
+      return -1;
+    }
+
+  return (SetCommState (h, &state) != 0) ? 0 : -1;
+}
+
 static int
 ser_windows_setbaudrate (struct serial *scb, int rate)
 {
@@ -223,7 +255,7 @@ ser_windows_close (struct serial *scb)
      by calling close (scb->fd) below.  */
   if (CancelIo)
     CancelIo ((HANDLE) _get_osfhandle (scb->fd));
-  state = scb->state;
+  state = (struct ser_windows_state *) scb->state;
   CloseHandle (state->ov.hEvent);
   CloseHandle (state->except_event);
 
@@ -244,7 +276,7 @@ ser_windows_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
   DWORD errors;
   HANDLE h = (HANDLE) _get_osfhandle (scb->fd);
 
-  state = scb->state;
+  state = (struct ser_windows_state *) scb->state;
 
   *except = state->except_event;
   *read = state->ov.hEvent;
@@ -297,7 +329,7 @@ ser_windows_read_prim (struct serial *scb, size_t count)
   HANDLE h;
   gdb_byte *p;
 
-  state = scb->state;
+  state = (struct ser_windows_state *) scb->state;
   if (state->in_progress)
     {
       WaitForSingleObject (state->ov.hEvent, INFINITE);
@@ -501,12 +533,12 @@ stop_select_thread (struct ser_console_state *state)
 static DWORD WINAPI
 console_select_thread (void *arg)
 {
-  struct serial *scb = arg;
+  struct serial *scb = (struct serial *) arg;
   struct ser_console_state *state;
   int event_index;
   HANDLE h;
 
-  state = scb->state;
+  state = (struct ser_console_state *) scb->state;
   h = (HANDLE) _get_osfhandle (scb->fd);
 
   while (1)
@@ -604,12 +636,12 @@ fd_is_file (int fd)
 static DWORD WINAPI
 pipe_select_thread (void *arg)
 {
-  struct serial *scb = arg;
+  struct serial *scb = (struct serial *) arg;
   struct ser_console_state *state;
   int event_index;
   HANDLE h;
 
-  state = scb->state;
+  state = (struct ser_console_state *) scb->state;
   h = (HANDLE) _get_osfhandle (scb->fd);
 
   while (1)
@@ -647,12 +679,12 @@ pipe_select_thread (void *arg)
 static DWORD WINAPI
 file_select_thread (void *arg)
 {
-  struct serial *scb = arg;
+  struct serial *scb = (struct serial *) arg;
   struct ser_console_state *state;
   int event_index;
   HANDLE h;
 
-  state = scb->state;
+  state = (struct ser_console_state *) scb->state;
   h = (HANDLE) _get_osfhandle (scb->fd);
 
   while (1)
@@ -673,7 +705,7 @@ file_select_thread (void *arg)
 static void
 ser_console_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
 {
-  struct ser_console_state *state = scb->state;
+  struct ser_console_state *state = (struct ser_console_state *) scb->state;
 
   if (state == NULL)
     {
@@ -688,8 +720,7 @@ ser_console_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
 	  return;
 	}
 
-      state = xmalloc (sizeof (struct ser_console_state));
-      memset (state, 0, sizeof (struct ser_console_state));
+      state = XCNEW (struct ser_console_state);
       scb->state = state;
 
       if (is_tty)
@@ -728,7 +759,7 @@ ser_console_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
 static void
 ser_console_done_wait_handle (struct serial *scb)
 {
-  struct ser_console_state *state = scb->state;
+  struct ser_console_state *state = (struct ser_console_state *) scb->state;
 
   if (state == NULL)
     return;
@@ -739,7 +770,7 @@ ser_console_done_wait_handle (struct serial *scb)
 static void
 ser_console_close (struct serial *scb)
 {
-  struct ser_console_state *state = scb->state;
+  struct ser_console_state *state = (struct ser_console_state *) scb->state;
 
   if (scb->state)
     {
@@ -760,7 +791,7 @@ ser_console_get_tty_state (struct serial *scb)
     {
       struct ser_console_ttystate *state;
 
-      state = (struct ser_console_ttystate *) xmalloc (sizeof *state);
+      state = XNEW (struct ser_console_ttystate);
       state->is_a_tty = 1;
       return state;
     }
@@ -785,9 +816,8 @@ struct pipe_state
 static struct pipe_state *
 make_pipe_state (void)
 {
-  struct pipe_state *ps = XNEW (struct pipe_state);
+  struct pipe_state *ps = XCNEW (struct pipe_state);
 
-  memset (ps, 0, sizeof (*ps));
   ps->wait.read_event = INVALID_HANDLE_VALUE;
   ps->wait.except_event = INVALID_HANDLE_VALUE;
   ps->wait.start_select = INVALID_HANDLE_VALUE;
@@ -825,7 +855,7 @@ free_pipe_state (struct pipe_state *ps)
 static void
 cleanup_pipe_state (void *untyped)
 {
-  struct pipe_state *ps = untyped;
+  struct pipe_state *ps = (struct pipe_state *) untyped;
 
   free_pipe_state (ps);
 }
@@ -928,7 +958,7 @@ pipe_windows_fdopen (struct serial *scb, int fd)
 static void
 pipe_windows_close (struct serial *scb)
 {
-  struct pipe_state *ps = scb->state;
+  struct pipe_state *ps = (struct pipe_state *) scb->state;
 
   /* In theory, we should try to kill the subprocess here, but the pex
      interface doesn't give us enough information to do that.  Usually
@@ -964,7 +994,7 @@ pipe_windows_read (struct serial *scb, size_t count)
 static int
 pipe_windows_write (struct serial *scb, const void *buf, size_t count)
 {
-  struct pipe_state *ps = scb->state;
+  struct pipe_state *ps = (struct pipe_state *) scb->state;
   HANDLE pipeline_in;
   DWORD written;
 
@@ -986,7 +1016,7 @@ pipe_windows_write (struct serial *scb, const void *buf, size_t count)
 static void
 pipe_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
 {
-  struct pipe_state *ps = scb->state;
+  struct pipe_state *ps = (struct pipe_state *) scb->state;
 
   /* Have we allocated our events yet?  */
   if (ps->wait.read_event == INVALID_HANDLE_VALUE)
@@ -1007,7 +1037,7 @@ pipe_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
 static void
 pipe_done_wait_handle (struct serial *scb)
 {
-  struct pipe_state *ps = scb->state;
+  struct pipe_state *ps = (struct pipe_state *) scb->state;
 
   /* Have we allocated our events yet?  */
   if (ps->wait.read_event == INVALID_HANDLE_VALUE)
@@ -1051,7 +1081,7 @@ struct net_windows_state
 static int
 net_windows_socket_check_pending (struct serial *scb)
 {
-  struct net_windows_state *state = scb->state;
+  struct net_windows_state *state = (struct net_windows_state *) scb->state;
   unsigned long available;
 
   if (ioctlsocket (scb->fd, FIONREAD, &available) != 0)
@@ -1072,11 +1102,11 @@ net_windows_socket_check_pending (struct serial *scb)
 static DWORD WINAPI
 net_windows_select_thread (void *arg)
 {
-  struct serial *scb = arg;
+  struct serial *scb = (struct serial *) arg;
   struct net_windows_state *state;
   int event_index;
 
-  state = scb->state;
+  state = (struct net_windows_state *) scb->state;
 
   while (1)
     {
@@ -1141,7 +1171,7 @@ net_windows_select_thread (void *arg)
 static void
 net_windows_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
 {
-  struct net_windows_state *state = scb->state;
+  struct net_windows_state *state = (struct net_windows_state *) scb->state;
 
   /* Start from a clean slate.  */
   ResetEvent (state->base.read_event);
@@ -1160,7 +1190,7 @@ net_windows_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
 static void
 net_windows_done_wait_handle (struct serial *scb)
 {
-  struct net_windows_state *state = scb->state;
+  struct net_windows_state *state = (struct net_windows_state *) scb->state;
 
   stop_select_thread (&state->base);
 }
@@ -1176,8 +1206,7 @@ net_windows_open (struct serial *scb, const char *name)
   if (ret != 0)
     return ret;
 
-  state = xmalloc (sizeof (struct net_windows_state));
-  memset (state, 0, sizeof (struct net_windows_state));
+  state = XCNEW (struct net_windows_state);
   scb->state = state;
 
   /* Associate an event with the socket.  */
@@ -1194,7 +1223,7 @@ net_windows_open (struct serial *scb, const char *name)
 static void
 net_windows_close (struct serial *scb)
 {
-  struct net_windows_state *state = scb->state;
+  struct net_windows_state *state = (struct net_windows_state *) scb->state;
 
   destroy_select_thread (&state->base);
   CloseHandle (state->sock_event);
@@ -1227,6 +1256,7 @@ static const struct serial_ops hardwire_ops =
   ser_base_noflush_set_tty_state,
   ser_windows_setbaudrate,
   ser_windows_setstopbits,
+  ser_windows_setparity,
   ser_windows_drain_output,
   ser_base_async,
   ser_windows_read_prim,
@@ -1255,6 +1285,7 @@ static const struct serial_ops tty_ops =
   ser_base_set_tty_state,
   ser_base_print_tty_state,
   ser_base_noflush_set_tty_state,
+  NULL,
   NULL,
   NULL,
   ser_base_drain_output,
@@ -1287,6 +1318,7 @@ static const struct serial_ops pipe_ops =
   ser_base_noflush_set_tty_state,
   ser_base_setbaudrate,
   ser_base_setstopbits,
+  ser_base_setparity,
   ser_base_drain_output,
   ser_base_async,
   pipe_windows_read,
@@ -1317,6 +1349,7 @@ static const struct serial_ops tcp_ops =
   ser_base_noflush_set_tty_state,
   ser_base_setbaudrate,
   ser_base_setstopbits,
+  ser_base_setparity,
   ser_base_drain_output,
   ser_base_async,
   net_read_prim,
@@ -1338,7 +1371,7 @@ _initialize_ser_windows (void)
   hm = LoadLibrary ("kernel32.dll");
   if (hm)
     {
-      CancelIo = (void *) GetProcAddress (hm, "CancelIo");
+      CancelIo = (CancelIo_ftype *) GetProcAddress (hm, "CancelIo");
       FreeLibrary (hm);
     }
   else

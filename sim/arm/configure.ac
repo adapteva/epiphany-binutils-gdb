@@ -5,10 +5,8 @@ sinclude(../common/acinclude.m4)
 
 SIM_AC_COMMON
 
-AC_CHECK_HEADERS(unistd.h stdint.h)
-
-COPRO="armcopro.o maverick.o iwmmxt.o"
-
-AC_SUBST(COPRO)
+SIM_AC_OPTION_ENDIAN
+SIM_AC_OPTION_ALIGNMENT(STRICT_ALIGNMENT,STRICT_ALIGNMENT)
+SIM_AC_OPTION_WARNINGS
 
 SIM_AC_OUTPUT

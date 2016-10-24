@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/amd64.
 
-   Copyright (C) 2003-2014 Free Software Foundation, Inc.
+   Copyright (C) 2003-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -114,7 +114,7 @@ amd64obsd_sigtramp_p (struct frame_info *this_frame)
     return 0;
 
   /* If we can't read the instructions at START_PC, return zero.  */
-  buf = alloca ((sizeof sigreturn) + 1);
+  buf = (gdb_byte *) alloca ((sizeof sigreturn) + 1);
   if (!safe_frame_unwind_memory (this_frame, start_pc + 6, buf, buflen))
     return 0;
 
@@ -363,7 +363,7 @@ amd64obsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   int i;
 
   if (*this_cache)
-    return *this_cache;
+    return (struct trad_frame_cache *) *this_cache;
 
   cache = trad_frame_cache_zalloc (this_frame);
   *this_cache = cache;
@@ -372,7 +372,7 @@ amd64obsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   sp = get_frame_register_unsigned (this_frame, AMD64_RSP_REGNUM);
 
   find_pc_partial_function (func, &name, NULL, NULL);
-  if (name && strncmp (name, "Xintr", 5) == 0)
+  if (name && startswith (name, "Xintr"))
     addr = sp + 8;		/* It's an interrupt frame.  */
   else
     addr = sp;
@@ -436,7 +436,7 @@ amd64obsd_trapframe_sniffer (const struct frame_unwind *self,
   return (name && ((strcmp (name, "calltrap") == 0)
 		   || (strcmp (name, "osyscall1") == 0)
 		   || (strcmp (name, "Xsyscall") == 0)
-		   || (strncmp (name, "Xintr", 5) == 0)));
+		   || (startswith (name, "Xintr"))));
 }
 
 static const struct frame_unwind amd64obsd_trapframe_unwind = {

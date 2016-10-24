@@ -1,6 +1,6 @@
 /* General GDB/Guile code.
 
-   Copyright (C) 2014 Free Software Foundation, Inc.
+   Copyright (C) 2014-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -27,7 +27,7 @@
 #include "cli/cli-utils.h"
 #include "command.h"
 #include "gdbcmd.h"
-#include "interps.h"
+#include "top.h"
 #include "extension-priv.h"
 #include "utils.h"
 #include "version.h"
@@ -71,13 +71,13 @@ const char *gdbscm_print_excp = gdbscm_print_excp_message;
 
 #ifdef HAVE_GUILE
 /* Forward decls, these are defined later.  */
-static const struct extension_language_script_ops guile_extension_script_ops;
-static const struct extension_language_ops guile_extension_ops;
+extern const struct extension_language_script_ops guile_extension_script_ops;
+extern const struct extension_language_ops guile_extension_ops;
 #endif
 
 /* The main struct describing GDB's interface to the Guile
    extension language.  */
-const struct extension_language_defn extension_language_guile =
+EXPORTED_CONST struct extension_language_defn extension_language_guile =
 {
   EXT_LANG_GUILE,
   "guile",
@@ -124,16 +124,17 @@ static const char boot_scm_filename[] = "boot.scm";
 
 /* The interface between gdb proper and loading of python scripts.  */
 
-static const struct extension_language_script_ops guile_extension_script_ops =
+const struct extension_language_script_ops guile_extension_script_ops =
 {
   gdbscm_source_script,
   gdbscm_source_objfile_script,
+  gdbscm_execute_objfile_script,
   gdbscm_auto_load_enabled
 };
 
 /* The interface between gdb proper and guile scripting.  */
 
-static const struct extension_language_ops guile_extension_ops =
+const struct extension_language_ops guile_extension_ops =
 {
   gdbscm_finish_initialization,
   gdbscm_initialized,
@@ -154,7 +155,6 @@ static const struct extension_language_ops guile_extension_ops =
   gdbscm_breakpoint_cond_says_stop,
 
   NULL, /* gdbscm_check_quit_flag, */
-  NULL, /* gdbscm_clear_quit_flag, */
   NULL, /* gdbscm_set_quit_flag, */
 };
 
@@ -165,8 +165,8 @@ guile_repl_command (char *arg, int from_tty)
 {
   struct cleanup *cleanup;
 
-  cleanup = make_cleanup_restore_integer (&interpreter_async);
-  interpreter_async = 0;
+  cleanup = make_cleanup_restore_integer (&current_ui->async);
+  current_ui->async = 0;
 
   arg = skip_spaces (arg);
 
@@ -198,8 +198,8 @@ guile_command (char *arg, int from_tty)
 {
   struct cleanup *cleanup;
 
-  cleanup = make_cleanup_restore_integer (&interpreter_async);
-  interpreter_async = 0;
+  cleanup = make_cleanup_restore_integer (&current_ui->async);
+  current_ui->async = 0;
 
   arg = skip_spaces (arg);
 
@@ -240,7 +240,7 @@ compute_scheme_string (struct command_line *l)
   for (iter = l; iter; iter = iter->next)
     size += strlen (iter->line) + 1;
 
-  script = xmalloc (size + 1);
+  script = (char *) xmalloc (size + 1);
   here = 0;
   for (iter = l; iter; iter = iter->next)
     {
@@ -309,11 +309,11 @@ gdbscm_execute_gdb_command (SCM command_scm, SCM rest)
 {
   int from_tty_arg_pos = -1, to_string_arg_pos = -1;
   int from_tty = 0, to_string = 0;
-  volatile struct gdb_exception except;
   const SCM keywords[] = { from_tty_keyword, to_string_keyword, SCM_BOOL_F };
   char *command;
   char *result = NULL;
   struct cleanup *cleanups;
+  struct gdb_exception except = exception_none;
 
   gdbscm_parse_function_args (FUNC_NAME, SCM_ARG1, keywords, "s#tt",
 			      command_scm, &command, rest,
@@ -324,12 +324,12 @@ gdbscm_execute_gdb_command (SCM command_scm, SCM rest)
      executed.  */
   cleanups = make_cleanup (xfree, command);
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
+  TRY
     {
       struct cleanup *inner_cleanups;
 
-      inner_cleanups = make_cleanup_restore_integer (&interpreter_async);
-      interpreter_async = 0;
+      inner_cleanups = make_cleanup_restore_integer (&current_ui->async);
+      current_ui->async = 0;
 
       prevent_dont_repeat ();
       if (to_string)
@@ -345,6 +345,12 @@ gdbscm_execute_gdb_command (SCM command_scm, SCM rest)
 
       do_cleanups (inner_cleanups);
     }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      except = ex;
+    }
+  END_CATCH
+
   do_cleanups (cleanups);
   GDBSCM_HANDLE_GDB_EXCEPTION (except);
 
@@ -471,7 +477,7 @@ info_guile_command (char *args, int from_tty)
 
 static const scheme_function misc_guile_functions[] =
 {
-  { "execute", 1, 0, 1, gdbscm_execute_gdb_command,
+  { "execute", 1, 0, 1, as_a_scm_t_subr (gdbscm_execute_gdb_command),
   "\
 Execute the given GDB command.\n\
 \n\
@@ -484,23 +490,24 @@ Execute the given GDB command.\n\
   Returns: The result of the command if #:to-string is true.\n\
     Otherwise returns unspecified." },
 
-  { "data-directory", 0, 0, 0, gdbscm_data_directory,
+  { "data-directory", 0, 0, 0, as_a_scm_t_subr (gdbscm_data_directory),
     "\
 Return the name of GDB's data directory." },
 
-  { "guile-data-directory", 0, 0, 0, gdbscm_guile_data_directory,
+  { "guile-data-directory", 0, 0, 0,
+    as_a_scm_t_subr (gdbscm_guile_data_directory),
     "\
 Return the name of the Guile directory within GDB's data directory." },
 
-  { "gdb-version", 0, 0, 0, gdbscm_gdb_version,
+  { "gdb-version", 0, 0, 0, as_a_scm_t_subr (gdbscm_gdb_version),
     "\
 Return GDB's version string." },
 
-  { "host-config", 0, 0, 0, gdbscm_host_config,
+  { "host-config", 0, 0, 0, as_a_scm_t_subr (gdbscm_host_config),
     "\
 Return the name of the host configuration." },
 
-  { "target-config", 0, 0, 0, gdbscm_target_config,
+  { "target-config", 0, 0, 0, as_a_scm_t_subr (gdbscm_target_config),
     "\
 Return the name of the target configuration." },
 
@@ -621,9 +628,9 @@ initialize_scheme_side (void)
   char *boot_scm_path;
   char *msg;
 
-  guile_datadir = concat (gdb_datadir, SLASH_STRING, "guile", NULL);
+  guile_datadir = concat (gdb_datadir, SLASH_STRING, "guile", (char *) NULL);
   boot_scm_path = concat (guile_datadir, SLASH_STRING, "gdb",
-			  SLASH_STRING, boot_scm_filename, NULL);
+			  SLASH_STRING, boot_scm_filename, (char *) NULL);
 
   scm_c_catch (SCM_BOOL_T, boot_guile_support, boot_scm_path,
 	       handle_boot_error, boot_scm_path, NULL, NULL);
@@ -696,6 +703,10 @@ call_initialize_gdb_module (void *data)
      It is called via scm_c_define_module so that the initialization is
      performed within the desired module.  */
   scm_c_define_module (gdbscm_module_name, initialize_gdb_module, NULL);
+
+#if HAVE_GUILE_MANUAL_FINALIZATION
+  scm_run_finalizers ();
+#endif
 
   return NULL;
 }
@@ -842,6 +853,13 @@ _initialize_guile (void)
     /* The Python support puts the C side in module "_gdb", leaving the Python
        side to define module "gdb" which imports "_gdb".  There is evidently no
        similar convention in Guile so we skip this.  */
+
+#if HAVE_GUILE_MANUAL_FINALIZATION
+    /* Our SMOB free functions are not thread-safe, as GDB itself is not
+       intended to be thread-safe.  Disable automatic finalization so that
+       finalizers aren't run in other threads.  */
+    scm_set_automatic_finalization_enabled (0);
+#endif
 
 #ifdef HAVE_SIGPROCMASK
     /* Before we initialize Guile, block SIGCHLD.

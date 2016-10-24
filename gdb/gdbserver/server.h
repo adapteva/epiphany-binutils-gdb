@@ -1,5 +1,5 @@
 /* Common definitions for remote server for GDB.
-   Copyright (C) 1993-2014 Free Software Foundation, Inc.
+   Copyright (C) 1993-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -28,15 +28,6 @@ gdb_static_assert (sizeof (CORE_ADDR) >= sizeof (void *));
 #endif
 
 #include "version.h"
-
-#ifdef HAVE_ALLOCA_H
-#include <alloca.h>
-#endif
-/* On some systems such as MinGW, alloca is declared in malloc.h
-   (there is no alloca.h).  */
-#if HAVE_MALLOC_H
-#include <malloc.h>
-#endif
 
 #if !HAVE_DECL_STRERROR
 #ifndef strerror
@@ -91,9 +82,26 @@ extern int disable_packet_Tthread;
 extern int disable_packet_qC;
 extern int disable_packet_qfThreadInfo;
 
+extern char *own_buf;
+
 extern int run_once;
 extern int multi_process;
+extern int report_fork_events;
+extern int report_vfork_events;
+extern int report_exec_events;
+extern int report_thread_events;
 extern int non_stop;
+
+/* True if the "swbreak+" feature is active.  In that case, GDB wants
+   us to report whether a trap is explained by a software breakpoint
+   and for the server to handle PC adjustment if necessary on this
+   target.  Only enabled if the target supports it.  */
+extern int swbreak_feature;
+
+/* True if the "hwbreak+" feature is active.  In that case, GDB wants
+   us to report whether a trap is explained by a hardware breakpoint.
+   Only enabled if the target supports it.  */
+extern int hwbreak_feature;
 
 extern int disable_randomization;
 
@@ -107,13 +115,19 @@ typedef int gdb_fildes_t;
 #include "event-loop.h"
 
 /* Functions from server.c.  */
+extern void handle_v_requests (char *own_buf, int packet_len,
+			       int *new_packet_len);
 extern int handle_serial_event (int err, gdb_client_data client_data);
 extern int handle_target_event (int err, gdb_client_data client_data);
+
+/* Get rid of the currently pending stop replies that match PTID.  */
+extern void discard_queued_stop_replies (ptid_t ptid);
 
 #include "remote-utils.h"
 
 #include "utils.h"
 #include "debug.h"
+#include "gdb_vecs.h"
 
 /* Maximum number of bytes to read/write at once.  The value here
    is chosen to fill up a packet (the headers account for the 32).  */
@@ -123,5 +137,11 @@ extern int handle_target_event (int err, gdb_client_data client_data);
    value to accomodate multiple register formats.  This value must be at least
    as large as the largest register set supported by gdbserver.  */
 #define PBUFSIZ 16384
+
+/* Definition for an unknown syscall, used basically in error-cases.  */
+#define UNKNOWN_SYSCALL (-1)
+
+/* Definition for any syscall, used for unfiltered syscall reporting.  */
+#define ANY_SYSCALL (-2)
 
 #endif /* SERVER_H */

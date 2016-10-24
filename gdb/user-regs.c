@@ -1,6 +1,6 @@
 /* User visible, per-frame registers, for GDB, the GNU debugger.
 
-   Copyright (C) 2002-2014 Free Software Foundation, Inc.
+   Copyright (C) 2002-2016 Free Software Foundation, Inc.
 
    Contributed by Red Hat.
 
@@ -23,6 +23,9 @@
 #include "user-regs.h"
 #include "gdbtypes.h"
 #include "frame.h"
+#include "arch-utils.h"
+#include "command.h"
+#include "cli/cli-cmds.h"
 
 /* A table of user registers.
 
@@ -109,13 +112,14 @@ void
 user_reg_add (struct gdbarch *gdbarch, const char *name,
 	      user_reg_read_ftype *read, const void *baton)
 {
-  struct gdb_user_regs *regs = gdbarch_data (gdbarch, user_regs_data);
+  struct gdb_user_regs *regs
+    = (struct gdb_user_regs *) gdbarch_data (gdbarch, user_regs_data);
 
   if (regs == NULL)
     {
       /* ULGH, called during architecture initialization.  Patch
          things up.  */
-      regs = user_regs_init (gdbarch);
+      regs = (struct gdb_user_regs *) user_regs_init (gdbarch);
       deprecated_set_gdbarch_data (gdbarch, user_regs_data, regs);
     }
   append_user_reg (regs, name, read, baton,
@@ -151,7 +155,8 @@ user_reg_map_name_to_regnum (struct gdbarch *gdbarch, const char *name,
 
   /* Search the user name space.  */
   {
-    struct gdb_user_regs *regs = gdbarch_data (gdbarch, user_regs_data);
+    struct gdb_user_regs *regs
+      = (struct gdb_user_regs *) gdbarch_data (gdbarch, user_regs_data);
     struct user_reg *reg;
     int nr;
 
@@ -171,7 +176,8 @@ user_reg_map_name_to_regnum (struct gdbarch *gdbarch, const char *name,
 static struct user_reg *
 usernum_to_user_reg (struct gdbarch *gdbarch, int usernum)
 {
-  struct gdb_user_regs *regs = gdbarch_data (gdbarch, user_regs_data);
+  struct gdb_user_regs *regs
+    = (struct gdb_user_regs *) gdbarch_data (gdbarch, user_regs_data);
   struct user_reg *reg;
 
   for (reg = regs->first; reg != NULL; reg = reg->next)
@@ -215,10 +221,31 @@ value_of_user_reg (int regnum, struct frame_info *frame)
   return reg->read (frame, reg->baton);
 }
 
+static void
+maintenance_print_user_registers (char *args, int from_tty)
+{
+  struct gdbarch *gdbarch = get_current_arch ();
+  struct gdb_user_regs *regs;
+  struct user_reg *reg;
+  int regnum;
+
+  regs = (struct gdb_user_regs *) gdbarch_data (gdbarch, user_regs_data);
+  regnum = gdbarch_num_regs (gdbarch) + gdbarch_num_pseudo_regs (gdbarch);
+
+  fprintf_unfiltered (gdb_stdout, " %-11s %3s\n", "Name", "Nr");
+  for (reg = regs->first; reg != NULL; reg = reg->next, ++regnum)
+    fprintf_unfiltered (gdb_stdout, " %-11s %3d\n", reg->name, regnum);
+}
+
 extern initialize_file_ftype _initialize_user_regs; /* -Wmissing-prototypes */
 
 void
 _initialize_user_regs (void)
 {
   user_regs_data = gdbarch_data_register_post_init (user_regs_init);
+
+  add_cmd ("user-registers", class_maintenance,
+	   maintenance_print_user_registers,
+	   _("List the names of the current user registers.\n"),
+	   &maintenanceprintlist);
 }

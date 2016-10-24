@@ -112,6 +112,8 @@
 @V@/gdb/ChangeLog-2011 @V@/gdb/ChangeLog.011
 @V@/gdb/ChangeLog-2012 @V@/gdb/ChangeLog.012
 @V@/gdb/ChangeLog-2013 @V@/gdb/ChangeLog.013
+@V@/gdb/ChangeLog-2014 @V@/gdb/ChangeLog.014
+@V@/gdb/ChangeLog-2015 @V@/gdb/ChangeLog.015
 @V@/gdb/ChangeLog-3.x @V@/gdb/ChangeLog.3-x
 @V@/gdb/ada-exp.tab.c @V@/gdb/ada-exp_tab.c
 @V@/gdb/amd64-windows-nat.c @V@/gdb/a64w-nat.c
@@ -132,9 +134,6 @@
 @V@/gdb/armnbsd-nat.c @V@/gdb/armnbd-nat.c
 @V@/gdb/armnbsd-tdep.c @V@/gdb/armnbd-tdep.c
 @V@/gdb/c-exp.tab.c @V@/gdb/c-exp_tab.c
-@V@/gdb/config/alpha/alpha-osf1.mh @V@/gdb/config/alpha/alphosf1.mh
-@V@/gdb/config/alpha/alpha-osf2.mh @V@/gdb/config/alpha/alphosf2.mh
-@V@/gdb/config/alpha/alpha-osf3.mh @V@/gdb/config/alpha/alphosf3.mh
 @V@/gdb/config/alpha/tm-alphalinux.h @V@/gdb/config/alpha/tm-alplinux.h
 @V@/gdb/config/i386/nm-cygwin64.h @V@/gdb/config/i386/nm-cyg64.h
 @V@/gdb/config/i386/nm-linux64.h @V@/gdb/config/i386/nm-lx64.h
@@ -408,6 +407,8 @@
 @V@/gdb/testsuite/gdb.base/bitfields2.c @V@/gdb/testsuite/gdb.base/bitfiel2.c
 @V@/gdb/testsuite/gdb.base/bitfields2.exp @V@/gdb/testsuite/gdb.base/bitfiel2.exp
 @V@/gdb/testsuite/gdb.base/break-entry.exp @V@/gdb/testsuite/gdb.base/brkentry.exp
+@V@/gdb/testsuite/gdb.base/break-fun-addr1.c @V@/gdb/testsuite/gdb.base/b-f-a1.c
+@V@/gdb/testsuite/gdb.base/break-fun-addr2.c @V@/gdb/testsuite/gdb.base/b-f-a2.c
 @V@/gdb/testsuite/gdb.base/coremaker2.c @V@/gdb/testsuite/gdb.base/core2maker.c
 @V@/gdb/testsuite/gdb.base/hashline1.exp @V@/gdb/testsuite/gdb.base/hash1line.exp
 @V@/gdb/testsuite/gdb.base/hashline2.exp @V@/gdb/testsuite/gdb.base/hash2line.exp
@@ -512,8 +513,6 @@
 @V@/gdb/amd64-linux-nat.c @V@/gdb/amd64-lnat.c
 @V@/gdb/hppa-linux-tdep.c @V@/gdb/palnxtdep.c
 @V@/gdb/hppa-linux-nat.c @V@/gdb/palnxnat.c
-@V@/gdb/hppa-hpux-nat.c @V@/gdb/pahpuxnat.c
-@V@/gdb/hppa-hpux-tdep.c @V@/gdb/pahpuxtdep.c
 @V@/gdb/hppanbsd-nat.c @V@/gdb/panbsd-nat.c
 @V@/gdb/hppanbsd-tdep.c @V@/gdb/panbsd-tdep.c
 @V@/gdb/amd64-windows-nat.c @V@/gdb/amd64-wnat.c

@@ -20,8 +20,7 @@ case $host in
  vax-*-netbsdelf*)
     ;;
  *-*-irix* | \
- alpha*-*-osf1* | \
- alpha*-*-osf2* | \
+ alpha*-*-osf* | \
  arm*-*-netbsd* | \
  hppa*-*-hiux* | \
  i[34567]86-ncr-* | \
@@ -42,7 +41,11 @@ case $host in
  m68*-*-netbsd* | \
  sparc-*-netbsd* | \
  rs6000-*-lynxos* | \
+ vax-*-bsd* | \
  vax-*-netbsd* | \
+ vax-*-ultrix* | \
+ hppa*-*-hpux* | \
+ ia64-*-hpux* | \
  null)
     echo "*** Configuration $host is obsolete." >&2
     echo "*** Support has been REMOVED." >&2
@@ -80,7 +83,6 @@ case "${host}" in
 
 aarch64*-*-linux*)	gdb_host=linux ;;
 
-alpha*-*-osf[3456789]*)	gdb_host=alpha-osf3 ;;
 alpha*-*-linux*)	gdb_host=alpha-linux ;;
 alpha*-*-freebsd* | alpha*-*-kfreebsd*-gnu)
 			gdb_host=fbsd ;;
@@ -93,8 +95,6 @@ arm*-*-netbsdelf* | arm*-*-knetbsd*-gnu)
 			gdb_host=nbsdelf ;;
 arm*-*-openbsd*)	gdb_host=nbsdelf ;;
 
-hppa*-*-hpux*)
-			gdb_host=hpux ;;
 hppa*-*-linux*)		gdb_host=linux ;;
 hppa*-*-netbsd*)	gdb_host=nbsd ;;
 hppa*-*-openbsd*)	gdb_host=obsd ;;
@@ -117,7 +117,6 @@ i[34567]86-*-solaris2.1[0-9]* | x86_64-*-solaris2.1[0-9]*)
 i[34567]86-*-solaris*)	gdb_host=i386sol2 ;;
 i[34567]86-*-cygwin*)	gdb_host=cygwin ;;
 
-ia64-*-hpux*)		gdb_host=hpux ;;
 ia64-*-linux*)		gdb_host=linux ;;
 
 m68*-*-linux*)		gdb_host=linux ;;
@@ -170,11 +169,9 @@ sparc-*-solaris2* | sparcv9-*-solaris2* | sparc64-*-solaris2*)
 
 tilegx-*-linux*)	gdb_host=linux ;;
 
-vax-*-bsd*)		gdb_host=vax ;;
 vax-*-netbsdelf* | vax-*-knetbsd*-gnu)
 			gdb_host=nbsdelf ;;
 vax-*-openbsd*)		gdb_host=obsd ;;
-vax-*-ultrix*)		gdb_host=vax ;;
 
 x86_64-*-linux*)	gdb_host=linux64 ;;
 x86_64-*-freebsd* | x86_64-*-kfreebsd*-gnu)
@@ -198,7 +195,7 @@ esac
 # "double" and "long double" types.
 
 case "${host}" in
-i[34567]86-*-*)
+i[34567]86-*-*|x86_64-*-*)
 	gdb_host_float_format="&floatformat_ieee_single_little"
 	gdb_host_double_format="&floatformat_ieee_double_little"
 	gdb_host_long_double_format="&floatformat_i387_ext"
@@ -212,11 +209,6 @@ m68*-*-*)
 	gdb_host_float_format="&floatformat_ieee_single_big"
 	gdb_host_double_format="&floatformat_ieee_double_big"
 	gdb_host_long_double_format="&floatformat_m68881_ext"
-	;;
-ia64-*-hpux*)
-	gdb_host_float_format="&floatformat_ieee_single_big"
-	gdb_host_double_format="&floatformat_ieee_double_big"
-	gdb_host_long_double_format="&floatformat_ia64_quad_big"
 	;;
 *)
 	gdb_host_float_format=0

@@ -1,4 +1,4 @@
-# Copyright 2013-2014 Free Software Foundation, Inc.
+# Copyright 2013-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,6 +19,11 @@ standard_testfile
 if [using_fission] {
     unsupported "fission"
     return -1
+}
+
+if [is_remote host] {
+    unsupported "Compiling on a remote host does not support a filename with directory."
+    return 0
 }
 
 set opts {debug additional_flags=-I.}

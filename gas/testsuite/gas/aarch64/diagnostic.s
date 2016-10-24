@@ -110,3 +110,150 @@
 	sys	#0, c0, c0, #0,
 
 	casp w0,w1,w2,w3,[x4]
+
+	# test warning of unpredictable load pairs
+	ldp     x0, x0, [sp]
+	ldp     d0, d0, [sp]
+	ldp     x0, x0, [sp], #16
+	ldnp    x0, x0, [sp]
+
+	# test warning of unpredictable writeback
+	ldr	x0, [x0, #8]!
+	str	x0, [x0, #8]!
+	str	x1, [x1], #8
+	stp	x0, x1, [x0, #16]!
+	ldp	x0, x1, [x1], #16
+	adr	x2, :got:s1
+	ldr	x0, [x0, :got:s1]
+
+	# Test error of 32-bit base reg
+	ldr	x1, [wsp, #8]!
+	ldp	x6, x29, [w7, #8]!
+	str	x30, [w11, #8]!
+	stp	x8, x27, [wsp, #8]!
+
+	# Test various valid load/store reg combination.
+	# especially we shouldn't warn on xzr, although
+	# xzr is with the same encoding 31 as sp.
+	.macro ldst_pair_wb_2 op, reg1, reg2
+	.irp base x3, x6, x25, sp
+	\op	\reg1, \reg2, [\base], #16
+	\op	\reg1, \reg2, [\base, #32]!
+	\op	\reg2, \reg1, [\base], #32
+	\op	\reg2, \reg1, [\base, #16]!
+	.endr
+	.endm
+
+	.macro ldst_pair_wb_1 op, reg1, width
+	.irp reg2 0, 14, 21, 23, 29
+	ldst_pair_wb_2	\op, \reg1, \width\reg2
+	.endr
+	.endm
+
+	.macro ldst_pair_wb_64 op
+	.irp	reg1 x2, x15, x16, x27, x30, xzr
+	ldst_pair_wb_1	\op, \reg1, x
+	.endr
+	.endm
+
+	.macro ldst_pair_wb_32 op
+	.irp	reg1 w1, w12, w16, w19, w30, wzr
+	ldst_pair_wb_1	\op, \reg1, w
+	.endr
+	.endm
+
+	.macro ldst_single_wb_1 op, reg
+	.irp	base x1, x4, x13, x26, sp
+	\op	\reg, [\base], #16
+	.endr
+	.endm
+
+	.macro ldst_single_wb_32 op
+	.irp reg w0, w3, w12, w21, w28, w30, wzr
+	ldst_single_wb_1	\op, \reg
+	.endr
+	.endm
+
+	.macro ldst_single_wb_64 op
+	.irp reg x2, x5, x17, x23, x24, x30, xzr
+	ldst_single_wb_1	\op, \reg
+	.endr
+	.endm
+
+	ldst_pair_wb_32	stp
+	ldst_pair_wb_64 stp
+
+	ldst_pair_wb_32	ldp
+	ldst_pair_wb_64 ldp
+
+	ldst_pair_wb_64	ldpsw
+
+	ldst_single_wb_32 str
+	ldst_single_wb_64 str
+
+	ldst_single_wb_32 strb
+
+	ldst_single_wb_32 strh
+
+	ldst_single_wb_32 ldr
+	ldst_single_wb_64 ldr
+
+	ldst_single_wb_32 ldrb
+
+	ldst_single_wb_32 ldrh
+
+	ldst_single_wb_32 ldrsb
+	ldst_single_wb_64 ldrsb
+
+	ldst_single_wb_32 ldrsh
+	ldst_single_wb_64 ldrsh
+
+	ldst_single_wb_64 ldrsw
+
+	dup	v0.2d, v1.2d[-1]
+	dup	v0.2d, v1.2d[0]
+	dup	v0.2d, v1.2d[1]
+	dup	v0.2d, v1.2d[2]
+	dup	v0.2d, v1.2d[64]
+
+	dup	v0.4s, v1.4s[-1]
+	dup	v0.4s, v1.4s[0]
+	dup	v0.4s, v1.4s[3]
+	dup	v0.4s, v1.4s[4]
+	dup	v0.4s, v1.4s[65]
+
+	dup	v0.8h, v1.8h[-1]
+	dup	v0.8h, v1.8h[0]
+	dup	v0.8h, v1.8h[7]
+	dup	v0.8h, v1.8h[8]
+	dup	v0.8h, v1.8h[66]
+
+	dup	v0.16b, v1.16b[-1]
+	dup	v0.16b, v1.16b[0]
+	dup	v0.16b, v1.16b[15]
+	dup	v0.16b, v1.16b[16]
+	dup	v0.16b, v1.16b[67]
+
+	ld2	{v0.d, v1.d}[-1], [x0]
+	ld2	{v0.d, v1.d}[0], [x0]
+	ld2	{v0.d, v1.d}[1], [x0]
+	ld2	{v0.d, v1.d}[2], [x0]
+	ld2	{v0.d, v1.d}[64], [x0]
+
+	ld2	{v0.s, v1.s}[-1], [x0]
+	ld2	{v0.s, v1.s}[0], [x0]
+	ld2	{v0.s, v1.s}[3], [x0]
+	ld2	{v0.s, v1.s}[4], [x0]
+	ld2	{v0.s, v1.s}[65], [x0]
+
+	ld2	{v0.h, v1.h}[-1], [x0]
+	ld2	{v0.h, v1.h}[0], [x0]
+	ld2	{v0.h, v1.h}[7], [x0]
+	ld2	{v0.h, v1.h}[8], [x0]
+	ld2	{v0.h, v1.h}[66], [x0]
+
+	ld2	{v0.b, v1.b}[-1], [x0]
+	ld2	{v0.b, v1.b}[0], [x0]
+	ld2	{v0.b, v1.b}[15], [x0]
+	ld2	{v0.b, v1.b}[16], [x0]
+	ld2	{v0.b, v1.b}[67], [x0]

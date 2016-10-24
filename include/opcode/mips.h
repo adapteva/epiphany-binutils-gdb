@@ -1,5 +1,5 @@
 /* mips.h.  Mips opcode list for GDB, the GNU debugger.
-   Copyright (C) 1993-2014 Free Software Foundation, Inc.
+   Copyright (C) 1993-2016 Free Software Foundation, Inc.
    Contributed by Ralph Campbell and OSF
    Commented and modified by Ian Lance Taylor, Cygnus Support
 
@@ -24,6 +24,10 @@
 #define _MIPS_H_
 
 #include "bfd.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* These are bit masks and shift counts to use to access the various
    fields of an instruction.  To retrieve the X field of an
@@ -1196,6 +1200,7 @@ static const unsigned int mips_isa_table[] = {
 #define INSN_OCTEON		  0x00000800
 #define INSN_OCTEONP		  0x00000200
 #define INSN_OCTEON2		  0x00000100
+#define INSN_OCTEON3		  0x00000040
 
 /* MIPS R5900 instruction */
 #define INSN_5900                 0x00004000
@@ -1255,6 +1260,7 @@ static const unsigned int mips_isa_table[] = {
 #define ASE_MSA64		0x00001000
 /* eXtended Physical Address (XPA) Extension.  */
 #define ASE_XPA			0x00002000
+#define ASE_DSPR3		0x00004000
 
 /* MIPS ISA defines, use instead of hardcoding ISA level.  */
 
@@ -1323,6 +1329,7 @@ static const unsigned int mips_isa_table[] = {
 #define CPU_OCTEON	6501
 #define CPU_OCTEONP	6601
 #define CPU_OCTEON2	6502
+#define CPU_OCTEON3	6503
 #define CPU_XLR     	887682   	/* decimal 'XLR'   */
 
 /* Return true if the given CPU is included in INSN_* mask MASK.  */
@@ -1387,6 +1394,9 @@ cpu_is_member (int cpu, unsigned int mask)
 
     case CPU_OCTEON2:
       return (mask & INSN_OCTEON2) != 0;
+
+    case CPU_OCTEON3:
+      return (mask & INSN_OCTEON3) != 0;
 
     case CPU_XLR:
       return (mask & INSN_XLR) != 0;
@@ -1820,6 +1830,12 @@ extern int bfd_mips_num_opcodes;
    "E" 5 bit PC relative address * 4 (MIPS16OP_*_IMM5)
    "m" 7 bit register list for save instruction (18 bit extended)
    "M" 7 bit register list for restore instruction (18 bit extended)
+
+   Characters used so far, for quick reference when adding more:
+   "   456 8 0"
+   "[]<>"
+   "ABCDE  HI KLM  P RS UVWXYZ"
+   "a   e   ijklm  pq    vwxyz"
   */
 
 /* Save/restore encoding for the args field when all 4 registers are
@@ -2271,5 +2287,9 @@ extern const int bfd_micromips_num_opcodes;
 /* A NOP insn impemented as "or at,at,zero".
    Used to implement -mfix-loongson2f.  */
 #define LOONGSON2F_NOP_INSN	0x00200825
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _MIPS_H_ */

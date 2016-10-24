@@ -1,6 +1,6 @@
 /* BSD user-level threads support.
 
-   Copyright (C) 2005-2014 Free Software Foundation, Inc.
+   Copyright (C) 2005-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -68,7 +68,9 @@ bsd_uthread_set_supply_uthread (struct gdbarch *gdbarch,
 				void (*supply_uthread) (struct regcache *,
 							int, CORE_ADDR))
 {
-  struct bsd_uthread_ops *ops = gdbarch_data (gdbarch, bsd_uthread_data);
+  struct bsd_uthread_ops *ops
+    = (struct bsd_uthread_ops *) gdbarch_data (gdbarch, bsd_uthread_data);
+
   ops->supply_uthread = supply_uthread;
 }
 
@@ -80,7 +82,9 @@ bsd_uthread_set_collect_uthread (struct gdbarch *gdbarch,
 			 void (*collect_uthread) (const struct regcache *,
 						  int, CORE_ADDR))
 {
-  struct bsd_uthread_ops *ops = gdbarch_data (gdbarch, bsd_uthread_data);
+  struct bsd_uthread_ops *ops
+    = (struct bsd_uthread_ops *) gdbarch_data (gdbarch, bsd_uthread_data);
+
   ops->collect_uthread = collect_uthread;
 }
 
@@ -161,7 +165,8 @@ static int
 bsd_uthread_activate (struct objfile *objfile)
 {
   struct gdbarch *gdbarch = target_gdbarch ();
-  struct bsd_uthread_ops *ops = gdbarch_data (gdbarch, bsd_uthread_data);
+  struct bsd_uthread_ops *ops
+    = (struct bsd_uthread_ops *) gdbarch_data (gdbarch, bsd_uthread_data);
 
   /* Skip if the thread stratum has already been activated.  */
   if (bsd_uthread_active)
@@ -247,7 +252,7 @@ bsd_uthread_solib_loaded (struct so_list *so)
 
   for (names = bsd_uthread_solib_names; *names; names++)
     {
-      if (strncmp (so->so_original_name, *names, strlen (*names)) == 0)
+      if (startswith (so->so_original_name, *names))
 	{
 	  solib_read_symbols (so, 0);
 
@@ -283,7 +288,8 @@ bsd_uthread_fetch_registers (struct target_ops *ops,
 			     struct regcache *regcache, int regnum)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct bsd_uthread_ops *uthread_ops = gdbarch_data (gdbarch, bsd_uthread_data);
+  struct bsd_uthread_ops *uthread_ops
+    = (struct bsd_uthread_ops *) gdbarch_data (gdbarch, bsd_uthread_data);
   CORE_ADDR addr = ptid_get_tid (inferior_ptid);
   struct target_ops *beneath = find_target_beneath (ops);
   CORE_ADDR active_addr;
@@ -310,7 +316,8 @@ bsd_uthread_store_registers (struct target_ops *ops,
 			     struct regcache *regcache, int regnum)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct bsd_uthread_ops *uthread_ops = gdbarch_data (gdbarch, bsd_uthread_data);
+  struct bsd_uthread_ops *uthread_ops
+    = (struct bsd_uthread_ops *) gdbarch_data (gdbarch, bsd_uthread_data);
   struct target_ops *beneath = find_target_beneath (ops);
   CORE_ADDR addr = ptid_get_tid (inferior_ptid);
   CORE_ADDR active_addr;
@@ -412,11 +419,13 @@ bsd_uthread_thread_alive (struct target_ops *ops, ptid_t ptid)
 }
 
 static void
-bsd_uthread_find_new_threads (struct target_ops *ops)
+bsd_uthread_update_thread_list (struct target_ops *ops)
 {
   pid_t pid = ptid_get_pid (inferior_ptid);
   int offset = bsd_uthread_thread_next_offset;
   CORE_ADDR addr;
+
+  prune_threads ();
 
   addr = bsd_uthread_read_memory_address (bsd_uthread_thread_list_addr);
   while (addr != 0)
@@ -516,7 +525,7 @@ bsd_uthread_target (void)
   t->to_wait = bsd_uthread_wait;
   t->to_resume = bsd_uthread_resume;
   t->to_thread_alive = bsd_uthread_thread_alive;
-  t->to_find_new_threads = bsd_uthread_find_new_threads;
+  t->to_update_thread_list = bsd_uthread_update_thread_list;
   t->to_extra_thread_info = bsd_uthread_extra_thread_info;
   t->to_pid_to_str = bsd_uthread_pid_to_str;
   t->to_stratum = thread_stratum;

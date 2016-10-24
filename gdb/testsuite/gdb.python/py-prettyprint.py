@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2014 Free Software Foundation, Inc.
+# Copyright (C) 2008-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -152,10 +152,20 @@ class pp_ls (object):
         self.val = val
 
     def to_string(self):
+        length = self.val['len']
         if pp_ls_encoding is not None:
-            return self.val['lazy_str'].lazy_string(encoding = pp_ls_encoding)
+            if length >= 0:
+                return self.val['lazy_str'].lazy_string(
+                        encoding = pp_ls_encoding,
+                        length = length)
+            else:
+                return self.val['lazy_str'].lazy_string(
+                        encoding = pp_ls_encoding)
         else:
-            return self.val['lazy_str'].lazy_string()
+            if length >= 0:
+                return self.val['lazy_str'].lazy_string(length = length)
+            else:
+                return self.val['lazy_str'].lazy_string()
 
     def display_hint (self):
         return 'string'

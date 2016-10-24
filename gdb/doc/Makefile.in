@@ -1,4 +1,4 @@
-##Copyright (C) 1991-2014 Free Software Foundation, Inc.
+##Copyright (C) 1991-2016 Free Software Foundation, Inc.
 
 # Makefile for GDB documentation.
 # This file is part of GDB.
@@ -143,7 +143,9 @@ GDB_DOC_FILES = \
 # Stabs manual: All files
 STABS_DOC_SOURCE_INCLUDES = \
 	$(srcdir)/fdl.texi
-STABS_DOC_BUILD_INCLUDES =
+STABS_DOC_BUILD_INCLUDES = \
+	gdb-cfg.texi \
+	GDBvn.texi
 STABS_DOC_FILES = \
 	$(srcdir)/stabs.texinfo \
 	$(STABS_DOC_SOURCE_INCLUDES) \

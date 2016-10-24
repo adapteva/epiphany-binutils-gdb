@@ -1,6 +1,6 @@
 /* Exception (throw catch) mechanism, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,7 +20,7 @@
 #ifndef COMMON_EXCEPTIONS_H
 #define COMMON_EXCEPTIONS_H
 
-#include "gdb_setjmp.h"
+#include <setjmp.h>
 
 /* Reasons for calling throw_exceptions().  NOTE: all reason values
    must be less than zero.  enum value 0 is reserved for internal use
@@ -99,6 +99,12 @@ enum errors {
   /* Requested feature, method, mechanism, etc. is not supported.  */
   NOT_SUPPORTED_ERROR,
 
+  /* The number of candidates generated during line completion has
+     reached the user's specified limit.  This isn't an error, this exception
+     is used to halt searching for more completions, but for consistency
+     "_ERROR" is appended to the name.  */
+  MAX_COMPLETIONS_REACHED_ERROR,
+
   /* Add more errors here.  */
   NR_ERRORS
 };
@@ -110,16 +116,44 @@ struct gdb_exception
   const char *message;
 };
 
-/* Functions to drive the exceptions state machine.  Though declared
-   here by necessity, these functions should be considered internal to
-   the exceptions subsystem and not used other than via the TRY_CATCH
-   macro defined below.  */
+/* The different exception mechanisms that TRY/CATCH can map to.  */
 
-extern SIGJMP_BUF *exceptions_state_mc_init (volatile struct
-					     gdb_exception *exception,
-					     return_mask mask);
+/* Make GDB exceptions use setjmp/longjmp behind the scenes.  This is
+   the only mode supported when GDB is built as a C program.  */
+#define GDB_XCPT_SJMP 1
+
+/* Make GDB exceptions use try/catch behind the scenes.  */
+#define GDB_XCPT_TRY 2
+
+/* Specify this mode to build with TRY/CATCH mapped directly to raw
+   try/catch.  GDB won't work correctly, but building that way catches
+   code tryin to break/continue out of the try block, along with
+   spurious code between the TRY and the CATCH block.  */
+#define GDB_XCPT_RAW_TRY 3
+
+#ifdef __cplusplus
+# define GDB_XCPT GDB_XCPT_TRY
+#else
+# define GDB_XCPT GDB_XCPT_SJMP
+#endif
+
+/* Functions to drive the sjlj-based exceptions state machine.  Though
+   declared here by necessity, these functions should be considered
+   internal to the exceptions subsystem and not used other than via
+   the TRY/CATCH (or TRY_SJLJ/CATCH_SJLJ) macros defined below.  */
+
+extern jmp_buf *exceptions_state_mc_init (void);
 extern int exceptions_state_mc_action_iter (void);
 extern int exceptions_state_mc_action_iter_1 (void);
+extern int exceptions_state_mc_catch (struct gdb_exception *, int);
+
+/* Same, but for the C++ try/catch-based TRY/CATCH mechanism.  */
+
+#if GDB_XCPT != GDB_XCPT_SJMP
+extern void *exception_try_scope_entry (void);
+extern void exception_try_scope_exit (void *saved_state);
+extern void exception_rethrow (void);
+#endif
 
 /* Macro to wrap up standard try/catch behavior.
 
@@ -132,47 +166,142 @@ extern int exceptions_state_mc_action_iter_1 (void);
 
    *INDENT-OFF*
 
-   volatile struct gdb_exception e;
-   TRY_CATCH (e, RETURN_MASK_ERROR)
+   TRY
      {
      }
-   switch (e.reason)
+   CATCH (e, RETURN_MASK_ERROR)
      {
-     case RETURN_ERROR: ...
+       switch (e.reason)
+         {
+           case RETURN_ERROR: ...
+         }
      }
+   END_CATCH
 
-  */
+  Note that the SJLJ version of the macros are actually named
+  TRY_SJLJ/CATCH_SJLJ in order to make it possible to call them even
+  when TRY/CATCH are mapped to C++ try/catch.  The SJLJ variants are
+  needed in some cases where gdb exceptions need to cross third-party
+  library code compiled without exceptions support (e.g.,
+  readline).  */
 
-#define TRY_CATCH(EXCEPTION,MASK) \
+#define TRY_SJLJ \
      { \
-       SIGJMP_BUF *buf = \
-	 exceptions_state_mc_init (&(EXCEPTION), (MASK)); \
-       SIGSETJMP (*buf); \
+       jmp_buf *buf = \
+	 exceptions_state_mc_init (); \
+       setjmp (*buf); \
      } \
      while (exceptions_state_mc_action_iter ()) \
        while (exceptions_state_mc_action_iter_1 ())
 
+#define CATCH_SJLJ(EXCEPTION, MASK)				\
+  {							\
+    struct gdb_exception EXCEPTION;				\
+    if (exceptions_state_mc_catch (&(EXCEPTION), MASK))
+
+#define END_CATCH_SJLJ				\
+  }
+
+#if GDB_XCPT == GDB_XCPT_SJMP
+
+/* If using SJLJ-based exceptions for all exceptions, then provide
+   standard aliases.  */
+
+#define TRY TRY_SJLJ
+#define CATCH CATCH_SJLJ
+#define END_CATCH END_CATCH_SJLJ
+
+#endif /* GDB_XCPT_SJMP */
+
+#if GDB_XCPT == GDB_XCPT_TRY || GDB_XCPT == GDB_XCPT_RAW_TRY
+
+/* Prevent error/quit during TRY from calling cleanups established
+   prior to here.  This pops out the scope in either case of normal
+   exit or exception exit.  */
+struct exception_try_scope
+{
+  exception_try_scope ()
+  {
+    saved_state = exception_try_scope_entry ();
+  }
+  ~exception_try_scope ()
+  {
+    exception_try_scope_exit (saved_state);
+  }
+
+  void *saved_state;
+};
+
+#if GDB_XCPT == GDB_XCPT_TRY
+
+/* We still need to wrap TRY/CATCH in C++ so that cleanups and C++
+   exceptions can coexist.  The TRY blocked is wrapped in a
+   do/while(0) so that break/continue within the block works the same
+   as in C.  */
+#define TRY								\
+  try									\
+    {									\
+      exception_try_scope exception_try_scope_instance;			\
+      do								\
+	{
+
+#define CATCH(EXCEPTION, MASK)						\
+	} while (0);							\
+    }								        \
+  catch (struct gdb_exception ## _ ## MASK &EXCEPTION)
+
+#define END_CATCH				\
+  catch (...)					\
+  {						\
+    exception_rethrow ();			\
+  }
+
+#else
+
+#define TRY try
+#define CATCH(EXCEPTION, MASK) \
+  catch (struct gdb_exception ## _ ## MASK &EXCEPTION)
+#define END_CATCH
+
+#endif
+
+/* The exception types client code may catch.  They're just shims
+   around gdb_exception that add nothing but type info.  Which is used
+   is selected depending on the MASK argument passed to CATCH.  */
+
+struct gdb_exception_RETURN_MASK_ALL : public gdb_exception
+{
+};
+
+struct gdb_exception_RETURN_MASK_ERROR : public gdb_exception_RETURN_MASK_ALL
+{
+};
+
+struct gdb_exception_RETURN_MASK_QUIT : public gdb_exception_RETURN_MASK_ALL
+{
+};
+
+#endif /* GDB_XCPT_TRY || GDB_XCPT_RAW_TRY */
+
 /* *INDENT-ON* */
 
-/* Hook to allow client-specific actions to be performed prior to
-   throwing an exception.  This function must be provided by the
-   client, and will be called before any cleanups are run.  */
-
-extern void prepare_to_throw_exception (void);
-
-/* Throw an exception (as described by "struct gdb_exception").  Will
-   execute a LONG JUMP to the inner most containing exception handler
-   established using catch_exceptions() (or similar).
-
-   Code normally throws an exception using error() et.al.  For various
-   reaons, GDB also contains code that throws an exception directly.
-   For instance, the remote*.c targets contain CNTRL-C signal handlers
-   that propogate the QUIT event up the exception chain.  ``This could
-   be a good thing or a dangerous thing.'' -- the Existential
-   Wombat.  */
-
+/* Throw an exception (as described by "struct gdb_exception").  When
+   GDB is built as a C program, executes a LONG JUMP to the inner most
+   containing exception handler established using TRY/CATCH.  When
+   built as a C++ program, throws a C++ exception, using "throw".  */
 extern void throw_exception (struct gdb_exception exception)
      ATTRIBUTE_NORETURN;
+
+/* Throw an exception by executing a LONG JUMP to the inner most
+   containing exception handler established using TRY_SJLJ.  Works the
+   same regardless of whether GDB is built as a C program or a C++
+   program.  Necessary in some cases where we need to throw GDB
+   exceptions across third-party library code (e.g., readline).  */
+extern void throw_exception_sjlj (struct gdb_exception exception)
+     ATTRIBUTE_NORETURN;
+
+/* Convenience wrappers around throw_exception that throw GDB
+   errors.  */
 extern void throw_verror (enum errors, const char *fmt, va_list ap)
      ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (2, 0);
 extern void throw_vquit (const char *fmt, va_list ap)
@@ -181,5 +310,8 @@ extern void throw_error (enum errors error, const char *fmt, ...)
      ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (2, 3);
 extern void throw_quit (const char *fmt, ...)
      ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (1, 2);
+
+/* A pre-defined non-exception.  */
+extern const struct gdb_exception exception_none;
 
 #endif /* COMMON_EXCEPTIONS_H */

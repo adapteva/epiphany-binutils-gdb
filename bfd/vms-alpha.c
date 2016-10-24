@@ -1,5 +1,5 @@
 /* vms.c -- BFD back-end for EVAX (openVMS/Alpha) files.
-   Copyright (C) 1996-2014 Free Software Foundation, Inc.
+   Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
    Initial version written by Klaus Kaempf (kkaempf@rmi.de)
    Major rewrite by Adacore.
@@ -367,7 +367,7 @@ struct vms_section_data_struct
 struct vms_private_data_struct *bfd_vms_get_data (bfd *);
 
 static int vms_get_remaining_object_record (bfd *, unsigned int);
-static bfd_boolean _bfd_vms_slurp_object_records (bfd *);
+static bfd_boolean _bfd_vms_slurp_object_records (bfd * abfd);
 static void alpha_vms_add_fixup_lp (struct bfd_link_info *, bfd *, bfd *);
 static void alpha_vms_add_fixup_ca (struct bfd_link_info *, bfd *, bfd *);
 static void alpha_vms_add_fixup_qr (struct bfd_link_info *, bfd *, bfd *,
@@ -526,7 +526,6 @@ _bfd_vms_slurp_eisd (bfd *abfd, unsigned int offset)
 	return FALSE;
       eisd = (struct vms_eisd *)(PRIV (recrd.rec) + offset);
       rec_size = bfd_getl32 (eisd->eisdsize);
-
       if (rec_size == 0)
         break;
 
@@ -1642,9 +1641,8 @@ _bfd_vms_get_value (bfd *abfd, const unsigned char *ascic,
     *vma = 0;
   else
     {
-      if (!(*info->callbacks->undefined_symbol)
-          (info, name, abfd, PRIV (image_section), PRIV (image_offset), TRUE))
-        abort ();
+      (*info->callbacks->undefined_symbol)
+	(info, name, abfd, PRIV (image_section), PRIV (image_offset), TRUE);
       *vma = 0;
     }
 }
@@ -8203,7 +8201,7 @@ alpha_vms_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 	 to include it.  We don't need to check anything.  */
       if (!(*info->callbacks
 	    ->add_archive_element) (info, element, h->root.string, &element))
-	return FALSE;
+	continue;
       if (!alpha_vms_link_add_object_symbols (element, info))
 	return FALSE;
 
@@ -8598,7 +8596,7 @@ alpha_vms_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
   asection *dst;
   asection *dmt;
 
-  if (info->relocatable)
+  if (bfd_link_relocatable (info))
     {
       /* FIXME: we do not yet support relocatable link.  It is not obvious
          how to do it for debug infos.  */
@@ -9014,13 +9012,13 @@ vms_new_section_hook (bfd * abfd, asection *section)
 {
   bfd_size_type amt;
 
-  vms_debug2 ((1, "vms_new_section_hook (%p, [%d]%s)\n",
+  vms_debug2 ((1, "vms_new_section_hook (%p, [%u]%s)\n",
                abfd, section->index, section->name));
 
   if (! bfd_set_section_alignment (abfd, section, 0))
     return FALSE;
 
-  vms_debug2 ((7, "%d: %s\n", section->index, section->name));
+  vms_debug2 ((7, "%u: %s\n", section->index, section->name));
 
   amt = sizeof (struct vms_section_data_struct);
   section->used_by_bfd = bfd_zalloc (abfd, amt);
@@ -9261,6 +9259,7 @@ bfd_vms_get_data (bfd *abfd)
   _bfd_nodynamic_get_dynamic_reloc_upper_bound
 #define alpha_vms_canonicalize_dynamic_reloc \
   _bfd_nodynamic_canonicalize_dynamic_reloc
+#define alpha_vms_bfd_link_check_relocs              _bfd_generic_link_check_relocs
 
 const bfd_target alpha_vms_vec =
 {

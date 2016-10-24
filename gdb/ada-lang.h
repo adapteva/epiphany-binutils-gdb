@@ -1,6 +1,6 @@
 /* Ada language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2014 Free Software Foundation, Inc.
+   Copyright (C) 1992-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,11 +34,7 @@ struct parser_state;
    system and that might consider (confusing) debugging information.
    Each name (a basic regular expression string) is followed by a
    comma.  FIXME: Should be part of a configuration file.  */
-#if defined(__alpha__) && defined(__osf__)
-#define ADA_KNOWN_RUNTIME_FILE_NAME_PATTERNS \
-   "^[agis]-.*\\.ad[bs]$", \
-   "/usr/shlib/libpthread\\.so",
-#elif defined (__linux__)
+#if defined (__linux__)
 #define ADA_KNOWN_RUNTIME_FILE_NAME_PATTERNS \
    "^[agis]-.*\\.ad[bs]$", \
    "/lib.*/libpthread\\.so[.0-9]*$", "/lib.*/libpthread\\.a$", \
@@ -82,17 +78,6 @@ struct ada_opname_map
 /* Table of Ada operators in encoded and decoded forms.  */
 /* Defined in ada-lang.c */
 extern const struct ada_opname_map ada_opname_table[];
-
-/* A tuple representing one instance of a symbol-lookup operation.  */
-
-struct ada_symbol_info
-{
-  /* The symbol that was found.  */
-  struct symbol *sym;
-
-  /* The block where the symbol was found.  */
-  const struct block *block;
-};
 
 /* Denotes a type of renaming symbol (see ada_parse_renaming).  */
 enum ada_renaming_category
@@ -162,9 +147,11 @@ struct ada_task_info
    least M objects, updating V and S as necessary.  */
 
 #define GROW_VECT(v, s, m)                                    \
-   if ((s) < (m)) (v) = grow_vect (v, &(s), m, sizeof *(v));
+   if ((s) < (m)) (v) = (char *) grow_vect (v, &(s), m, sizeof *(v));
 
 extern void *grow_vect (void *, size_t *, size_t, int);
+
+extern void ada_ensure_varsize_limit (const struct type *type);
 
 extern int ada_get_field_index (const struct type *type,
                                 const char *field_name,
@@ -172,7 +159,7 @@ extern int ada_get_field_index (const struct type *type,
 
 extern int ada_parse (struct parser_state *);    /* Defined in ada-exp.y */
 
-extern void ada_error (char *); /* Defined in ada-exp.y */
+extern void ada_yyerror (char *); /* Defined in ada-exp.y */
 
                         /* Defined in ada-typeprint.c */
 extern void ada_print_type (struct type *, const char *, struct ui_file *, int,
@@ -238,22 +225,23 @@ extern const char *ada_decode (const char*);
 extern enum language ada_update_initial_language (enum language);
 
 extern int ada_lookup_symbol_list (const char *, const struct block *,
-                                   domain_enum, struct ada_symbol_info**);
+                                   domain_enum, struct block_symbol**);
 
 extern char *ada_fold_name (const char *);
 
-extern struct symbol *ada_lookup_symbol (const char *, const struct block *,
-                                         domain_enum, int *);
+extern struct block_symbol ada_lookup_symbol (const char *,
+					      const struct block *,
+					      domain_enum, int *);
 
 extern void ada_lookup_encoded_symbol
-  (const char *name, const struct block *block, domain_enum namespace,
-   struct ada_symbol_info *symbol_info);
+  (const char *name, const struct block *block, domain_enum domain,
+   struct block_symbol *symbol_info);
 
 extern struct bound_minimal_symbol ada_lookup_simple_minsym (const char *);
 
 extern void ada_fill_in_ada_prototype (struct symbol *);
 
-extern int user_select_syms (struct ada_symbol_info *, int, int);
+extern int user_select_syms (struct block_symbol *, int, int);
 
 extern int get_selections (int *, int, int, int, char *);
 

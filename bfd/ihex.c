@@ -1,5 +1,5 @@
 /* BFD back-end for Intel Hex objects.
-   Copyright (C) 1995-2014 Free Software Foundation, Inc.
+   Copyright (C) 1995-2016 Free Software Foundation, Inc.
    Written by Ian Lance Taylor of Cygnus Support <ian@cygnus.com>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -219,7 +219,7 @@ ihex_bad_byte (bfd *abfd, unsigned int lineno, int c, bfd_boolean error)
       char buf[10];
 
       if (! ISPRINT (c))
-	sprintf (buf, "\\%03o", (unsigned int) c);
+	sprintf (buf, "\\%03o", (unsigned int) c & 0xff);
       else
 	{
 	  buf[0] = c;
@@ -276,7 +276,7 @@ ihex_scan (bfd *abfd)
       else
 	{
 	  file_ptr pos;
-	  char hdr[8];
+	  unsigned char hdr[8];
 	  unsigned int i;
 	  unsigned int len;
 	  bfd_vma addr;
@@ -553,7 +553,7 @@ ihex_read_section (bfd *abfd, asection *section, bfd_byte *contents)
   error = FALSE;
   while ((c = ihex_get_byte (abfd, &error)) != EOF)
     {
-      char hdr[8];
+      unsigned char hdr[8];
       unsigned int len;
       unsigned int type;
       unsigned int i;
@@ -918,6 +918,7 @@ ihex_sizeof_headers (bfd *abfd ATTRIBUTE_UNUSED,
 #define ihex_make_empty_symbol                    _bfd_generic_make_empty_symbol
 #define ihex_print_symbol                         _bfd_nosymbols_print_symbol
 #define ihex_get_symbol_info                      _bfd_nosymbols_get_symbol_info
+#define ihex_get_symbol_version_string		  _bfd_nosymbols_get_symbol_version_string
 #define ihex_bfd_is_target_special_symbol         ((bfd_boolean (*) (bfd *, asymbol *)) bfd_false)
 #define ihex_bfd_is_local_label_name              _bfd_nosymbols_bfd_is_local_label_name
 #define ihex_get_lineno                           _bfd_nosymbols_get_lineno
@@ -939,10 +940,10 @@ ihex_sizeof_headers (bfd *abfd ATTRIBUTE_UNUSED,
 #define ihex_bfd_link_hash_table_create           _bfd_generic_link_hash_table_create
 #define ihex_bfd_link_add_symbols                 _bfd_generic_link_add_symbols
 #define ihex_bfd_link_just_syms                   _bfd_generic_link_just_syms
-#define ihex_bfd_copy_link_hash_symbol_type \
-  _bfd_generic_copy_link_hash_symbol_type
+#define ihex_bfd_copy_link_hash_symbol_type       _bfd_generic_copy_link_hash_symbol_type
 #define ihex_bfd_final_link                       _bfd_generic_final_link
 #define ihex_bfd_link_split_section               _bfd_generic_link_split_section
+#define ihex_bfd_link_check_relocs                _bfd_generic_link_check_relocs
 
 /* The Intel Hex target vector.  */
 

@@ -1,6 +1,6 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2014 Free Software Foundation, Inc.
+   Copyright (C) 1998-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -68,14 +68,21 @@ extern gdbarch_convert_from_func_ptr_addr_ftype convert_from_func_ptr_addr_ident
 
 extern int no_op_reg_to_regnum (struct gdbarch *gdbarch, int reg);
 
-/* Do nothing version of elf_make_msymbol_special.  */
-
-void default_elf_make_msymbol_special (asymbol *sym,
-				       struct minimal_symbol *msym);
-
 /* Do nothing version of coff_make_msymbol_special.  */
 
 void default_coff_make_msymbol_special (int val, struct minimal_symbol *msym);
+
+/* Do nothing default implementation of gdbarch_make_symbol_special.  */
+
+void default_make_symbol_special (struct symbol *sym, struct objfile *objfile);
+
+/* Do nothing default implementation of gdbarch_adjust_dwarf2_addr.  */
+
+CORE_ADDR default_adjust_dwarf2_addr (CORE_ADDR pc);
+
+/* Do nothing default implementation of gdbarch_adjust_dwarf2_line.  */
+
+CORE_ADDR default_adjust_dwarf2_line (CORE_ADDR addr, int rel);
 
 /* Version of cannot_fetch_register() / cannot_store_register() that
    always fails.  */
@@ -97,8 +104,11 @@ extern CORE_ADDR generic_skip_solib_resolver (struct gdbarch *gdbarch,
 extern int generic_in_solib_return_trampoline (struct gdbarch *gdbarch,
 					       CORE_ADDR pc, const char *name);
 
-extern int generic_in_function_epilogue_p (struct gdbarch *gdbarch,
-					   CORE_ADDR pc);
+extern int generic_stack_frame_destroyed_p (struct gdbarch *gdbarch,
+					    CORE_ADDR pc);
+
+extern int default_code_of_frame_writable (struct gdbarch *gdbarch,
+					   struct frame_info *frame);
 
 /* By default, registers are not convertible.  */
 extern int generic_convert_register_p (struct gdbarch *gdbarch, int regnum,
@@ -154,8 +164,7 @@ extern struct gdbarch *get_current_arch (void);
 extern int default_has_shared_address_space (struct gdbarch *);
 
 extern int default_fast_tracepoint_valid_at (struct gdbarch *gdbarch,
-					     CORE_ADDR addr,
-					     int *isize, char **msg);
+					     CORE_ADDR addr, char **msg);
 
 extern void default_remote_breakpoint_from_pc (struct gdbarch *,
 					       CORE_ADDR *pcptr, int *kindptr);
@@ -178,4 +187,28 @@ extern int default_insn_is_jump (struct gdbarch *, CORE_ADDR);
 /* Do-nothing version of vsyscall_range.  Returns false.  */
 
 extern int default_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range);
+
+/* Default way to advance the PC to the next instruction in order to
+   skip a permanent breakpoint.  Increments the PC by the size of a
+   software breakpoint instruction, as determined with
+   gdbarch_breakpoint_from_pc.  This matches how the breakpoints
+   module determines whether a breakpoint is permanent.  */
+extern void default_skip_permanent_breakpoint (struct regcache *regcache);
+
+/* Symbols for gdbarch_infcall_mmap; their Linux PROT_* system
+   definitions would be dependent on compilation host.  */
+#define GDB_MMAP_PROT_READ	0x1	/* Page can be read.  */
+#define GDB_MMAP_PROT_WRITE	0x2	/* Page can be written.  */
+#define GDB_MMAP_PROT_EXEC	0x4	/* Page can be executed.  */
+
+extern CORE_ADDR default_infcall_mmap (CORE_ADDR size, unsigned prot);
+extern void default_infcall_munmap (CORE_ADDR addr, CORE_ADDR size);
+extern char *default_gcc_target_options (struct gdbarch *gdbarch);
+extern const char *default_gnu_triplet_regexp (struct gdbarch *gdbarch);
+extern int default_addressable_memory_unit_size (struct gdbarch *gdbarch);
+
+extern void default_guess_tracepoint_registers (struct gdbarch *gdbarch,
+						struct regcache *regcache,
+						CORE_ADDR addr);
+
 #endif

@@ -1,6 +1,6 @@
 /* Target-dependent code for ARM BSD's.
 
-   Copyright (C) 2006-2014 Free Software Foundation, Inc.
+   Copyright (C) 2006-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -50,7 +50,7 @@ armbsd_supply_fpregset (const struct regset *regset,
 			struct regcache *regcache,
 			int regnum, const void *fpregs, size_t len)
 {
-  const gdb_byte *regs = fpregs;
+  const gdb_byte *regs = (const gdb_byte *) fpregs;
   int i;
 
   gdb_assert (len >= ARMBSD_SIZEOF_FPREGS);
@@ -71,7 +71,7 @@ armbsd_supply_gregset (const struct regset *regset,
 		       struct regcache *regcache,
 		       int regnum, const void *gregs, size_t len)
 {
-  const gdb_byte *regs = gregs;
+  const gdb_byte *regs = (const gdb_byte *) gregs;
   int i;
 
   gdb_assert (len >= ARMBSD_SIZEOF_GREGS);
@@ -98,7 +98,9 @@ armbsd_supply_gregset (const struct regset *regset,
 static const struct regset armbsd_gregset =
 {
   NULL,
-  armbsd_supply_gregset
+  armbsd_supply_gregset,
+  NULL,
+  REGSET_VARIABLE_SIZE
 };
 
 static const struct regset armbsd_fpregset =

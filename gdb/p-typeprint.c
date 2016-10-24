@@ -1,5 +1,5 @@
 /* Support for printing Pascal types for GDB, the GNU debugger.
-   Copyright (C) 2000-2014 Free Software Foundation, Inc.
+   Copyright (C) 2000-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -55,7 +55,7 @@ pascal_print_type (struct type *type, const char *varstring,
   code = TYPE_CODE (type);
 
   if (show > 0)
-    CHECK_TYPEDEF (type);
+    type = check_typedef (type);
 
   if ((code == TYPE_CODE_FUNC
        || code == TYPE_CODE_METHOD))
@@ -96,7 +96,7 @@ void
 pascal_print_typedef (struct type *type, struct symbol *new_symbol,
 		      struct ui_file *stream)
 {
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
   fprintf_filtered (stream, "type ");
   fprintf_filtered (stream, "%s = ", SYMBOL_PRINT_NAME (new_symbol));
   type_print (type, "", stream, 0);
@@ -154,8 +154,8 @@ void
 pascal_type_print_method_args (const char *physname, const char *methodname,
 			       struct ui_file *stream)
 {
-  int is_constructor = (strncmp (physname, "__ct__", 6) == 0);
-  int is_destructor = (strncmp (physname, "__dt__", 6) == 0);
+  int is_constructor = (startswith (physname, "__ct__"));
+  int is_destructor = (startswith (physname, "__dt__"));
 
   if (is_constructor || is_destructor)
     {
@@ -239,7 +239,7 @@ pascal_type_print_varspec_prefix (struct type *type, struct ui_file *stream,
       if (passed_a_ptr)
 	{
 	  fprintf_filtered (stream, " ");
-	  pascal_type_print_base (TYPE_DOMAIN_TYPE (type),
+	  pascal_type_print_base (TYPE_SELF_TYPE (type),
 				  stream, 0, passed_a_ptr, flags);
 	  fprintf_filtered (stream, "::");
 	}
@@ -479,7 +479,7 @@ pascal_type_print_base (struct type *type, struct ui_file *stream, int show,
       return;
     }
 
-  CHECK_TYPEDEF (type);
+  type = check_typedef (type);
 
   switch (TYPE_CODE (type))
     {
@@ -567,7 +567,7 @@ pascal_type_print_base (struct type *type, struct ui_file *stream, int show,
 	    {
 	      QUIT;
 	      /* Don't print out virtual function table.  */
-	      if ((strncmp (TYPE_FIELD_NAME (type, i), "_vptr", 5) == 0)
+	      if ((startswith (TYPE_FIELD_NAME (type, i), "_vptr"))
 		  && is_cplus_marker ((TYPE_FIELD_NAME (type, i))[5]))
 		continue;
 
@@ -643,8 +643,8 @@ pascal_type_print_base (struct type *type, struct ui_file *stream, int show,
 		{
 		  const char *physname = TYPE_FN_FIELD_PHYSNAME (f, j);
 
-		  int is_constructor = (strncmp (physname, "__ct__", 6) == 0);
-		  int is_destructor = (strncmp (physname, "__dt__", 6) == 0);
+		  int is_constructor = (startswith (physname, "__ct__"));
+		  int is_destructor = (startswith (physname, "__dt__"));
 
 		  QUIT;
 		  if (TYPE_FN_FIELD_PROTECTED (f, j))

@@ -1,4 +1,4 @@
-@c Copyright (C) 2008-2014 Free Software Foundation, Inc.
+@c Copyright (C) 2008-2016 Free Software Foundation, Inc.
 @c Permission is granted to copy, distribute and/or modify this document
 @c under the terms of the GNU Free Documentation License, Version 1.3 or
 @c any later version published by the Free Software Foundation; with the
@@ -144,6 +144,7 @@ optional arguments while skipping others.  Example:
 * Frame Filter API::            Filtering Frames.
 * Frame Decorator API::         Decorating Frames.
 * Writing a Frame Filter::      Writing a Frame Filter.
+* Unwinding Frames in Python::  Writing frame unwinder.
 * Xmethods In Python::          Adding and replacing methods of C++ classes.
 * Xmethod API::                 Xmethod types.
 * Writing an Xmethod::          Writing an xmethod.
@@ -235,7 +236,10 @@ and height, and its pagination will be disabled; @pxref{Screen Size}.
 @findex gdb.breakpoints
 @defun gdb.breakpoints ()
 Return a sequence holding all of @value{GDBN}'s breakpoints.
-@xref{Breakpoints In Python}, for more information.
+@xref{Breakpoints In Python}, for more information.  In @value{GDBN}
+version 7.11 and earlier, this function returned @code{None} if there
+were no breakpoints.  This peculiarity was subsequently fixed, and now
+@code{gdb.breakpoints} returns an empty sequence in this case.
 @end defun
 
 @findex gdb.parameter
@@ -780,6 +784,16 @@ The @code{gdb.Value} object @code{py_val} is identical to that
 corresponding to @code{val}.
 @end defun
 
+@defun Value.reference_value ()
+Return a @code{gdb.Value} object which is a reference to the value
+encapsulated by this instance.
+@end defun
+
+@defun Value.const_value ()
+Return a @code{gdb.Value} object which is a @code{const} version of the
+value encapsulated by this instance.
+@end defun
+
 @defun Value.dynamic_cast (type)
 Like @code{Value.cast}, but works as if the C@t{++} @code{dynamic_cast}
 operator were used.  Consult a C@t{++} reference for details.
@@ -1059,6 +1073,11 @@ If @var{block} is given, then @var{name} is looked up in that scope.
 Otherwise, it is searched for globally.
 @end defun
 
+@defun Type.optimized_out ()
+Return @code{gdb.Value} instance of this type whose value is optimized
+out.  This allows a frame decorator to indicate that the value of an
+argument or a local variable is not known.
+@end defun
 
 Each type has a code, which indicates what category this type falls
 into.  The available type categories are represented by constants
@@ -2178,6 +2197,148 @@ printed hierarchically.  Another approach would be to combine the
 marker in the inlined frame, and also show the hierarchical
 relationship.
 
+@node Unwinding Frames in Python
+@subsubsection Unwinding Frames in Python
+@cindex unwinding frames in Python
+
+In @value{GDBN} terminology ``unwinding'' is the process of finding
+the previous frame (that is, caller's) from the current one.  An
+unwinder has three methods.  The first one checks if it can handle
+given frame (``sniff'' it).  For the frames it can sniff an unwinder
+provides two additional methods: it can return frame's ID, and it can
+fetch registers from the previous frame.  A running @value{GDBN}
+mantains a list of the unwinders and calls each unwinder's sniffer in
+turn until it finds the one that recognizes the current frame.  There
+is an API to register an unwinder.
+
+The unwinders that come with @value{GDBN} handle standard frames.
+However, mixed language applications (for example, an application
+running Java Virtual Machine) sometimes use frame layouts that cannot
+be handled by the @value{GDBN} unwinders.  You can write Python code
+that can handle such custom frames.
+
+You implement a frame unwinder in Python as a class with which has two
+attributes, @code{name} and @code{enabled}, with obvious meanings, and
+a single method @code{__call__}, which examines a given frame and
+returns an object (an instance of @code{gdb.UnwindInfo class)}
+describing it.  If an unwinder does not recognize a frame, it should
+return @code{None}.  The code in @value{GDBN} that enables writing
+unwinders in Python uses this object to return frame's ID and previous
+frame registers when @value{GDBN} core asks for them.
+
+@subheading Unwinder Input
+
+An object passed to an unwinder (a @code{gdb.PendingFrame} instance)
+provides a method to read frame's registers:
+
+@defun PendingFrame.read_register (reg)
+This method returns the contents of the register @var{regn} in the
+frame as a @code{gdb.Value} object.  @var{reg} can be either a
+register number or a register name; the values are platform-specific.
+They are usually found in the corresponding
+@file{@var{platform}-tdep.h} file in the @value{GDBN} source tree.
+@end defun
+
+It also provides a factory method to create a @code{gdb.UnwindInfo}
+instance to be returned to @value{GDBN}:
+
+@defun PendingFrame.create_unwind_info (frame_id)
+Returns a new @code{gdb.UnwindInfo} instance identified by given
+@var{frame_id}.  The argument is used to build @value{GDBN}'s frame ID
+using one of functions provided by @value{GDBN}.  @var{frame_id}'s attributes
+determine which function will be used, as follows:
+
+@table @code
+@item sp, pc, special
+@code{frame_id_build_special (@var{frame_id}.sp, @var{frame_id}.pc, @var{frame_id}.special)}
+
+@item sp, pc
+@code{frame_id_build (@var{frame_id}.sp, @var{frame_id}.pc)}
+
+This is the most common case.
+
+@item sp
+@code{frame_id_build_wild (@var{frame_id}.sp)}
+@end table
+The attribute values should be @code{gdb.Value}
+
+@end defun
+
+@subheading Unwinder Output: UnwindInfo
+
+Use @code{PendingFrame.create_unwind_info} method described above to
+create a @code{gdb.UnwindInfo} instance.  Use the following method to
+specify caller registers that have been saved in this frame:
+
+@defun gdb.UnwindInfo.add_saved_register (reg, value)
+@var{reg} identifies the register.  It can be a number or a name, just
+as for the @code{PendingFrame.read_register} method above.
+@var{value} is a register value (a @code{gdb.Value} object).
+@end defun
+
+@subheading Unwinder Skeleton Code
+
+@value{GDBN} comes with the module containing the base @code{Unwinder}
+class.  Derive your unwinder class from it and structure the code as
+follows:
+
+@smallexample
+from gdb.unwinders import Unwinder
+
+class FrameId(object):
+    def __init__(self, sp, pc):
+        self.sp = sp
+        self.pc = pc
+
+
+class MyUnwinder(Unwinder):
+    def __init__(....):
+        supe(MyUnwinder, self).__init___(<expects unwinder name argument>)
+
+    def __call__(pending_frame):
+        if not <we recognize frame>:
+            return None
+        # Create UnwindInfo.  Usually the frame is identified by the stack 
+        # pointer and the program counter.
+        sp = pending_frame.read_register(<SP number>)
+        pc = pending_frame.read_register(<PC number>)
+        unwind_info = pending_frame.create_unwind_info(FrameId(sp, pc))
+
+        # Find the values of the registers in the caller's frame and 
+        # save them in the result:
+        unwind_info.add_saved_register(<register>, <value>)
+        ....
+
+        # Return the result:
+        return unwind_info
+
+@end smallexample
+
+@subheading Registering a Unwinder
+
+An object file, a program space, and the @value{GDBN} proper can have
+unwinders registered with it.
+
+The @code{gdb.unwinders} module provides the function to register a
+unwinder:
+
+@defun gdb.unwinder.register_unwinder (locus, unwinder, replace=False)
+@var{locus} is specifies an object file or a program space to which
+@var{unwinder} is added.  Passing @code{None} or @code{gdb} adds
+@var{unwinder} to the @value{GDBN}'s global unwinder list.  The newly
+added @var{unwinder} will be called before any other unwinder from the
+same locus.  Two unwinders in the same locus cannot have the same
+name.  An attempt to add a unwinder with already existing name raises
+an exception unless @var{replace} is @code{True}, in which case the
+old unwinder is deleted.
+@end defun
+
+@subheading Unwinder Precedence
+
+@value{GDBN} first calls the unwinders from all the object files in no
+particular order, then the unwinders from the current program space,
+and finally the unwinders from @value{GDBN}.
+
 @node Xmethods In Python
 @subsubsection Xmethods In Python
 @cindex xmethods in Python
@@ -2217,7 +2378,7 @@ xmethod worker is found to be equivalent to the winning C@t{++}
 method, then the xmethod worker is treated as a replacement for
 the C@t{++} method.  @value{GDBN} uses the overall winner to invoke the
 method.  If the winning xmethod worker is the overall winner, then
-the corresponding xmethod is invoked via the @code{invoke} method
+the corresponding xmethod is invoked via the @code{__call__} method
 of the worker object.
 
 If one wants to implement an xmethod as a replacement for an
@@ -2305,6 +2466,13 @@ to the arguments that the xmethod takes.  It can return an empty
 sequence or @code{None} if the xmethod does not take any arguments.
 If the xmethod takes a single argument, then a single
 @code{gdb.Type} object corresponding to it can be returned.
+@end defun
+
+@defun XMethodWorker.get_result_type (self, *args)
+This method returns a @code{gdb.Type} object representing the type
+of the result of invoking this xmethod.
+The @var{args} argument is the same tuple of arguments that would be
+passed to the @code{__call__} method of this worker.
 @end defun
 
 @defun XMethodWorker.__call__ (self, *args)
@@ -2423,6 +2591,9 @@ above is as follows:
 class MyClassWorker_geta(gdb.xmethod.XMethodWorker):
     def get_arg_types(self):
         return None
+
+    def get_result_type(self, obj):
+        return gdb.lookup_type('int')
  
     def __call__(self, obj):
         return obj['a_']
@@ -2431,6 +2602,9 @@ class MyClassWorker_geta(gdb.xmethod.XMethodWorker):
 class MyClassWorker_plus(gdb.xmethod.XMethodWorker):
     def get_arg_types(self):
         return gdb.lookup_type('MyClass')
+
+    def get_result_type(self, obj):
+        return gdb.lookup_type('int')
  
     def __call__(self, obj, other):
         return obj['a_'] + other['a_']
@@ -2494,10 +2668,13 @@ of the xmethod workers and xmethod matchers is as follows:
 class MyTemplateWorker_footprint(gdb.xmethod.XMethodWorker):
     def __init__(self, class_type):
         self.class_type = class_type
- 
+
     def get_arg_types(self):
         return None
- 
+
+    def get_result_type(self):
+        return gdb.lookup_type('int')
+
     def __call__(self, obj):
         return (self.class_type.sizeof +
                 obj['dsize_'] *
@@ -2575,7 +2752,7 @@ return an empty tuple.
 
 @findex Inferior.read_memory
 @defun Inferior.read_memory (address, length)
-Read @var{length} bytes of memory from the inferior, starting at
+Read @var{length} addressable memory units from the inferior, starting at
 @var{address}.  Returns a buffer object, which behaves much like an array
 or a string.  It can be modified and given to the
 @code{Inferior.write_memory} function.  In @code{Python} 3, the return
@@ -2588,7 +2765,8 @@ Write the contents of @var{buffer} to the inferior, starting at
 @var{address}.  The @var{buffer} parameter must be a Python object
 which supports the buffer protocol, i.e., a string, an array or the
 object returned from @code{Inferior.read_memory}.  If given, @var{length}
-determines the number of bytes from @var{buffer} to be written.
+determines the number of addressable memory units from @var{buffer} to be
+written.
 @end defun
 
 @findex gdb.search_memory
@@ -2728,6 +2906,65 @@ A reference to the object file (@code{gdb.Objfile}) which has been loaded.
 @xref{Objfiles In Python}, for details of the @code{gdb.Objfile} object.
 @end defvar
 
+@item events.clear_objfiles
+Emits @code{gdb.ClearObjFilesEvent} which indicates that the list of object
+files for a program space has been reset.
+@code{gdb.ClearObjFilesEvent} has one attribute:
+
+@defvar ClearObjFilesEvent.progspace
+A reference to the program space (@code{gdb.Progspace}) whose objfile list has
+been cleared.  @xref{Progspaces In Python}.
+@end defvar
+
+@item events.inferior_call_pre
+Emits @code{gdb.InferiorCallPreEvent} which indicates that a function in
+the inferior is about to be called.
+
+@defvar InferiorCallPreEvent.ptid
+The thread in which the call will be run.
+@end defvar
+
+@defvar InferiorCallPreEvent.address
+The location of the function to be called.
+@end defvar
+
+@item events.inferior_call_post
+Emits @code{gdb.InferiorCallPostEvent} which indicates that a function in
+the inferior has returned.
+
+@defvar InferiorCallPostEvent.ptid
+The thread in which the call was run.
+@end defvar
+
+@defvar InferiorCallPostEvent.address
+The location of the function that was called.
+@end defvar
+
+@item events.memory_changed
+Emits @code{gdb.MemoryChangedEvent} which indicates that the memory of the
+inferior has been modified by the @value{GDBN} user, for instance via a
+command like @w{@code{set *addr = value}}.  The event has the following
+attributes:
+
+@defvar MemoryChangedEvent.address
+The start address of the changed region.
+@end defvar
+
+@defvar MemoryChangedEvent.length
+Length in bytes of the changed region.
+@end defvar
+
+@item events.register_changed
+Emits @code{gdb.RegisterChangedEvent} which indicates that a register in the
+inferior has been modified by the @value{GDBN} user.
+
+@defvar RegisterChangedEvent.frame
+A gdb.Frame object representing the frame in which the register was modified.
+@end defvar
+@defvar RegisterChangedEvent.regnum
+Denotes which register was modified.
+@end defvar
+
 @end table
 
 @node Threads In Python
@@ -2761,7 +2998,13 @@ user-specified thread name.
 @end defvar
 
 @defvar InferiorThread.num
-ID of the thread, as assigned by GDB.
+The per-inferior number of the thread, as assigned by GDB.
+@end defvar
+
+@defvar InferiorThread.global_num
+The global ID of the thread, as assigned by GDB.  You can use this to
+make Python breakpoints thread-specific, for example
+(@pxref{python_breakpoint_thread,,The Breakpoint.thread attribute}).
 @end defvar
 
 @defvar InferiorThread.ptid
@@ -2770,6 +3013,11 @@ tuple containing three integers.  The first is the Process ID (PID); the second
 is the Lightweight Process ID (LWPID), and the third is the Thread ID (TID).
 Either the LWPID or TID may be 0, which indicates that the operating system
 does not  use that identifier.
+@end defvar
+
+@defvar InferiorThread.inferior
+The inferior this thread belongs to.  This attribute is represented as
+a @code{gdb.Inferior} object.  This attribute is not writable.
 @end defvar
 
 A @code{gdb.InferiorThread} object has the following methods:
@@ -3356,6 +3604,50 @@ The @code{frame_filters} attribute is a dictionary of frame filter
 objects.  @xref{Frame Filter API}, for more information.
 @end defvar
 
+One may add arbitrary attributes to @code{gdb.Progspace} objects
+in the usual Python way.
+This is useful if, for example, one needs to do some extra record keeping
+associated with the program space.
+
+In this contrived example, we want to perform some processing when
+an objfile with a certain symbol is loaded, but we only want to do
+this once because it is expensive.  To achieve this we record the results
+with the program space because we can't predict when the desired objfile
+will be loaded.
+
+@smallexample
+(gdb) python
+def clear_objfiles_handler(event):
+    event.progspace.expensive_computation = None
+def expensive(symbol):
+    """A mock routine to perform an "expensive" computation on symbol."""
+    print "Computing the answer to the ultimate question ..."
+    return 42
+def new_objfile_handler(event):
+    objfile = event.new_objfile
+    progspace = objfile.progspace
+    if not hasattr(progspace, 'expensive_computation') or \
+            progspace.expensive_computation is None:
+        # We use 'main' for the symbol to keep the example simple.
+        # Note: There's no current way to constrain the lookup
+        # to one objfile.
+        symbol = gdb.lookup_global_symbol('main')
+        if symbol is not None:
+            progspace.expensive_computation = expensive(symbol)
+gdb.events.clear_objfiles.connect(clear_objfiles_handler)
+gdb.events.new_objfile.connect(new_objfile_handler)
+end
+(gdb) file /tmp/hello
+Reading symbols from /tmp/hello...done.
+Computing the answer to the ultimate question ...
+(gdb) python print gdb.current_progspace().expensive_computation
+42
+(gdb) run
+Starting program: /tmp/hello
+Hello.
+[Inferior 1 (process 4242) exited normally]
+@end smallexample
+
 @node Objfiles In Python
 @subsubsection Objfiles In Python
 
@@ -3385,11 +3677,66 @@ Return a sequence of all the objfiles current known to @value{GDBN}.
 @xref{Objfiles In Python}.
 @end defun
 
+@findex gdb.lookup_objfile
+@defun gdb.lookup_objfile (name @r{[}, by_build_id{]})
+Look up @var{name}, a file name or build ID, in the list of objfiles
+for the current program space (@pxref{Progspaces In Python}).
+If the objfile is not found throw the Python @code{ValueError} exception.
+
+If @var{name} is a relative file name, then it will match any
+source file name with the same trailing components.  For example, if
+@var{name} is @samp{gcc/expr.c}, then it will match source file
+name of @file{/build/trunk/gcc/expr.c}, but not
+@file{/build/trunk/libcpp/expr.c} or @file{/build/trunk/gcc/x-expr.c}.
+
+If @var{by_build_id} is provided and is @code{True} then @var{name}
+is the build ID of the objfile.  Otherwise, @var{name} is a file name.
+This is supported only on some operating systems, notably those which use
+the ELF format for binary files and the @sc{gnu} Binutils.  For more details
+about this feature, see the description of the @option{--build-id}
+command-line option in @ref{Options, , Command Line Options, ld.info,
+The GNU Linker}.
+@end defun
+
 Each objfile is represented by an instance of the @code{gdb.Objfile}
 class.
 
 @defvar Objfile.filename
-The file name of the objfile as a string.
+The file name of the objfile as a string, with symbolic links resolved.
+
+The value is @code{None} if the objfile is no longer valid.
+See the @code{gdb.Objfile.is_valid} method, described below.
+@end defvar
+
+@defvar Objfile.username
+The file name of the objfile as specified by the user as a string.
+
+The value is @code{None} if the objfile is no longer valid.
+See the @code{gdb.Objfile.is_valid} method, described below.
+@end defvar
+
+@defvar Objfile.owner
+For separate debug info objfiles this is the corresponding @code{gdb.Objfile}
+object that debug info is being provided for.
+Otherwise this is @code{None}.
+Separate debug info objfiles are added with the
+@code{gdb.Objfile.add_separate_debug_file} method, described below.
+@end defvar
+
+@defvar Objfile.build_id
+The build ID of the objfile as a string.
+If the objfile does not have a build ID then the value is @code{None}.
+
+This is supported only on some operating systems, notably those which use
+the ELF format for binary files and the @sc{gnu} Binutils.  For more details
+about this feature, see the description of the @option{--build-id}
+command-line option in @ref{Options, , Command Line Options, ld.info,
+The GNU Linker}.
+@end defvar
+
+@defvar Objfile.progspace
+The containing program space of the objfile as a @code{gdb.Progspace}
+object.  @xref{Progspaces In Python}.
 @end defvar
 
 @defvar Objfile.pretty_printers
@@ -3411,6 +3758,28 @@ The @code{frame_filters} attribute is a dictionary of frame filter
 objects.  @xref{Frame Filter API}, for more information.
 @end defvar
 
+One may add arbitrary attributes to @code{gdb.Objfile} objects
+in the usual Python way.
+This is useful if, for example, one needs to do some extra record keeping
+associated with the objfile.
+
+In this contrived example we record the time when @value{GDBN}
+loaded the objfile.
+
+@smallexample
+(gdb) python
+import datetime
+def new_objfile_handler(event):
+    # Set the time_loaded attribute of the new objfile.
+    event.new_objfile.time_loaded = datetime.datetime.today()
+gdb.events.new_objfile.connect(new_objfile_handler)
+end
+(gdb) file ./hello
+Reading symbols from ./hello...done.
+(gdb) python print gdb.objfiles()[0].time_loaded
+2014-10-09 11:41:36.770345
+@end smallexample
+
 A @code{gdb.Objfile} object has the following methods:
 
 @defun Objfile.is_valid ()
@@ -3419,6 +3788,17 @@ Returns @code{True} if the @code{gdb.Objfile} object is valid,
 if the object file it refers to is not loaded in @value{GDBN} any
 longer.  All other @code{gdb.Objfile} methods will throw an exception
 if it is invalid at the time the method is called.
+@end defun
+
+@defun Objfile.add_separate_debug_file (file)
+Add @var{file} to the list of files that @value{GDBN} will search for
+debug information for the objfile.
+This is useful when the debug info has been removed from the program
+and stored in a separate file.  @value{GDBN} has built-in support for
+finding separate debug info files (@pxref{Separate Debug Files}), but if
+the file doesn't live in one of the standard places that @value{GDBN}
+searches then this function can be used to add a debug info file
+from a different place.
 @end defun
 
 @node Frames In Python
@@ -4250,7 +4630,7 @@ watchpoint scope, the watchpoint remains valid even if execution of the
 inferior leaves the scope of that watchpoint.
 @end defun
 
-@defun Breakpoint.delete
+@defun Breakpoint.delete ()
 Permanently deletes the @value{GDBN} breakpoint.  This also
 invalidates the Python @code{Breakpoint} object.  Any further access
 to this object's attributes or methods will raise an error.
@@ -4258,7 +4638,8 @@ to this object's attributes or methods will raise an error.
 
 @defvar Breakpoint.enabled
 This attribute is @code{True} if the breakpoint is enabled, and
-@code{False} otherwise.  This attribute is writable.
+@code{False} otherwise.  This attribute is writable.  You can use it to enable
+or disable the breakpoint.
 @end defvar
 
 @defvar Breakpoint.silent
@@ -4270,10 +4651,11 @@ first command is @code{silent}.  This is not reported by the
 @code{silent} attribute.
 @end defvar
 
+@anchor{python_breakpoint_thread}
 @defvar Breakpoint.thread
-If the breakpoint is thread-specific, this attribute holds the thread
-id.  If the breakpoint is not thread-specific, this attribute is
-@code{None}.  This attribute is writable.
+If the breakpoint is thread-specific, this attribute holds the
+thread's global id.  If the breakpoint is not thread-specific, this
+attribute is @code{None}.  This attribute is writable.
 @end defvar
 
 @defvar Breakpoint.task
@@ -4562,8 +4944,9 @@ Show whether auto-loading of Python scripts is enabled or disabled.
 Print the list of all Python scripts that @value{GDBN} auto-loaded.
 
 Also printed is the list of Python scripts that were mentioned in
-the @code{.debug_gdb_scripts} section and were not found
-(@pxref{dotdebug_gdb_scripts section}).
+the @code{.debug_gdb_scripts} section and were either not found
+(@pxref{dotdebug_gdb_scripts section}) or were not auto-loaded due to
+@code{auto-load safe-path} rejection (@pxref{Auto-loading}).
 This is useful because their names are not printed when @value{GDBN}
 tries to load them and fails.  There may be many of them, and printing
 an error message for each one is problematic.
@@ -4581,7 +4964,7 @@ No     my-foo-pretty-printers.py
 @end smallexample
 @end table
 
-When reading an auto-loaded file, @value{GDBN} sets the
+When reading an auto-loaded file or script, @value{GDBN} sets the
 @dfn{current objfile}.  This is available via the @code{gdb.current_objfile}
 function (@pxref{Objfiles In Python}).  This can be useful for
 registering objfile-specific pretty-printers and frame-filters.

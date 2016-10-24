@@ -1,6 +1,6 @@
 /* Data/register window display.
 
-   Copyright (C) 1998-2014 Free Software Foundation, Inc.
+   Copyright (C) 1998-2016 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -94,7 +94,7 @@ tui_delete_data_content_windows (void)
       data_item_win_ptr = &((tui_win_content)
 			    TUI_DATA_WIN->generic.content)[i]->which_element.data_window;
       tui_delete_win (data_item_win_ptr->handle);
-      data_item_win_ptr->handle = (WINDOW *) NULL;
+      data_item_win_ptr->handle = NULL;
       data_item_win_ptr->is_visible = FALSE;
     }
 }
@@ -253,7 +253,7 @@ tui_check_data_values (struct frame_info *frame)
 	    has changed (data_element_ptr, frame, &new_value)
 	    {
 	      data_element_ptr->value = new_value;
-	      update the display with the new value, hiliting it.
+	      update the display with the newobj value, hiliting it.
 	    }
 #endif
 	}

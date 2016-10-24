@@ -1,4 +1,4 @@
-# Copyright 2005-2014 Free Software Foundation, Inc.
+# Copyright 2005-2016 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,16 +44,6 @@ proc test_gdb_no_completion { expr } {
     gdb_test_no_output "complete p $expr"
 }
 
-# A convenience function that joins all the arguments together,
-# with a regexp that matches zero-or-more end of lines in between
-# each argument.  This function is ideal to write the expected output
-# of a GDB command that generates more than a couple of lines, as
-# this allows us to write each line as a separate string, which is
-# easier to read by a human being.
-
-proc multi_line { args } {
-    return [join $args "\[\r\n\]*"]
-}
 # Try a global variable, only one match should be found:
 
 test_gdb_complete "my_glob" \
@@ -150,6 +140,7 @@ test_gdb_complete "external_ident" \
 test_gdb_complete "pck" \
                   [multi_line "(p pck\\.ad\[sb\])?" \
                               "(p pck\\.ad\[sb\])?" \
+                              "p pck.ambiguous_func" \
                               "p pck.external_identical_one" \
                               "p pck.inner.inside_variable" \
                               "p pck.local_identical_one" \
@@ -161,6 +152,7 @@ test_gdb_complete "pck" \
 test_gdb_complete "pck." \
                   [multi_line "(p pck\\.ad\[sb\])?" \
                               "(p pck\\.ad\[sb\])?" \
+                              "p pck.ambiguous_func" \
                               "p pck.external_identical_one" \
                               "p pck.inner.inside_variable" \
                               "p pck.local_identical_one" \
@@ -191,3 +183,14 @@ if { [readline_is_used] } {
 	}
     }
 }
+
+# Usually, parsing a function name that is ambiguous yields a menu through
+# which users can select a specific function.  This should not happen during
+# completion, though.
+test_gdb_complete "ambig" \
+                  [multi_line "p ambiguous_func" \
+                              "p ambiguous_proc" ]
+test_gdb_complete "ambiguous_f" \
+                  "p ambiguous_func"
+test_gdb_complete "ambiguous_func" \
+                  "p ambiguous_func"

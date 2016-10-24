@@ -22,9 +22,28 @@
    you don't. */
 #undef HAVE_DECL_ADDR_NO_RANDOMIZE
 
+/* Define to 1 if you have the declaration of `asprintf', and to 0 if you
+   don't. */
+#undef HAVE_DECL_ASPRINTF
+
+/* Define to 1 if you have the declaration of `basename(char *)', and to 0 if
+   you don't. */
+#undef HAVE_DECL_BASENAME
+
+/* Define to 1 if you have the declaration of `ffs', and to 0 if you don't. */
+#undef HAVE_DECL_FFS
+
 /* Define to 1 if you have the declaration of `perror', and to 0 if you don't.
    */
 #undef HAVE_DECL_PERROR
+
+/* Define to 1 if you have the declaration of `ptrace', and to 0 if you don't.
+   */
+#undef HAVE_DECL_PTRACE
+
+/* Define to 1 if you have the declaration of `snprintf', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SNPRINTF
 
 /* Define to 1 if you have the declaration of `strerror', and to 0 if you
    don't. */
@@ -33,6 +52,26 @@
 /* Define to 1 if you have the declaration of `strstr', and to 0 if you don't.
    */
 #undef HAVE_DECL_STRSTR
+
+/* Define to 1 if you have the declaration of `strtol', and to 0 if you don't.
+   */
+#undef HAVE_DECL_STRTOL
+
+/* Define to 1 if you have the declaration of `strtoll', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRTOLL
+
+/* Define to 1 if you have the declaration of `strtoul', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRTOUL
+
+/* Define to 1 if you have the declaration of `strtoull', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRTOULL
+
+/* Define to 1 if you have the declaration of `strverscmp', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRVERSCMP
 
 /* Define to 1 if you have the declaration of `vasprintf', and to 0 if you
    don't. */
@@ -59,6 +98,12 @@
 
 /* Define to 1 if you have the `fdwalk' function. */
 #undef HAVE_FDWALK
+
+/* Define to 1 if you have the `fork' function. */
+#undef HAVE_FORK
+
+/* Define to 1 if you have the `getauxval' function. */
+#undef HAVE_GETAUXVAL
 
 /* Define to 1 if you have the `getrlimit' function. */
 #undef HAVE_GETRLIMIT
@@ -93,11 +138,11 @@
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
+/* Define to 1 if the system has the type `long long'. */
+#undef HAVE_LONG_LONG
+
 /* Define if <thread_db.h> has lwpid_t. */
 #undef HAVE_LWPID_T
-
-/* Define to 1 if you have the <malloc.h> header file. */
-#undef HAVE_MALLOC_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -126,6 +171,9 @@
 /* Define to 1 if you have the `pread64' function. */
 #undef HAVE_PREAD64
 
+/* Define if <sys/procfs.h> has prfpregset_t. */
+#undef HAVE_PRFPREGSET_T
+
 /* Define if <sys/procfs.h> has prgregset_t. */
 #undef HAVE_PRGREGSET_T
 
@@ -142,11 +190,14 @@
 /* Define if the target supports PTRACE_GETREGS for register access. */
 #undef HAVE_PTRACE_GETREGS
 
+/* Define to 1 if you have the <ptrace.h> header file. */
+#undef HAVE_PTRACE_H
+
 /* Define to 1 if you have the `pwrite' function. */
 #undef HAVE_PWRITE
 
-/* Define to 1 if you have the `readlink' function. */
-#undef HAVE_READLINK
+/* Define to 1 if you have the `setns' function. */
+#undef HAVE_SETNS
 
 /* Define to 1 if you have the <sgtty.h> header file. */
 #undef HAVE_SGTTY_H
@@ -175,6 +226,12 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
+/* Define to 1 if `struct stat' is a member of `st_blksize'. */
+#undef HAVE_STRUCT_STAT_ST_BLKSIZE
+
+/* Define to 1 if `struct stat' is a member of `st_blocks'. */
+#undef HAVE_STRUCT_STAT_ST_BLOCKS
+
 /* Define to 1 if the target supports __sync_*_compare_and_swap */
 #undef HAVE_SYNC_BUILTINS
 
@@ -186,6 +243,9 @@
 
 /* Define to 1 if you have the <sys/procfs.h> header file. */
 #undef HAVE_SYS_PROCFS_H
+
+/* Define to 1 if you have the <sys/ptrace.h> header file. */
+#undef HAVE_SYS_PTRACE_H
 
 /* Define to 1 if you have the <sys/reg.h> header file. */
 #undef HAVE_SYS_REG_H
@@ -229,8 +289,20 @@
 /* Define if UST is available */
 #undef HAVE_UST
 
+/* Define to 1 if you have the `vfork' function. */
+#undef HAVE_VFORK
+
+/* Define to 1 if you have the <vfork.h> header file. */
+#undef HAVE_VFORK_H
+
 /* Define to 1 if you have the <wait.h> header file. */
 #undef HAVE_WAIT_H
+
+/* Define to 1 if `fork' works. */
+#undef HAVE_WORKING_FORK
+
+/* Define to 1 if `vfork' works. */
+#undef HAVE_WORKING_VFORK
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -253,8 +325,26 @@
 /* Additional package description */
 #undef PKGVERSION
 
+/* Define to the type of arg 1 for ptrace. */
+#undef PTRACE_TYPE_ARG1
+
+/* Define to the type of arg 3 for ptrace. */
+#undef PTRACE_TYPE_ARG3
+
+/* Define to the type of arg 4 for ptrace. */
+#undef PTRACE_TYPE_ARG4
+
+/* Define to the type of arg 5 for ptrace. */
+#undef PTRACE_TYPE_ARG5
+
+/* Define as the return type of ptrace. */
+#undef PTRACE_TYPE_RET
+
 /* Bug reporting address */
 #undef REPORT_BUGS_TO
+
+/* The size of `long long', as computed by sizeof. */
+#undef SIZEOF_LONG_LONG
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -318,3 +408,9 @@
 
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 #undef _POSIX_SOURCE
+
+/* Define to `int' if <sys/types.h> does not define. */
+#undef pid_t
+
+/* Define as `fork' if `vfork' does not work. */
+#undef vfork

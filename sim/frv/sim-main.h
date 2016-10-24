@@ -1,5 +1,5 @@
 /* frv simulator support code
-   Copyright (C) 1998-2014 Free Software Foundation, Inc.
+   Copyright (C) 1998-2016 Free Software Foundation, Inc.
    Contributed by Red Hat.
 
 This file is part of the GNU simulators.
@@ -19,19 +19,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* Main header for the frv.  */
 
-#define USING_SIM_BASE_H /* FIXME: quick hack */
-
-struct _sim_cpu; /* FIXME: should be in sim-basics.h */
-typedef struct _sim_cpu SIM_CPU;
-
-/* Set the mask of unsupported traces.  */
-#define WITH_TRACE \
-  (~(TRACE_alu | TRACE_decode | TRACE_memory | TRACE_model | TRACE_fpu \
-     | TRACE_branch | TRACE_debug))
-
 /* sim-basics.h includes config.h but cgen-types.h must be included before
    sim-basics.h and cgen-types.h needs config.h.  */
 #include "config.h"
+
+/* This is a global setting.  Different cpu families can't mix-n-match -scache
+   and -pbb.  However some cpu families may use -simple while others use
+   one of -scache/-pbb. ???? */
+#define WITH_SCACHE_PBB 0
 
 #include "symcat.h"
 #include "sim-basics.h"
@@ -40,13 +35,6 @@ typedef struct _sim_cpu SIM_CPU;
 #include "frv-opc.h"
 #include "arch.h"
 
-/* These must be defined before sim-base.h.  */
-typedef USI sim_cia;
-
-#define CIA_GET(cpu)     CPU_PC_GET (cpu)
-#define CIA_SET(cpu,val) CPU_PC_SET ((cpu), (val))
-
-void frv_sim_engine_halt_hook (SIM_DESC, SIM_CPU *, sim_cia);
 #define SIM_ENGINE_HALT_HOOK(SD, LAST_CPU, CIA) \
   frv_sim_engine_halt_hook ((SD), (LAST_CPU), (CIA))
 
@@ -58,6 +46,11 @@ void frv_sim_engine_halt_hook (SIM_DESC, SIM_CPU *, sim_cia);
 #include "cache.h"
 #include "registers.h"
 #include "profile.h"
+
+void frv_sim_engine_halt_hook (SIM_DESC, SIM_CPU *, sim_cia);
+
+extern void frv_sim_close (SIM_DESC sd, int quitting);
+#define SIM_CLOSE_HOOK(...) frv_sim_close (__VA_ARGS__)
 
 /* The _sim_cpu struct.  */
 
@@ -118,8 +111,7 @@ struct _sim_cpu {
 /* The sim_state struct.  */
 
 struct sim_state {
-  sim_cpu *cpu;
-#define STATE_CPU(sd, n) (/*&*/ (sd)->cpu)
+  sim_cpu *cpu[MAX_NR_PROCESSORS];
 
   CGEN_STATE cgen_state;
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2014 Free Software Foundation, Inc.
+# Copyright (C) 2011-2016 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,6 @@
 # for defining the prompt in Python.
 
 standard_testfile
-
-# We need to use TCL's exec to get the pid.
-if [is_remote target] then {
-    return 0
-}
 
 load_lib gdb-python.exp
 load_lib prompt.exp
@@ -80,7 +75,13 @@ gdb_test "python print (\"'\" + str(p\[0\]) + \"'\")" "'$gdb_prompt_fail '" \
 	 "prompt_hook argument is default prompt. 2"
 gdb_exit
 
-set testpid [spawn_wait_for_attach $binfile]
+if {![can_spawn_for_attach]} {
+    set GDBFLAGS $saved_gdbflags
+    return 0
+}
+
+set test_spawn_id [spawn_wait_for_attach $binfile]
+set testpid [spawn_id_get_pid $test_spawn_id]
 
 set GDBFLAGS [concat $tmp_gdbflags " -ex \"set pagination off\""]
 set GDBFLAGS [concat $GDBFLAGS " -ex \"set editing on\""]
@@ -115,5 +116,5 @@ gdb_test "python print (\"'\" + str(p\[0\]) + \"'\")" "'$gdb_prompt_fail '" \
 gdb_exit
 
 set GDBFLAGS $saved_gdbflags
-exec kill -9 ${testpid}
+kill_wait_spawned_process $test_spawn_id
 return 0

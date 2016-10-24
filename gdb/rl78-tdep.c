@@ -1,6 +1,6 @@
 /* Target-dependent code for the Renesas RL78 for GDB, the GNU debugger.
 
-   Copyright (C) 2011-2014 Free Software Foundation, Inc.
+   Copyright (C) 2011-2016 Free Software Foundation, Inc.
 
    Contributed by Red Hat, Inc.
 
@@ -205,6 +205,8 @@ enum
   RL78_NUM_PSEUDO_REGS = RL78_NUM_TOTAL_REGS - RL78_NUM_REGS
 };
 
+#define RL78_SP_ADDR 0xffff8 
+
 /* Architecture specific data.  */
 
 struct gdbarch_tdep
@@ -220,7 +222,8 @@ struct gdbarch_tdep
 	      *rl78_uint32,
 	      *rl78_int32,
 	      *rl78_data_pointer,
-	      *rl78_code_pointer;
+	      *rl78_code_pointer,
+	      *rl78_psw_type;
 };
 
 /* This structure holds the results of a prologue analysis.  */
@@ -269,6 +272,8 @@ rl78_register_type (struct gdbarch *gdbarch, int reg_nr)
     return tdep->rl78_code_pointer;
   else if (reg_nr == RL78_RAW_PC_REGNUM)
     return tdep->rl78_uint32;
+  else if (reg_nr == RL78_PSW_REGNUM)
+    return (tdep->rl78_psw_type);
   else if (reg_nr <= RL78_MEM_REGNUM
            || (RL78_X_REGNUM <= reg_nr && reg_nr <= RL78_H_REGNUM)
 	   || (RL78_BANK0_R0_REGNUM <= reg_nr
@@ -786,6 +791,57 @@ struct rl78_get_opcode_byte_handle
   CORE_ADDR pc;
 };
 
+static int
+opc_reg_to_gdb_regnum (int opcreg)
+{
+  switch (opcreg)
+    {
+      case RL78_Reg_X:
+        return RL78_X_REGNUM;
+      case RL78_Reg_A:
+	return RL78_A_REGNUM;
+      case RL78_Reg_C:
+	return RL78_C_REGNUM;
+      case RL78_Reg_B:
+	return RL78_B_REGNUM;
+      case RL78_Reg_E:
+	return RL78_E_REGNUM;
+      case RL78_Reg_D:
+	return RL78_D_REGNUM;
+      case RL78_Reg_L:
+	return RL78_L_REGNUM;
+      case RL78_Reg_H:
+	return RL78_H_REGNUM;
+      case RL78_Reg_AX:
+	return RL78_AX_REGNUM;
+      case RL78_Reg_BC:
+	return RL78_BC_REGNUM;
+      case RL78_Reg_DE:
+	return RL78_DE_REGNUM;
+      case RL78_Reg_HL:
+	return RL78_HL_REGNUM;
+      case RL78_Reg_SP:
+	return RL78_SP_REGNUM;
+      case RL78_Reg_PSW:
+	return RL78_PSW_REGNUM;
+      case RL78_Reg_CS:
+	return RL78_CS_REGNUM;
+      case RL78_Reg_ES:
+	return RL78_ES_REGNUM;
+      case RL78_Reg_PMC:
+	return RL78_PMC_REGNUM;
+      case RL78_Reg_MEM:
+	return RL78_MEM_REGNUM;
+      default:
+	internal_error (__FILE__, __LINE__,
+			_("Undefined mapping for opc reg %d"),
+			opcreg);
+    }
+
+  /* Not reached.  */
+  return 0;
+}
+
 /* Fetch a byte on behalf of the opcode decoder.  HANDLE contains
    the memory address of the next byte to fetch.  If successful,
    the address in the handle is updated and the byte fetched is
@@ -795,7 +851,8 @@ struct rl78_get_opcode_byte_handle
 static int
 rl78_get_opcode_byte (void *handle)
 {
-  struct rl78_get_opcode_byte_handle *opcdata = handle;
+  struct rl78_get_opcode_byte_handle *opcdata
+    = (struct rl78_get_opcode_byte_handle *) handle;
   int status;
   gdb_byte byte;
 
@@ -868,7 +925,7 @@ rl78_analyze_prologue (CORE_ADDR start_pc,
 
       opcode_handle.pc = pc;
       bytes_read = rl78_decode_opcode (pc, &opc, rl78_get_opcode_byte,
-				     &opcode_handle);
+				       &opcode_handle, RL78_ISA_DEFAULT);
       next_pc = pc + bytes_read;
 
       if (opc.id == RLO_sel)
@@ -898,6 +955,35 @@ rl78_analyze_prologue (CORE_ADDR start_pc,
 
 	  reg[RL78_SP_REGNUM] = pv_add_constant (reg[RL78_SP_REGNUM],
 	                                         -addend);
+	  after_last_frame_setup_insn = next_pc;
+	}
+      else if (opc.id == RLO_mov
+               && opc.size == RL78_Word
+	       && opc.op[0].type == RL78_Operand_Register
+	       && opc.op[1].type == RL78_Operand_Indirect
+	       && opc.op[1].addend == RL78_SP_ADDR)
+	{
+	  reg[opc_reg_to_gdb_regnum (opc.op[0].reg)]
+	    = reg[RL78_SP_REGNUM];
+	}
+      else if (opc.id == RLO_sub
+               && opc.size == RL78_Word
+	       && opc.op[0].type == RL78_Operand_Register
+	       && opc.op[1].type == RL78_Operand_Immediate)
+	{
+	  int addend = opc.op[1].addend;
+	  int regnum = opc_reg_to_gdb_regnum (opc.op[0].reg);
+
+	  reg[regnum] = pv_add_constant (reg[regnum], -addend);
+	}
+      else if (opc.id == RLO_mov
+               && opc.size == RL78_Word
+	       && opc.op[0].type == RL78_Operand_Indirect
+	       && opc.op[0].addend == RL78_SP_ADDR
+	       && opc.op[1].type == RL78_Operand_Register)
+	{
+	  reg[RL78_SP_REGNUM]
+	    = reg[opc_reg_to_gdb_regnum (opc.op[1].reg)];
 	  after_last_frame_setup_insn = next_pc;
 	}
       else
@@ -1019,10 +1105,11 @@ rl78_analyze_frame_prologue (struct frame_info *this_frame,
       if (!func_start)
 	stop_addr = func_start;
 
-      rl78_analyze_prologue (func_start, stop_addr, *this_prologue_cache);
+      rl78_analyze_prologue (func_start, stop_addr,
+			     (struct rl78_prologue *) *this_prologue_cache);
     }
 
-  return *this_prologue_cache;
+  return (struct rl78_prologue *) *this_prologue_cache;
 }
 
 /* Given a frame and a prologue cache, return this frame's base.  */
@@ -1130,9 +1217,7 @@ rl78_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   else if (reg == 37)
     return RL78_PC_REGNUM;
   else
-    internal_error (__FILE__, __LINE__,
-                    _("Undefined dwarf2 register mapping of reg %d"),
-		    reg);
+    return -1;
 }
 
 /* Implement the `register_sim_regno' gdbarch method.  */
@@ -1311,7 +1396,7 @@ rl78_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* None found, create a new architecture from the information
      provided.  */
-  tdep = (struct gdbarch_tdep *) xmalloc (sizeof (struct gdbarch_tdep));
+  tdep = XNEW (struct gdbarch_tdep);
   gdbarch = gdbarch_alloc (&info, tdep);
   tdep->elf_flags = elf_flags;
 
@@ -1335,6 +1420,16 @@ rl78_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
                  xstrdup ("rl78_code_addr_t"));
   TYPE_TARGET_TYPE (tdep->rl78_code_pointer) = tdep->rl78_void;
   TYPE_UNSIGNED (tdep->rl78_code_pointer) = 1;
+
+  tdep->rl78_psw_type = arch_flags_type (gdbarch, "builtin_type_rl78_psw", 1);
+  append_flags_type_flag (tdep->rl78_psw_type, 0, "CY");
+  append_flags_type_flag (tdep->rl78_psw_type, 1, "ISP0");
+  append_flags_type_flag (tdep->rl78_psw_type, 2, "ISP1");
+  append_flags_type_flag (tdep->rl78_psw_type, 3, "RBS0");
+  append_flags_type_flag (tdep->rl78_psw_type, 4, "AC");
+  append_flags_type_flag (tdep->rl78_psw_type, 5, "RBS1");
+  append_flags_type_flag (tdep->rl78_psw_type, 6, "Z");
+  append_flags_type_flag (tdep->rl78_psw_type, 7, "IE");
 
   /* Registers.  */
   set_gdbarch_num_regs (gdbarch, RL78_NUM_REGS);

@@ -1,6 +1,6 @@
 /* Support for GDB maintenance commands.
 
-   Copyright (C) 1992-2014 Free Software Foundation, Inc.
+   Copyright (C) 1992-2016 Free Software Foundation, Inc.
 
    Written by Fred Fish at Cygnus Support.
 
@@ -24,7 +24,7 @@
 #include "arch-utils.h"
 #include <ctype.h>
 #include <signal.h>
-#include <sys/time.h>
+#include "gdb_sys_time.h"
 #include <time.h>
 #include "command.h"
 #include "gdbcmd.h"
@@ -41,6 +41,7 @@
 #include "top.h"
 #include "timeval-utils.h"
 #include "maint.h"
+#include "selftest.h"
 
 #include "cli/cli-decode.h"
 #include "cli/cli-utils.h"
@@ -139,38 +140,14 @@ maintenance_demangler_warning (char *args, int from_tty)
   demangler_warning (__FILE__, __LINE__, "%s", (args == NULL ? "" : args));
 }
 
-/* Someday we should allow demangling for things other than just
-   explicit strings.  For example, we might want to be able to specify
-   the address of a string in either GDB's process space or the
-   debuggee's process space, and have gdb fetch and demangle that
-   string.  If we have a char* pointer "ptr" that points to a string,
-   we might want to be able to given just the name and have GDB
-   demangle and print what it points to, etc.  (FIXME)  */
+/* Old command to demangle a string.  The command has been moved to "demangle".
+   It is kept for now because otherwise "mt demangle" gets interpreted as
+   "mt demangler-warning" which artificially creates an internal gdb error.  */
 
 static void
 maintenance_demangle (char *args, int from_tty)
 {
-  char *demangled;
-
-  if (args == NULL || *args == '\0')
-    {
-      printf_unfiltered (_("\"maintenance demangle\" takes "
-			   "an argument to demangle.\n"));
-    }
-  else
-    {
-      demangled = language_demangle (current_language, args, 
-				     DMGL_ANSI | DMGL_PARAMS);
-      if (demangled != NULL)
-	{
-	  printf_unfiltered ("%s\n", demangled);
-	  xfree (demangled);
-	}
-      else
-	{
-	  printf_unfiltered (_("Can't demangle \"%s\"\n"), args);
-	}
-    }
+  printf_filtered (_("This command has been moved to \"demangle\".\n"));
 }
 
 static void
@@ -327,7 +304,7 @@ print_bfd_section_info (bfd *abfd,
 {
   flagword flags = bfd_get_section_flags (abfd, asect);
   const char *name = bfd_section_name (abfd, asect);
-  const char *arg = datum;
+  const char *arg = (const char *) datum;
 
   if (arg == NULL || *arg == '\0'
       || match_substring (arg, name)
@@ -707,14 +684,17 @@ extern char etext;
 
 static int profiling_state;
 
+EXTERN_C void _mcleanup (void);
+
 static void
 mcleanup_wrapper (void)
 {
-  extern void _mcleanup (void);
-
   if (profiling_state)
     _mcleanup ();
 }
+
+EXTERN_C void monstartup (unsigned long, unsigned long);
+extern int main ();
 
 static void
 maintenance_set_profile_cmd (char *args, int from_tty,
@@ -728,9 +708,6 @@ maintenance_set_profile_cmd (char *args, int from_tty,
   if (maintenance_profile_p)
     {
       static int profiling_initialized;
-
-      extern void monstartup (unsigned long, unsigned long);
-      extern int main();
 
       if (!profiling_initialized)
 	{
@@ -794,8 +771,8 @@ struct cmd_stats
   long start_space;
   /* Total number of symtabs (over all objfiles).  */
   int start_nr_symtabs;
-  /* Of those, a count of just the primary ones.  */
-  int start_nr_primary_symtabs;
+  /* A count of the compunits.  */
+  int start_nr_compunit_symtabs;
   /* Total number of blocks.  */
   int start_nr_blocks;
 };
@@ -821,13 +798,14 @@ set_per_command_space (int new_value)
 /* Count the number of symtabs and blocks.  */
 
 static void
-count_symtabs_and_blocks (int *nr_symtabs_ptr, int *nr_primary_symtabs_ptr,
+count_symtabs_and_blocks (int *nr_symtabs_ptr, int *nr_compunit_symtabs_ptr,
 			  int *nr_blocks_ptr)
 {
   struct objfile *o;
+  struct compunit_symtab *cu;
   struct symtab *s;
   int nr_symtabs = 0;
-  int nr_primary_symtabs = 0;
+  int nr_compunit_symtabs = 0;
   int nr_blocks = 0;
 
   /* When collecting statistics during startup, this is called before
@@ -835,19 +813,17 @@ count_symtabs_and_blocks (int *nr_symtabs_ptr, int *nr_primary_symtabs_ptr,
      current_program_space may be NULL.  */
   if (current_program_space != NULL)
     {
-      ALL_SYMTABS (o, s)
+      ALL_COMPUNITS (o, cu)
 	{
-	  ++nr_symtabs;
-	  if (s->primary)
-	    {
-	      ++nr_primary_symtabs;
-	      nr_blocks += BLOCKVECTOR_NBLOCKS (BLOCKVECTOR (s));
-	    }
+	  ++nr_compunit_symtabs;
+	  nr_blocks += BLOCKVECTOR_NBLOCKS (COMPUNIT_BLOCKVECTOR (cu));
+	  ALL_COMPUNIT_FILETABS (cu, s)
+	    ++nr_symtabs;
 	}
     }
 
   *nr_symtabs_ptr = nr_symtabs;
-  *nr_primary_symtabs_ptr = nr_primary_symtabs;
+  *nr_compunit_symtabs_ptr = nr_compunit_symtabs;
   *nr_blocks_ptr = nr_blocks;
 }
 
@@ -902,16 +878,17 @@ report_command_stats (void *arg)
 
   if (start_stats->symtab_enabled && per_command_symtab)
     {
-      int nr_symtabs, nr_primary_symtabs, nr_blocks;
+      int nr_symtabs, nr_compunit_symtabs, nr_blocks;
 
-      count_symtabs_and_blocks (&nr_symtabs, &nr_primary_symtabs, &nr_blocks);
+      count_symtabs_and_blocks (&nr_symtabs, &nr_compunit_symtabs, &nr_blocks);
       printf_unfiltered (_("#symtabs: %d (+%d),"
-			   " #primary symtabs: %d (+%d),"
+			   " #compunits: %d (+%d),"
 			   " #blocks: %d (+%d)\n"),
 			 nr_symtabs,
 			 nr_symtabs - start_stats->start_nr_symtabs,
-			 nr_primary_symtabs,
-			 nr_primary_symtabs - start_stats->start_nr_primary_symtabs,
+			 nr_compunit_symtabs,
+			 (nr_compunit_symtabs
+			  - start_stats->start_nr_compunit_symtabs),
 			 nr_blocks,
 			 nr_blocks - start_stats->start_nr_blocks);
     }
@@ -960,11 +937,11 @@ make_command_stats_cleanup (int msg_type)
 
   if (msg_type == 0 || per_command_symtab)
     {
-      int nr_symtabs, nr_primary_symtabs, nr_blocks;
+      int nr_symtabs, nr_compunit_symtabs, nr_blocks;
 
-      count_symtabs_and_blocks (&nr_symtabs, &nr_primary_symtabs, &nr_blocks);
+      count_symtabs_and_blocks (&nr_symtabs, &nr_compunit_symtabs, &nr_blocks);
       new_stat->start_nr_symtabs = nr_symtabs;
-      new_stat->start_nr_primary_symtabs = nr_primary_symtabs;
+      new_stat->start_nr_compunit_symtabs = nr_compunit_symtabs;
       new_stat->start_nr_blocks = nr_blocks;
       new_stat->symtab_enabled = 1;
     }
@@ -982,7 +959,6 @@ static void
 set_per_command_cmd (char *args, int from_tty)
 {
   struct cmd_list_element *list;
-  size_t length;
   int val;
 
   val = parse_cli_boolean_value (args);
@@ -1006,14 +982,25 @@ show_per_command_cmd (char *args, int from_tty)
   cmd_show_list (per_command_showlist, from_tty, "");
 }
 
+
+/* The "maintenance selftest" command.  */
+
+static void
+maintenance_selftest (char *args, int from_tty)
+{
+  run_self_tests ();
+}
+
+
 void
 _initialize_maint_cmds (void)
 {
+  struct cmd_list_element *cmd;
+
   add_prefix_cmd ("maintenance", class_maintenance, maintenance_command, _("\
 Commands for use by GDB maintainers.\n\
 Includes commands to dump specific internal GDB structures in\n\
-a human readable form, to cause GDB to deliberately dump core,\n\
-to test internal functions such as the C++/ObjC demangler, etc."),
+a human readable form, to cause GDB to deliberately dump core, etc."),
 		  &maintenancelist, "maintenance ", 0,
 		  &cmdlist);
 
@@ -1082,11 +1069,10 @@ Give GDB a demangler warning.\n\
 Cause GDB to behave as if a demangler warning was reported."),
 	   &maintenancelist);
 
-  add_cmd ("demangle", class_maintenance, maintenance_demangle, _("\
-Demangle a C++/ObjC mangled name.\n\
-Call internal GDB demangler routine to demangle a C++ link name\n\
-and prints the result."),
-	   &maintenancelist);
+  cmd = add_cmd ("demangle", class_maintenance, maintenance_demangle, _("\
+This command has been moved to \"demangle\"."),
+		 &maintenancelist);
+  deprecate_cmd (cmd, "demangle");
 
   add_prefix_cmd ("per-command", class_maintenance, set_per_command_cmd, _("\
 Per-command statistics settings."),
@@ -1176,6 +1162,13 @@ replacement is optional."), &maintenancelist);
 Undeprecate a command.  Note that this is just in here so the \n\
 testsuite can check the command deprecator. You probably shouldn't use this,\n\
 If you decide you want to use it: maintenance undeprecate 'commandname'"),
+	   &maintenancelist);
+
+  add_cmd ("selftest", class_maintenance, maintenance_selftest, _("\
+Run gdb's unit tests.\n\
+Usage: maintenance selftest\n\
+This will run any unit tests that were built in to gdb.\n\
+gdb will abort if any test fails."),
 	   &maintenancelist);
 
   add_setshow_zinteger_cmd ("watchdog", class_maintenance, &watchdog, _("\

@@ -1,6 +1,6 @@
 /* Simulator pseudo baseclass.
 
-   Copyright 1997-2014 Free Software Foundation, Inc.
+   Copyright 1997-2016 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.
 
@@ -28,9 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
    information), include ``sim-base.h'':
 
      #include "sim-basics.h"
-     typedef address_word sim_cia;
      /-* If `sim_cia' is not an integral value (e.g. a struct), define
          CIA_ADDR to return the integral value.  *-/
+     /-* typedef struct {...} sim_cia; *-/
      /-* #define CIA_ADDR(cia) (...) *-/
      #include "sim-base.h"
 
@@ -44,11 +44,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
      struct sim_state {
        sim_cpu *cpu[MAX_NR_PROCESSORS];
-     #if (WITH_SMP)
-     #define STATE_CPU(sd,n) ((sd)->cpu[n])
-     #else
-     #define STATE_CPU(sd,n) ((sd)->cpu[0])
-     #endif
        ... simulator specific members ...
        sim_state_base base;
      };
@@ -71,11 +66,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
    (e.g. for delay slot handling).  */
 #ifndef CIA_ADDR
 #define CIA_ADDR(cia) (cia)
+typedef address_word sim_cia;
 #endif
 #ifndef INVALID_INSTRUCTION_ADDRESS
 #define INVALID_INSTRUCTION_ADDRESS ((address_word)0 - 1)
 #endif
 
+/* TODO: Probably should just delete SIM_CPU.  */
+typedef struct _sim_cpu SIM_CPU;
 typedef struct _sim_cpu sim_cpu;
 
 #include "sim-module.h"
@@ -84,35 +82,20 @@ typedef struct _sim_cpu sim_cpu;
 #include "sim-core.h"
 #include "sim-events.h"
 #include "sim-profile.h"
-#ifdef SIM_HAVE_MODEL
 #include "sim-model.h"
-#endif
 #include "sim-io.h"
 #include "sim-engine.h"
 #include "sim-watch.h"
 #include "sim-memopt.h"
 #include "sim-cpu.h"
 
-/* Global pointer to current state while sim_resume is running.
-   On a machine with lots of registers, it might be possible to reserve
-   one of them for current_state.  However on a machine with few registers
-   current_state can't permanently live in one and indirecting through it
-   will be slower [in which case one can have sim_resume set globals from
-   current_state for faster access].
-   If CURRENT_STATE_REG is defined, it means current_state is living in
-   a global register.  */
 
-
-#ifdef CURRENT_STATE_REG
-/* FIXME: wip */
+/* We require all sims to dynamically allocate cpus.  See comment up top about
+   struct sim_state.  */
+#if (WITH_SMP)
+# define STATE_CPU(sd, n) ((sd)->cpu[n])
 #else
-extern struct sim_state *current_state;
-#endif
-
-
-/* The simulator may provide different (and faster) definition.  */
-#ifndef CURRENT_STATE
-#define CURRENT_STATE current_state
+# define STATE_CPU(sd, n) ((sd)->cpu[0])
 #endif
 
 
@@ -194,16 +177,6 @@ typedef struct {
      to process instructions.  */
   unsigned int scache_size;
 #define STATE_SCACHE_SIZE(sd) ((sd)->base.scache_size)
-
-  /* FIXME: Move to top level sim_state struct (as some struct)?  */
-#ifdef SIM_HAVE_FLATMEM
-  unsigned int mem_size;
-#define STATE_MEM_SIZE(sd) ((sd)->base.mem_size)
-  unsigned int mem_base;
-#define STATE_MEM_BASE(sd) ((sd)->base.mem_base)
-  unsigned char *memory;
-#define STATE_MEMORY(sd) ((sd)->base.memory)
-#endif
 
   /* core memory bus */
 #define STATE_CORE(sd) (&(sd)->base.core)

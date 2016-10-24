@@ -1,6 +1,6 @@
 /* Target-dependent code for the i386.
 
-   Copyright (C) 2001-2014 Free Software Foundation, Inc.
+   Copyright (C) 2001-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -193,7 +193,7 @@ struct gdbarch_tdep
   const struct target_desc *tdesc;
 
   /* Register group function.  */
-  const void *register_reggroup_p;
+  gdbarch_register_reggroup_p_ftype *register_reggroup_p;
 
   /* Offset of saved PC in jmp_buf.  */
   int jb_pc_offset;
@@ -328,6 +328,8 @@ enum record_i386_regnum
 /* Size of the largest register.  */
 #define I386_MAX_REGISTER_SIZE	64
 
+extern struct target_desc *tdesc_i386;
+
 /* Types for i386-specific registers.  */
 extern struct type *i387_ext_type (struct gdbarch *gdbarch);
 
@@ -357,6 +359,10 @@ extern void i386_pseudo_register_read_into_value (struct gdbarch *gdbarch,
 extern void i386_pseudo_register_write (struct gdbarch *gdbarch,
 					struct regcache *regcache,
 					int regnum, const gdb_byte *buf);
+
+extern int i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
+					    struct agent_expr *ax,
+					    int regnum);
 
 /* Segment selectors.  */
 #define I386_SEL_RPL	0x0003  /* Requester's Privilege Level mask.  */
@@ -416,7 +422,10 @@ extern void i386_svr4_init_abi (struct gdbarch_info, struct gdbarch *);
 
 extern int i386_process_record (struct gdbarch *gdbarch,
                                 struct regcache *regcache, CORE_ADDR addr);
+extern const struct target_desc *i386_target_description (uint64_t xcr0);
 
+/* Return true iff the current target is MPX enabled.  */
+extern int i386_mpx_enabled (void);
 
 
 /* Functions and variables exported from i386bsd-tdep.c.  */

@@ -1,6 +1,6 @@
 /* Code dealing with dummy stack frames, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -28,6 +28,7 @@
 #include "gdbcmd.h"
 #include "observer.h"
 #include "gdbthread.h"
+#include "infcall.h"
 
 struct dummy_frame_id
 {
@@ -48,6 +49,20 @@ dummy_frame_id_eq (struct dummy_frame_id *id1,
   return frame_id_eq (id1->id, id2->id) && ptid_equal (id1->ptid, id2->ptid);
 }
 
+/* List of dummy_frame destructors.  */
+
+struct dummy_frame_dtor_list
+{
+  /* Next element in the list or NULL if this is the last element.  */
+  struct dummy_frame_dtor_list *next;
+
+  /* If non-NULL, a destructor that is run when this dummy frame is freed.  */
+  dummy_frame_dtor_ftype *dtor;
+
+  /* Arbitrary data that is passed to DTOR.  */
+  void *dtor_data;
+};
+
 /* Dummy frame.  This saves the processor state just prior to setting
    up the inferior function call.  Older targets save the registers
    on the target stack (but that really slows down function calls).  */
@@ -61,6 +76,10 @@ struct dummy_frame
 
   /* The caller's state prior to the call.  */
   struct infcall_suspend_state *caller_state;
+
+  /* First element of destructors list or NULL if there are no
+     destructors registered for this dummy_frame.  */
+  struct dummy_frame_dtor_list *dtor_list;
 };
 
 static struct dummy_frame *dummy_frame_stack = NULL;
@@ -89,6 +108,15 @@ remove_dummy_frame (struct dummy_frame **dummy_ptr)
 {
   struct dummy_frame *dummy = *dummy_ptr;
 
+  while (dummy->dtor_list != NULL)
+    {
+      struct dummy_frame_dtor_list *list = dummy->dtor_list;
+
+      dummy->dtor_list = list->next;
+      list->dtor (list->dtor_data, 0);
+      xfree (list);
+    }
+
   *dummy_ptr = dummy->next;
   discard_infcall_suspend_state (dummy->caller_state);
   xfree (dummy);
@@ -100,9 +128,9 @@ remove_dummy_frame (struct dummy_frame **dummy_ptr)
 static int
 pop_dummy_frame_bpt (struct breakpoint *b, void *dummy_voidp)
 {
-  struct dummy_frame *dummy = dummy_voidp;
+  struct dummy_frame *dummy = (struct dummy_frame *) dummy_voidp;
 
-  if (b->thread == pid_to_thread_id (dummy->id.ptid)
+  if (b->thread == ptid_to_global_thread_id (dummy->id.ptid)
       && b->disposition == disp_del && frame_id_eq (b->frame_id, dummy->id.id))
     {
       while (b->related_breakpoint != b)
@@ -127,6 +155,16 @@ pop_dummy_frame (struct dummy_frame **dummy_ptr)
   struct dummy_frame *dummy = *dummy_ptr;
 
   gdb_assert (ptid_equal (dummy->id.ptid, inferior_ptid));
+
+  while (dummy->dtor_list != NULL)
+    {
+      struct dummy_frame_dtor_list *list = dummy->dtor_list;
+
+      dummy->dtor_list = list->next;
+      list->dtor (list->dtor_data, 1);
+      xfree (list);
+    }
+
   restore_infcall_suspend_state (dummy->caller_state);
 
   iterate_over_breakpoints (pop_dummy_frame_bpt, dummy);
@@ -188,6 +226,44 @@ dummy_frame_discard (struct frame_id dummy_id, ptid_t ptid)
   dp = lookup_dummy_frame (&id);
   if (dp)
     remove_dummy_frame (dp);
+}
+
+/* See dummy-frame.h.  */
+
+void
+register_dummy_frame_dtor (struct frame_id dummy_id, ptid_t ptid,
+			   dummy_frame_dtor_ftype *dtor, void *dtor_data)
+{
+  struct dummy_frame_id id = { dummy_id, ptid };
+  struct dummy_frame **dp, *d;
+  struct dummy_frame_dtor_list *list;
+
+  dp = lookup_dummy_frame (&id);
+  gdb_assert (dp != NULL);
+  d = *dp;
+  list = XNEW (struct dummy_frame_dtor_list);
+  list->next = d->dtor_list;
+  d->dtor_list = list;
+  list->dtor = dtor;
+  list->dtor_data = dtor_data;
+}
+
+/* See dummy-frame.h.  */
+
+int
+find_dummy_frame_dtor (dummy_frame_dtor_ftype *dtor, void *dtor_data)
+{
+  struct dummy_frame *d;
+
+  for (d = dummy_frame_stack; d != NULL; d = d->next)
+    {
+      struct dummy_frame_dtor_list *list;
+
+      for (list = d->dtor_list; list != NULL; list = list->next)
+	if (list->dtor == dtor && list->dtor_data == dtor_data)
+	  return 1;
+    }
+  return 0;
 }
 
 /* There may be stale dummy frames, perhaps left over from when an uncaught
@@ -261,7 +337,8 @@ dummy_frame_prev_register (struct frame_info *this_frame,
 			   void **this_prologue_cache,
 			   int regnum)
 {
-  struct dummy_frame_cache *cache = (*this_prologue_cache);
+  struct dummy_frame_cache *cache
+    = (struct dummy_frame_cache *) *this_prologue_cache;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   struct value *reg_val;
 
@@ -291,7 +368,8 @@ dummy_frame_this_id (struct frame_info *this_frame,
 		     struct frame_id *this_id)
 {
   /* The dummy-frame sniffer always fills in the cache.  */
-  struct dummy_frame_cache *cache = (*this_prologue_cache);
+  struct dummy_frame_cache *cache
+    = (struct dummy_frame_cache *) *this_prologue_cache;
 
   gdb_assert (cache != NULL);
   (*this_id) = cache->this_id;

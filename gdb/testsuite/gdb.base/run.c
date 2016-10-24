@@ -6,18 +6,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef PROTOTYPES
+#include "../lib/unbuffer_output.c"
+
 int factorial (int);
 
 int
 main (int argc, char **argv, char **envp)
-#else
-int
-main (argc, argv, envp)
-int argc;
-char *argv[], **envp;
-#endif
 {
+  gdb_unbuffer_output ();
+
 #ifdef FAKEARGV
     printf ("%d\n", factorial (1)); /* commands.exp: hw local_var out of scope */
 #else    
@@ -31,11 +28,7 @@ char *argv[], **envp;
     return 0;
 }
 
-#ifdef PROTOTYPES
 int factorial (int value)
-#else
-int factorial (value) int value;
-#endif
 {
     int  local_var;
 

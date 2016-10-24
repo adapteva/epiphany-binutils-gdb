@@ -1,5 +1,5 @@
 /* Remote target system call support.
-   Copyright 1997-2014 Free Software Foundation, Inc.
+   Copyright 1997-2016 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions.
 
    This file is part of GDB.
@@ -24,7 +24,7 @@
    supported.  */
 
 #ifdef HAVE_CONFIG_H
-#include "cconfig.h"
+#include "config.h"
 #endif
 #include "ansidecl.h"
 #include "libiberty.h"
@@ -240,7 +240,7 @@ cb_syscall (host_callback *cb, CB_SYSCALL *sc)
 #endif /* wip */
 
     case CB_SYS_exit :
-      /* Caller must catch and handle.  */
+      /* Caller must catch and handle; see sim_syscall as an example.  */
       break;
 
     case CB_SYS_open :
@@ -455,7 +455,7 @@ cb_syscall (host_callback *cb, CB_SYSCALL *sc)
 	    result = -1;
 	    goto FinishSyscall;
 	  }
-	result = (*cb->stat) (cb, path, &statbuf);
+	result = (*cb->to_stat) (cb, path, &statbuf);
 	free (path);
 	if (result < 0)
 	  goto ErrorFinish;
@@ -488,7 +488,7 @@ cb_syscall (host_callback *cb, CB_SYSCALL *sc)
 	struct stat statbuf;
 	TADDR addr = sc->arg2;
 
-	result = (*cb->fstat) (cb, sc->arg1, &statbuf);
+	result = (*cb->to_fstat) (cb, sc->arg1, &statbuf);
 	if (result < 0)
 	  goto ErrorFinish;
 	buflen = cb_host_to_target_stat (cb, NULL, NULL);
@@ -526,7 +526,7 @@ cb_syscall (host_callback *cb, CB_SYSCALL *sc)
 	    result = -1;
 	    goto FinishSyscall;
 	  }
-	result = (*cb->lstat) (cb, path, &statbuf);
+	result = (*cb->to_lstat) (cb, path, &statbuf);
 	free (path);
 	if (result < 0)
 	  goto ErrorFinish;

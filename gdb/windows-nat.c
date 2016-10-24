@@ -1,6 +1,6 @@
 /* Target-vector operations for controlling windows child processes, for GDB.
 
-   Copyright (C) 1995-2014 Free Software Foundation, Inc.
+   Copyright (C) 1995-2016 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions, A Red Hat Company.
 
@@ -77,20 +77,41 @@
 #define GetConsoleFontSize		dyn_GetConsoleFontSize
 #define GetCurrentConsoleFont		dyn_GetCurrentConsoleFont
 
-static BOOL WINAPI (*AdjustTokenPrivileges)(HANDLE, BOOL, PTOKEN_PRIVILEGES,
-					    DWORD, PTOKEN_PRIVILEGES, PDWORD);
-static BOOL WINAPI (*DebugActiveProcessStop) (DWORD);
-static BOOL WINAPI (*DebugBreakProcess) (HANDLE);
-static BOOL WINAPI (*DebugSetProcessKillOnExit) (BOOL);
-static BOOL WINAPI (*EnumProcessModules) (HANDLE, HMODULE *, DWORD,
-					  LPDWORD);
-static BOOL WINAPI (*GetModuleInformation) (HANDLE, HMODULE, LPMODULEINFO,
-					    DWORD);
-static BOOL WINAPI (*LookupPrivilegeValueA)(LPCSTR, LPCSTR, PLUID);
-static BOOL WINAPI (*OpenProcessToken)(HANDLE, DWORD, PHANDLE);
-static BOOL WINAPI (*GetCurrentConsoleFont) (HANDLE, BOOL,
-					     CONSOLE_FONT_INFO *);
-static COORD WINAPI (*GetConsoleFontSize) (HANDLE, DWORD);
+typedef BOOL WINAPI (AdjustTokenPrivileges_ftype) (HANDLE, BOOL,
+						   PTOKEN_PRIVILEGES,
+						   DWORD, PTOKEN_PRIVILEGES,
+						   PDWORD);
+static AdjustTokenPrivileges_ftype *AdjustTokenPrivileges;
+
+typedef BOOL WINAPI (DebugActiveProcessStop_ftype) (DWORD);
+static DebugActiveProcessStop_ftype *DebugActiveProcessStop;
+
+typedef BOOL WINAPI (DebugBreakProcess_ftype) (HANDLE);
+static DebugBreakProcess_ftype *DebugBreakProcess;
+
+typedef BOOL WINAPI (DebugSetProcessKillOnExit_ftype) (BOOL);
+static DebugSetProcessKillOnExit_ftype *DebugSetProcessKillOnExit;
+
+typedef BOOL WINAPI (EnumProcessModules_ftype) (HANDLE, HMODULE *, DWORD,
+						LPDWORD);
+static EnumProcessModules_ftype *EnumProcessModules;
+
+typedef BOOL WINAPI (GetModuleInformation_ftype) (HANDLE, HMODULE,
+						  LPMODULEINFO, DWORD);
+static GetModuleInformation_ftype *GetModuleInformation;
+
+typedef BOOL WINAPI (LookupPrivilegeValueA_ftype) (LPCSTR, LPCSTR, PLUID);
+static LookupPrivilegeValueA_ftype *LookupPrivilegeValueA;
+
+typedef BOOL WINAPI (OpenProcessToken_ftype) (HANDLE, DWORD, PHANDLE);
+static OpenProcessToken_ftype *OpenProcessToken;
+
+typedef BOOL WINAPI (GetCurrentConsoleFont_ftype) (HANDLE, BOOL,
+						   CONSOLE_FONT_INFO *);
+static GetCurrentConsoleFont_ftype *GetCurrentConsoleFont;
+
+typedef COORD WINAPI (GetConsoleFontSize_ftype) (HANDLE, DWORD);
+static GetConsoleFontSize_ftype *GetConsoleFontSize;
 
 #undef STARTUPINFO
 #undef CreateProcess
@@ -98,7 +119,8 @@ static COORD WINAPI (*GetConsoleFontSize) (HANDLE, DWORD);
 
 #ifndef __CYGWIN__
 # define __PMAX	(MAX_PATH + 1)
-  static DWORD WINAPI (*GetModuleFileNameEx) (HANDLE, HMODULE, LPSTR, DWORD);
+  typedef DWORD WINAPI (GetModuleFileNameEx_ftype) (HANDLE, HMODULE, LPSTR, DWORD);
+  static GetModuleFileNameEx_ftype *GetModuleFileNameEx;
 # define STARTUPINFO STARTUPINFOA
 # define CreateProcess CreateProcessA
 # define GetModuleFileNameEx_name "GetModuleFileNameExA"
@@ -110,8 +132,9 @@ static COORD WINAPI (*GetConsoleFontSize) (HANDLE, DWORD);
   static CORE_ADDR cygwin_load_end;
 #   define __USEWIDE
     typedef wchar_t cygwin_buf_t;
-    static DWORD WINAPI (*GetModuleFileNameEx) (HANDLE, HMODULE,
-						LPWSTR, DWORD);
+    typedef DWORD WINAPI (GetModuleFileNameEx_ftype) (HANDLE, HMODULE,
+						      LPWSTR, DWORD);
+    static GetModuleFileNameEx_ftype *GetModuleFileNameEx;
 #   define STARTUPINFO STARTUPINFOW
 #   define CreateProcess CreateProcessW
 #   define GetModuleFileNameEx_name "GetModuleFileNameExW"
@@ -130,7 +153,6 @@ static CONTEXT saved_context;	/* Containes the saved context from a
 enum
   {
     FLAG_TRACE_BIT = 0x100,
-    CONTEXT_DEBUGGER = (CONTEXT_FULL | CONTEXT_FLOATING_POINT)
   };
 #endif
 
@@ -140,8 +162,9 @@ enum
 #define CONTEXT_EXTENDED_REGISTERS 0
 #endif
 
-#define CONTEXT_DEBUGGER_DR CONTEXT_DEBUGGER | CONTEXT_DEBUG_REGISTERS \
-	| CONTEXT_EXTENDED_REGISTERS
+#define CONTEXT_DEBUGGER_DR CONTEXT_FULL | CONTEXT_FLOATING_POINT \
+        | CONTEXT_SEGMENTS | CONTEXT_DEBUG_REGISTERS \
+        | CONTEXT_EXTENDED_REGISTERS
 
 static uintptr_t dr[8];
 static int debug_registers_changed;
@@ -162,7 +185,7 @@ static int windows_initialization_done;
 #define DEBUG_MEM(x)	if (debug_memory)	printf_unfiltered x
 #define DEBUG_EXCEPT(x)	if (debug_exceptions)	printf_unfiltered x
 
-static void windows_stop (struct target_ops *self, ptid_t);
+static void windows_interrupt (struct target_ops *self, ptid_t);
 static int windows_thread_alive (struct target_ops *, ptid_t);
 static void windows_kill_inferior (struct target_ops *);
 
@@ -177,9 +200,9 @@ static enum gdb_signal last_sig = GDB_SIGNAL_0;
 
 /* Thread information structure used to track information that is
    not available in gdb's thread structure.  */
-typedef struct thread_info_struct
+typedef struct windows_thread_info_struct
   {
-    struct thread_info_struct *next;
+    struct windows_thread_info_struct *next;
     DWORD id;
     HANDLE h;
     CORE_ADDR thread_local_base;
@@ -189,16 +212,16 @@ typedef struct thread_info_struct
     CONTEXT context;
     STACKFRAME sf;
   }
-thread_info;
+windows_thread_info;
 
-static thread_info thread_head;
+static windows_thread_info thread_head;
 
 /* The process and thread handles for the above context.  */
 
 static DEBUG_EVENT current_event;	/* The current debug event from
 					   WaitForDebugEvent */
 static HANDLE current_process_handle;	/* Currently executing process */
-static thread_info *current_thread;	/* Info on currently selected thread */
+static windows_thread_info *current_thread;	/* Info on currently selected thread */
 static DWORD main_thread_id;		/* Thread ID of the main thread */
 
 /* Counts of things.  */
@@ -261,7 +284,7 @@ static const struct xlate_exception
   {DBG_CONTROL_C, GDB_SIGNAL_INT},
   {EXCEPTION_SINGLE_STEP, GDB_SIGNAL_TRAP},
   {STATUS_FLOAT_DIVIDE_BY_ZERO, GDB_SIGNAL_FPE},
-  {-1, -1}};
+  {-1, GDB_SIGNAL_UNKNOWN}};
 
 /* Set the MAPPINGS static global to OFFSETS.
    See the description of MAPPINGS for more details.  */
@@ -291,10 +314,10 @@ check (BOOL ok, const char *file, int line)
 /* Find a thread record given a thread id.  If GET_CONTEXT is not 0,
    then also retrieve the context for this thread.  If GET_CONTEXT is
    negative, then don't suspend the thread.  */
-static thread_info *
+static windows_thread_info *
 thread_rec (DWORD id, int get_context)
 {
-  thread_info *th;
+  windows_thread_info *th;
 
   for (th = &thread_head; (th = th->next) != NULL;)
     if (th->id == id)
@@ -310,8 +333,11 @@ thread_rec (DWORD id, int get_context)
 		    /* We get Access Denied (5) when trying to suspend
 		       threads that Windows started on behalf of the
 		       debuggee, usually when those threads are just
-		       about to exit.  */
-		    if (err != ERROR_ACCESS_DENIED)
+		       about to exit.
+		       We can get Invalid Handle (6) if the main thread
+		       has exited.  */
+		    if (err != ERROR_INVALID_HANDLE
+			&& err != ERROR_ACCESS_DENIED)
 		      warning (_("SuspendThread (tid=0x%x) failed."
 				 " (winerr %u)"),
 			       (unsigned) id, (unsigned) err);
@@ -331,10 +357,10 @@ thread_rec (DWORD id, int get_context)
 }
 
 /* Add a thread to the thread list.  */
-static thread_info *
+static windows_thread_info *
 windows_add_thread (ptid_t ptid, HANDLE h, void *tlb)
 {
-  thread_info *th;
+  windows_thread_info *th;
   DWORD id;
 
   gdb_assert (ptid_get_tid (ptid) != 0);
@@ -344,7 +370,7 @@ windows_add_thread (ptid_t ptid, HANDLE h, void *tlb)
   if ((th = thread_rec (id, FALSE)))
     return th;
 
-  th = XCNEW (thread_info);
+  th = XCNEW (windows_thread_info);
   th->id = id;
   th->h = h;
   th->thread_local_base = (CORE_ADDR) (uintptr_t) tlb;
@@ -374,13 +400,13 @@ windows_add_thread (ptid_t ptid, HANDLE h, void *tlb)
 static void
 windows_init_thread_list (void)
 {
-  thread_info *th = &thread_head;
+  windows_thread_info *th = &thread_head;
 
   DEBUG_EVENTS (("gdb: windows_init_thread_list\n"));
   init_thread_list ();
   while (th->next != NULL)
     {
-      thread_info *here = th->next;
+      windows_thread_info *here = th->next;
       th->next = here->next;
       xfree (here);
     }
@@ -391,7 +417,7 @@ windows_init_thread_list (void)
 static void
 windows_delete_thread (ptid_t ptid, DWORD exit_code)
 {
-  thread_info *th;
+  windows_thread_info *th;
   DWORD id;
 
   gdb_assert (ptid_get_tid (ptid) != 0);
@@ -412,7 +438,7 @@ windows_delete_thread (ptid_t ptid, DWORD exit_code)
 
   if (th->next != NULL)
     {
-      thread_info *here = th->next;
+      windows_thread_info *here = th->next;
       th->next = here->next;
       xfree (here);
     }
@@ -432,7 +458,7 @@ do_windows_fetch_inferior_registers (struct regcache *regcache, int r)
 
   if (current_thread->reload_context)
     {
-#ifdef __COPY_CONTEXT_SIZE
+#ifdef __CYGWIN__
       if (have_saved_context)
 	{
 	  /* Lie about where the program actually is stopped since
@@ -446,7 +472,7 @@ do_windows_fetch_inferior_registers (struct regcache *regcache, int r)
       else
 #endif
 	{
-	  thread_info *th = current_thread;
+	  windows_thread_info *th = current_thread;
 	  th->context.ContextFlags = CONTEXT_DEBUGGER_DR;
 	  CHECK (GetThreadContext (th->h, &th->context));
 	  /* Copy dr values from that thread.
@@ -551,61 +577,6 @@ struct lm_info
 
 static struct so_list solib_start, *solib_end;
 
-/* Call symbol_file_add with stderr redirected.  We don't care if there
-   are errors.  */
-static int
-safe_symbol_file_add_stub (void *argv)
-{
-#define p ((struct safe_symbol_file_add_args *) argv)
-  const int add_flags = ((p->from_tty ? SYMFILE_VERBOSE : 0)
-                         | (p->mainline ? SYMFILE_MAINLINE : 0));
-  p->ret = symbol_file_add (p->name, add_flags, p->addrs, p->flags);
-  return !!p->ret;
-#undef p
-}
-
-/* Restore gdb's stderr after calling symbol_file_add.  */
-static void
-safe_symbol_file_add_cleanup (void *p)
-{
-#define sp ((struct safe_symbol_file_add_args *)p)
-  gdb_flush (gdb_stderr);
-  gdb_flush (gdb_stdout);
-  ui_file_delete (gdb_stderr);
-  ui_file_delete (gdb_stdout);
-  gdb_stderr = sp->err;
-  gdb_stdout = sp->out;
-#undef sp
-}
-
-/* symbol_file_add wrapper that prevents errors from being displayed.  */
-static struct objfile *
-safe_symbol_file_add (char *name, int from_tty,
-		      struct section_addr_info *addrs,
-		      int mainline, int flags)
-{
-  struct safe_symbol_file_add_args p;
-  struct cleanup *cleanup;
-
-  cleanup = make_cleanup (safe_symbol_file_add_cleanup, &p);
-
-  p.err = gdb_stderr;
-  p.out = gdb_stdout;
-  gdb_flush (gdb_stderr);
-  gdb_flush (gdb_stdout);
-  gdb_stderr = ui_file_new ();
-  gdb_stdout = ui_file_new ();
-  p.name = name;
-  p.from_tty = from_tty;
-  p.addrs = addrs;
-  p.mainline = mainline;
-  p.flags = flags;
-  catch_errors (safe_symbol_file_add_stub, &p, "", RETURN_MASK_ERROR);
-
-  do_cleanups (cleanup);
-  return p.ret;
-}
-
 static struct so_list *
 windows_make_so (const char *name, LPVOID load_addr)
 {
@@ -659,7 +630,7 @@ windows_make_so (const char *name, LPVOID load_addr)
     }
 #endif
   so = XCNEW (struct so_list);
-  so->lm_info = (struct lm_info *) xmalloc (sizeof (struct lm_info));
+  so->lm_info = XNEW (struct lm_info);
   so->lm_info->load_addr = load_addr;
   strcpy (so->so_original_name, name);
 #ifndef __CYGWIN__
@@ -854,28 +825,6 @@ windows_clear_solib (void)
   solib_end = &solib_start;
 }
 
-/* Load DLL symbol info.  */
-static void
-dll_symbol_command (char *args, int from_tty)
-{
-  int n;
-  dont_repeat ();
-
-  if (args == NULL)
-    error (_("dll-symbols requires a file name"));
-
-  n = strlen (args);
-  if (n > 4 && strcasecmp (args + n - 4, ".dll") != 0)
-    {
-      char *newargs = (char *) alloca (n + 4 + 1);
-      strcpy (newargs, args);
-      strcat (newargs, ".dll");
-      args = newargs;
-    }
-
-  safe_symbol_file_add (args, from_tty, NULL, 0, OBJF_SHARED | OBJF_USERLOADED);
-}
-
 /* Handle DEBUG_STRING output from child process.
    Cygwin prepends its messages with a "cygwin:".  Interpret this as
    a Cygwin signal.  Otherwise just print the string as a warning.  */
@@ -890,15 +839,20 @@ handle_output_debug_string (struct target_waitstatus *ourstatus)
 	&s, 1024, 0)
       || !s || !*s)
     /* nothing to do */;
-  else if (strncmp (s, _CYGWIN_SIGNAL_STRING,
-		    sizeof (_CYGWIN_SIGNAL_STRING) - 1) != 0)
+  else if (!startswith (s, _CYGWIN_SIGNAL_STRING))
     {
 #ifdef __CYGWIN__
-      if (strncmp (s, "cYg", 3) != 0)
+      if (!startswith (s, "cYg"))
 #endif
-	warning (("%s"), s);
+	{
+	  char *p = strchr (s, '\0');
+
+	  if (p > s && *--p == '\n')
+	    *p = '\0';
+	  warning (("%s"), s);
+	}
     }
-#ifdef __COPY_CONTEXT_SIZE
+#ifdef __CYGWIN__
   else
     {
       /* Got a cygwin signal marker.  A cygwin signal is followed by
@@ -910,7 +864,7 @@ handle_output_debug_string (struct target_waitstatus *ourstatus)
 	 to treat this like a real signal.  */
       char *p;
       int sig = strtol (s + sizeof (_CYGWIN_SIGNAL_STRING) - 1, &p, 0);
-      int gotasig = gdb_signal_from_host (sig);
+      gdb_signal gotasig = gdb_signal_from_host (sig);
 
       ourstatus->value.sig = gotasig;
       if (gotasig)
@@ -928,7 +882,6 @@ handle_output_debug_string (struct target_waitstatus *ourstatus)
 					 __COPY_CONTEXT_SIZE, &n)
 		   && n == __COPY_CONTEXT_SIZE)
 	    have_saved_context = 1;
-	  current_event.dwThreadId = retval;
 	}
     }
 #endif
@@ -1061,7 +1014,7 @@ display_selectors (char * args, int from_tty)
 static int
 handle_exception (struct target_waitstatus *ourstatus)
 {
-  thread_info *th;
+  windows_thread_info *th;
   DWORD code = current_event.u.Exception.ExceptionRecord.ExceptionCode;
 
   ourstatus->kind = TARGET_WAITKIND_STOPPED;
@@ -1091,8 +1044,7 @@ handle_exception (struct target_waitstatus *ourstatus)
 	if ((!cygwin_exceptions && (addr >= cygwin_load_start
 				    && addr < cygwin_load_end))
 	    || (find_pc_partial_function (addr, &fn, NULL, NULL)
-		&& strncmp (fn, "KERNEL32!IsBad",
-			    strlen ("KERNEL32!IsBad")) == 0))
+		&& startswith (fn, "KERNEL32!IsBad")))
 	  return 0;
       }
 #endif
@@ -1172,7 +1124,7 @@ handle_exception (struct target_waitstatus *ourstatus)
     default:
       /* Treat unhandled first chance exceptions specially.  */
       if (current_event.u.Exception.dwFirstChance)
-	return -1;
+	return 0;
       printf_unfiltered ("gdb: unknown target exception 0x%08x at %s\n",
 	(unsigned) current_event.u.Exception.ExceptionRecord.ExceptionCode,
 	host_address_to_string (
@@ -1193,7 +1145,7 @@ static BOOL
 windows_continue (DWORD continue_status, int id, int killed)
 {
   int i;
-  thread_info *th;
+  windows_thread_info *th;
   BOOL res;
 
   DEBUG_EVENTS (("ContinueDebugEvent (cpid=%d, ctid=0x%x, %s);\n",
@@ -1239,6 +1191,11 @@ windows_continue (DWORD continue_status, int id, int killed)
 			    current_event.dwThreadId,
 			    continue_status);
 
+  if (!res)
+    error (_("Failed to resume program execution"
+	     " (ContinueDebugEvent failed, error %u)"),
+	   (unsigned int) GetLastError ());
+
   debug_registers_changed = 0;
   return res;
 }
@@ -1271,7 +1228,7 @@ static void
 windows_resume (struct target_ops *ops,
 		ptid_t ptid, int step, enum gdb_signal sig)
 {
-  thread_info *th;
+  windows_thread_info *th;
   DWORD continue_status = DBG_CONTINUE;
 
   /* A specific PTID means `step only this thread id'.  */
@@ -1312,7 +1269,7 @@ windows_resume (struct target_ops *ops,
 	    }
 	}
 #endif
-	DEBUG_EXCEPT(("Can only continue with recieved signal %d.\n",
+	DEBUG_EXCEPT(("Can only continue with received signal %d.\n",
 	  last_sig));
     }
 
@@ -1386,17 +1343,17 @@ ctrl_c_handler (DWORD event_type)
   return TRUE;
 }
 
-/* Get the next event from the child.  Return 1 if the event requires
-   handling by WFI (or whatever).  */
+/* Get the next event from the child.  Returns a non-zero thread id if the event
+   requires handling by WFI (or whatever).  */
 static int
 get_windows_debug_event (struct target_ops *ops,
 			 int pid, struct target_waitstatus *ourstatus)
 {
   BOOL debug_event;
   DWORD continue_status, event_code;
-  thread_info *th;
-  static thread_info dummy_thread_info;
-  int retval = 0;
+  windows_thread_info *th;
+  static windows_thread_info dummy_thread_info;
+  DWORD thread_id = 0;
 
   last_sig = GDB_SIGNAL_0;
 
@@ -1427,14 +1384,14 @@ get_windows_debug_event (struct target_ops *ops,
 	      /* Kludge around a Windows bug where first event is a create
 		 thread event.  Caused when attached process does not have
 		 a main thread.  */
-	      retval = fake_create_process ();
-	      if (retval)
+	      thread_id = fake_create_process ();
+	      if (thread_id)
 		saw_create++;
 	    }
 	  break;
 	}
       /* Record the existence of this thread.  */
-      retval = current_event.dwThreadId;
+      thread_id = current_event.dwThreadId;
       th = windows_add_thread (ptid_build (current_event.dwProcessId, 0,
 					 current_event.dwThreadId),
 			     current_event.u.CreateThread.hThread,
@@ -1477,7 +1434,7 @@ get_windows_debug_event (struct target_ops *ops,
 					   current_event.dwThreadId),
 	     current_event.u.CreateProcessInfo.hThread,
 	     current_event.u.CreateProcessInfo.lpThreadLocalBase);
-      retval = current_event.dwThreadId;
+      thread_id = current_event.dwThreadId;
       break;
 
     case EXIT_PROCESS_DEBUG_EVENT:
@@ -1496,7 +1453,7 @@ get_windows_debug_event (struct target_ops *ops,
 	{
 	  ourstatus->kind = TARGET_WAITKIND_EXITED;
 	  ourstatus->value.integer = current_event.u.ExitProcess.dwExitCode;
-	  retval = main_thread_id;
+	  thread_id = main_thread_id;
 	}
       break;
 
@@ -1511,7 +1468,7 @@ get_windows_debug_event (struct target_ops *ops,
       catch_errors (handle_load_dll, NULL, (char *) "", RETURN_MASK_ALL);
       ourstatus->kind = TARGET_WAITKIND_LOADED;
       ourstatus->value.integer = 0;
-      retval = main_thread_id;
+      thread_id = main_thread_id;
       break;
 
     case UNLOAD_DLL_DEBUG_EVENT:
@@ -1524,7 +1481,7 @@ get_windows_debug_event (struct target_ops *ops,
       catch_errors (handle_unload_dll, NULL, (char *) "", RETURN_MASK_ALL);
       ourstatus->kind = TARGET_WAITKIND_LOADED;
       ourstatus->value.integer = 0;
-      retval = main_thread_id;
+      thread_id = main_thread_id;
       break;
 
     case EXCEPTION_DEBUG_EVENT:
@@ -1534,19 +1491,10 @@ get_windows_debug_event (struct target_ops *ops,
 		     "EXCEPTION_DEBUG_EVENT"));
       if (saw_create != 1)
 	break;
-      switch (handle_exception (ourstatus))
-	{
-	case 0:
-	  continue_status = DBG_EXCEPTION_NOT_HANDLED;
-	  break;
-	case 1:
-	  retval = current_event.dwThreadId;
-	  break;
-	case -1:
-	  last_sig = 1;
-	  continue_status = -1;
-	  break;
-	}
+      if (handle_exception (ourstatus))
+	thread_id = current_event.dwThreadId;
+      else
+	continue_status = DBG_EXCEPTION_NOT_HANDLED;
       break;
 
     case OUTPUT_DEBUG_STRING_EVENT:	/* Message from the kernel.  */
@@ -1556,7 +1504,7 @@ get_windows_debug_event (struct target_ops *ops,
 		     "OUTPUT_DEBUG_STRING_EVENT"));
       if (saw_create != 1)
 	break;
-      retval = handle_output_debug_string (ourstatus);
+      thread_id = handle_output_debug_string (ourstatus);
       break;
 
     default:
@@ -1570,22 +1518,21 @@ get_windows_debug_event (struct target_ops *ops,
       break;
     }
 
-  if (!retval || saw_create != 1)
+  if (!thread_id || saw_create != 1)
     {
-      if (continue_status == -1)
-	windows_resume (ops, minus_one_ptid, 0, 1);
-      else
-	CHECK (windows_continue (continue_status, -1, 0));
+      CHECK (windows_continue (continue_status, -1, 0));
     }
   else
     {
       inferior_ptid = ptid_build (current_event.dwProcessId, 0,
-				  retval);
-      current_thread = th ?: thread_rec (current_event.dwThreadId, TRUE);
+				  thread_id);
+      current_thread = th;
+      if (!current_thread)
+	current_thread = thread_rec (thread_id, TRUE);
     }
 
 out:
-  return retval;
+  return thread_id;
 }
 
 /* Wait for interesting events to occur in the target process.  */
@@ -1706,7 +1653,6 @@ windows_add_all_dlls (void)
 static void
 do_initial_windows_stuff (struct target_ops *ops, DWORD pid, int attaching)
 {
-  extern int stop_after_trap;
   int i;
   struct inferior *inf;
   struct thread_info *tp;
@@ -1741,20 +1687,24 @@ do_initial_windows_stuff (struct target_ops *ops, DWORD pid, int attaching)
      current thread until we report an event out of windows_wait.  */
   inferior_ptid = pid_to_ptid (pid);
 
-  child_terminal_init_with_pgrp (pid);
+  target_terminal_init ();
   target_terminal_inferior ();
 
   windows_initialization_done = 0;
-  inf->control.stop_soon = STOP_QUIETLY;
+
   while (1)
     {
-      stop_after_trap = 1;
-      wait_for_inferior ();
-      tp = inferior_thread ();
-      if (tp->suspend.stop_signal != GDB_SIGNAL_TRAP)
-	resume (0, tp->suspend.stop_signal);
-      else
+      struct target_waitstatus status;
+
+      windows_wait (ops, minus_one_ptid, &status, 0);
+
+      /* Note windows_wait returns TARGET_WAITKIND_SPURIOUS for thread
+	 events.  */
+      if (status.kind != TARGET_WAITKIND_LOADED
+	  && status.kind != TARGET_WAITKIND_SPURIOUS)
 	break;
+
+      windows_resume (ops, minus_one_ptid, 0, GDB_SIGNAL_0);
     }
 
   /* Now that the inferior has been started and all DLLs have been mapped,
@@ -1775,8 +1725,6 @@ do_initial_windows_stuff (struct target_ops *ops, DWORD pid, int attaching)
   windows_add_all_dlls ();
 
   windows_initialization_done = 1;
-  inf->control.stop_soon = NO_STOP_QUIETLY;
-  stop_after_trap = 0;
   return;
 }
 
@@ -1946,7 +1894,7 @@ windows_get_exec_module_filename (char *exe_name_ret, size_t exe_name_max_len)
     /* Cygwin prefers that the path be in /x/y/z format, so extract
        the filename into a temporary buffer first, and then convert it
        to POSIX format into the destination buffer.  */
-    cygwin_buf_t *pathbuf = alloca (exe_name_max_len * sizeof (cygwin_buf_t));
+    cygwin_buf_t *pathbuf = (cygwin_buf_t *) alloca (exe_name_max_len * sizeof (cygwin_buf_t));
 
     len = GetModuleFileNameEx (current_process_handle,
 			       dh_buf, pathbuf, exe_name_max_len);
@@ -2272,7 +2220,7 @@ windows_create_inferior (struct target_ops *ops, char *exec_file,
      To avoid ambiguities introduced by spaces in the module name,
      we quote it.  */
   args_len = strlen (toexec) + 2 /* quotes */ + strlen (allargs) + 2;
-  args = alloca (args_len);
+  args = (char *) alloca (args_len);
   xsnprintf (args, args_len, "\"%s\" %s", toexec, allargs);
 
   flags |= DEBUG_ONLY_THIS_PROCESS;
@@ -2312,7 +2260,7 @@ windows_create_inferior (struct target_ops *ops, char *exec_file,
   /* Windows programs expect the environment block to be sorted.  */
   qsort (env, i, sizeof (char *), envvar_cmp);
 
-  w32env = alloca (envlen + 1);
+  w32env = (char *) alloca (envlen + 1);
 
   /* Copy env strings into new buffer.  */
   for (temp = w32env, i = 0; env[i] && *env[i]; i++)
@@ -2373,7 +2321,7 @@ windows_mourn_inferior (struct target_ops *ops)
    ^C on the controlling terminal.  */
 
 static void
-windows_stop (struct target_ops *self, ptid_t ptid)
+windows_interrupt (struct target_ops *self, ptid_t ptid)
 {
   DEBUG_EVENTS (("gdb: GenerateConsoleCtrlEvent (CTRLC_EVENT, 0)\n"));
   CHECK (GenerateConsoleCtrlEvent (CTRL_C_EVENT, current_event.dwProcessId));
@@ -2484,7 +2432,7 @@ windows_xfer_shared_libraries (struct target_ops *ops,
 				 target_gdbarch (), &obstack);
   obstack_grow_str0 (&obstack, "</library-list>\n");
 
-  buf = obstack_finish (&obstack);
+  buf = (const char *) obstack_finish (&obstack);
   len_avail = strlen (buf);
   if (offset >= len_avail)
     len= 0;
@@ -2529,7 +2477,7 @@ static int
 windows_get_tib_address (struct target_ops *self,
 			 ptid_t ptid, CORE_ADDR *addr)
 {
-  thread_info *th;
+  windows_thread_info *th;
 
   th = thread_rec (ptid_get_tid (ptid), 0);
   if (th == NULL)
@@ -2567,18 +2515,12 @@ windows_target (void)
   t->to_mourn_inferior = windows_mourn_inferior;
   t->to_thread_alive = windows_thread_alive;
   t->to_pid_to_str = windows_pid_to_str;
-  t->to_stop = windows_stop;
+  t->to_interrupt = windows_interrupt;
   t->to_pid_to_exec_file = windows_pid_to_exec_file;
   t->to_get_ada_task_ptid = windows_get_ada_task_ptid;
   t->to_get_tib_address = windows_get_tib_address;
 
   return t;
-}
-
-static void
-set_windows_aliases (char *argv0)
-{
-  add_info_alias ("dll", "sharedlibrary", 1);
 }
 
 /* -Wmissing-prototypes */
@@ -2587,7 +2529,6 @@ extern initialize_file_ftype _initialize_windows_nat;
 void
 _initialize_windows_nat (void)
 {
-  struct cmd_list_element *c;
   struct target_ops *t;
 
   t = windows_target ();
@@ -2609,21 +2550,6 @@ _initialize_windows_nat (void)
 #ifdef __CYGWIN__
   cygwin_internal (CW_SET_DOS_FILE_WARNING, 0);
 #endif
-
-  c = add_com ("dll-symbols", class_files, dll_symbol_command,
-	       _("Load dll library symbols from FILE."));
-  set_cmd_completer (c, filename_completer);
-  deprecate_cmd (c, "sharedlibrary");
-
-  c = add_com ("add-shared-symbol-files", class_files, dll_symbol_command,
-	       _("Load dll library symbols from FILE."));
-  set_cmd_completer (c, filename_completer);
-  deprecate_cmd (c, "sharedlibrary");
-
-  c = add_com ("assf", class_files, dll_symbol_command,
-	       _("Load dll library symbols from FILE."));
-  set_cmd_completer (c, filename_completer);
-  deprecate_cmd (c, "sharedlibrary");
 
 #ifdef __CYGWIN__
   add_setshow_boolean_cmd ("shell", class_support, &useshell, _("\
@@ -2690,7 +2616,6 @@ Show whether to display kernel exceptions in child process."), NULL,
   add_cmd ("selector", class_info, display_selectors,
 	   _("Display selectors infos."),
 	   &info_w32_cmdlist);
-  deprecated_init_ui_hook = set_windows_aliases;
 }
 
 /* Hardware watchpoint support, adapted from go32-nat.c code.  */
@@ -2777,7 +2702,7 @@ _initialize_check_for_gdb_ini (void)
     {
       char *p;
       char *oldini = (char *) alloca (strlen (homedir) +
-				      sizeof ("/gdb.ini"));
+				      sizeof ("gdb.ini") + 1);
       strcpy (oldini, homedir);
       p = strchr (oldini, '\0');
       if (p > oldini && !IS_DIR_SEPARATOR (p[-1]))
@@ -2786,9 +2711,9 @@ _initialize_check_for_gdb_ini (void)
       if (access (oldini, 0) == 0)
 	{
 	  int len = strlen (oldini);
-	  char *newini = alloca (len + 1);
+	  char *newini = (char *) alloca (len + 2);
 
-	  xsnprintf (newini, len + 1, "%.*s.gdbinit",
+	  xsnprintf (newini, len + 2, "%.*s.gdbinit",
 		     (int) (len - (sizeof ("gdb.ini") - 1)), oldini);
 	  warning (_("obsolete '%s' found. Rename to '%s'."), oldini, newini);
 	}
@@ -2870,19 +2795,18 @@ _initialize_loadable (void)
 {
   HMODULE hm = NULL;
 
+#define GPA(m, func)					\
+  func = (func ## _ftype *) GetProcAddress (m, #func)
+
   hm = LoadLibrary ("kernel32.dll");
   if (hm)
     {
-      DebugActiveProcessStop = (void *)
-	GetProcAddress (hm, "DebugActiveProcessStop");
-      DebugBreakProcess = (void *)
-	GetProcAddress (hm, "DebugBreakProcess");
-      DebugSetProcessKillOnExit = (void *)
-	GetProcAddress (hm, "DebugSetProcessKillOnExit");
-      GetConsoleFontSize = (void *) 
-	GetProcAddress (hm, "GetConsoleFontSize");
-      GetCurrentConsoleFont = (void *) 
-	GetProcAddress (hm, "GetCurrentConsoleFont");
+      GPA (hm, DebugActiveProcessStop);
+      GPA (hm, DebugBreakProcess);
+      GPA (hm, DebugSetProcessKillOnExit);
+      GPA (hm, GetConsoleFontSize);
+      GPA (hm, DebugActiveProcessStop);
+      GPA (hm, GetCurrentConsoleFont);
     }
 
   /* Set variables to dummy versions of these processes if the function
@@ -2904,12 +2828,10 @@ _initialize_loadable (void)
   hm = LoadLibrary ("psapi.dll");
   if (hm)
     {
-      EnumProcessModules = (void *)
-	GetProcAddress (hm, "EnumProcessModules");
-      GetModuleInformation = (void *)
-	GetProcAddress (hm, "GetModuleInformation");
-      GetModuleFileNameEx = (void *)
-	GetProcAddress (hm, GetModuleFileNameEx_name);
+      GPA (hm, EnumProcessModules);
+      GPA (hm, GetModuleInformation);
+      GetModuleFileNameEx = (GetModuleFileNameEx_ftype *)
+        GetProcAddress (hm, GetModuleFileNameEx_name);
     }
 
   if (!EnumProcessModules || !GetModuleInformation || !GetModuleFileNameEx)
@@ -2929,15 +2851,15 @@ Use \"file\" or \"dll\" command to load executable/libraries directly."));
   hm = LoadLibrary ("advapi32.dll");
   if (hm)
     {
-      OpenProcessToken = (void *) GetProcAddress (hm, "OpenProcessToken");
-      LookupPrivilegeValueA = (void *)
-	GetProcAddress (hm, "LookupPrivilegeValueA");
-      AdjustTokenPrivileges = (void *)
-	GetProcAddress (hm, "AdjustTokenPrivileges");
+      GPA (hm, OpenProcessToken);
+      GPA (hm, LookupPrivilegeValueA);
+      GPA (hm, AdjustTokenPrivileges);
       /* Only need to set one of these since if OpenProcessToken fails nothing
 	 else is needed.  */
       if (!OpenProcessToken || !LookupPrivilegeValueA
 	  || !AdjustTokenPrivileges)
 	OpenProcessToken = bad_OpenProcessToken;
     }
+
+#undef GPA
 }

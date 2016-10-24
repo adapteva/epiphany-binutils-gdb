@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Copyright (C) 2011-2014 Free Software Foundation, Inc.
+# Copyright (C) 2011-2016 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -30,21 +30,34 @@
 
 # The list of gnulib modules we are importing in GDB.
 IMPORTED_GNULIB_MODULES="\
+    alloca \
+    canonicalize-lgpl \
+    dirent \
     dirfd \
+    errno \
     fnmatch-gnu \
     frexpl \
     inttypes \
+    lstat \
+    memchr \
     memmem \
-    update-copyright \
-    unistd \
     pathmax \
+    rawmemchr \
+    readlink \
+    rename \
+    signal-h \
+    strchrnul \
     strstr \
-    dirent \
+    strtok_r \
     sys_stat \
+    unistd \
+    update-copyright \
+    wchar \
+    wctype-h \
 "
 
 # The gnulib commit ID to use for the update.
-GNULIB_COMMIT_SHA1="8d5bd1402003bd0153984b138735adf537d960b0"
+GNULIB_COMMIT_SHA1="1029a8112290f6eee9d7878a391c49db42c999bd"
 
 # The expected version number for the various auto tools we will
 # use after the import.
@@ -101,7 +114,23 @@ if [ "$ver" != "$AUTOMAKE_VERSION" ]; then
 fi
 
 # Verify that we have the correct version of aclocal.
-ver=`aclocal --version 2>&1 | head -1 | sed 's/.*) //'`
+#
+# The grep below is needed because Perl >= 5.16 dumps a "called too
+# early to check prototype" warning when running aclocal 1.11.1.  This
+# causes trouble below, because the warning is the first line output
+# by aclocal, resulting in:
+#
+# $ sh ./update-gnulib.sh ~/src/gnulib/src/
+# Error: Wrong aclocal version: called too early to check prototype at /opt/automake-1.11.1/bin/aclocal line 617.. Aborting.
+#
+# Some distros carry an automake patch for that:
+#  https://bugs.debian.org/cgi-bin/bugreport.cgi?msg=5;filename=aclocal-function-prototypes.debdiff;att=1;bug=752784
+#
+# But since we prefer pristine FSF versions of autotools, work around
+# the issue here.  This can be removed later when we bump the required
+# automake version.
+#
+ver=`aclocal --version 2>&1 | grep -v "called too early to check prototype" | head -1 | sed 's/.*) //'`
 if [ "$ver" != "$ACLOCAL_VERSION" ]; then
    echo "Error: Wrong aclocal version: $ver. Aborting."
    exit 1

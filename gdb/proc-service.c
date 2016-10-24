@@ -1,6 +1,6 @@
 /* <proc_service.h> implementation.
 
-   Copyright (C) 1999-2014 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -114,7 +114,7 @@ ps_pglobal_lookup (gdb_ps_prochandle_t ph, const char *obj,
 {
   struct bound_minimal_symbol ms;
   struct cleanup *old_chain = save_current_program_space ();
-  struct inferior *inf = find_inferior_pid (ptid_get_pid (ph->ptid));
+  struct inferior *inf = find_inferior_ptid (ph->ptid);
   ps_err_e result;
 
   set_current_program_space (inf->pspace);
@@ -140,7 +140,7 @@ ps_err_e
 ps_pdread (gdb_ps_prochandle_t ph, psaddr_t addr,
 	   gdb_ps_read_buf_t buf, gdb_ps_size_t size)
 {
-  return ps_xfer_memory (ph, addr, buf, size, 0);
+  return ps_xfer_memory (ph, addr, (gdb_byte *) buf, size, 0);
 }
 
 /* Write SIZE bytes from BUF into the target process PH at address ADDR.  */

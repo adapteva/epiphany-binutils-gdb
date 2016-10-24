@@ -287,9 +287,6 @@
 /* Define to 1 if you have the <windows.h> header file. */
 #undef HAVE_WINDOWS_H
 
-/* Define to 1 if you have the <zlib.h> header file. */
-#undef HAVE_ZLIB_H
-
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
@@ -327,6 +324,18 @@
    Windows, we use the Windows API when building for MinGW, but the POSIX API
    when building for Cygwin. */
 #undef USE_WIN32API
+
+/* Sim assert settings */
+#undef WITH_ASSERT
+
+/* Sim default environment */
+#undef WITH_ENVIRONMENT
+
+/* How to route I/O */
+#undef WITH_STDIO
+
+/* Sim trace settings */
+#undef WITH_TRACE
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

@@ -1,6 +1,6 @@
 /* Generate a core file for the inferior process.
 
-   Copyright (C) 2001-2014 Free Software Foundation, Inc.
+   Copyright (C) 2001-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -114,12 +114,19 @@ write_gcore_file_1 (bfd *obfd)
 void
 write_gcore_file (bfd *obfd)
 {
-  volatile struct gdb_exception except;
+  struct gdb_exception except = exception_none;
 
   target_prepare_to_generate_core ();
 
-  TRY_CATCH (except, RETURN_MASK_ALL)
-    write_gcore_file_1 (obfd);
+  TRY
+    {
+      write_gcore_file_1 (obfd);
+    }
+  CATCH (e, RETURN_MASK_ALL)
+    {
+      except = e;
+    }
+  END_CATCH
 
   target_done_generating_core ();
 
@@ -130,10 +137,10 @@ write_gcore_file (bfd *obfd)
 static void
 do_bfd_delete_cleanup (void *arg)
 {
-  bfd *obfd = arg;
+  bfd *obfd = (bfd *) arg;
   const char *filename = obfd->filename;
 
-  gdb_bfd_unref (arg);
+  gdb_bfd_unref ((bfd *) arg);
   unlink (filename);
 }
 
@@ -387,9 +394,9 @@ make_output_phdrs (bfd *obfd, asection *osec, void *ignored)
   int p_type = 0;
 
   /* FIXME: these constants may only be applicable for ELF.  */
-  if (strncmp (bfd_section_name (obfd, osec), "load", 4) == 0)
+  if (startswith (bfd_section_name (obfd, osec), "load"))
     p_type = PT_LOAD;
-  else if (strncmp (bfd_section_name (obfd, osec), "note", 4) == 0)
+  else if (startswith (bfd_section_name (obfd, osec), "note"))
     p_type = PT_NOTE;
   else
     p_type = PT_NULL;
@@ -410,7 +417,7 @@ static int
 gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
 		       int write, int exec, int modified, void *data)
 {
-  bfd *obfd = data;
+  bfd *obfd = (bfd *) data;
   asection *osec;
   flagword flags = SEC_ALLOC | SEC_HAS_CONTENTS | SEC_LOAD;
 
@@ -555,18 +562,18 @@ gcore_copy_callback (bfd *obfd, asection *osec, void *ignored)
   bfd_size_type size, total_size = bfd_section_size (obfd, osec);
   file_ptr offset = 0;
   struct cleanup *old_chain = NULL;
-  void *memhunk;
+  gdb_byte *memhunk;
 
   /* Read-only sections are marked; we don't have to copy their contents.  */
   if ((bfd_get_section_flags (obfd, osec) & SEC_LOAD) == 0)
     return;
 
   /* Only interested in "load" sections.  */
-  if (strncmp ("load", bfd_section_name (obfd, osec), 4) != 0)
+  if (!startswith (bfd_section_name (obfd, osec), "load"))
     return;
 
   size = min (total_size, MAX_COPY_BYTES);
-  memhunk = xmalloc (size);
+  memhunk = (gdb_byte *) xmalloc (size);
   old_chain = make_cleanup (xfree, memhunk);
 
   while (total_size > 0)

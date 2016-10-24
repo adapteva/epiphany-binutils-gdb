@@ -1,5 +1,5 @@
 /* tc-epiphany.c -- Assembler for the Adapteva EPIPHANY
-   Copyright (C) 2009-2014 Free Software Foundation, Inc.
+   Copyright (C) 2009-2016 Free Software Foundation, Inc.
    Contributed by Embecosm on behalf of Adapteva, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -69,38 +69,18 @@ epiphany_elf_section_rtn (int i)
 
   if (force_code_align)
     {
-      /* The s_align_ptwo function expects that we are just after a .align
-	 directive and it will either try and read the align value or stop
-	 if end of line so we must fake it out so it thinks we are at the
-	 end of the line.  */
-      char *old_input_line_pointer = input_line_pointer;
-
-      input_line_pointer = "\n";
-      s_align_ptwo (1);
+      do_align (1, NULL, 0, 0);
       force_code_align = FALSE;
-
-      /* Restore.  */
-      input_line_pointer = old_input_line_pointer;
     }
 }
 
 static void
 epiphany_elf_section_text (int i)
 {
-  char *old_input_line_pointer;
-
   obj_elf_text (i);
 
-  /* The s_align_ptwo function expects that we are just after a .align
-     directive and it will either try and read the align value or stop if
-     end of line so we must fake it out so it thinks we are at the end of
-     the line.  */
-  old_input_line_pointer = input_line_pointer;
-  input_line_pointer = "\n";
-  s_align_ptwo (1);
+  do_align (1, NULL, 0, 0);
   force_code_align = FALSE;
-  /* Restore.  */
-  input_line_pointer = old_input_line_pointer;
 }
 
 /* The target specific pseudo-ops which we support.  */
@@ -136,7 +116,7 @@ size_t md_longopts_size = sizeof (md_longopts);
 const char * md_shortopts = "";
 
 int
-md_parse_option (int c ATTRIBUTE_UNUSED, char * arg ATTRIBUTE_UNUSED)
+md_parse_option (int c ATTRIBUTE_UNUSED, const char * arg ATTRIBUTE_UNUSED)
 {
   return 0;	/* No target-specific options.  */
 }
@@ -173,7 +153,7 @@ md_section_align (segT segment, valueT size)
 {
   int align = bfd_get_section_alignment (stdoutput, segment);
 
-  return ((size + (1 << align) - 1) & (-1 << align));
+  return ((size + (1 << align) - 1) & -(1 << align));
 }
 
 
@@ -421,8 +401,10 @@ epiphany_cons_fix_new (fragS *frag,
 }
 
 
-void
-md_assemble (char *str)
+/* Assemble an instruction.  */
+
+static void
+epiphany_assemble (const char *str)
 {
   epiphany_insn insn;
   char *errmsg = 0;
@@ -516,6 +498,12 @@ md_assemble (char *str)
     default:
       break;
     }
+}
+
+void
+md_assemble (char *str)
+{
+  epiphany_assemble (str);
 }
 
 /* The syntax in the manual says constants begin with '#'.
@@ -944,7 +932,7 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
 /* Equal to MAX_PRECISION in atof-ieee.c.  */
 #define MAX_LITTLENUMS 6
 
-char *
+const char *
 md_atof (int type, char *litP, int *sizeP)
 {
   return ieee_md_atof (type, litP, sizeP, FALSE);

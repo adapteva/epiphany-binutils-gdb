@@ -1,5 +1,5 @@
 /* frv trap support
-   Copyright (C) 1999-2014 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
    Contributed by Red Hat.
 
 This file is part of the GNU simulators.
@@ -65,7 +65,7 @@ frv_sim_engine_halt_hook (SIM_DESC sd, SIM_CPU *current_cpu, sim_cia cia)
 {
   int i;
   if (current_cpu != NULL)
-    CIA_SET (current_cpu, cia);
+    CPU_PC_SET (current_cpu, cia);
 
   /* Invalidate the insn and data caches of all cpus.  */
   for (i = 0; i < MAX_NR_PROCESSORS; ++i)
@@ -109,18 +109,6 @@ frv_itrap (SIM_CPU *current_cpu, PCADDR pc, USI base, SI offset)
   SIM_DESC sd = CPU_STATE (current_cpu);
   host_callback *cb = STATE_CALLBACK (sd);
   USI num = ((base + offset) & 0x7f) + 0x80;
-
-#ifdef SIM_HAVE_BREAKPOINTS
-  /* Check for breakpoints "owned" by the simulator first, regardless
-     of --environment.  */
-  if (num == TRAP_BREAKPOINT)
-    {
-      /* First try sim-break.c.  If it's a breakpoint the simulator "owns"
-	 it doesn't return.  Otherwise it returns and let's us try.  */
-      sim_handle_breakpoint (sd, current_cpu, pc);
-      /* Fall through.  */
-    }
-#endif
 
   if (STATE_ENVIRONMENT (sd) == OPERATING_ENVIRONMENT)
     {
@@ -293,21 +281,10 @@ frv_break (SIM_CPU *current_cpu)
   IADDR pc;
   SIM_DESC sd = CPU_STATE (current_cpu);
 
-#ifdef SIM_HAVE_BREAKPOINTS
-  /* First try sim-break.c.  If it's a breakpoint the simulator "owns"
-     it doesn't return.  Otherwise it returns and let's us try.  */
-  pc = GET_H_PC ();
-  sim_handle_breakpoint (sd, current_cpu, pc);
-  /* Fall through.  */
-#endif
-
   if (STATE_ENVIRONMENT (sd) != OPERATING_ENVIRONMENT)
     {
       /* Invalidate the insn cache because the debugger will presumably
 	 replace the breakpoint insn with the real one.  */
-#ifndef SIM_HAVE_BREAKPOINTS
-      pc = GET_H_PC ();
-#endif
       sim_engine_halt (sd, current_cpu, NULL, pc, sim_stopped, SIM_SIGTRAP);
     }
 

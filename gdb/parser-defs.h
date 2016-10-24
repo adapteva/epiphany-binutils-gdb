@@ -1,6 +1,6 @@
 /* Parser definitions for GDB.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    Modified from expread.y by the Department of Computer Science at the
    State University of New York at Buffalo.
@@ -67,11 +67,6 @@ extern CORE_ADDR expression_context_pc;
    we've encountered so far.  */
 extern const struct block *innermost_block;
 
-/* The block in which the most recently discovered symbol was found.
-   FIXME: Should be declared along with lookup_symbol in symtab.h; is not
-   related specifically to parsing.  */
-extern const struct block *block_found;
-
 /* Number of arguments seen so far in innermost function call.  */
 extern int arglist_len;
 
@@ -111,7 +106,7 @@ struct ttype
 struct symtoken
   {
     struct stoken stoken;
-    struct symbol *sym;
+    struct block_symbol sym;
     int is_a_field_of_this;
   };
 
@@ -119,7 +114,7 @@ struct objc_class_str
   {
     struct stoken stoken;
     struct type *type;
-    int class;
+    int theclass;
   };
 
 typedef struct type *type_ptr;

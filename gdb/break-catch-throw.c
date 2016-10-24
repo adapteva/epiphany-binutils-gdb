@@ -1,6 +1,6 @@
 /* Everything about catch/throw catchpoints, for GDB.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -35,6 +35,7 @@
 #include "cp-abi.h"
 #include "gdb_regex.h"
 #include "cp-support.h"
+#include "location.h"
 
 /* Enums for exception-handling support.  */
 enum exception_event_kind
@@ -106,7 +107,6 @@ fetch_probe_arguments (struct value **arg0, struct value **arg1)
   struct frame_info *frame = get_selected_frame (_("No frame selected"));
   CORE_ADDR pc = get_frame_pc (frame);
   struct bound_probe pc_probe;
-  const struct sym_probe_fns *pc_probe_fns;
   unsigned n_args;
 
   pc_probe = find_probe_by_pc (pc);
@@ -162,8 +162,7 @@ check_status_exception_catchpoint (struct bpstats *bs)
 {
   struct exception_catchpoint *self
     = (struct exception_catchpoint *) bs->breakpoint_at;
-  char *typename = NULL;
-  volatile struct gdb_exception e;
+  char *type_name = NULL;
 
   bkpt_breakpoint_ops.check_status (bs);
   if (bs->stop == 0)
@@ -172,28 +171,34 @@ check_status_exception_catchpoint (struct bpstats *bs)
   if (self->pattern == NULL)
     return;
 
-  TRY_CATCH (e, RETURN_MASK_ERROR)
+  TRY
     {
       struct value *typeinfo_arg;
       char *canon;
 
       fetch_probe_arguments (NULL, &typeinfo_arg);
-      typename = cplus_typename_from_type_info (typeinfo_arg);
+      type_name = cplus_typename_from_type_info (typeinfo_arg);
 
-      canon = cp_canonicalize_string (typename);
+      canon = cp_canonicalize_string (type_name);
       if (canon != NULL)
 	{
-	  xfree (typename);
-	  typename = canon;
+	  xfree (type_name);
+	  type_name = canon;
 	}
     }
+  CATCH (e, RETURN_MASK_ERROR)
+    {
+      exception_print (gdb_stderr, e);
+    }
+  END_CATCH
 
-  if (e.reason < 0)
-    exception_print (gdb_stderr, e);
-  else if (regexec (self->pattern, typename, 0, NULL, 0) != 0)
-    bs->stop = 0;
+  if (type_name != NULL)
+    {
+      if (regexec (self->pattern, type_name, 0, NULL, 0) != 0)
+	bs->stop = 0;
 
-  xfree (typename);
+      xfree (type_name);
+    }
 }
 
 /* Implement the 're_set' method.  */
@@ -203,39 +208,49 @@ re_set_exception_catchpoint (struct breakpoint *self)
 {
   struct symtabs_and_lines sals = {0};
   struct symtabs_and_lines sals_end = {0};
-  volatile struct gdb_exception e;
   struct cleanup *cleanup;
   enum exception_event_kind kind = classify_exception_breakpoint (self);
+  struct event_location *location;
+  struct program_space *filter_pspace = current_program_space;
 
   /* We first try to use the probe interface.  */
-  TRY_CATCH (e, RETURN_MASK_ERROR)
+  TRY
     {
-      char *spec = ASTRDUP (exception_functions[kind].probe);
-
-      sals = parse_probes (&spec, NULL);
+      location
+	= new_probe_location (exception_functions[kind].probe);
+      cleanup = make_cleanup_delete_event_location (location);
+      sals = parse_probes (location, filter_pspace, NULL);
+      do_cleanups (cleanup);
     }
-
-  if (e.reason < 0)
+  CATCH (e, RETURN_MASK_ERROR)
     {
-      volatile struct gdb_exception ex;
-
       /* Using the probe interface failed.  Let's fallback to the normal
 	 catchpoint mode.  */
-      TRY_CATCH (ex, RETURN_MASK_ERROR)
+      TRY
 	{
-	  char *spec = ASTRDUP (exception_functions[kind].function);
+	  struct explicit_location explicit_loc;
 
-	  self->ops->decode_linespec (self, &spec, &sals);
+	  initialize_explicit_location (&explicit_loc);
+	  explicit_loc.function_name
+	    = ASTRDUP (exception_functions[kind].function);
+	  location = new_explicit_location (&explicit_loc);
+	  cleanup = make_cleanup_delete_event_location (location);
+	  self->ops->decode_location (self, location, filter_pspace, &sals);
+	  do_cleanups (cleanup);
 	}
-
-      /* NOT_FOUND_ERROR just means the breakpoint will be pending, so
-	 let it through.  */
-      if (ex.reason < 0 && ex.error != NOT_FOUND_ERROR)
-	throw_exception (ex);
+      CATCH (ex, RETURN_MASK_ERROR)
+	{
+	  /* NOT_FOUND_ERROR just means the breakpoint will be
+	     pending, so let it through.  */
+	  if (ex.error != NOT_FOUND_ERROR)
+	    throw_exception (ex);
+	}
+      END_CATCH
     }
+  END_CATCH
 
   cleanup = make_cleanup (xfree, sals.sals);
-  update_breakpoint_locations (self, sals, sals_end);
+  update_breakpoint_locations (self, filter_pspace, sals, sals_end);
   do_cleanups (cleanup);
 }
 
@@ -248,6 +263,7 @@ print_it_exception_catchpoint (bpstat bs)
   enum exception_event_kind kind = classify_exception_breakpoint (b);
 
   annotate_catchpoint (b->number);
+  maybe_print_thread_hit_breakpoint (uiout);
 
   bp_temp = b->disposition == disp_del;
   ui_out_text (uiout, 

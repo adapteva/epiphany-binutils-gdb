@@ -1,6 +1,6 @@
 /* Handle set and show GDB commands.
 
-   Copyright (C) 2000-2014 Free Software Foundation, Inc.
+   Copyright (C) 2000-2016 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,8 +37,8 @@ notify_command_param_changed_p (int param_changed, struct cmd_list_element *c)
   if (param_changed == 0)
     return 0;
 
-  if (c->class == class_maintenance || c->class == class_deprecated
-      || c->class == class_obscure)
+  if (c->theclass == class_maintenance || c->theclass == class_deprecated
+      || c->theclass == class_obscure)
     return 0;
 
   return 1;
@@ -158,16 +158,16 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
     {
     case var_string:
       {
-	char *new;
+	char *newobj;
 	const char *p;
 	char *q;
 	int ch;
 
 	if (arg == NULL)
 	  arg = "";
-	new = (char *) xmalloc (strlen (arg) + 2);
+	newobj = (char *) xmalloc (strlen (arg) + 2);
 	p = arg;
-	q = new;
+	q = newobj;
 	while ((ch = *p++) != '\000')
 	  {
 	    if (ch == '\\')
@@ -195,18 +195,18 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	  *q++ = ' ';
 #endif
 	*q++ = '\0';
-	new = (char *) xrealloc (new, q - new);
+	newobj = (char *) xrealloc (newobj, q - newobj);
 
 	if (*(char **) c->var == NULL
-	    || strcmp (*(char **) c->var, new) != 0)
+	    || strcmp (*(char **) c->var, newobj) != 0)
 	  {
 	    xfree (*(char **) c->var);
-	    *(char **) c->var = new;
+	    *(char **) c->var = newobj;
 
 	    option_changed = 1;
 	  }
 	else
-	  xfree (new);
+	  xfree (newobj);
       }
       break;
     case var_string_noescape:
@@ -361,7 +361,7 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	int len;
 	int nmatches;
 	const char *match = NULL;
-	char *p;
+	const char *p;
 
 	/* If no argument was supplied, print an informative error
 	   message.  */
@@ -373,7 +373,7 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	    for (i = 0; c->enums[i]; i++)
 	      msg_len += strlen (c->enums[i]) + 2;
 
-	    msg = xmalloc (msg_len);
+	    msg = (char *) xmalloc (msg_len);
 	    *msg = '\0';
 	    make_cleanup (xfree, msg);
 
@@ -475,8 +475,8 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 
 	  p = p->prefix;
 	}
-      cp = name = xmalloc (length);
-      cmds = xmalloc (sizeof (struct cmd_list_element *) * i);
+      cp = name = (char *) xmalloc (length);
+      cmds = XNEWVEC (struct cmd_list_element *, i);
 
       /* Track back through filed 'prefix' and cache them in CMDS.  */
       for (i = 0, p = c; p != NULL; i++)
@@ -523,7 +523,7 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	  break;
 	case var_boolean:
 	  {
-	    char *opt = *(int *) c->var ? "on" : "off";
+	    const char *opt = *(int *) c->var ? "on" : "off";
 
 	    observer_notify_command_param_changed (name, opt);
 	  }
@@ -683,7 +683,7 @@ cmd_show_list (struct cmd_list_element *list, int from_tty, const char *prefix)
 	{
 	  struct cleanup *optionlist_chain
 	    = make_cleanup_ui_out_tuple_begin_end (uiout, "optionlist");
-	  char *new_prefix = strstr (list->prefixname, "show ") + 5;
+	  const char *new_prefix = strstr (list->prefixname, "show ") + 5;
 
 	  if (ui_out_is_mi_like_p (uiout))
 	    ui_out_field_string (uiout, "prefix", new_prefix);
@@ -693,7 +693,7 @@ cmd_show_list (struct cmd_list_element *list, int from_tty, const char *prefix)
 	}
       else
 	{
-	  if (list->class != no_set_class)
+	  if (list->theclass != no_set_class)
 	    {
 	      struct cleanup *option_chain
 		= make_cleanup_ui_out_tuple_begin_end (uiout, "option");

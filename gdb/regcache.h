@@ -1,6 +1,6 @@
 /* Cache and manage the values of registers for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -47,24 +47,6 @@ extern struct gdbarch *get_regcache_arch (const struct regcache *regcache);
 
 extern struct address_space *get_regcache_aspace (const struct regcache *);
 
-enum register_status
-  {
-    /* The register value is not in the cache, and we don't know yet
-       whether it's available in the target (or traceframe).  */
-    REG_UNKNOWN = 0,
-
-    /* The register value is valid and cached.  */
-    REG_VALID = 1,
-
-    /* The register value is unavailable.  E.g., we're inspecting a
-       traceframe, and this register wasn't collected.  Note that this
-       is different a different "unavailable" from saying the register
-       does not exist in the target's architecture --- in that case,
-       the target should have given us a target description that does
-       not include the register in the first place.  */
-    REG_UNAVAILABLE = -1
-  };
-
 enum register_status regcache_register_status (const struct regcache *regcache,
 					       int regnum);
 
@@ -78,9 +60,7 @@ void regcache_raw_write (struct regcache *regcache, int rawnum,
 extern enum register_status
   regcache_raw_read_signed (struct regcache *regcache,
 			    int regnum, LONGEST *val);
-extern enum register_status
-  regcache_raw_read_unsigned (struct regcache *regcache,
-			      int regnum, ULONGEST *val);
+
 extern void regcache_raw_write_signed (struct regcache *regcache,
 				       int regnum, LONGEST val);
 extern void regcache_raw_write_unsigned (struct regcache *regcache,
@@ -224,17 +204,12 @@ extern void regcache_save (struct regcache *dst,
 
 /* Copy/duplicate the contents of a register cache.  By default, the
    operation is pass-through.  Writes to DST and reads from SRC will
-   go through to the target.
+   go through to the target.  See also regcache_cpy_no_passthrough.
 
-   The ``cpy'' functions can not have overlapping SRC and DST buffers.
-
-   ``no passthrough'' versions do not go through to the target.  They
-   only transfer values already in the cache.  */
+   regcache_cpy can not have overlapping SRC and DST buffers.  */
 
 extern struct regcache *regcache_dup (struct regcache *regcache);
 extern void regcache_cpy (struct regcache *dest, struct regcache *src);
-extern void regcache_cpy_no_passthrough (struct regcache *dest,
-					 struct regcache *src);
 
 extern void registers_changed (void);
 extern void registers_changed_ptid (ptid_t);

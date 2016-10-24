@@ -1,6 +1,6 @@
 /* gdb-if.c -- sim interface to GDB.
 
-Copyright (C) 2011-2014 Free Software Foundation, Inc.
+Copyright (C) 2011-2016 Free Software Foundation, Inc.
 Contributed by Red Hat, Inc.
 
 This file is part of the GNU simulators.
@@ -64,7 +64,7 @@ static struct host_callback_struct *host_callbacks;
 SIM_DESC
 sim_open (SIM_OPEN_KIND kind,
 	  struct host_callback_struct *callback,
-	  struct bfd *abfd, char **argv)
+	  struct bfd *abfd, char * const *argv)
 {
   if (open)
     fprintf (stderr, "rl78 minisim: re-opened sim\n");
@@ -86,6 +86,37 @@ sim_open (SIM_OPEN_KIND kind,
 
   sim_disasm_init (abfd);
   open = 1;
+
+  while (argv != NULL && *argv != NULL)
+    {
+      if (strcmp (*argv, "g10") == 0 || strcmp (*argv, "-Mg10") == 0)
+	{
+	  fprintf (stderr, "rl78 g10 support enabled.\n");
+	  rl78_g10_mode = 1;
+	  g13_multiply = 0;
+	  g14_multiply = 0;
+	  mem_set_mirror (0, 0xf8000, 4096);
+	  break;
+	}
+      if (strcmp (*argv, "g13") == 0 || strcmp (*argv, "-Mg13") == 0)
+	{
+	  fprintf (stderr, "rl78 g13 support enabled.\n");
+	  rl78_g10_mode = 0;
+	  g13_multiply = 1;
+	  g14_multiply = 0;
+	  break;
+	}
+      if (strcmp (*argv, "g14") == 0 || strcmp (*argv, "-Mg14") == 0)
+	{
+	  fprintf (stderr, "rl78 g14 support enabled.\n");
+	  rl78_g10_mode = 0;
+	  g13_multiply = 0;
+	  g14_multiply = 1;
+	  break;
+	}
+      argv++;
+    }
+
   return &the_minisim;
 }
 
@@ -157,7 +188,8 @@ sim_load (SIM_DESC sd, const char *prog, struct bfd *abfd, int from_tty)
 /* Create inferior.  */
 
 SIM_RC
-sim_create_inferior (SIM_DESC sd, struct bfd *abfd, char **argv, char **env)
+sim_create_inferior (SIM_DESC sd, struct bfd *abfd,
+		     char * const *argv, char * const *env)
 {
   check_desc (sd);
 

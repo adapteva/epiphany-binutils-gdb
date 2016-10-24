@@ -1,6 +1,6 @@
 /* Native support code for PPC AIX, for GDB the GNU debugger.
 
-   Copyright (C) 2006-2014 Free Software Foundation, Inc.
+   Copyright (C) 2006-2016 Free Software Foundation, Inc.
 
    Free Software Foundation, Inc.
 
@@ -290,8 +290,6 @@ rs6000_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       else
 	{
 	  /* Argument can fit in one register.  No problem.  */
-	  int adj = gdbarch_byte_order (gdbarch)
-		    == BFD_ENDIAN_BIG ? reg_size - len : 0;
 	  gdb_byte word[MAX_REGISTER_SIZE];
 
 	  memset (word, 0, reg_size);
@@ -572,19 +570,20 @@ rs6000_convert_from_func_ptr_addr (struct gdbarch *gdbarch,
     {
       CORE_ADDR pc = 0;
       struct obj_section *pc_section;
-      volatile struct gdb_exception e;
 
-      TRY_CATCH (e, RETURN_MASK_ERROR)
+      TRY
         {
           pc = read_memory_unsigned_integer (addr, tdep->wordsize, byte_order);
         }
-      if (e.reason < 0)
+      CATCH (e, RETURN_MASK_ERROR)
         {
           /* An error occured during reading.  Probably a memory error
              due to the section not being loaded yet.  This address
              cannot be a function descriptor.  */
           return addr;
         }
+      END_CATCH
+
       pc_section = find_pc_section (pc);
 
       if (pc_section && (pc_section->the_bfd_section->flags & SEC_CODE))
@@ -982,7 +981,7 @@ rs6000_aix_ld_info_to_xml (struct gdbarch *gdbarch, const gdb_byte *ldi_buf,
 
   obstack_grow_str0 (&obstack, "</library-list-aix>\n");
 
-  buf = obstack_finish (&obstack);
+  buf = (const char *) obstack_finish (&obstack);
   len_avail = strlen (buf);
   if (offset >= len_avail)
     len= 0;
@@ -1017,7 +1016,7 @@ rs6000_aix_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch,
 	   bfd_errmsg (bfd_get_error ()));
   ldinfo_size = bfd_get_section_size (ldinfo_sec);
 
-  ldinfo_buf = xmalloc (ldinfo_size);
+  ldinfo_buf = (gdb_byte *) xmalloc (ldinfo_size);
   cleanup = make_cleanup (xfree, ldinfo_buf);
 
   if (! bfd_get_section_contents (core_bfd, ldinfo_sec,

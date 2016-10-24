@@ -1,6 +1,6 @@
 /* Output generating routines for GDB CLI.
 
-   Copyright (C) 1999-2014 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions.
    Written by Fernando Nasser for Cygnus.
@@ -23,10 +23,11 @@
 #include "defs.h"
 #include "ui-out.h"
 #include "cli-out.h"
+#include "completer.h"
 #include "vec.h"
+#include "readline/readline.h"
 
 typedef struct cli_ui_out_data cli_out_data;
-
 
 /* Prototypes for local functions */
 
@@ -43,7 +44,7 @@ static void out_field_fmt (struct ui_out *uiout, int fldno,
 static void
 cli_uiout_dtor (struct ui_out *ui_out)
 {
-  cli_out_data *data = ui_out_data (ui_out);
+  cli_out_data *data = (cli_out_data *) ui_out_data (ui_out);
 
   VEC_free (ui_filep, data->streams);
   xfree (data);
@@ -58,7 +59,7 @@ cli_table_begin (struct ui_out *uiout, int nbrofcols,
 		 int nr_rows,
 		 const char *tblid)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (nr_rows == 0)
     data->suppress_output = 1;
@@ -73,7 +74,7 @@ cli_table_begin (struct ui_out *uiout, int nbrofcols,
 static void
 cli_table_body (struct ui_out *uiout)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -86,7 +87,7 @@ cli_table_body (struct ui_out *uiout)
 static void
 cli_table_end (struct ui_out *uiout)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   data->suppress_output = 0;
 }
@@ -98,7 +99,7 @@ cli_table_header (struct ui_out *uiout, int width, enum ui_align alignment,
 		  const char *col_name,
 		  const char *colhdr)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -116,7 +117,7 @@ cli_begin (struct ui_out *uiout,
 	   int level,
 	   const char *id)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -129,7 +130,7 @@ cli_end (struct ui_out *uiout,
 	 enum ui_out_type type,
 	 int level)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -143,7 +144,7 @@ cli_field_int (struct ui_out *uiout, int fldno, int width,
 	       const char *fldname, int value)
 {
   char buffer[20];	/* FIXME: how many chars long a %d can become? */
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -161,7 +162,7 @@ cli_field_skip (struct ui_out *uiout, int fldno, int width,
 		enum ui_align alignment,
 		const char *fldname)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -184,7 +185,7 @@ cli_field_string (struct ui_out *uiout,
 {
   int before = 0;
   int after = 0;
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -232,7 +233,7 @@ cli_field_fmt (struct ui_out *uiout, int fldno,
 	       const char *format,
 	       va_list args)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
   struct ui_file *stream;
 
   if (data->suppress_output)
@@ -248,7 +249,7 @@ cli_field_fmt (struct ui_out *uiout, int fldno,
 static void
 cli_spaces (struct ui_out *uiout, int numspaces)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
   struct ui_file *stream;
 
   if (data->suppress_output)
@@ -261,7 +262,7 @@ cli_spaces (struct ui_out *uiout, int numspaces)
 static void
 cli_text (struct ui_out *uiout, const char *string)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
   struct ui_file *stream;
 
   if (data->suppress_output)
@@ -275,7 +276,7 @@ static void ATTRIBUTE_PRINTF (3, 0)
 cli_message (struct ui_out *uiout, int verbosity,
 	     const char *format, va_list args)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -291,7 +292,7 @@ cli_message (struct ui_out *uiout, int verbosity,
 static void
 cli_wrap_hint (struct ui_out *uiout, char *identstring)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (data->suppress_output)
     return;
@@ -301,7 +302,7 @@ cli_wrap_hint (struct ui_out *uiout, char *identstring)
 static void
 cli_flush (struct ui_out *uiout)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
   struct ui_file *stream = VEC_last (ui_filep, data->streams);
 
   gdb_flush (stream);
@@ -314,7 +315,7 @@ cli_flush (struct ui_out *uiout)
 static int
 cli_redirect (struct ui_out *uiout, struct ui_file *outstream)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
 
   if (outstream != NULL)
     VEC_safe_push (ui_filep, data->streams, outstream);
@@ -335,7 +336,7 @@ out_field_fmt (struct ui_out *uiout, int fldno,
 	       const char *fldname,
 	       const char *format,...)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
   struct ui_file *stream = VEC_last (ui_filep, data->streams);
   va_list args;
 
@@ -350,7 +351,7 @@ out_field_fmt (struct ui_out *uiout, int fldno,
 static void
 field_separator (void)
 {
-  cli_out_data *data = ui_out_data (current_uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (current_uiout);
   struct ui_file *stream = VEC_last (ui_filep, data->streams);
 
   fputc_filtered (' ', stream);
@@ -408,11 +409,92 @@ cli_out_new (struct ui_file *stream)
 struct ui_file *
 cli_out_set_stream (struct ui_out *uiout, struct ui_file *stream)
 {
-  cli_out_data *data = ui_out_data (uiout);
+  cli_out_data *data = (cli_out_data *) ui_out_data (uiout);
   struct ui_file *old;
   
   old = VEC_pop (ui_filep, data->streams);
   VEC_quick_push (ui_filep, data->streams, stream);
 
   return old;
+}
+
+/* CLI interface to display tab-completion matches.  */
+
+/* CLI version of displayer.crlf.  */
+
+static void
+cli_mld_crlf (const struct match_list_displayer *displayer)
+{
+  rl_crlf ();
+}
+
+/* CLI version of displayer.putch.  */
+
+static void
+cli_mld_putch (const struct match_list_displayer *displayer, int ch)
+{
+  putc (ch, rl_outstream);
+}
+
+/* CLI version of displayer.puts.  */
+
+static void
+cli_mld_puts (const struct match_list_displayer *displayer, const char *s)
+{
+  fputs (s, rl_outstream);
+}
+
+/* CLI version of displayer.flush.  */
+
+static void
+cli_mld_flush (const struct match_list_displayer *displayer)
+{
+  fflush (rl_outstream);
+}
+
+EXTERN_C void _rl_erase_entire_line (void);
+
+/* CLI version of displayer.erase_entire_line.  */
+
+static void
+cli_mld_erase_entire_line (const struct match_list_displayer *displayer)
+{
+  _rl_erase_entire_line ();
+}
+
+/* CLI version of displayer.beep.  */
+
+static void
+cli_mld_beep (const struct match_list_displayer *displayer)
+{
+  rl_ding ();
+}
+
+/* CLI version of displayer.read_key.  */
+
+static int
+cli_mld_read_key (const struct match_list_displayer *displayer)
+{
+  return rl_read_key ();
+}
+
+/* CLI version of rl_completion_display_matches_hook.
+   See gdb_display_match_list for a description of the arguments.  */
+
+void
+cli_display_match_list (char **matches, int len, int max)
+{
+  struct match_list_displayer displayer;
+
+  rl_get_screen_size (&displayer.height, &displayer.width);
+  displayer.crlf = cli_mld_crlf;
+  displayer.putch = cli_mld_putch;
+  displayer.puts = cli_mld_puts;
+  displayer.flush = cli_mld_flush;
+  displayer.erase_entire_line = cli_mld_erase_entire_line;
+  displayer.beep = cli_mld_beep;
+  displayer.read_key = cli_mld_read_key;
+
+  gdb_display_match_list (matches, len, max, &displayer);
+  rl_forced_update_display ();
 }

@@ -1,6 +1,6 @@
 /* Exception (throw catch) mechanism, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,26 +26,23 @@
 #include "ui-out.h"
 #include "serial.h"
 #include "gdbthread.h"
-
-const struct gdb_exception exception_none = { 0, GDB_NO_ERROR, NULL };
-
-void
-prepare_to_throw_exception (void)
-{
-  clear_quit_flag ();
-  immediate_quit = 0;
-}
+#include "top.h"
 
 static void
 print_flush (void)
 {
+  struct ui *ui = current_ui;
   struct serial *gdb_stdout_serial;
+  struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
 
   if (deprecated_error_begin_hook)
     deprecated_error_begin_hook ();
 
   if (target_supports_terminal_ours ())
-    target_terminal_ours ();
+    {
+      make_cleanup_restore_target_terminal ();
+      target_terminal_ours_for_output ();
+    }
 
   /* We want all output to appear now, before we print the error.  We
      have 3 levels of buffering we have to flush (it's possible that
@@ -61,7 +58,7 @@ print_flush (void)
   gdb_flush (gdb_stderr);
 
   /* 3.  The system-level buffer.  */
-  gdb_stdout_serial = serial_fdopen (1);
+  gdb_stdout_serial = serial_fdopen (fileno (ui->outstream));
   if (gdb_stdout_serial)
     {
       serial_drain_output (gdb_stdout_serial);
@@ -69,6 +66,8 @@ print_flush (void)
     }
 
   annotate_error_begin ();
+
+  do_cleanups (old_chain);
 }
 
 static void
@@ -145,12 +144,7 @@ exception_fprintf (struct ui_file *file, struct gdb_exception e,
    returned by catch_exceptions().  It is an internal_error() for
    FUNC() to return a negative value.
 
-   See exceptions.h for further usage details.
-
-   Must not be called with immediate_quit in effect (bad things might
-   happen, say we got a signal in the middle of a memcpy to quit_return).
-   This is an OK restriction; with very few exceptions immediate_quit can
-   be replaced by judicious use of QUIT.  */
+   See exceptions.h for further usage details.  */
 
 /* MAYBE: cagney/1999-11-05: catch_errors() in conjunction with
    error() et al. could maintain a set of flags that indicate the
@@ -176,7 +170,7 @@ catch_exceptions_with_msg (struct ui_out *func_uiout,
 			   char **gdberrmsg,
 		  	   return_mask mask)
 {
-  volatile struct gdb_exception exception;
+  struct gdb_exception exception = exception_none;
   volatile int val = 0;
   struct ui_out *saved_uiout;
 
@@ -184,10 +178,15 @@ catch_exceptions_with_msg (struct ui_out *func_uiout,
   saved_uiout = current_uiout;
   current_uiout = func_uiout;
 
-  TRY_CATCH (exception, RETURN_MASK_ALL)
+  TRY
     {
       val = (*func) (current_uiout, func_args);
     }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      exception = ex;
+    }
+  END_CATCH
 
   /* Restore the global builder.  */
   current_uiout = saved_uiout;
@@ -225,17 +224,22 @@ int
 catch_errors (catch_errors_ftype *func, void *func_args, char *errstring,
 	      return_mask mask)
 {
+  struct gdb_exception exception = exception_none;
   volatile int val = 0;
-  volatile struct gdb_exception exception;
   struct ui_out *saved_uiout;
 
   /* Save the global ``struct ui_out'' builder.  */
   saved_uiout = current_uiout;
 
-  TRY_CATCH (exception, RETURN_MASK_ALL)
+  TRY
     {
       val = func (func_args);
     }
+  CATCH (ex, RETURN_MASK_ALL)
+    {
+      exception = ex;
+    }
+  END_CATCH
 
   /* Restore the global builder.  */
   current_uiout = saved_uiout;

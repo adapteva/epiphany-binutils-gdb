@@ -1,5 +1,5 @@
 /* Support for the generic parts of PE/PEI; the common executable parts.
-   Copyright (C) 1995-2014 Free Software Foundation, Inc.
+   Copyright (C) 1995-2016 Free Software Foundation, Inc.
    Written by Cygnus Solutions.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -62,8 +62,12 @@
 #include "libbfd.h"
 #include "coff/internal.h"
 #include "bfdver.h"
+#include "libiberty.h"
 #ifdef HAVE_WCHAR_H
 #include <wchar.h>
+#endif
+#ifdef HAVE_WCTYPE_H
+#include <wctype.h>
 #endif
 
 /* NOTE: it's strange to be including an architecture specific header
@@ -116,7 +120,7 @@ _bfd_XXi_swap_sym_in (bfd * abfd, void * ext1, void * in1)
     memcpy (in->_n._n_name, ext->e.e_name, SYMNMLEN);
 
   in->n_value = H_GET_32 (abfd, ext->e_value);
-  in->n_scnum = H_GET_16 (abfd, ext->e_scnum);
+  in->n_scnum = (short) H_GET_16 (abfd, ext->e_scnum);
 
   if (sizeof (ext->e_type) == 2)
     in->n_type = H_GET_16 (abfd, ext->e_type);
@@ -254,7 +258,7 @@ _bfd_XXi_swap_sym_out (bfd * abfd, void * inp, void * extp)
 	 as the worst that can happen is that some absolute symbols are
 	 needlessly converted into section relative symbols.  */
       && in->n_value > ((1ULL << (sizeof (in->n_value) > 4 ? 32 : 31)) - 1)
-      && in->n_scnum == -1)
+      && in->n_scnum == N_ABS)
     {
       asection * sec;
 
@@ -1057,8 +1061,8 @@ _bfd_XXi_swap_scnhdr_out (bfd * abfd, void * in, void * out)
   }
 
   if (coff_data (abfd)->link_info
-      && ! coff_data (abfd)->link_info->relocatable
-      && ! coff_data (abfd)->link_info->shared
+      && ! bfd_link_relocatable (coff_data (abfd)->link_info)
+      && ! bfd_link_pic (coff_data (abfd)->link_info)
       && strcmp (scnhdr_int->s_name, ".text") == 0)
     {
       /* By inference from looking at MS output, the 32 bit field
@@ -1192,13 +1196,15 @@ _bfd_XXi_slurp_codeview_record (bfd * abfd, file_ptr where, unsigned long length
 unsigned int
 _bfd_XXi_write_codeview_record (bfd * abfd, file_ptr where, CODEVIEW_INFO *cvinfo)
 {
-  unsigned int size = sizeof (CV_INFO_PDB70) + 1;
+  const bfd_size_type size = sizeof (CV_INFO_PDB70) + 1;
+  bfd_size_type written;
   CV_INFO_PDB70 *cvinfo70;
-  char buffer[size];
+  char * buffer;
 
   if (bfd_seek (abfd, where, SEEK_SET) != 0)
     return 0;
 
+  buffer = xmalloc (size);
   cvinfo70 = (CV_INFO_PDB70 *) buffer;
   H_PUT_32 (abfd, CVINFO_PDB70_CVSIGNATURE, cvinfo70->CvSignature);
 
@@ -1212,10 +1218,11 @@ _bfd_XXi_write_codeview_record (bfd * abfd, file_ptr where, CODEVIEW_INFO *cvinf
   H_PUT_32 (abfd, cvinfo->Age, cvinfo70->Age);
   cvinfo70->PdbFileName[0] = '\0';
 
-  if (bfd_bwrite (buffer, size, abfd) != size)
-    return 0;
+  written = bfd_bwrite (buffer, size, abfd);
 
-  return size;
+  free (buffer);
+
+  return written == size ? size : 0;
 }
 
 static char * dir_names[IMAGE_NUMBEROF_DIRECTORY_ENTRIES] =
@@ -2563,7 +2570,7 @@ rsrc_print_section (bfd * abfd, void * vfile)
   if (regions.resource_start != NULL)
     fprintf (file, " Resources start at offset: %#03x\n",
 	     (int) (regions.resource_start - regions.section_start));
-  
+
   free (regions.section_start);
   return TRUE;
 }
@@ -2678,6 +2685,7 @@ pe_print_debugdata (bfd * abfd, void * vfile)
 	     We need to use a 32-bit aligned buffer
 	     to safely read in a codeview record.  */
           char buffer[256 + 1] ATTRIBUTE_ALIGNED_ALIGNOF (CODEVIEW_INFO);
+
           CODEVIEW_INFO *cvinfo = (CODEVIEW_INFO *) buffer;
 
           /* The debug entry doesn't have to have to be in a section,
@@ -3466,7 +3474,7 @@ rsrc_compute_region_sizes (rsrc_directory * dir)
       sizeof_tables_and_entries += 8;
 
       sizeof_strings += (entry->name_id.name.len + 1) * 2;
-	  
+
       if (entry->is_dir)
 	rsrc_compute_region_sizes (entry->value.directory);
       else
@@ -3536,7 +3544,11 @@ rsrc_write_directory (rsrc_write_data * data,
    putting its 'ucs4_t' representation in *PUC.  */
 
 static unsigned int
+#if defined HAVE_WCTYPE_H
+u16_mbtouc (wint_t * puc, const unsigned short * s, unsigned int n)
+#else
 u16_mbtouc (wchar_t * puc, const unsigned short * s, unsigned int n)
+#endif
 {
   unsigned short c = * s;
 
@@ -3612,17 +3624,30 @@ rsrc_cmp (bfd_boolean is_name, rsrc_entry * a, rsrc_entry * b)
     res = 0;
     for (i = min (alen, blen); i--; astring += 2, bstring += 2)
       {
+#if defined HAVE_WCTYPE_H
+	wint_t awc;
+	wint_t bwc;
+#else
 	wchar_t awc;
 	wchar_t bwc;
+#endif
 
-	/* Convert UTF-16 unicode characters into wchar_t characters so
-	   that we can then perform a case insensitive comparison.  */
-	int Alen = u16_mbtouc (& awc, (const unsigned short *) astring, 2);
-	int Blen = u16_mbtouc (& bwc, (const unsigned short *) bstring, 2);
+	/* Convert UTF-16 unicode characters into wchar_t characters
+	   so that we can then perform a case insensitive comparison.  */
+	unsigned int Alen = u16_mbtouc (& awc, (const unsigned short *) astring, 2);
+	unsigned int Blen = u16_mbtouc (& bwc, (const unsigned short *) bstring, 2);
 
 	if (Alen != Blen)
 	  return Alen - Blen;
+
+#ifdef HAVE_WCTYPE_H
+	awc = towlower (awc);
+	bwc = towlower (bwc);
+
+	res = awc - bwc;
+#else
 	res = wcsncasecmp (& awc, & bwc, 1);
+#endif
 	if (res)
 	  break;
       }
@@ -4139,7 +4164,8 @@ rsrc_process_section (bfd * abfd,
     {
       asection * rsrc_sec = bfd_get_section_by_name (input, ".rsrc");
 
-      if (rsrc_sec != NULL)
+      /* PR 18372 - skip discarded .rsrc sections.  */
+      if (rsrc_sec != NULL && !discarded_section (rsrc_sec))
 	{
 	  if (num_input_rsrc == max_num_input_rsrc)
 	    {

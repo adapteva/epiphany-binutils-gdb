@@ -1,6 +1,6 @@
 /* Handle JIT code generation in the inferior for GDB, the GNU Debugger.
 
-   Copyright (C) 2009-2014 Free Software Foundation, Inc.
+   Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -126,6 +126,7 @@ mem_bfd_iovec_stat (struct bfd *abfd, void *stream, struct stat *sb)
 {
   struct target_buffer *buffer = (struct target_buffer*) stream;
 
+  memset (sb, 0, sizeof (struct stat));
   sb->st_size = buffer->size;
   return 0;
 }
@@ -135,7 +136,7 @@ mem_bfd_iovec_stat (struct bfd *abfd, void *stream, struct stat *sb)
 static struct bfd *
 bfd_open_from_target_memory (CORE_ADDR addr, ULONGEST size, char *target)
 {
-  struct target_buffer *buffer = xmalloc (sizeof (struct target_buffer));
+  struct target_buffer *buffer = XNEW (struct target_buffer);
 
   buffer->base = addr;
   buffer->size = size;
@@ -176,7 +177,7 @@ jit_reader_load (const char *file_name)
   so = gdb_dlopen (file_name);
   old_cleanups = make_cleanup_dlclose (so);
 
-  init_fn = gdb_dlsym (so, reader_init_fn_sym);
+  init_fn = (reader_init_fn_type *) gdb_dlsym (so, reader_init_fn_sym);
   if (!init_fn)
     error (_("Could not locate initialization function: %s."),
           reader_init_fn_sym);
@@ -284,7 +285,7 @@ get_jit_objfile_data (struct objfile *objf)
 {
   struct jit_objfile_data *objf_data;
 
-  objf_data = objfile_data (objf, jit_objfile_data);
+  objf_data = (struct jit_objfile_data *) objfile_data (objf, jit_objfile_data);
   if (objf_data == NULL)
     {
       objf_data = XCNEW (struct jit_objfile_data);
@@ -314,7 +315,9 @@ get_jit_program_space_data (void)
 {
   struct jit_program_space_data *ps_data;
 
-  ps_data = program_space_data (current_program_space, jit_program_space_data);
+  ps_data
+    = ((struct jit_program_space_data *)
+       program_space_data (current_program_space, jit_program_space_data));
   if (ps_data == NULL)
     {
       ps_data = XCNEW (struct jit_program_space_data);
@@ -363,7 +366,7 @@ jit_read_descriptor (struct gdbarch *gdbarch,
   ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
   ptr_size = TYPE_LENGTH (ptr_type);
   desc_size = 8 + 2 * ptr_size;  /* Two 32-bit ints and two pointers.  */
-  desc_buf = alloca (desc_size);
+  desc_buf = (gdb_byte *) alloca (desc_size);
 
   /* Read the descriptor.  */
   err = target_read_memory (MSYMBOL_VALUE_ADDRESS (ps_data->objfile,
@@ -411,7 +414,7 @@ jit_read_code_entry (struct gdbarch *gdbarch,
   off = (off + (align_bytes - 1)) & ~(align_bytes - 1);
 
   entry_size = off + 8;  /* Three pointers and one 64-bit int.  */
-  entry_buf = alloca (entry_size);
+  entry_buf = (gdb_byte *) alloca (entry_size);
 
   /* Read the entry.  */
   err = target_read_memory (code_addr, entry_buf, entry_size);
@@ -488,7 +491,8 @@ typedef CORE_ADDR jit_dbg_reader_data;
 static enum gdb_status
 jit_target_read_impl (GDB_CORE_ADDR target_mem, void *gdb_buf, int len)
 {
-  int result = target_read_memory ((CORE_ADDR) target_mem, gdb_buf, len);
+  int result = target_read_memory ((CORE_ADDR) target_mem,
+				   (gdb_byte *) gdb_buf, len);
   if (result == 0)
     return GDB_SUCCESS;
   else
@@ -532,15 +536,15 @@ jit_symtab_open_impl (struct gdb_symbol_callbacks *cb,
 
 static int
 compare_block (const struct gdb_block *const old,
-               const struct gdb_block *const new)
+               const struct gdb_block *const newobj)
 {
   if (old == NULL)
     return 1;
-  if (old->begin < new->begin)
+  if (old->begin < newobj->begin)
     return 1;
-  else if (old->begin == new->begin)
+  else if (old->begin == newobj->begin)
     {
-      if (old->end > new->end)
+      if (old->end > newobj->end)
         return 1;
       else
         return 0;
@@ -602,12 +606,14 @@ jit_symtab_line_mapping_add_impl (struct gdb_symbol_callbacks *cb,
                                   struct gdb_line_mapping *map)
 {
   int i;
+  int alloc_len;
 
   if (nlines < 1)
     return;
 
-  stab->linetable = xmalloc (sizeof (struct linetable)
-                             + (nlines - 1) * sizeof (struct linetable_entry));
+  alloc_len = sizeof (struct linetable)
+	      + (nlines - 1) * sizeof (struct linetable_entry);
+  stab->linetable = (struct linetable *) xmalloc (alloc_len);
   stab->linetable->nitems = nlines;
   for (i = 0; i < nlines; i++)
     {
@@ -633,7 +639,7 @@ jit_symtab_close_impl (struct gdb_symbol_callbacks *cb,
 static void
 finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 {
-  struct symtab *symtab;
+  struct compunit_symtab *cust;
   struct gdb_block *gdb_block_iter, *gdb_block_iter_tmp;
   struct block *block_iter;
   int actual_nblocks, i;
@@ -643,9 +649,12 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 
   actual_nblocks = FIRST_LOCAL_BLOCK + stab->nblocks;
 
-  symtab = allocate_symtab (stab->file_name, objfile);
+  cust = allocate_compunit_symtab (objfile, stab->file_name);
+  allocate_symtab (cust, stab->file_name);
+  add_compunit_symtab_to_objfile (cust);
+
   /* JIT compilers compile in memory.  */
-  symtab->dirname = NULL;
+  COMPUNIT_DIRNAME (cust) = NULL;
 
   /* Copy over the linetable entry if one was provided.  */
   if (stab->linetable)
@@ -653,22 +662,20 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       size_t size = ((stab->linetable->nitems - 1)
 		     * sizeof (struct linetable_entry)
 		     + sizeof (struct linetable));
-      LINETABLE (symtab) = obstack_alloc (&objfile->objfile_obstack, size);
-      memcpy (LINETABLE (symtab), stab->linetable, size);
-    }
-  else
-    {
-      LINETABLE (symtab) = NULL;
+      SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust))
+	= (struct linetable *) obstack_alloc (&objfile->objfile_obstack, size);
+      memcpy (SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust)), stab->linetable,
+	      size);
     }
 
   blockvector_size = (sizeof (struct blockvector)
                       + (actual_nblocks - 1) * sizeof (struct block *));
-  bv = obstack_alloc (&objfile->objfile_obstack, blockvector_size);
-  symtab->blockvector = bv;
+  bv = (struct blockvector *) obstack_alloc (&objfile->objfile_obstack,
+					     blockvector_size);
+  COMPUNIT_BLOCKVECTOR (cust) = bv;
 
   /* (begin, end) will contain the PC range this entire blockvector
      spans.  */
-  set_symtab_primary (symtab, 1);
   BLOCKVECTOR_MAP (bv) = NULL;
   begin = stab->blocks->begin;
   end = stab->blocks->end;
@@ -697,13 +704,14 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       /* The name.  */
       SYMBOL_DOMAIN (block_name) = VAR_DOMAIN;
       SYMBOL_ACLASS_INDEX (block_name) = LOC_BLOCK;
-      SYMBOL_SYMTAB (block_name) = symtab;
+      symbol_set_symtab (block_name, COMPUNIT_FILETABS (cust));
       SYMBOL_TYPE (block_name) = lookup_function_type (block_type);
       SYMBOL_BLOCK_VALUE (block_name) = new_block;
 
-      block_name->ginfo.name = obstack_copy0 (&objfile->objfile_obstack,
-					      gdb_block_iter->name,
-					      strlen (gdb_block_iter->name));
+      block_name->ginfo.name
+	= (const char *) obstack_copy0 (&objfile->objfile_obstack,
+					gdb_block_iter->name,
+					strlen (gdb_block_iter->name));
 
       BLOCK_FUNCTION (new_block) = block_name;
 
@@ -736,7 +744,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       BLOCKVECTOR_BLOCK (bv, i) = new_block;
 
       if (i == GLOBAL_BLOCK)
-	set_block_symtab (new_block, symtab);
+	set_block_compunit_symtab (new_block, cust);
     }
 
   /* Fill up the superblock fields for the real blocks, using the
@@ -786,7 +794,7 @@ jit_object_close_impl (struct gdb_symbol_callbacks *cb,
   struct objfile *objfile;
   jit_dbg_reader_data *priv_data;
 
-  priv_data = cb->priv_data;
+  priv_data = (jit_dbg_reader_data *) cb->priv_data;
 
   objfile = allocate_objfile (NULL, "<< JIT compiled code >>",
 			      OBJF_NOT_FILENAME);
@@ -812,11 +820,10 @@ static int
 jit_reader_try_read_symtab (struct jit_code_entry *code_entry,
                             CORE_ADDR entry_addr)
 {
-  void *gdb_mem;
+  gdb_byte *gdb_mem;
   int status;
   jit_dbg_reader_data priv_data;
   struct gdb_reader_funcs *funcs;
-  volatile struct gdb_exception e;
   struct gdb_symbol_callbacks callbacks =
     {
       jit_object_open_impl,
@@ -836,15 +843,20 @@ jit_reader_try_read_symtab (struct jit_code_entry *code_entry,
   if (!loaded_jit_reader)
     return 0;
 
-  gdb_mem = xmalloc (code_entry->symfile_size);
+  gdb_mem = (gdb_byte *) xmalloc (code_entry->symfile_size);
 
   status = 1;
-  TRY_CATCH (e, RETURN_MASK_ALL)
-    if (target_read_memory (code_entry->symfile_addr, gdb_mem,
-                            code_entry->symfile_size))
+  TRY
+    {
+      if (target_read_memory (code_entry->symfile_addr, gdb_mem,
+			      code_entry->symfile_size))
+	status = 0;
+    }
+  CATCH (e, RETURN_MASK_ALL)
+    {
       status = 0;
-  if (e.reason < 0)
-    status = 0;
+    }
+  END_CATCH
 
   if (status)
     {
@@ -980,7 +992,8 @@ jit_find_objf_with_entry_addr (CORE_ADDR entry_addr)
     {
       struct jit_objfile_data *objf_data;
 
-      objf_data = objfile_data (objf, jit_objfile_data);
+      objf_data
+	= (struct jit_objfile_data *) objfile_data (objf, jit_objfile_data);
       if (objf_data != NULL && objf_data->addr == entry_addr)
         return objf;
     }
@@ -1002,7 +1015,8 @@ jit_breakpoint_deleted (struct breakpoint *b)
     {
       struct jit_program_space_data *ps_data;
 
-      ps_data = program_space_data (iter->pspace, jit_program_space_data);
+      ps_data = ((struct jit_program_space_data *)
+		 program_space_data (iter->pspace, jit_program_space_data));
       if (ps_data != NULL && ps_data->jit_breakpoint == iter->owner)
 	{
 	  ps_data->cached_code_address = 0;
@@ -1012,7 +1026,7 @@ jit_breakpoint_deleted (struct breakpoint *b)
 }
 
 /* (Re-)Initialize the jit breakpoint if necessary.
-   Return 0 on success.  */
+   Return 0 if the jit breakpoint has been successfully initialized.  */
 
 static int
 jit_breakpoint_re_set_internal (struct gdbarch *gdbarch,
@@ -1056,7 +1070,7 @@ jit_breakpoint_re_set_internal (struct gdbarch *gdbarch,
 			paddress (gdbarch, addr));
 
   if (ps_data->cached_code_address == addr)
-    return 1;
+    return 0;
 
   /* Delete the old breakpoint.  */
   if (ps_data->jit_breakpoint != NULL)
@@ -1091,7 +1105,7 @@ jit_unwind_reg_set_impl (struct gdb_unwind_callbacks *cb, int dwarf_regnum,
   struct jit_unwind_private *priv;
   int gdb_reg;
 
-  priv = cb->priv_data;
+  priv = (struct jit_unwind_private *) cb->priv_data;
 
   gdb_reg = gdbarch_dwarf2_reg_to_regnum (get_frame_arch (priv->this_frame),
                                           dwarf_regnum);
@@ -1124,12 +1138,13 @@ jit_unwind_reg_get_impl (struct gdb_unwind_callbacks *cb, int regnum)
   int gdb_reg, size;
   struct gdbarch *frame_arch;
 
-  priv = cb->priv_data;
+  priv = (struct jit_unwind_private *) cb->priv_data;
   frame_arch = get_frame_arch (priv->this_frame);
 
   gdb_reg = gdbarch_dwarf2_reg_to_regnum (frame_arch, regnum);
   size = register_size (frame_arch, gdb_reg);
-  value = xmalloc (sizeof (struct gdb_reg_value) + size - 1);
+  value = ((struct gdb_reg_value *)
+	   xmalloc (sizeof (struct gdb_reg_value) + size - 1));
   value->defined = deprecated_frame_register_read (priv->this_frame, gdb_reg,
 						   value->value);
   value->size = size;
@@ -1143,7 +1158,7 @@ jit_unwind_reg_get_impl (struct gdb_unwind_callbacks *cb, int regnum)
 static void
 jit_dealloc_cache (struct frame_info *this_frame, void *cache)
 {
-  struct jit_unwind_private *priv_data = cache;
+  struct jit_unwind_private *priv_data = (struct jit_unwind_private *) cache;
   struct gdbarch *frame_arch;
   int i;
 
@@ -1186,7 +1201,7 @@ jit_frame_sniffer (const struct frame_unwind *self,
   gdb_assert (!*cache);
 
   *cache = XCNEW (struct jit_unwind_private);
-  priv_data = *cache;
+  priv_data = (struct jit_unwind_private *) *cache;
   priv_data->registers =
     XCNEWVEC (struct gdb_reg_value *,	      
 	      gdbarch_num_regs (get_frame_arch (this_frame)));
@@ -1220,20 +1235,20 @@ static void
 jit_frame_this_id (struct frame_info *this_frame, void **cache,
                    struct frame_id *this_id)
 {
-  struct jit_unwind_private private;
+  struct jit_unwind_private priv;
   struct gdb_frame_id frame_id;
   struct gdb_reader_funcs *funcs;
   struct gdb_unwind_callbacks callbacks;
 
-  private.registers = NULL;
-  private.this_frame = this_frame;
+  priv.registers = NULL;
+  priv.this_frame = this_frame;
 
   /* We don't expect the frame_id function to set any registers, so we
      set reg_set to NULL.  */
   callbacks.reg_get = jit_unwind_reg_get_impl;
   callbacks.reg_set = NULL;
   callbacks.target_read = jit_target_read_impl;
-  callbacks.priv_data = &private;
+  callbacks.priv_data = &priv;
 
   gdb_assert (loaded_jit_reader);
   funcs = loaded_jit_reader->functions;
@@ -1248,7 +1263,7 @@ jit_frame_this_id (struct frame_info *this_frame, void **cache,
 static struct value *
 jit_frame_prev_register (struct frame_info *this_frame, void **cache, int reg)
 {
-  struct jit_unwind_private *priv = *cache;
+  struct jit_unwind_private *priv = (struct jit_unwind_private *) *cache;
   struct gdb_reg_value *value;
 
   if (priv == NULL)
@@ -1293,7 +1308,8 @@ jit_prepend_unwinder (struct gdbarch *gdbarch)
 {
   struct jit_gdbarch_data_type *data;
 
-  data = gdbarch_data (gdbarch, jit_gdbarch_data);
+  data
+    = (struct jit_gdbarch_data_type *) gdbarch_data (gdbarch, jit_gdbarch_data);
   if (!data->unwinder_registered)
     {
       frame_unwind_prepend_unwinder (gdbarch, &jit_frame_unwind);
@@ -1351,6 +1367,14 @@ jit_inferior_init (struct gdbarch *gdbarch)
     }
 }
 
+/* inferior_created observer.  */
+
+static void
+jit_inferior_created (struct target_ops *ops, int from_tty)
+{
+  jit_inferior_created_hook ();
+}
+
 /* Exported routine to call when an inferior has been created.  */
 
 void
@@ -1381,8 +1405,8 @@ jit_inferior_exit_hook (struct inferior *inf)
 
   ALL_OBJFILES_SAFE (objf, temp)
     {
-      struct jit_objfile_data *objf_data = objfile_data (objf,
-							 jit_objfile_data);
+      struct jit_objfile_data *objf_data
+	= (struct jit_objfile_data *) objfile_data (objf, jit_objfile_data);
 
       if (objf_data != NULL && objf_data->addr != 0)
 	jit_unregister_code (objf);
@@ -1433,13 +1457,15 @@ jit_event_handler (struct gdbarch *gdbarch)
 static void
 free_objfile_data (struct objfile *objfile, void *data)
 {
-  struct jit_objfile_data *objf_data = data;
+  struct jit_objfile_data *objf_data = (struct jit_objfile_data *) data;
 
   if (objf_data->register_code != NULL)
     {
       struct jit_program_space_data *ps_data;
 
-      ps_data = program_space_data (objfile->pspace, jit_program_space_data);
+      ps_data
+	= ((struct jit_program_space_data *)
+	   program_space_data (objfile->pspace, jit_program_space_data));
       if (ps_data != NULL && ps_data->objfile == objfile)
 	ps_data->objfile = NULL;
     }
@@ -1453,10 +1479,11 @@ free_objfile_data (struct objfile *objfile, void *data)
 static void *
 jit_gdbarch_data_init (struct obstack *obstack)
 {
-  struct jit_gdbarch_data_type *data;
+  struct jit_gdbarch_data_type *data =
+    XOBNEW (obstack, struct jit_gdbarch_data_type);
 
-  data = obstack_alloc (obstack, sizeof (struct jit_gdbarch_data_type));
   data->unwinder_registered = 0;
+
   return data;
 }
 
@@ -1477,6 +1504,7 @@ _initialize_jit (void)
 			     show_jit_debug,
 			     &setdebuglist, &showdebuglist);
 
+  observer_attach_inferior_created (jit_inferior_created);
   observer_attach_inferior_exit (jit_inferior_exit_hook);
   observer_attach_breakpoint_deleted (jit_breakpoint_deleted);
 

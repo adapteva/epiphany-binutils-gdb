@@ -1,5 +1,5 @@
 /* Memory breakpoint interfaces for the remote server for GDB.
-   Copyright (C) 2002-2014 Free Software Foundation, Inc.
+   Copyright (C) 2002-2016 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -65,20 +65,20 @@ enum raw_bkpt_type Z_packet_to_raw_bkpt_type (char z_type);
 enum target_hw_bp_type raw_bkpt_type_to_target_hw_bp_type
   (enum raw_bkpt_type raw_type);
 
-/* Create a new GDB breakpoint of type Z_TYPE at ADDR with size SIZE.
+/* Create a new GDB breakpoint of type Z_TYPE at ADDR with kind KIND.
    Returns a pointer to the newly created breakpoint on success.  On
    failure returns NULL and sets *ERR to either -1 for error, or 1 if
    Z_TYPE breakpoints are not supported on this target.  */
 
-struct breakpoint *set_gdb_breakpoint (char z_type, CORE_ADDR addr, int size,
+struct breakpoint *set_gdb_breakpoint (char z_type, CORE_ADDR addr, int kind,
 				       int *err);
 
-/* Delete a GDB breakpoint of type Z_TYPE and size SIZE previously
+/* Delete a GDB breakpoint of type Z_TYPE and kind KIND previously
    inserted at ADDR with set_gdb_breakpoint_at.  Returns 0 on success,
    -1 on error, and 1 if Z_TYPE breakpoints are not supported on this
    target.  */
 
-int delete_gdb_breakpoint (char z_type, CORE_ADDR addr, int size);
+int delete_gdb_breakpoint (char z_type, CORE_ADDR addr, int kind);
 
 /* Returns TRUE if there's a software or hardware (code) breakpoint at
    ADDR in our tables, inserted, or not.  */
@@ -89,6 +89,20 @@ int breakpoint_here (CORE_ADDR addr);
    breakpoint set at ADDR.  */
 
 int breakpoint_inserted_here (CORE_ADDR addr);
+
+/* Returns TRUE if there's any inserted software breakpoint at
+   ADDR.  */
+
+int software_breakpoint_inserted_here (CORE_ADDR addr);
+
+/* Returns TRUE if there's any inserted hardware (code) breakpoint at
+   ADDR.  */
+
+int hardware_breakpoint_inserted_here (CORE_ADDR addr);
+
+/* Returns TRUE if there's any reinsert breakpoint at ADDR.  */
+
+int reinsert_breakpoint_inserted_here (CORE_ADDR addr);
 
 /* Clear all breakpoint conditions and commands associated with a
    breakpoint.  */
@@ -144,10 +158,23 @@ void set_reinsert_breakpoint (CORE_ADDR stop_at);
 
 void delete_reinsert_breakpoints (void);
 
+/* Reinsert all reinsert breakpoints of the current process.  */
+
+void reinsert_reinsert_breakpoints (void);
+
+/* Uninsert all reinsert breakpoints of the current process.  This
+   still leaves the reinsert breakpoints in the table.  */
+
+void uninsert_reinsert_breakpoints (void);
+
 /* Reinsert breakpoints at WHERE (and change their status to
    inserted).  */
 
 void reinsert_breakpoints_at (CORE_ADDR where);
+
+/* Process PROC has reinsert breakpoints or not.  */
+
+int has_reinsert_breakpoints (struct process_info *proc);
 
 /* Uninsert breakpoints at WHERE (and change their status to
    uninserted).  This still leaves the breakpoints in the table.  */
@@ -183,11 +210,6 @@ void check_mem_read (CORE_ADDR mem_addr, unsigned char *buf, int mem_len);
 
 void check_mem_write (CORE_ADDR mem_addr,
 		      unsigned char *buf, const unsigned char *myaddr, int mem_len);
-
-/* Set the byte pattern to insert for memory breakpoints.  This function
-   must be called before any breakpoints are set.  */
-
-void set_breakpoint_data (const unsigned char *bp_data, int bp_len);
 
 /* Delete all breakpoints.  */
 
@@ -242,5 +264,11 @@ int insert_memory_breakpoint (struct raw_breakpoint *bp);
 /* Remove a previously inserted memory breakpoint.  */
 
 int remove_memory_breakpoint (struct raw_breakpoint *bp);
+
+/* Create a new breakpoint list NEW_BKPT_LIST that is a copy of SRC.  */
+
+void clone_all_breakpoints (struct breakpoint **new_bkpt_list,
+			    struct raw_breakpoint **new_raw_bkpt_list,
+			    const struct breakpoint *src);
 
 #endif /* MEM_BREAK_H */

@@ -1,5 +1,5 @@
 # Makefile fragment for common parts of all simulators.
-# Copyright 1997-2014 Free Software Foundation, Inc.
+# Copyright 1997-2016 Free Software Foundation, Inc.
 # Contributed by Cygnus Support.
 
 # This program is free software; you can redistribute it and/or modify
@@ -72,31 +72,21 @@ INSTALL_DATA = @INSTALL_DATA@
 CC = @CC@
 CC_FOR_BUILD = @CC_FOR_BUILD@
 CFLAGS = @CFLAGS@
-SIM_BSWAP = @sim_bswap@
-SIM_CFLAGS = @sim_cflags@
-SIM_DEBUG = @sim_debug@
-SIM_TRACE = @sim_trace@
-SIM_PROFILE = @sim_profile@
+CPPFLAGS = @CPPFLAGS@
+CXXFLAGS = @CXXFLAGS@
+LDFLAGS = @LDFLAGS@
 
-SIM_ASSERT = @sim_assert@
 SIM_ALIGNMENT = @sim_alignment@
 SIM_BITSIZE = @sim_bitsize@
 SIM_DEFAULT_MODEL = @sim_default_model@
 SIM_ENDIAN = @sim_endian@
-SIM_ENVIRONMENT = @sim_environment@
 SIM_FLOAT = @sim_float@
 SIM_HW_CFLAGS = @sim_hw_cflags@
 SIM_HW_OBJS = @sim_hw_objs@
 SIM_HW = @sim_hw@
-SIM_HOSTENDIAN = @sim_hostendian@
 SIM_INLINE = @sim_inline@
-SIM_PACKAGES = @sim_packages@
-SIM_REGPARM = @sim_regparm@
 SIM_RESERVED_BITS = @sim_reserved_bits@
 SIM_SCACHE = @sim_scache@
-SIM_SMP = @sim_smp@
-SIM_STDCALL = @sim_stdcall@
-SIM_XOR_ENDIAN = @sim_xor_endian@
 WARN_CFLAGS = @WARN_CFLAGS@
 WERROR_CFLAGS = @WERROR_CFLAGS@
 SIM_WARN_CFLAGS = $(WARN_CFLAGS)
@@ -139,7 +129,7 @@ SIM_EXTRA_LIBS =
 # List of extra program dependencies.
 SIM_EXTRA_LIBDEPS =
 # List of main object files for `run'.
-SIM_RUN_OBJS = run.o
+SIM_RUN_OBJS = nrun.o
 # Dependency of `all' to build any extra files.
 SIM_EXTRA_ALL =
 # Dependency of `install' to install any extra files.
@@ -173,20 +163,30 @@ SIM_COMMON_HW_OBJS = \
 SIM_NEW_COMMON_OBJS = \
 	sim-arange.o \
 	sim-bits.o \
+	sim-close.o \
 	sim-command.o \
 	sim-config.o \
 	sim-core.o \
+	sim-cpu.o \
 	sim-endian.o \
+	sim-engine.o \
 	sim-events.o \
 	sim-fpu.o \
+	sim-hload.o \
+	sim-hrw.o \
 	sim-io.o \
 	sim-info.o \
 	sim-load.o \
 	sim-memopt.o \
+	sim-model.o \
 	sim-module.o \
 	sim-options.o \
 	sim-profile.o \
+	sim-reason.o \
+	sim-reg.o \
 	sim-signal.o \
+	sim-stop.o \
+	sim-syscall.o \
 	sim-trace.o \
 	sim-utils.o \
 	sim-watch.o \
@@ -217,30 +217,17 @@ CGEN_INCLUDE_DEPS = \
 
 CONFIG_CFLAGS = \
 	@DEFS@ \
-	$(SIM_CFLAGS) \
-	$(SIM_DEBUG) \
 	$(SIM_DEFAULT_MODEL) \
-	$(SIM_TRACE) \
-	$(SIM_PROFILE) \
-	$(SIM_BSWAP) \
-	$(SIM_ASSERT) \
 	$(SIM_ALIGNMENT) \
 	$(SIM_BITSIZE) \
 	$(SIM_ENDIAN) \
-	$(SIM_ENVIRONMENT) \
 	$(SIM_FLOAT) \
 	$(SIM_HW_CFLAGS) \
-	$(SIM_HOSTENDIAN) \
 	$(SIM_INLINE) \
-	$(SIM_PACKAGES) \
-	$(SIM_REGPARM) \
 	$(SIM_RESERVED_BITS) \
 	$(SIM_SCACHE) \
-	$(SIM_SMP) \
-	$(SIM_STDCALL) \
 	$(SIM_WARN_CFLAGS) \
 	$(SIM_WERROR_CFLAGS) \
-	$(SIM_XOR_ENDIAN) \
 	$(SIM_HARDWARE) \
 	$(SIM_EXTRA_CFLAGS) \
 	$(HDEFINES) $(TDEFINES)
@@ -254,13 +241,14 @@ BUILD_CFLAGS = -g -O $(CSEARCH)
 
 COMMON_DEP_CFLAGS = $(CONFIG_CFLAGS) $(CSEARCH)
 
+ZLIB = @zlibdir@ -lz
 LIBIBERTY_LIB = ../../libiberty/libiberty.a
 BFD_LIB = ../../bfd/libbfd.a
 @PLUGINS_TRUE@LIBDL = @lt_cv_dlopen_libs@
 OPCODES_LIB = ../../opcodes/libopcodes.a
 LIBINTL = @LIBINTL@
 LIBINTL_DEP = @LIBINTL_DEP@
-CONFIG_LIBS = @LIBS@
+CONFIG_LIBS = @LIBS@ $(ZLIB)
 LIBDEPS = $(BFD_LIB) $(OPCODES_LIB) $(LIBINTL_DEP) $(LIBIBERTY_LIB) \
 	$(SIM_EXTRA_LIBDEPS)
 EXTRA_LIBS = $(BFD_LIB) $(OPCODES_LIB) $(LIBINTL) $(LIBIBERTY_LIB) \
@@ -289,7 +277,7 @@ run$(EXEEXT): $(SIM_RUN_OBJS) libsim.a $(LIBDEPS)
 # devo/libremote because this directory would contain more than just
 # a library).
 
-gentmap: Makefile $(srccom)/gentmap.c targ-vals.def
+gentmap: Makefile $(srccom)/gentmap.c $(srccom)/nltvals.def
 	$(CC_FOR_BUILD) $(srccom)/gentmap.c -o gentmap $(BUILD_CFLAGS) $(NL_TARGET)
 
 targ-vals.h targ-map.c: stamp-tvals
@@ -301,8 +289,9 @@ stamp-tvals: gentmap
 	$(SHELL) $(srcroot)/move-if-change tmp-tmap.c targ-map.c
 	touch stamp-tvals
 
-version.c: Makefile $(srccom)/create-version.sh ../../bfd/version.h ../../gdb/version.in
-	$(SHELL) $(srccom)/create-version.sh $(srcsim) $(host_alias) $(target_alias) version.c
+version.c: Makefile $(srcroot)/gdb/version.in $(srcroot)/bfd/version.h $(srcroot)/gdb/common/create-version.sh
+	$(SHELL) $(srcroot)/gdb/common/create-version.sh $(srcroot)/gdb \
+	    $(host_alias) $(target_alias) version.c
 
 #
 # Rules for building sim-* components.  Triggered by listing the corresponding
@@ -346,8 +335,6 @@ sim-base_h = $(srccom)/sim-base.h \
 		$(sim-memopt_h) \
 		$(sim-cpu_h)
 sim-basics_h = $(srccom)/sim-basics.h \
-		../common/cconfig.h \
-		tconfig.h \
 		$(sim-config_h) \
 		$(callback_h) \
 		$(sim-inline_h) \
@@ -447,15 +434,6 @@ $(all_object_files) : $(generated_files)
 # Dependencies.
 @GMAKE_TRUE@-include $(patsubst %.o, $(DEPDIR)/%.Po, $(all_object_files))
 
-BUILT_SRC_FROM_COMMON= \
-	sim-inline.c
-
-sim-inline.c: $(srccom)/sim-inline.c
-	rm -f $@ tmp-$@
-	echo "# 1 \"$(srccom)/$@\"" > tmp-$@
-	cat $(srccom)/$@ >> tmp-$@
-	$(SHELL) $(srcdir)/../../move-if-change tmp-$@ $@
-
 # FIXME This is one very simple-minded way of generating the file hw-config.h
 hw-config.h: Makefile.in $(srccom)/Make-common.in config.status Makefile
 	rm -f tmp-hw.h
@@ -531,8 +509,7 @@ clean: $(SIM_EXTRA_CLEAN)
 distclean mostlyclean maintainer-clean realclean: clean $(SIM_EXTRA_DISTCLEAN)
 	rm -f TAGS
 	rm -f Makefile config.cache config.log config.status .gdbinit
-	rm -f tconfig.h config.h stamp-h
-	rm -f targ-vals.def
+	rm -f config.h stamp-h
 
 .c.o:
 	$(COMPILE) $<

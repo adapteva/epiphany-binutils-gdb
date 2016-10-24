@@ -1,7 +1,7 @@
 /* Target-dependent code for Windows CE running on ARM processors,
    for GDB.
 
-   Copyright (C) 2007-2014 Free Software Foundation, Inc.
+   Copyright (C) 2007-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -24,6 +24,7 @@
 #include "target.h"
 #include "frame.h"
 
+#include "arch/arm.h"
 #include "arm-tdep.h"
 #include "windows-tdep.h"
 
@@ -66,7 +67,7 @@ arm_pe_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
     return 0;
 
   symname = MSYMBOL_LINKAGE_NAME (indsym.minsym);
-  if (symname == NULL || strncmp (symname, "__imp_", 6) != 0)
+  if (symname == NULL || !startswith (symname, "__imp_"))
     return 0;
 
   next_pc = read_memory_unsigned_integer (indirect, 4, byte_order);

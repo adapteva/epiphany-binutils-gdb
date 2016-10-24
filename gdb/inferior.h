@@ -1,7 +1,7 @@
 /* Variables that describe the inferior process running under GDB:
    Where it is, why it stopped, and how to step it.
 
-   Copyright (C) 1986-2014 Free Software Foundation, Inc.
+   Copyright (C) 1986-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -106,6 +106,14 @@ extern void default_print_registers_info (struct gdbarch *gdbarch,
 					  struct frame_info *frame,
 					  int regnum, int all);
 
+/* Default implementation of gdbarch_print_float_info.  Print
+   the values of all floating point registers.  */
+
+extern void default_print_float_info (struct gdbarch *gdbarch,
+				      struct ui_file *file,
+				      struct frame_info *frame,
+				      const char *args);
+
 extern void child_terminal_info (struct target_ops *self, const char *, int);
 
 extern void term_info (char *, int);
@@ -135,6 +143,12 @@ extern char *construct_inferior_arguments (int, char **);
 
 /* From infcmd.c */
 
+/* Initial inferior setup.  Determines the exec file is not yet known,
+   takes any necessary post-attaching actions, fetches the target
+   description and syncs the shared library list.  */
+
+extern void setup_inferior (int from_tty);
+
 extern void post_create_inferior (struct target_ops *, int);
 
 extern void attach_command (char *, int);
@@ -158,7 +172,7 @@ extern void detach_command (char *, int);
 extern void notice_new_inferior (ptid_t, int, int);
 
 extern struct value *get_return_value (struct value *function,
-                                       struct type *value_type);
+				       struct type *value_type);
 
 /* Prepare for execution command.  TARGET is the target that will run
    the command.  BACKGROUND determines whether this is a foreground
@@ -250,11 +264,9 @@ enum stop_kind
 
 /* Number of traps that happen between exec'ing the shell to run an
    inferior and when we finally get to the inferior code, not counting
-   the exec for the shell.  This is 1 on most implementations.
-   Overridden in nm.h files.  */
-#if !defined(START_INFERIOR_TRAPS_EXPECTED)
+   the exec for the shell.  This is 1 on all supported
+   implementations.  */
 #define START_INFERIOR_TRAPS_EXPECTED	1
-#endif
 
 struct private_inferior;
 
@@ -267,16 +279,6 @@ struct inferior_control_state
   /* See the definition of stop_kind above.  */
   enum stop_kind stop_soon;
 };
-
-/* Inferior process specific part of `struct infcall_suspend_state'.
-
-   Inferior thread counterpart is `struct thread_suspend_state'.  */
-
-#if 0 /* Currently unused and empty structures are not valid C.  */
-struct inferior_suspend_state
-{
-};
-#endif
 
 /* GDB represents the state of each program execution with an object
    called an inferior.  An inferior typically corresponds to a process
@@ -302,15 +304,12 @@ struct inferior
   /* True if the PID was actually faked by GDB.  */
   int fake_pid_p;
 
+  /* The highest thread number this inferior ever had.  */
+  int highest_thread_num;
+
   /* State of GDB control of inferior process execution.
      See `struct inferior_control_state'.  */
   struct inferior_control_state control;
-
-  /* State of inferior process to restore after GDB is done with an inferior
-     call.  See `struct inferior_suspend_state'.  */
-#if 0 /* Currently unused and empty structures are not valid C.  */
-  struct inferior_suspend_state suspend;
-#endif
 
   /* True if this was an auto-created inferior, e.g. created from
      following a fork; false, if this inferior was manually added by
@@ -374,8 +373,14 @@ struct inferior
      specific thread, see `struct thread_info'.  */
   struct continuation *continuations;
 
+  /* True if setup_inferior wasn't called for this inferior yet.
+     Until that is done, we must not access inferior memory or
+     registers, as we haven't determined the target
+     architecture/description.  */
+  int needs_setup;
+
   /* Private data used by the target vector implementation.  */
-  struct private_inferior *private;
+  struct private_inferior *priv;
 
   /* HAS_EXIT_CODE is true if the inferior exited with an exit code.
      In this case, the EXIT_CODE field is also valid.  */
@@ -426,14 +431,7 @@ extern struct inferior *add_inferior (int pid);
    the CLI.  */
 extern struct inferior *add_inferior_silent (int pid);
 
-/* Delete an existing inferior list entry, due to inferior exit.  */
-extern void delete_inferior (int pid);
-
-extern void delete_inferior_1 (struct inferior *todel, int silent);
-
-/* Same as delete_inferior, but don't print new inferior notifications
-   to the CLI.  */
-extern void delete_inferior_silent (int pid);
+extern void delete_inferior (struct inferior *todel);
 
 /* Delete an existing inferior list entry, due to inferior detaching.  */
 extern void detach_inferior (int pid);
@@ -467,6 +465,9 @@ extern int valid_gdb_inferior_id (int num);
 /* Search function to lookup an inferior by target 'pid'.  */
 extern struct inferior *find_inferior_pid (int pid);
 
+/* Search function to lookup an inferior whose pid is equal to 'ptid.pid'. */
+extern struct inferior *find_inferior_ptid (ptid_t ptid);
+
 /* Search function to lookup an inferior by GDB 'num'.  */
 extern struct inferior *find_inferior_id (int num);
 
@@ -491,6 +492,9 @@ extern struct inferior *iterate_over_inferiors (int (*) (struct inferior *,
 
 /* Returns true if the inferior list is not empty.  */
 extern int have_inferiors (void);
+
+/* Returns the number of live inferiors (real live processes).  */
+extern int number_of_live_inferiors (void);
 
 /* Returns true if there are any live inferiors in the inferior list
    (not cores, not executables, real live processes).  */

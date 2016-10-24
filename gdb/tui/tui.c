@@ -1,6 +1,6 @@
 /* General functions for the WDB TUI.
 
-   Copyright (C) 1998-2014 Free Software Foundation, Inc.
+   Copyright (C) 1998-2016 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -38,6 +38,7 @@
 #include "symtab.h"
 #include "source.h"
 #include "terminal.h"
+#include "top.h"
 
 #include <ctype.h>
 #include <signal.h>
@@ -48,6 +49,7 @@
 #include <setjmp.h>
 
 #include "gdb_curses.h"
+#include "interps.h"
 
 /* This redefines CTRL if it is not already defined, so it must come
    after terminal state releated include files like <term.h> and
@@ -89,16 +91,31 @@ static Keymap tui_readline_standard_keymap;
 static int
 tui_rl_switch_mode (int notused1, int notused2)
 {
-  if (tui_active)
+
+  /* Don't let exceptions escape.  We're in the middle of a readline
+     callback that isn't prepared for that.  */
+  TRY
     {
-      tui_disable ();
-      rl_prep_terminal (0);
+      if (tui_active)
+	{
+	  tui_disable ();
+	  rl_prep_terminal (0);
+	}
+      else
+	{
+	  /* If tui_enable throws, we'll re-prep below.  */
+	  rl_deprep_terminal ();
+	  tui_enable ();
+	}
     }
-  else
+  CATCH (ex, RETURN_MASK_ALL)
     {
-      rl_deprep_terminal ();
-      tui_enable ();
+      exception_print (gdb_stderr, ex);
+
+      if (!tui_active)
+	rl_prep_terminal (0);
     }
+  END_CATCH
 
   /* Clear the readline in case switching occurred in middle of
      something.  */
@@ -134,7 +151,6 @@ tui_rl_change_windows (int notused1, int notused2)
   if (tui_active)
     {
       enum tui_layout_type new_layout;
-      enum tui_register_display_type regs_type = TUI_UNDEFINED_REGS;
 
       new_layout = tui_current_layout ();
 
@@ -166,7 +182,7 @@ tui_rl_change_windows (int notused1, int notused2)
 	  new_layout = SRC_COMMAND;
 	  break;
 	}
-      tui_set_layout (new_layout, regs_type);
+      tui_set_layout (new_layout);
     }
   return 0;
 }
@@ -182,7 +198,6 @@ tui_rl_delete_other_windows (int notused1, int notused2)
   if (tui_active)
     {
       enum tui_layout_type new_layout;
-      enum tui_register_display_type regs_type = TUI_UNDEFINED_REGS;
 
       new_layout = tui_current_layout ();
 
@@ -201,7 +216,7 @@ tui_rl_delete_other_windows (int notused1, int notused2)
 	  new_layout = DISASSEM_COMMAND;
 	  break;
 	}
-      tui_set_layout (new_layout, regs_type);
+      tui_set_layout (new_layout);
     }
   return 0;
 }
@@ -288,7 +303,8 @@ static int
 tui_rl_startup_hook (void)
 {
   rl_already_prompted = 1;
-  if (tui_current_key_mode != TUI_COMMAND_MODE && immediate_quit == 0)
+  if (tui_current_key_mode != TUI_COMMAND_MODE
+      && !gdb_in_secondary_prompt_p (current_ui))
     tui_set_key_mode (TUI_SINGLE_KEY_MODE);
   tui_redisplay_readline ();
   return 0;
@@ -361,6 +377,20 @@ tui_initialize_readline (void)
   rl_bind_key_in_map ('s', tui_rl_next_keymap, tui_ctlx_keymap);
 }
 
+/* Return the TERM variable from the environment, or "<unset>"
+   if not set.  */
+
+static const char *
+gdb_getenv_term (void)
+{
+  const char *term;
+
+  term = getenv ("TERM");
+  if (term != NULL)
+    return term;
+  return "<unset>";
+}
+
 /* Enter in the tui mode (curses).
    When in normal mode, it installs the tui hooks in gdb, redirects
    the gdb output, configures the readline to work in tui mode.
@@ -368,9 +398,6 @@ tui_initialize_readline (void)
 void
 tui_enable (void)
 {
-  if (!tui_allowed_p ())
-    error (_("TUI mode not allowed"));
-
   if (tui_active)
     return;
 
@@ -380,9 +407,49 @@ tui_enable (void)
   if (tui_finish_init)
     {
       WINDOW *w;
+      SCREEN *s;
+      const char *cap;
+      const char *interp;
 
-      w = initscr ();
-  
+      /* If the top level interpreter is not the console/tui (e.g.,
+	 MI), enabling curses will certainly lose.  */
+      interp = interp_name (top_level_interpreter ());
+      if (strcmp (interp, INTERP_TUI) != 0)
+	error (_("Cannot enable the TUI when the interpreter is '%s'"), interp);
+
+      /* Don't try to setup curses (and print funny control
+	 characters) if we're not outputting to a terminal.  */
+      if (!ui_file_isatty (gdb_stdout))
+	error (_("Cannot enable the TUI when output is not a terminal"));
+
+      s = newterm (NULL, stdout, stdin);
+#ifdef __MINGW32__
+      /* The MinGW port of ncurses requires $TERM to be unset in order
+	 to activate the Windows console driver.  */
+      if (s == NULL)
+	s = newterm ("unknown", stdout, stdin);
+#endif
+      if (s == NULL)
+	{
+	  error (_("Cannot enable the TUI: error opening terminal [TERM=%s]"),
+		 gdb_getenv_term ());
+	}
+      w = stdscr;
+
+      /* Check required terminal capabilities.  The MinGW port of
+	 ncurses does have them, but doesn't expose them through "cup".  */
+#ifndef __MINGW32__
+      cap = tigetstr ("cup");
+      if (cap == NULL || cap == (char *) -1 || *cap == '\0')
+	{
+	  endwin ();
+	  delscreen (s);
+	  error (_("Cannot enable the TUI: "
+		   "terminal doesn't support cursor addressing [TERM=%s]"),
+		 gdb_getenv_term ());
+	}
+#endif
+
       cbreak ();
       noecho ();
       /* timeout (1); */
@@ -395,7 +462,7 @@ tui_enable (void)
       def_prog_mode ();
 
       tui_show_frame_info (0);
-      tui_set_layout (SRC_COMMAND, TUI_UNDEFINED_REGS);
+      tui_set_layout (SRC_COMMAND);
       tui_set_win_focus_to (TUI_SRC_WIN);
       keypad (TUI_CMD_WIN->generic.handle, TRUE);
       wrefresh (TUI_CMD_WIN->generic.handle);
@@ -418,11 +485,22 @@ tui_enable (void)
   tui_setup_io (1);
 
   tui_active = 1;
+
+  /* Resize windows before anything might display/refresh a
+     window.  */
+  if (tui_win_resized ())
+    {
+      tui_set_win_resized_to (FALSE);
+      tui_resize_all ();
+    }
+
   if (deprecated_safe_get_selected_frame ())
-     tui_show_frame_info (deprecated_safe_get_selected_frame ());
+    tui_show_frame_info (deprecated_safe_get_selected_frame ());
 
   /* Restore TUI keymap.  */
   tui_set_key_mode (tui_current_key_mode);
+
+  /* Refresh the screen.  */
   tui_refresh_all_win ();
 
   /* Update gdb's knowledge of its terminal.  */
@@ -460,6 +538,22 @@ tui_disable (void)
 
   tui_active = 0;
   tui_update_gdb_sizes ();
+}
+
+/* Command wrapper for enabling tui mode.  */
+
+static void
+tui_enable_command (char *args, int from_tty)
+{
+  tui_enable ();
+}
+
+/* Command wrapper for leaving tui mode.  */
+
+static void
+tui_disable_command (char *args, int from_tty)
+{
+  tui_disable ();
 }
 
 void
@@ -573,4 +667,22 @@ tui_get_command_dimension (unsigned int *width,
   *width = TUI_CMD_WIN->generic.width;
   *height = TUI_CMD_WIN->generic.height;
   return 1;
+}
+
+/* Provide a prototype to silence -Wmissing-prototypes.  */
+extern initialize_file_ftype _initialize_tui;
+
+void
+_initialize_tui (void)
+{
+  struct cmd_list_element **tuicmd;
+
+  tuicmd = tui_get_cmd_list ();
+
+  add_cmd ("enable", class_tui, tui_enable_command,
+	   _("Enable TUI display mode."),
+	   tuicmd);
+  add_cmd ("disable", class_tui, tui_disable_command,
+	   _("Disable TUI display mode."),
+	   tuicmd);
 }
