@@ -8,7 +8,7 @@ fi
 rm -f e${EMULATION_NAME}.c
 (echo;echo;echo;echo;echo)>e${EMULATION_NAME}.c # there, now line numbers match ;-)
 fragment <<EOF
-/* Copyright (C) 1995-2015 Free Software Foundation, Inc.
+/* Copyright (C) 1995-2016 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -138,7 +138,6 @@ static const char *emit_build_id;
 #ifdef DLL_SUPPORT
 static int pe_enable_stdcall_fixup = -1; /* 0=disable 1=enable.  */
 static char *pe_out_def_filename = NULL;
-static char *pe_implib_filename = NULL;
 static int pe_enable_auto_image_base = 0;
 static unsigned long pe_auto_image_base = 0x61500000;
 static char *pe_dll_search_prefix = NULL;
@@ -228,8 +227,7 @@ fragment <<EOF
 #define OPTION_STDCALL_ALIASES		(OPTION_KILL_ATS + 1)
 #define OPTION_ENABLE_STDCALL_FIXUP	(OPTION_STDCALL_ALIASES + 1)
 #define OPTION_DISABLE_STDCALL_FIXUP	(OPTION_ENABLE_STDCALL_FIXUP + 1)
-#define OPTION_IMPLIB_FILENAME		(OPTION_DISABLE_STDCALL_FIXUP + 1)
-#define OPTION_THUMB_ENTRY		(OPTION_IMPLIB_FILENAME + 1)
+#define OPTION_THUMB_ENTRY		(OPTION_DISABLE_STDCALL_FIXUP + 1)
 #define OPTION_WARN_DUPLICATE_EXPORTS	(OPTION_THUMB_ENTRY + 1)
 #define OPTION_IMP_COMPAT		(OPTION_WARN_DUPLICATE_EXPORTS + 1)
 #define OPTION_ENABLE_AUTO_IMAGE_BASE	(OPTION_IMP_COMPAT + 1)
@@ -323,7 +321,6 @@ gld${EMULATION_NAME}_add_options
     {"add-stdcall-alias", no_argument, NULL, OPTION_STDCALL_ALIASES},
     {"enable-stdcall-fixup", no_argument, NULL, OPTION_ENABLE_STDCALL_FIXUP},
     {"disable-stdcall-fixup", no_argument, NULL, OPTION_DISABLE_STDCALL_FIXUP},
-    {"out-implib", required_argument, NULL, OPTION_IMPLIB_FILENAME},
     {"warn-duplicate-exports", no_argument, NULL, OPTION_WARN_DUPLICATE_EXPORTS},
     /* getopt() allows abbreviations, so we do this to stop it from
        treating -c as an abbreviation for these --compat-implib.  */
@@ -461,7 +458,6 @@ gld_${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("                                     export, place into import library instead.\n"));
   fprintf (file, _("  --export-all-symbols               Automatically export all globals to DLL\n"));
   fprintf (file, _("  --kill-at                          Remove @nn from exported symbols\n"));
-  fprintf (file, _("  --out-implib <file>                Generate import library\n"));
   fprintf (file, _("  --output-def <file>                Generate a .DEF file for the built DLL\n"));
   fprintf (file, _("  --warn-duplicate-exports           Warn about duplicate exports\n"));
   fprintf (file, _("  --compat-implib                    Create backward compatible import libs;\n\
@@ -553,7 +549,7 @@ set_entry_point (void)
   /* Entry point name for arbitrary subsystem numbers.  */
   static const char default_entry[] = "mainCRTStartup";
 
-  if (link_info.shared || dll)
+  if (bfd_link_pic (&link_info) || dll)
     {
 #if defined (TARGET_IS_i386pe)
       entry = "DllMainCRTStartup@12";
@@ -563,7 +559,6 @@ set_entry_point (void)
     }
   else
     {
-
       for (i = 0; v[i].entry; i++)
         if (v[i].value == pe_subsystem)
           break;
@@ -805,9 +800,6 @@ gld${EMULATION_NAME}_handle_option (int optc)
     case OPTION_DISABLE_STDCALL_FIXUP:
       pe_enable_stdcall_fixup = 0;
       break;
-    case OPTION_IMPLIB_FILENAME:
-      pe_implib_filename = xstrdup (optarg);
-      break;
     case OPTION_WARN_DUPLICATE_EXPORTS:
       pe_dll_warn_dup_exports = 1;
       break;
@@ -960,9 +952,9 @@ gld_${EMULATION_NAME}_set_symbols (void)
 
   if (!init[IMAGEBASEOFF].inited)
     {
-      if (link_info.relocatable)
+      if (bfd_link_relocatable (&link_info))
 	init[IMAGEBASEOFF].value = 0;
-      else if (init[DLLOFF].value || (link_info.shared && !link_info.pie))
+      else if (init[DLLOFF].value || bfd_link_dll (&link_info))
 	{
 #ifdef DLL_SUPPORT
 	  init[IMAGEBASEOFF].value = (pe_enable_auto_image_base
@@ -978,7 +970,7 @@ gld_${EMULATION_NAME}_set_symbols (void)
     }
 
   /* Don't do any symbol assignments if this is a relocatable link.  */
-  if (link_info.relocatable)
+  if (bfd_link_relocatable (&link_info))
     return;
 
   /* Glue the assignments into the abs section.  */
@@ -1060,10 +1052,38 @@ pe_undef_cdecl_match (struct bfd_link_hash_entry *h, void *inf)
   return TRUE;
 }
 
+/* Change UNDEF to a defined symbol, taking data from SYM.  */
+
+static void
+change_undef (struct bfd_link_hash_entry * undef,
+	      struct bfd_link_hash_entry * sym)
+{
+  static bfd_boolean  gave_warning_message = FALSE;
+
+  undef->type = bfd_link_hash_defined;
+  undef->u.def.value = sym->u.def.value;
+  undef->u.def.section = sym->u.def.section;
+
+  if (pe_enable_stdcall_fixup == -1)
+    {
+      einfo (_("Warning: resolving %s by linking to %s\n"),
+	     undef->root.string, sym->root.string);
+
+      if (! gave_warning_message)
+	{
+	  einfo (_("Use --enable-stdcall-fixup to disable these warnings\n"));
+	  einfo (_("Use --disable-stdcall-fixup to disable these fixups\n"));
+	  gave_warning_message = TRUE;
+	}
+    }
+
+  /* PR 19803: Make sure that the linked symbol is not garbage collected.  */
+  lang_add_gc_name (sym->root.string);
+}
+
 static void
 pe_fixup_stdcalls (void)
 {
-  static int gave_warning_message = 0;
   struct bfd_link_hash_entry *undef, *sym;
 
   if (pe_dll_extra_pe_debug)
@@ -1072,69 +1092,39 @@ pe_fixup_stdcalls (void)
   for (undef = link_info.hash->undefs; undef; undef=undef->u.undef.next)
     if (undef->type == bfd_link_hash_undefined)
       {
-	char* at = strchr (undef->root.string, '@');
-	int lead_at = (*undef->root.string == '@');
+	const char * name = undef->root.string;
+	char * at;
+	int lead_at = (*name == '@');
+
 	if (lead_at)
-	  at = strchr (undef->root.string + 1, '@');
+	  at = strchr (name + 1, '@');
+	else
+	  at = strchr (name, '@');
 
 	if (at || lead_at)
 	  {
 	    /* The symbol is a stdcall symbol, so let's look for a
 	       cdecl symbol with the same name and resolve to that.  */
-	    char *cname = xstrdup (undef->root.string);
+	    char *cname = xstrdup (name);
 
 	    if (lead_at)
 	      *cname = '_';
-	    at = strchr (cname, '@');
-	    if (at)
-	      *at = 0;
-	    sym = bfd_link_hash_lookup (link_info.hash, cname, 0, 0, 1);
+	    if (at)	      
+	      * strchr (cname, '@') = 0;
+	    sym = bfd_link_hash_lookup (link_info.hash, cname, FALSE, FALSE, TRUE);
 
 	    if (sym && sym->type == bfd_link_hash_defined)
-	      {
-		undef->type = bfd_link_hash_defined;
-		undef->u.def.value = sym->u.def.value;
-		undef->u.def.section = sym->u.def.section;
-
-		if (pe_enable_stdcall_fixup == -1)
-		  {
-		    einfo (_("Warning: resolving %s by linking to %s\n"),
-			   undef->root.string, cname);
-		    if (! gave_warning_message)
-		      {
-			gave_warning_message = 1;
-			einfo (_("Use --enable-stdcall-fixup to disable these warnings\n"));
-			einfo (_("Use --disable-stdcall-fixup to disable these fixups\n"));
-		      }
-		  }
-	      }
+	      change_undef (undef, sym);
 	  }
 	else
 	  {
 	    /* The symbol is a cdecl symbol, so we look for stdcall
 	       symbols - which means scanning the whole symbol table.  */
-	    pe_undef_found_sym = 0;
+	    pe_undef_found_sym = NULL;
 	    bfd_link_hash_traverse (link_info.hash, pe_undef_cdecl_match,
-				    (char *) undef->root.string);
-	    sym = pe_undef_found_sym;
-	    if (sym)
-	      {
-		undef->type = bfd_link_hash_defined;
-		undef->u.def.value = sym->u.def.value;
-		undef->u.def.section = sym->u.def.section;
-
-		if (pe_enable_stdcall_fixup == -1)
-		  {
-		    einfo (_("Warning: resolving %s by linking to %s\n"),
-			   undef->root.string, sym->root.string);
-		    if (! gave_warning_message)
-		      {
-			gave_warning_message = 1;
-			einfo (_("Use --enable-stdcall-fixup to disable these warnings\n"));
-			einfo (_("Use --disable-stdcall-fixup to disable these fixups\n"));
-		      }
-		  }
-	      }
+				    (char *) name);
+	    if (pe_undef_found_sym)
+	      change_undef (undef, pe_undef_found_sym);
 	  }
       }
 }
@@ -1312,7 +1302,7 @@ write_build_id (bfd *abfd)
       struct bfd_link_order *l = NULL;
       for (l = asec->map_head.link_order; l != NULL; l = l->next)
         {
-          if ((l->type == bfd_indirect_link_order))
+          if (l->type == bfd_indirect_link_order)
             {
               if (l->u.indirect.section == t->build_id.sec)
                 {
@@ -1364,7 +1354,7 @@ write_build_id (bfd *abfd)
   if (bfd_seek (abfd, asec->filepos + link_order->offset, SEEK_SET) != 0)
     return 0;
 
-  if ((bfd_bwrite (contents, size, abfd) != size))
+  if (bfd_bwrite (contents, size, abfd) != size)
     return 0;
 
   /* Construct the CodeView record.  */
@@ -1494,7 +1484,7 @@ gld_${EMULATION_NAME}_after_open (void)
      find it, so enable it in that case.  */
   if (pe_use_coff_long_section_names < 0 && link_info.strip == strip_none)
     {
-      if (link_info.relocatable)
+      if (bfd_link_relocatable (&link_info))
 	pe_use_coff_long_section_names = 1;
       else
 	{
@@ -1533,10 +1523,10 @@ gld_${EMULATION_NAME}_after_open (void)
     || defined (TARGET_IS_armpe) \
     || defined (TARGET_IS_arm_epoc_pe) \
     || defined (TARGET_IS_arm_wince_pe)
-  if (!link_info.relocatable)
+  if (!bfd_link_relocatable (&link_info))
     pe_dll_build_sections (link_info.output_bfd, &link_info);
 #else
-  if (link_info.shared)
+  if (bfd_link_pic (&link_info))
     pe_dll_build_sections (link_info.output_bfd, &link_info);
   else
     pe_exe_build_sections (link_info.output_bfd, &link_info);
@@ -1956,7 +1946,7 @@ gld_${EMULATION_NAME}_unrecognized_file (lang_input_statement_type *entry ATTRIB
 
 	  /* def_file_print (stdout, pe_def_file); */
 	  if (pe_def_file->is_dll == 1)
-	    link_info.shared = 1;
+	    link_info.type = type_dll;
 
 	  if (pe_def_file->base_address != (bfd_vma)(-1))
 	    {
@@ -2065,15 +2055,17 @@ gld_${EMULATION_NAME}_finish (void)
   finish_default ();
 
 #ifdef DLL_SUPPORT
-  if (link_info.shared
+  if (bfd_link_pic (&link_info)
 #if !defined(TARGET_IS_shpe)
-      || (!link_info.relocatable && pe_def_file->num_exports != 0)
+      || (!bfd_link_relocatable (&link_info)
+	  && pe_def_file->num_exports != 0)
 #endif
     )
     {
       pe_dll_fill_sections (link_info.output_bfd, &link_info);
-      if (pe_implib_filename)
-	pe_dll_generate_implib (pe_def_file, pe_implib_filename, &link_info);
+      if (command_line.out_implib_filename)
+	pe_dll_generate_implib (pe_def_file, command_line.out_implib_filename,
+				&link_info);
     }
 #if defined(TARGET_IS_shpe)
   /* ARM doesn't need relocs.  */
@@ -2126,7 +2118,7 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
   lang_statement_union_type **pl;
 
   /* Look through the script to see where to place this section.  */
-  if (!link_info.relocatable
+  if (!bfd_link_relocatable (&link_info)
       && (dollar = strchr (secname, '\$')) != NULL)
     {
       size_t len = dollar - secname;
@@ -2208,6 +2200,8 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
       struct orphan_save *place;
       lang_output_section_statement_type *after;
       etree_type *address;
+      flagword flags;
+      asection *nexts;
 
       if (!orphan_init_done)
 	{
@@ -2222,17 +2216,35 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
 	  orphan_init_done = 1;
 	}
 
+      flags = s->flags;
+      if (!bfd_link_relocatable (&link_info))
+	{
+	  nexts = s;
+	  while ((nexts = bfd_get_next_section_by_name (nexts->owner,
+							nexts)))
+	    if (nexts->output_section == NULL
+		&& (nexts->flags & SEC_EXCLUDE) == 0
+		&& ((nexts->flags ^ flags) & (SEC_LOAD | SEC_ALLOC)) == 0
+		&& (nexts->owner->flags & DYNAMIC) == 0
+		&& nexts->owner->usrdata != NULL
+		&& !(((lang_input_statement_type *) nexts->owner->usrdata)
+		     ->flags.just_syms))
+	      flags = (((flags ^ SEC_READONLY)
+			| (nexts->flags ^ SEC_READONLY))
+		       ^ SEC_READONLY);
+	}
+
       /* Try to put the new output section in a reasonable place based
 	 on the section name and section flags.  */
 
       place = NULL;
-      if ((s->flags & SEC_ALLOC) == 0)
+      if ((flags & SEC_ALLOC) == 0)
 	;
-      else if ((s->flags & (SEC_LOAD | SEC_HAS_CONTENTS)) == 0)
+      else if ((flags & (SEC_LOAD | SEC_HAS_CONTENTS)) == 0)
 	place = &hold[orphan_bss];
-      else if ((s->flags & SEC_READONLY) == 0)
+      else if ((flags & SEC_READONLY) == 0)
 	place = &hold[orphan_data];
-      else if ((s->flags & SEC_CODE) == 0)
+      else if ((flags & SEC_CODE) == 0)
 	{
 	  place = (!strncmp (secname, ".idata\$", 7) ? &hold[orphan_idata]
 						     : &hold[orphan_rodata]);
@@ -2247,7 +2259,8 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
 	    place->os = lang_output_section_find (place->name);
 	  after = place->os;
 	  if (after == NULL)
-	    after = lang_output_section_find_by_flags (s, &place->os, NULL);
+	    after = lang_output_section_find_by_flags (s, flags, &place->os,
+						       NULL);
 	  if (after == NULL)
 	    /* *ABS* is always the first output section statement.  */
 	    after = (&lang_output_section_statement.head
@@ -2260,7 +2273,7 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
       address = exp_unop (ALIGN_K, exp_nameop (NAME, "__section_alignment__"));
       os = lang_insert_orphan (s, secname, constraint, after, place, address,
 			       &add_child);
-      if (link_info.relocatable)
+      if (bfd_link_relocatable (&link_info))
 	{
 	  os->section_alignment = s->alignment_power;
 	  os->bfd_section->alignment_power = s->alignment_power;
@@ -2416,11 +2429,11 @@ fragment <<EOF
 {
   *isfile = 0;
 
-  if (link_info.relocatable && config.build_constructors)
+  if (bfd_link_relocatable (&link_info) && config.build_constructors)
     return
 EOF
 sed $sc ldscripts/${EMULATION_NAME}.xu			>> e${EMULATION_NAME}.c
-echo '  ; else if (link_info.relocatable) return'	>> e${EMULATION_NAME}.c
+echo '  ; else if (bfd_link_relocatable (&link_info)) return' >> e${EMULATION_NAME}.c
 sed $sc ldscripts/${EMULATION_NAME}.xr			>> e${EMULATION_NAME}.c
 echo '  ; else if (!config.text_read_only) return'	>> e${EMULATION_NAME}.c
 sed $sc ldscripts/${EMULATION_NAME}.xbn			>> e${EMULATION_NAME}.c

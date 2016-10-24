@@ -1,5 +1,5 @@
 /* od-avrelf.c -- dump information about an AVR elf object file.
-   Copyright (C) 2011-2015 Free Software Foundation, Inc.
+   Copyright (C) 2011-2016 Free Software Foundation, Inc.
    Written by Senthil Kumar Selvaraj, Atmel.
 
    This file is part of GNU Binutils.
@@ -271,13 +271,13 @@ elf32_avr_dump_avr_prop (bfd *abfd)
                   r_list->records [i].data.org.fill);
           break;
         case RECORD_ALIGN:
-          printf ("    Align: %#08lx\n",
+          printf ("     Align: %#08lx\n",
                   r_list->records [i].data.align.bytes);
           break;
         case RECORD_ALIGN_AND_FILL:
-          printf ("    Align: %#08lx, Fill: %#08lx\n",
+          printf ("     Align: %#08lx, Fill: %#08lx\n",
                   r_list->records [i].data.align.bytes,
-                  r_list->records [i].data.org.fill);
+                  r_list->records [i].data.align.fill);
           break;
         }
     }

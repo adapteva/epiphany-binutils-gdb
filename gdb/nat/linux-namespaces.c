@@ -1,6 +1,6 @@
 /* Linux namespaces(7) support.
 
-   Copyright (C) 2015 Free Software Foundation, Inc.
+   Copyright (C) 2015-2016 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,20 +32,33 @@
 /* See nat/linux-namespaces.h.  */
 int debug_linux_namespaces;
 
+/* Handle systems without fork.  */
+
+static inline pid_t
+do_fork (void)
+{
+#ifdef HAVE_FORK
+  return fork ();
+#else
+  errno = ENOSYS;
+  return -1;
+#endif
+}
+
 /* Handle systems without setns.  */
 
-#ifndef HAVE_SETNS
-static int
-setns (int fd, int nstype)
+static inline int
+do_setns (int fd, int nstype)
 {
-#ifdef __NR_setns
+#ifdef HAVE_SETNS
+  return setns (fd, nstype);
+#elif defined __NR_setns
   return syscall (__NR_setns, fd, nstype);
 #else
   errno = ENOSYS;
   return -1;
 #endif
 }
-#endif
 
 /* Handle systems without MSG_CMSG_CLOEXEC.  */
 
@@ -495,7 +508,7 @@ mnsh_recv_message (int sock, enum mnsh_msg_type *type,
 static ssize_t
 mnsh_handle_setns (int sock, int fd, int nstype)
 {
-  int result = setns (fd, nstype);
+  int result = do_setns (fd, nstype);
 
   return mnsh_return_int (sock, result, errno);
 }
@@ -644,7 +657,7 @@ linux_mntns_get_helper (void)
       if (gdb_socketpair_cloexec (AF_UNIX, SOCK_STREAM, 0, sv) < 0)
 	return NULL;
 
-      h.pid = fork ();
+      h.pid = do_fork ();
       if (h.pid < 0)
 	{
 	  int saved_errno = errno;

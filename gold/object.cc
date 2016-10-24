@@ -1,6 +1,6 @@
 // object.cc -- support for an object file for linking in gold
 
-// Copyright (C) 2006-2015 Free Software Foundation, Inc.
+// Copyright (C) 2006-2016 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -427,7 +427,8 @@ Sized_relobj<size, big_endian>::do_for_all_local_got_entries(
   unsigned int nsyms = this->local_symbol_count();
   for (unsigned int i = 0; i < nsyms; i++)
     {
-      Local_got_offsets::const_iterator p = this->local_got_offsets_.find(i);
+      Local_got_entry_key key(i, 0);
+      Local_got_offsets::const_iterator p = this->local_got_offsets_.find(key);
       if (p != this->local_got_offsets_.end())
 	{
 	  const Got_offset_list* got_offsets = p->second;
@@ -478,7 +479,8 @@ Sized_relobj_file<size, big_endian>::Sized_relobj_file(
     discarded_eh_frame_shndx_(-1U),
     is_deferred_layout_(false),
     deferred_layout_(),
-    deferred_layout_relocs_()
+    deferred_layout_relocs_(),
+    output_views_(NULL)
 {
   this->e_type_ = ehdr.get_e_type();
 }
@@ -663,14 +665,12 @@ Sized_relobj_file<size, big_endian>::find_eh_frame(
 
 // Return TRUE if this is a section whose contents will be needed in the
 // Add_symbols task.  This function is only called for sections that have
-// already passed the test in is_compressed_debug_section(), so we know
-// that the section name begins with ".zdebug".
+// already passed the test in is_compressed_debug_section() and the debug
+// section name prefix, ".debug"/".zdebug", has been skipped.
 
 static bool
 need_decompressed_section(const char* name)
 {
-  // Skip over the ".zdebug" and a quick check for the "_".
-  name += 7;
   if (*name++ != '_')
     return false;
 
@@ -741,14 +741,33 @@ build_compressed_section_map(
 	    }
 
 	  const char* name = names + shdr.get_sh_name();
-	  if (is_compressed_debug_section(name))
+	  bool is_compressed = ((shdr.get_sh_flags()
+				 & elfcpp::SHF_COMPRESSED) != 0);
+	  bool is_zcompressed = (!is_compressed
+				 && is_compressed_debug_section(name));
+
+	  if (is_zcompressed || is_compressed)
 	    {
 	      section_size_type len;
 	      const unsigned char* contents =
 		  obj->section_contents(i, &len, false);
-	      uint64_t uncompressed_size = get_uncompressed_size(contents, len);
+	      uint64_t uncompressed_size;
+	      if (is_zcompressed)
+		{
+		  // Skip over the ".zdebug" prefix.
+		  name += 7;
+		  uncompressed_size = get_uncompressed_size(contents, len);
+		}
+	      else
+		{
+		  // Skip over the ".debug" prefix.
+		  name += 6;
+		  elfcpp::Chdr<size, big_endian> chdr(contents);
+		  uncompressed_size = chdr.get_ch_size();
+		}
 	      Compressed_section_info info;
 	      info.size = convert_to_section_size_type(uncompressed_size);
+	      info.flag = shdr.get_sh_flags();
 	      info.contents = NULL;
 	      if (uncompressed_size != -1ULL)
 		{
@@ -758,7 +777,9 @@ build_compressed_section_map(
 		      uncompressed_data = new unsigned char[uncompressed_size];
 		      if (decompress_input_section(contents, len,
 						   uncompressed_data,
-						   uncompressed_size))
+						   uncompressed_size,
+						   size, big_endian,
+						   shdr.get_sh_flags()))
 			info.contents = uncompressed_data;
 		      else
 			delete[] uncompressed_data;
@@ -786,14 +807,11 @@ Sized_relobj_file<size, big_endian>::do_find_special_sections(
   if (this->find_eh_frame(pshdrs, names, sd->section_names_size))
     this->has_eh_frame_ = true;
 
-  if (memmem(names, sd->section_names_size, ".zdebug_", 8) != NULL)
-    {
-      Compressed_section_map* compressed_sections =
-	  build_compressed_section_map<size, big_endian>(
-	      pshdrs, this->shnum(), names, sd->section_names_size, this, true);
-      if (compressed_sections != NULL)
-        this->set_compressed_sections(compressed_sections);
-    }
+  Compressed_section_map* compressed_sections =
+    build_compressed_section_map<size, big_endian>(
+      pshdrs, this->shnum(), names, sd->section_names_size, this, true);
+  if (compressed_sections != NULL)
+    this->set_compressed_sections(compressed_sections);
 
   return (this->has_eh_frame_
 	  || (!parameters->options().relocatable()
@@ -2658,6 +2676,7 @@ Sized_relobj_file<size, big_endian>::write_local_symbols(
       elfcpp::Sym<size, big_endian> isym(psyms);
 
       Symbol_value<size>& lv(this->local_values_[i]);
+      typename elfcpp::Elf_types<size>::Elf_Addr sym_value = lv.value(this, 0);
 
       bool is_ordinary;
       unsigned int st_shndx = this->adjust_sym_shndx(i, isym.get_st_shndx(),
@@ -2667,6 +2686,9 @@ Sized_relobj_file<size, big_endian>::write_local_symbols(
 	  gold_assert(st_shndx < out_sections.size());
 	  if (out_sections[st_shndx] == NULL)
 	    continue;
+	  // In relocatable object files symbol values are section relative.
+	  if (parameters->options().relocatable())
+	    sym_value -= out_sections[st_shndx]->address();
 	  st_shndx = out_sections[st_shndx]->out_shndx();
 	  if (st_shndx >= elfcpp::SHN_LORESERVE)
 	    {
@@ -2686,7 +2708,7 @@ Sized_relobj_file<size, big_endian>::write_local_symbols(
 	  gold_assert(isym.get_st_name() < strtab_size);
 	  const char* name = pnames + isym.get_st_name();
 	  osym.put_st_name(sympool->get_offset(name));
-	  osym.put_st_value(this->local_values_[i].value(this, 0));
+	  osym.put_st_value(sym_value);
 	  osym.put_st_size(isym.get_st_size());
 	  osym.put_st_info(isym.get_st_info());
 	  osym.put_st_other(isym.get_st_other());
@@ -2704,7 +2726,7 @@ Sized_relobj_file<size, big_endian>::write_local_symbols(
 	  gold_assert(isym.get_st_name() < strtab_size);
 	  const char* name = pnames + isym.get_st_name();
 	  osym.put_st_name(dynpool->get_offset(name));
-	  osym.put_st_value(this->local_values_[i].value(this, 0));
+	  osym.put_st_value(sym_value);
 	  osym.put_st_size(isym.get_st_size());
 	  osym.put_st_info(isym.get_st_info());
 	  osym.put_st_other(isym.get_st_other());
@@ -2899,7 +2921,10 @@ Object::decompressed_section_contents(
   if (!decompress_input_section(buffer,
 				buffer_size,
 				uncompressed_data,
-				uncompressed_size))
+				uncompressed_size,
+				elfsize(),
+				is_big_endian(),
+				p->second.flag))
     this->error(_("could not decompress section %s"),
 		this->do_section_name(shndx).c_str());
 
@@ -2954,11 +2979,20 @@ Input_objects::add_object(Object* obj)
       Dynobj* dynobj = static_cast<Dynobj*>(obj);
       const char* soname = dynobj->soname();
 
-      std::pair<Unordered_set<std::string>::iterator, bool> ins =
-	this->sonames_.insert(soname);
+      Unordered_map<std::string, Object*>::value_type val(soname, obj);
+      std::pair<Unordered_map<std::string, Object*>::iterator, bool> ins =
+	this->sonames_.insert(val);
       if (!ins.second)
 	{
 	  // We have already seen a dynamic object with this soname.
+	  // If any instances of this object on the command line have
+	  // the --no-as-needed flag, make sure the one we keep is
+	  // marked so.
+	  if (!obj->as_needed())
+	    {
+	      gold_assert(ins.first->second != NULL);
+	      ins.first->second->clear_as_needed();
+	    }
 	  return false;
 	}
 

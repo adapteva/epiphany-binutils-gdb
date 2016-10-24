@@ -1,6 +1,6 @@
 /* script_test_12a.c -- a test case for gold
 
-   Copyright (C) 2015 Free Software Foundation, Inc.
+   Copyright (C) 2015-2016 Free Software Foundation, Inc.
    Written by Cary Coutant <ccoutant@gmail.com>.
 
    This file is part of gold.
@@ -51,7 +51,7 @@
 
 extern int test_array_start;
 extern int test_array_end;
-extern char interleaved;
+extern char interleaved __attribute__((__aligned__(1)));
 
 int
 main(void)
@@ -73,3 +73,4 @@ main(void)
 int a1[] __attribute((section(".x1"))) = { 0x01, 0x02, 0x03, 0x04 };
 int a2[] __attribute((section(".x2"))) = { 0x11, 0x12, 0x13, 0x14};
 int a3[] __attribute((section(".x3"))) = { 0x21, 0x22, 0x23, 0x24 };
+int a4[] __attribute((section(".x4"))) = { 0xff, 0xff, 0xff, 0xff };

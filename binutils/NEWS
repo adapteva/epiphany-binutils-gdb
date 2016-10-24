@@ -1,10 +1,45 @@
 -*- text -*-
 
+* The ARC port of objdump now accepts a -M option to specify the extra
+  instruction class(es) that should be disassembled.
+
+* The --remove-section option for objcopy and strip now accepts section
+  patterns starting with an exclamation point to indicate a non-matching
+  section.  A non-matching section is removed from the set of sections
+  matched by an earlier --remove-section pattern.
+
+* The --only-section option for objcopy now accepts section patterns
+  starting with an exclamation point to indicate a non-matching section.
+  A non-matching section is removed from the set of sections matched by
+  an earlier --only-section pattern.
+
+* New --remove-relocations=SECTIONPATTERN option for objcopy and strip.
+  This option can be used to remove sections containing relocations.
+  The SECTIONPATTERN is the section to which the relocations apply, not
+  the relocation section itself.
+
+Changes in 2.27:
+
+* Add a configure option, --enable-64-bit-archive, to force use of a
+  64-bit format when creating an archive symbol index.
+
+* Add --elf-stt-common= option to objcopy for ELF targets to control
+  whether to convert common symbols to the STT_COMMON type.
+
+Changes in 2.26:
+
+* Add option to objcopy to insert new symbols into a file:
+  --add-symbol <name>=[<section>:]<value>[,<flags>]
+
+* Add support for the ARC EM/HS, and ARC600/700 architectures.
+
 * Extend objcopy --compress-debug-sections option to support
   --compress-debug-sections=[none|zlib|zlib-gnu|zlib-gabi] for ELF
   targets.
 
 * Add --update-section option to objcopy.
+
+* Add --output-separator option to strings.
 
 Changes in 2.25:
 
@@ -114,7 +149,7 @@ Changes in 2.20:
 * Add new option --use-nul-prefixed-import-tables to dlltool to allow fall-
   back to old import table generation with null element prefix.
 
-* Added --identify-strict switch to cause --identify <implib> to 
+* Added --identify-strict switch to cause --identify <implib> to
   report an error when the import library is associated with
   multiple DLLs.
 
@@ -133,7 +168,7 @@ Changes in 2.19:
   object files rather than the files themselves and which contain a
   flattened symbol index for all objects, and archives, which have been
   added to the archive.
-  
+
 * Added -F switch to objdump to include file offsets in the disassembly.
 
 * Added -c switch to readelf to allow string dumps of archive symbol index.
@@ -198,9 +233,9 @@ Changes in 2.17:
 
 * Add "--globalize-symbol <name>" and "--globalize-symbols <filename>" switches
   to objcopy to convert local symbols into global symbols.
-  
+
 * gprof now allows input files to have histogram records for
-  several memory ranges, provided those ranges are disjoint.  
+  several memory ranges, provided those ranges are disjoint.
 
 Changes in 2.16:
 
@@ -249,7 +284,7 @@ Changes in 2.15:
 * objcopy now accepts --add-gnu-debuglink=<file> to insert a .gnu_debuglink
   section into a (presumably stripped) executable.  This allows the debug
   information for the file to be held in a separate file.
-  
+
 * BFD marks the sections .comment and .note as 'n' in the BSD/POSIX
   single-character representation.  This can be checked by running nm
   with the -a switch.
@@ -500,7 +535,7 @@ Changes in binutils 2.1:
   and/or local symbols only.  They now also support long options.
 
 
-Copyright (C) 2012-2015 Free Software Foundation, Inc.
+Copyright (C) 2012-2016 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

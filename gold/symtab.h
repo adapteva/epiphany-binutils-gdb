@@ -1,6 +1,6 @@
 // symtab.h -- the gold symbol table   -*- C++ -*-
 
-// Copyright (C) 2006-2015 Free Software Foundation, Inc.
+// Copyright (C) 2006-2016 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -139,6 +139,11 @@ class Symbol
   void
   set_is_default()
   { this->is_def_ = true; }
+
+  // Set that this version is not the default for this symbol name.
+  void
+  set_is_not_default()
+  { this->is_def_ = false; }
 
   // Return the symbol's name as name@version (or name@@version).
   std::string
@@ -865,6 +870,19 @@ class Symbol
   is_cxx_vtable() const
   { return is_prefix_of("_ZTV", this->name_); }
 
+  // Return true if this symbol is protected in a shared object.
+  // This is not the same as checking if visibility() == elfcpp::STV_PROTECTED,
+  // because the visibility_ field reflects the symbol's visibility from
+  // outside the shared object.
+  bool
+  is_protected() const
+  { return this->is_protected_; }
+
+  // Mark this symbol as protected in a shared object.
+  void
+  set_is_protected()
+  { this->is_protected_ = true; }
+
  protected:
   // Instances of this class should always be created at a specific
   // size.
@@ -1062,6 +1080,10 @@ class Symbol
   bool undef_binding_weak_ : 1;
   // True if this symbol is a predefined linker symbol (bit 34).
   bool is_predefined_ : 1;
+  // True if this symbol has protected visibility in a shared object (bit 35).
+  // The visibility_ field will be STV_DEFAULT in this case because we
+  // must treat it as such from outside the shared object.
+  bool is_protected_  : 1;
 };
 
 // The parts of a symbol which are size specific.  Using a template
@@ -1108,8 +1130,8 @@ class Sized_symbol : public Symbol
 
   // Initialize fields for an undefined symbol.
   void
-  init_undefined(const char* name, const char* version, elfcpp::STT,
-		 elfcpp::STB, elfcpp::STV, unsigned char nonvis);
+  init_undefined(const char* name, const char* version, Value_type value,
+		 elfcpp::STT, elfcpp::STB, elfcpp::STV, unsigned char nonvis);
 
   // Override existing symbol.
   template<bool big_endian>
@@ -1476,6 +1498,12 @@ class Symbol_table
   define_symbols(const Layout*, int count, const Define_symbol_in_segment*,
 		 bool only_if_ref);
 
+  // Add a target-specific global symbol.
+  // (Used by SPARC backend to add STT_SPARC_REGISTER symbols.)
+  void
+  add_target_global_symbol(Symbol* sym)
+  { this->target_symbols_.push_back(sym); }
+
   // Define SYM using a COPY reloc.  POSD is the Output_data where the
   // symbol should be defined--typically a .dyn.bss section.  VALUE is
   // the offset within POSD.
@@ -1706,7 +1734,8 @@ class Symbol_table
 	  const elfcpp::Sym<size, big_endian>& sym,
 	  unsigned int st_shndx, bool is_ordinary,
 	  unsigned int orig_st_shndx,
-	  Object*, const char* version);
+	  Object*, const char* version,
+	  bool is_default_version);
 
   template<int size, bool big_endian>
   void
@@ -1725,7 +1754,7 @@ class Symbol_table
   // resolve.cc.
   static bool
   should_override(const Symbol*, unsigned int, elfcpp::STT, Defined,
-		  Object*, bool*, bool*);
+		  Object*, bool*, bool*, bool);
 
   // Report a problem in symbol resolution.
   static void
@@ -1945,6 +1974,8 @@ class Symbol_table
   const Version_script_info& version_script_;
   Garbage_collection* gc_;
   Icf* icf_;
+  // Target-specific symbols, if any.
+  std::vector<Symbol*> target_symbols_;
 };
 
 // We inline get_sized_symbol for efficiency.

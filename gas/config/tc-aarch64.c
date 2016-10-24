@@ -1,6 +1,6 @@
 /* tc-aarch64.c -- Assemble for the AArch64 ISA
 
-   Copyright (C) 2009-2015 Free Software Foundation, Inc.
+   Copyright (C) 2009-2016 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -247,15 +247,6 @@ struct reloc_entry
   bfd_reloc_code_real_type reloc;
 };
 
-/* Structure for a hash table entry for a register.  */
-typedef struct
-{
-  const char *name;
-  unsigned char number;
-  unsigned char type;
-  unsigned char builtin;
-} reg_entry;
-
 /* Macros to define the register types and masks for the purpose
    of parsing.  */
 
@@ -301,7 +292,7 @@ typedef struct
 #define MULTI_REG_TYPE(T,V)	BASIC_REG_TYPE(T)
 
 /* Register type enumerators.  */
-typedef enum
+typedef enum aarch64_reg_type_
 {
   /* A list of REG_TYPE_*.  */
   AARCH64_REG_TYPES
@@ -313,6 +304,15 @@ typedef enum
 #define REG_TYPE(T)		(1 << REG_TYPE_##T)
 #undef MULTI_REG_TYPE
 #define MULTI_REG_TYPE(T,V)	V,
+
+/* Structure for a hash table entry for a register.  */
+typedef struct
+{
+  const char *name;
+  unsigned char number;
+  ENUM_BITFIELD (aarch64_reg_type_) type : 8;
+  unsigned char builtin;
+} reg_entry;
 
 /* Values indexed by aarch64_reg_type to assist the type checking.  */
 static const unsigned reg_type_masks[] =
@@ -406,6 +406,7 @@ static struct hash_control *aarch64_reg_hsh;
 static struct hash_control *aarch64_barrier_opt_hsh;
 static struct hash_control *aarch64_nzcv_hsh;
 static struct hash_control *aarch64_pldop_hsh;
+static struct hash_control *aarch64_hint_opt_hsh;
 
 /* Stuff needed to resolve the label ambiguity
    As:
@@ -572,7 +573,7 @@ my_get_expression (expressionS * ep, char **str, int prefix_mode,
    of LITTLENUMS emitted is stored in *SIZEP.  An error message is
    returned, or NULL on OK.  */
 
-char *
+const char *
 md_atof (int type, char *litP, int *sizeP)
 {
   return ieee_md_atof (type, litP, sizeP, target_big_endian);
@@ -743,7 +744,7 @@ aarch64_reg_parse_32_64 (char **ccp, int reject_sp, int reject_rz,
    otherwise return FALSE.
 
    Accept only one occurrence of:
-   8b 16b 4h 8h 2s 4s 1d 2d
+   8b 16b 2h 4h 8h 2s 4s 1d 2d
    b h s d q  */
 static bfd_boolean
 parse_neon_type_for_operand (struct neon_type_el *parsed_type, char **str)
@@ -802,7 +803,8 @@ elt_size:
 	first_error (_("missing element size"));
       return FALSE;
     }
-  if (width != 0 && width * element_size != 64 && width * element_size != 128)
+  if (width != 0 && width * element_size != 64 && width * element_size != 128
+      && !(width == 2 && element_size == 16))
     {
       first_error_fmt (_
 		       ("invalid element size %d and vector size combination %c"),
@@ -1185,7 +1187,7 @@ insert_reg_alias (char *str, int number, aarch64_reg_type type)
     }
 
   name = xstrdup (str);
-  new = xmalloc (sizeof (reg_entry));
+  new = XNEW (reg_entry);
 
   new->name = name;
   new->number = number;
@@ -1239,9 +1241,7 @@ create_register_alias (char *newname, char *p)
   nlen = strlen (newname);
 #endif
 
-  nbuf = alloca (nlen + 1);
-  memcpy (nbuf, newname, nlen);
-  nbuf[nlen] = '\0';
+  nbuf = xmemdup0 (newname, nlen);
 
   /* Create aliases under the new name as stated; an all-lowercase
      version of the new name; and an all-uppercase version of the new
@@ -1263,7 +1263,10 @@ create_register_alias (char *newname, char *p)
 	     the artificial FOO alias because it has already been created by the
 	     first .req.  */
 	  if (insert_reg_alias (nbuf, old->number, old->type) == NULL)
-	    return TRUE;
+	    {
+	      free (nbuf);
+	      return TRUE;
+	    }
 	}
 
       for (p = nbuf; *p; p++)
@@ -1273,6 +1276,7 @@ create_register_alias (char *newname, char *p)
 	insert_reg_alias (nbuf, old->number, old->type);
     }
 
+  free (nbuf);
   return TRUE;
 }
 
@@ -1571,7 +1575,7 @@ find_or_make_literal_pool (int size)
   if (pool == NULL)
     {
       /* Create a new pool.  */
-      pool = xmalloc (sizeof (*pool));
+      pool = XNEW (literal_pool);
       if (!pool)
 	return NULL;
 
@@ -1648,7 +1652,8 @@ add_to_lit_pool (expressionS *exp, int size)
 	{
 	  /* PR 16688: Bignums are held in a single global array.  We must
 	     copy and preserve that value now, before it is overwritten.  */
-	  pool->literals[entry].bignum = xmalloc (CHARS_PER_LITTLENUM * exp->X_add_number);
+	  pool->literals[entry].bignum = XNEWVEC (LITTLENUM_TYPE,
+						  exp->X_add_number);
 	  memcpy (pool->literals[entry].bignum, generic_bignum,
 		  CHARS_PER_LITTLENUM * exp->X_add_number);
 	}
@@ -1892,6 +1897,21 @@ s_aarch64_inst (int ignored ATTRIBUTE_UNUSED)
 }
 
 #ifdef OBJ_ELF
+/* Emit BFD_RELOC_AARCH64_TLSDESC_ADD on the next ADD instruction.  */
+
+static void
+s_tlsdescadd (int ignored ATTRIBUTE_UNUSED)
+{
+  expressionS exp;
+
+  expression (&exp);
+  frag_grow (4);
+  fix_new_aarch64 (frag_now, frag_more (0) - frag_now->fr_literal, 4, &exp, 0,
+		   BFD_RELOC_AARCH64_TLSDESC_ADD);
+
+  demand_empty_rest_of_line ();
+}
+
 /* Emit BFD_RELOC_AARCH64_TLSDESC_CALL on the next BLR instruction.  */
 
 static void
@@ -1908,6 +1928,21 @@ s_tlsdesccall (int ignored ATTRIBUTE_UNUSED)
   frag_grow (4);
   fix_new_aarch64 (frag_now, frag_more (0) - frag_now->fr_literal, 4, &exp, 0,
 		   BFD_RELOC_AARCH64_TLSDESC_CALL);
+
+  demand_empty_rest_of_line ();
+}
+
+/* Emit BFD_RELOC_AARCH64_TLSDESC_LDR on the next LDR instruction.  */
+
+static void
+s_tlsdescldr (int ignored ATTRIBUTE_UNUSED)
+{
+  expressionS exp;
+
+  expression (&exp);
+  frag_grow (4);
+  fix_new_aarch64 (frag_now, frag_more (0) - frag_now->fr_literal, 4, &exp, 0,
+		   BFD_RELOC_AARCH64_TLSDESC_LDR);
 
   demand_empty_rest_of_line ();
 }
@@ -1936,7 +1971,9 @@ const pseudo_typeS md_pseudo_table[] = {
   {"arch_extension", s_aarch64_arch_extension, 0},
   {"inst", s_aarch64_inst, 0},
 #ifdef OBJ_ELF
+  {"tlsdescadd", s_tlsdescadd, 0},
   {"tlsdesccall", s_tlsdesccall, 0},
+  {"tlsdescldr", s_tlsdescldr, 0},
   {"word", s_aarch64_elf_cons, 4},
   {"long", s_aarch64_elf_cons, 4},
   {"xword", s_aarch64_elf_cons, 8},
@@ -2455,6 +2492,24 @@ static struct reloc_table_entry reloc_table[] = {
    BFD_RELOC_AARCH64_LD_GOT_LO12_NC,
    0},
 
+  /* 0-15 bits of address/value: MOVk, no check.  */
+  {"gotoff_g0_nc", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC,
+   0,
+   0,
+   0},
+
+  /* Most significant bits 16-31 of address/value: MOVZ.  */
+  {"gotoff_g1", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_MOVW_GOTOFF_G1,
+   0,
+   0,
+   0},
+
   /* 15 bit offset into the page containing GOT entry for that symbol.  */
   {"gotoff_lo15", 0,
    0,				/* adr_type */
@@ -2462,6 +2517,24 @@ static struct reloc_table_entry reloc_table[] = {
    0,
    0,
    BFD_RELOC_AARCH64_LD64_GOTOFF_LO15,
+   0},
+
+  /* Get to the page containing GOT TLS entry for a symbol */
+  {"gottprel_g0_nc", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC,
+   0,
+   0,
+   0},
+
+  /* Get to the page containing GOT TLS entry for a symbol */
+  {"gottprel_g1", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1,
+   0,
+   0,
    0},
 
   /* Get to the page containing GOT TLS entry for a symbol */
@@ -2482,6 +2555,24 @@ static struct reloc_table_entry reloc_table[] = {
    0,
    0},
 
+  /* Lower 16 bits address/value: MOVk.  */
+  {"tlsgd_g0_nc", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC,
+   0,
+   0,
+   0},
+
+  /* Most significant bits 16-31 of address/value: MOVZ.  */
+  {"tlsgd_g1", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSGD_MOVW_G1,
+   0,
+   0,
+   0},
+
   /* Get to the page containing GOT TLS entry for a symbol */
   {"tlsdesc", 0,
    BFD_RELOC_AARCH64_TLSDESC_ADR_PREL21, /* adr_type */
@@ -2498,6 +2589,118 @@ static struct reloc_table_entry reloc_table[] = {
    0,
    BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC,
    BFD_RELOC_AARCH64_TLSDESC_LD_LO12_NC,
+   0},
+
+  /* Get to the page containing GOT TLS entry for a symbol.
+     The same as GD, we allocate two consecutive GOT slots
+     for module index and module offset, the only difference
+     with GD is the module offset should be intialized to
+     zero without any outstanding runtime relocation. */
+  {"tlsldm", 0,
+   BFD_RELOC_AARCH64_TLSLD_ADR_PREL21, /* adr_type */
+   BFD_RELOC_AARCH64_TLSLD_ADR_PAGE21,
+   0,
+   0,
+   0,
+   0},
+
+  /* 12 bit offset into the page containing GOT TLS entry for a symbol */
+  {"tlsldm_lo12_nc", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_AARCH64_TLSLD_ADD_LO12_NC,
+   0,
+   0},
+
+  /* 12 bit offset into the module TLS base address.  */
+  {"dtprel_lo12", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12,
+   BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12,
+   0},
+
+  /* Same as dtprel_lo12, no overflow check.  */
+  {"dtprel_lo12_nc", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12_NC,
+   BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12_NC,
+   0},
+
+  /* bits[23:12] of offset to the module TLS base address.  */
+  {"dtprel_hi12", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_HI12,
+   0,
+   0},
+
+  /* bits[15:0] of offset to the module TLS base address.  */
+  {"dtprel_g0", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0,
+   0,
+   0,
+   0},
+
+  /* No overflow check version of BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0.  */
+  {"dtprel_g0_nc", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0_NC,
+   0,
+   0,
+   0},
+
+  /* bits[31:16] of offset to the module TLS base address.  */
+  {"dtprel_g1", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1,
+   0,
+   0,
+   0},
+
+  /* No overflow check version of BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1.  */
+  {"dtprel_g1_nc", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1_NC,
+   0,
+   0,
+   0},
+
+  /* bits[47:32] of offset to the module TLS base address.  */
+  {"dtprel_g2", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G2,
+   0,
+   0,
+   0},
+
+  /* Lower 16 bit offset into GOT entry for a symbol */
+  {"tlsdesc_off_g0_nc", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC,
+   0,
+   0,
+   0},
+
+  /* Higher 16 bit offset into GOT entry for a symbol */
+  {"tlsdesc_off_g1", 0,
+   0,				/* adr_type */
+   0,
+   BFD_RELOC_AARCH64_TLSDESC_OFF_G1,
+   0,
+   0,
    0},
 
   /* Get to the page containing GOT TLS entry for a symbol */
@@ -3273,10 +3476,8 @@ parse_address_reloc (char **str, aarch64_opnd_info *operand)
 static bfd_boolean
 parse_half (char **str, int *internal_fixup_p)
 {
-  char *p, *saved;
-  int dummy;
+  char *p = *str;
 
-  p = *str;
   skip_past_char (&p, '#');
 
   gas_assert (internal_fixup_p);
@@ -3305,12 +3506,6 @@ parse_half (char **str, int *internal_fixup_p)
     }
   else
     *internal_fixup_p = 1;
-
-  /* Avoid parsing a register as a general symbol.  */
-  saved = p;
-  if (aarch64_reg_parse_32_64 (&p, 0, 0, &dummy, &dummy) != PARSE_FAIL)
-    return FALSE;
-  p = saved;
 
   if (! my_get_expression (&inst.reloc.exp, &p, GE_NO_PREFIX, 1))
     return FALSE;
@@ -3406,6 +3601,41 @@ parse_barrier (char **str)
   return o->value;
 }
 
+/* Parse an operand for a PSB barrier.  Set *HINT_OPT to the hint-option record
+   return 0 if successful.  Otherwise return PARSE_FAIL.  */
+
+static int
+parse_barrier_psb (char **str,
+		   const struct aarch64_name_value_pair ** hint_opt)
+{
+  char *p, *q;
+  const struct aarch64_name_value_pair *o;
+
+  p = q = *str;
+  while (ISALPHA (*q))
+    q++;
+
+  o = hash_find_n (aarch64_hint_opt_hsh, p, q - p);
+  if (!o)
+    {
+      set_fatal_syntax_error
+	( _("unknown or missing option to PSB"));
+      return PARSE_FAIL;
+    }
+
+  if (o->value != 0x11)
+    {
+      /* PSB only accepts option name 'CSYNC'.  */
+      set_syntax_error
+	(_("the specified option is not accepted for PSB"));
+      return PARSE_FAIL;
+    }
+
+  *str = q;
+  *hint_opt = o;
+  return 0;
+}
+
 /* Parse a system register or a PSTATE field name for an MSR/MRS instruction.
    Returns the encoding for the option, or PARSE_FAIL.
 
@@ -3488,6 +3718,10 @@ parse_sys_ins_reg (char **str, struct hash_control *sys_ins_regs)
   o = hash_find (sys_ins_regs, buf);
   if (!o)
     return NULL;
+
+  if (!aarch64_sys_ins_reg_supported_p (cpu_variant, o))
+    as_bad (_("selected processor does not support system register "
+	      "name '%s'"), buf);
 
   *str = q;
   return o;
@@ -3816,9 +4050,7 @@ add_operand_error_record (const operand_error_record* new_record)
       /* Get one empty record.  */
       if (free_opnd_error_record_nodes == NULL)
 	{
-	  record = xmalloc (sizeof (operand_error_record));
-	  if (record == NULL)
-	    abort ();
+	  record = XNEW (operand_error_record);
 	}
       else
 	{
@@ -3999,8 +4231,7 @@ print_operands (char *buf, const aarch64_opcode *opcode,
 
   for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
     {
-      const size_t size = 128;
-      char str[size];
+      char str[128];
 
       /* We regard the opcode operand info more, however we also look into
 	 the inst->operands to support the disassembling of the optional
@@ -4012,7 +4243,7 @@ print_operands (char *buf, const aarch64_opcode *opcode,
 	break;
 
       /* Generate the operand string in STR.  */
-      aarch64_print_operand (str, size, 0, opcode, opnds, i, NULL, NULL);
+      aarch64_print_operand (str, sizeof (str), 0, opcode, opnds, i, NULL, NULL);
 
       /* Delimiter.  */
       if (str[0] != '\0')
@@ -4028,11 +4259,11 @@ print_operands (char *buf, const aarch64_opcode *opcode,
 static void
 output_info (const char *format, ...)
 {
-  char *file;
+  const char *file;
   unsigned int line;
   va_list args;
 
-  as_where (&file, &line);
+  file = as_where (&line);
   if (file)
     {
       if (line != 0)
@@ -4118,8 +4349,7 @@ output_operand_error_record (const operand_error_record *record, char *str)
 	  size_t len = strlen (get_mnemonic_name (str));
 	  int i, qlf_idx;
 	  bfd_boolean result;
-	  const size_t size = 2048;
-	  char buf[size];
+	  char buf[2048];
 	  aarch64_inst *inst_base = &inst.base;
 	  const aarch64_opnd_qualifier_seq_t *qualifiers_list;
 
@@ -4149,7 +4379,7 @@ output_operand_error_record (const operand_error_record *record, char *str)
 
 	  /* Print the hint.  */
 	  output_info (_("   did you mean this?"));
-	  snprintf (buf, size, "\t%s", get_mnemonic_name (str));
+	  snprintf (buf, sizeof (buf), "\t%s", get_mnemonic_name (str));
 	  print_operands (buf, opcode, inst_base->operands);
 	  output_info (_("   %s"), buf);
 
@@ -4170,7 +4400,7 @@ output_operand_error_record (const operand_error_record *record, char *str)
 	      if (i != qlf_idx)
 		{
 		  /* Mnemonics name.  */
-		  snprintf (buf, size, "\t%s", get_mnemonic_name (str));
+		  snprintf (buf, sizeof (buf), "\t%s", get_mnemonic_name (str));
 
 		  /* Assign the qualifiers.  */
 		  assign_qualifier_sequence (inst_base, *qualifiers_list);
@@ -4433,6 +4663,14 @@ vectype_to_qualifier (const struct neon_type_el *vectype)
   /* Element size in bytes indexed by neon_el_type.  */
   const unsigned char ele_size[5]
     = {1, 2, 4, 8, 16};
+  const unsigned int ele_base [5] =
+    {
+      AARCH64_OPND_QLF_V_8B,
+      AARCH64_OPND_QLF_V_2H,
+      AARCH64_OPND_QLF_V_2S,
+      AARCH64_OPND_QLF_V_1D,
+      AARCH64_OPND_QLF_V_1Q
+  };
 
   if (!vectype->defined || vectype->type == NT_invtype)
     goto vectype_conversion_fail;
@@ -4447,14 +4685,28 @@ vectype_to_qualifier (const struct neon_type_el *vectype)
       /* Vector register.  */
       int reg_size = ele_size[vectype->type] * vectype->width;
       unsigned offset;
-      if (reg_size != 16 && reg_size != 8)
+      unsigned shift;
+      if (reg_size != 16 && reg_size != 8 && reg_size != 4)
 	goto vectype_conversion_fail;
-      /* The conversion is calculated based on the relation of the order of
-	 qualifiers to the vector element size and vector register size.  */
-      offset = (vectype->type == NT_q)
-	? 8 : (vectype->type << 1) + (reg_size >> 4);
-      gas_assert (offset <= 8);
-      return AARCH64_OPND_QLF_V_8B + offset;
+
+      /* The conversion is by calculating the offset from the base operand
+	 qualifier for the vector type.  The operand qualifiers are regular
+	 enough that the offset can established by shifting the vector width by
+	 a vector-type dependent amount.  */
+      shift = 0;
+      if (vectype->type == NT_b)
+	shift = 4;
+      else if (vectype->type == NT_h || vectype->type == NT_s)
+	shift = 2;
+      else if (vectype->type >= NT_d)
+	shift = 1;
+      else
+	gas_assert (0);
+
+      offset = ele_base [vectype->type] + (vectype->width >> shift);
+      gas_assert (AARCH64_OPND_QLF_V_8B <= offset
+		  && offset <= AARCH64_OPND_QLF_V_1Q);
+      return offset;
     }
 
 vectype_conversion_fail:
@@ -4558,6 +4810,7 @@ process_movw_reloc_info (void)
       case BFD_RELOC_AARCH64_MOVW_G0_S:
       case BFD_RELOC_AARCH64_MOVW_G1_S:
       case BFD_RELOC_AARCH64_MOVW_G2_S:
+      case BFD_RELOC_AARCH64_TLSGD_MOVW_G1:
       case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
       case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
       case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
@@ -4573,6 +4826,12 @@ process_movw_reloc_info (void)
     case BFD_RELOC_AARCH64_MOVW_G0:
     case BFD_RELOC_AARCH64_MOVW_G0_NC:
     case BFD_RELOC_AARCH64_MOVW_G0_S:
+    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC:
+    case BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC:
+    case BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0_NC:
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
       shift = 0;
@@ -4580,6 +4839,12 @@ process_movw_reloc_info (void)
     case BFD_RELOC_AARCH64_MOVW_G1:
     case BFD_RELOC_AARCH64_MOVW_G1_NC:
     case BFD_RELOC_AARCH64_MOVW_G1_S:
+    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G1:
+    case BFD_RELOC_AARCH64_TLSDESC_OFF_G1:
+    case BFD_RELOC_AARCH64_TLSGD_MOVW_G1:
+    case BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1_NC:
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
       shift = 16;
@@ -4587,6 +4852,7 @@ process_movw_reloc_info (void)
     case BFD_RELOC_AARCH64_MOVW_G2:
     case BFD_RELOC_AARCH64_MOVW_G2_NC:
     case BFD_RELOC_AARCH64_MOVW_G2_S:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G2:
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
       if (is32)
 	{
@@ -4640,17 +4906,38 @@ get_logsz (unsigned int size)
 static inline bfd_reloc_code_real_type
 ldst_lo12_determine_real_reloc_type (void)
 {
-  int logsz;
+  unsigned logsz;
   enum aarch64_opnd_qualifier opd0_qlf = inst.base.operands[0].qualifier;
   enum aarch64_opnd_qualifier opd1_qlf = inst.base.operands[1].qualifier;
 
-  const bfd_reloc_code_real_type reloc_ldst_lo12[5] = {
-      BFD_RELOC_AARCH64_LDST8_LO12, BFD_RELOC_AARCH64_LDST16_LO12,
-      BFD_RELOC_AARCH64_LDST32_LO12, BFD_RELOC_AARCH64_LDST64_LO12,
+  const bfd_reloc_code_real_type reloc_ldst_lo12[3][5] = {
+    {
+      BFD_RELOC_AARCH64_LDST8_LO12,
+      BFD_RELOC_AARCH64_LDST16_LO12,
+      BFD_RELOC_AARCH64_LDST32_LO12,
+      BFD_RELOC_AARCH64_LDST64_LO12,
       BFD_RELOC_AARCH64_LDST128_LO12
+    },
+    {
+      BFD_RELOC_AARCH64_TLSLD_LDST8_DTPREL_LO12,
+      BFD_RELOC_AARCH64_TLSLD_LDST16_DTPREL_LO12,
+      BFD_RELOC_AARCH64_TLSLD_LDST32_DTPREL_LO12,
+      BFD_RELOC_AARCH64_TLSLD_LDST64_DTPREL_LO12,
+      BFD_RELOC_AARCH64_NONE
+    },
+    {
+      BFD_RELOC_AARCH64_TLSLD_LDST8_DTPREL_LO12_NC,
+      BFD_RELOC_AARCH64_TLSLD_LDST16_DTPREL_LO12_NC,
+      BFD_RELOC_AARCH64_TLSLD_LDST32_DTPREL_LO12_NC,
+      BFD_RELOC_AARCH64_TLSLD_LDST64_DTPREL_LO12_NC,
+      BFD_RELOC_AARCH64_NONE
+    }
   };
 
-  gas_assert (inst.reloc.type == BFD_RELOC_AARCH64_LDST_LO12);
+  gas_assert (inst.reloc.type == BFD_RELOC_AARCH64_LDST_LO12
+	      || inst.reloc.type == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12
+	      || (inst.reloc.type
+		  == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12_NC));
   gas_assert (inst.base.opcode->operands[1] == AARCH64_OPND_ADDR_UIMM12);
 
   if (opd1_qlf == AARCH64_OPND_QLF_NIL)
@@ -4660,9 +4947,16 @@ ldst_lo12_determine_real_reloc_type (void)
   gas_assert (opd1_qlf != AARCH64_OPND_QLF_NIL);
 
   logsz = get_logsz (aarch64_get_qualifier_esize (opd1_qlf));
-  gas_assert (logsz >= 0 && logsz <= 4);
+  if (inst.reloc.type == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12
+      || inst.reloc.type == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12_NC)
+    gas_assert (logsz <= 3);
+  else
+    gas_assert (logsz <= 4);
 
-  return reloc_ldst_lo12[logsz];
+  /* In reloc.c, these pseudo relocation types should be defined in similar
+     order as above reloc_ldst_lo12 array. Because the array index calcuation
+     below relies on this.  */
+  return reloc_ldst_lo12[inst.reloc.type - BFD_RELOC_AARCH64_LDST_LO12][logsz];
 }
 
 /* Check whether a register list REGINFO is valid.  The registers must be
@@ -5298,7 +5592,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    }
 	  if (inst.reloc.type == BFD_RELOC_UNUSED)
 	    aarch64_set_gas_internal_fixup (&inst.reloc, info, 1);
-	  else if (inst.reloc.type == BFD_RELOC_AARCH64_LDST_LO12)
+	  else if (inst.reloc.type == BFD_RELOC_AARCH64_LDST_LO12
+		   || (inst.reloc.type
+		       == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12)
+		   || (inst.reloc.type
+		       == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12_NC))
 	    inst.reloc.type = ldst_lo12_determine_real_reloc_type ();
 	  /* Leave qualifier to be determined by libopcodes.  */
 	  break;
@@ -5393,6 +5691,12 @@ sys_reg_ins:
 	  if (val == PARSE_FAIL)
 	    po_imm_or_fail (0, 31);
 	  inst.base.operands[i].prfop = aarch64_prfops + val;
+	  break;
+
+	case AARCH64_OPND_BARRIER_PSB:
+	  val = parse_barrier_psb (&str, &(info->hint_option));
+	  if (val == PARSE_FAIL)
+	    goto failure;
 	  break;
 
 	default:
@@ -5776,7 +6080,7 @@ md_assemble (char *str)
 	{
 	  /* Check that this instruction is supported for this CPU.  */
 	  if (!opcode->avariant
-	      || !AARCH64_CPU_HAS_FEATURE (cpu_variant, *opcode->avariant))
+	      || !AARCH64_CPU_HAS_ALL_FEATURES (cpu_variant, *opcode->avariant))
 	    {
 	      as_bad (_("selected processor does not support `%s'"), str);
 	      return;
@@ -5793,8 +6097,7 @@ md_assemble (char *str)
 	         store the instruction information for the future fix-up.  */
 	      struct aarch64_inst *copy;
 	      gas_assert (inst.reloc.type != BFD_RELOC_UNUSED);
-	      if ((copy = xmalloc (sizeof (struct aarch64_inst))) == NULL)
-		abort ();
+	      copy = XNEW (struct aarch64_inst);
 	      memcpy (copy, &inst.base, sizeof (struct aarch64_inst));
 	      output_inst (copy);
 	    }
@@ -6013,7 +6316,7 @@ aarch64_handle_align (fragS * fragP)
 {
   /* NOP = d503201f */
   /* AArch64 instructions are always little-endian.  */
-  static char const aarch64_noop[4] = { 0x1f, 0x20, 0x03, 0xd5 };
+  static unsigned char const aarch64_noop[4] = { 0x1f, 0x20, 0x03, 0xd5 };
 
   int bytes, fix, noop_size;
   char *p;
@@ -6658,12 +6961,30 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_MOVW_G0:
     case BFD_RELOC_AARCH64_MOVW_G0_NC:
     case BFD_RELOC_AARCH64_MOVW_G0_S:
+    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC:
       scale = 0;
       goto movw_common;
     case BFD_RELOC_AARCH64_MOVW_G1:
     case BFD_RELOC_AARCH64_MOVW_G1_NC:
     case BFD_RELOC_AARCH64_MOVW_G1_S:
+    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G1:
       scale = 16;
+      goto movw_common;
+    case BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC:
+      scale = 0;
+      S_SET_THREAD_LOCAL (fixP->fx_addsy);
+      /* Should always be exported to object file, see
+	 aarch64_force_relocation().  */
+      gas_assert (!fixP->fx_done);
+      gas_assert (seg->use_rela_p);
+      goto movw_common;
+    case BFD_RELOC_AARCH64_TLSDESC_OFF_G1:
+      scale = 16;
+      S_SET_THREAD_LOCAL (fixP->fx_addsy);
+      /* Should always be exported to object file, see
+	 aarch64_force_relocation().  */
+      gas_assert (!fixP->fx_done);
+      gas_assert (seg->use_rela_p);
       goto movw_common;
     case BFD_RELOC_AARCH64_MOVW_G2:
     case BFD_RELOC_AARCH64_MOVW_G2_NC:
@@ -6693,6 +7014,8 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 		case BFD_RELOC_AARCH64_MOVW_G1:
 		case BFD_RELOC_AARCH64_MOVW_G2:
 		case BFD_RELOC_AARCH64_MOVW_G3:
+		case BFD_RELOC_AARCH64_MOVW_GOTOFF_G1:
+		case BFD_RELOC_AARCH64_TLSDESC_OFF_G1:
 		  if (unsigned_overflow (value, scale + 16))
 		    as_bad_where (fixP->fx_file, fixP->fx_line,
 				  _("unsigned value out of range"));
@@ -6761,10 +7084,33 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
     case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
     case BFD_RELOC_AARCH64_TLSGD_ADR_PREL21:
+    case BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC:
+    case BFD_RELOC_AARCH64_TLSGD_MOVW_G1:
     case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
     case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     case BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_PREL19:
+    case BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC:
+    case BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1:
+    case BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_HI12:
+    case BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_ADD_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_ADR_PAGE21:
+    case BFD_RELOC_AARCH64_TLSLD_ADR_PREL21:
+    case BFD_RELOC_AARCH64_TLSLD_LDST16_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST16_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_LDST32_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST32_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_LDST64_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST64_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_LDST8_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST8_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0_NC:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1_NC:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G2:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
@@ -6846,9 +7192,9 @@ tc_gen_reloc (asection * section, fixS * fixp)
   arelent *reloc;
   bfd_reloc_code_real_type code;
 
-  reloc = xmalloc (sizeof (arelent));
+  reloc = XNEW (arelent);
 
-  reloc->sym_ptr_ptr = xmalloc (sizeof (asymbol *));
+  reloc->sym_ptr_ptr = XNEW (asymbol *);
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 
@@ -6967,13 +7313,38 @@ aarch64_force_relocation (struct fix *fixp)
     case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
     case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
     case BFD_RELOC_AARCH64_TLSDESC_LD_PREL19:
+    case BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_OFF_G1:
     case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
     case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
     case BFD_RELOC_AARCH64_TLSGD_ADR_PREL21:
+    case BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC:
+    case BFD_RELOC_AARCH64_TLSGD_MOVW_G1:
     case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
     case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     case BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_PREL19:
+    case BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC:
+    case BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1:
+   case BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_HI12:
+    case BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_ADD_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_ADR_PAGE21:
+    case BFD_RELOC_AARCH64_TLSLD_ADR_PREL21:
+    case BFD_RELOC_AARCH64_TLSLD_LDST16_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST16_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_LDST32_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST32_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_LDST64_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST64_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_LDST8_DTPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLD_LDST8_DTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0_NC:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1_NC:
+    case BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G2:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
@@ -6997,6 +7368,11 @@ aarch64_force_relocation (struct fix *fixp)
 const char *
 elf64_aarch64_target_format (void)
 {
+  if (strcmp (TARGET_OS, "cloudabi") == 0)
+    {
+      /* FIXME: What to do for ilp32_p ?  */
+      return target_big_endian ? "elf64-bigaarch64-cloudabi" : "elf64-littleaarch64-cloudabi";
+    }
   if (target_big_endian)
     return ilp32_p ? "elf32-bigaarch64" : "elf64-bigaarch64";
   else
@@ -7128,7 +7504,7 @@ fill_instruction_hash_table (void)
       templates *templ, *new_templ;
       templ = hash_find (aarch64_ops_hsh, opcode->name);
 
-      new_templ = (templates *) xmalloc (sizeof (templates));
+      new_templ = XNEW (templates);
       new_templ->opcode = opcode;
       new_templ->next = NULL;
 
@@ -7159,8 +7535,7 @@ get_upper_str (const char *str)
 {
   char *ret;
   size_t len = strlen (str);
-  if ((ret = xmalloc (len + 1)) == NULL)
-    abort ();
+  ret = XNEWVEC (char, len + 1);
   convert_to_upper (ret, str, len);
   return ret;
 }
@@ -7185,7 +7560,8 @@ md_begin (void)
       || (aarch64_reg_hsh = hash_new ()) == NULL
       || (aarch64_barrier_opt_hsh = hash_new ()) == NULL
       || (aarch64_nzcv_hsh = hash_new ()) == NULL
-      || (aarch64_pldop_hsh = hash_new ()) == NULL)
+      || (aarch64_pldop_hsh = hash_new ()) == NULL
+      || (aarch64_hint_opt_hsh = hash_new ()) == NULL)
     as_fatal (_("virtual memory exhausted"));
 
   fill_instruction_hash_table ();
@@ -7199,24 +7575,24 @@ md_begin (void)
 			 aarch64_pstatefields[i].name,
 			 (void *) (aarch64_pstatefields + i));
 
-  for (i = 0; aarch64_sys_regs_ic[i].template != NULL; i++)
+  for (i = 0; aarch64_sys_regs_ic[i].name != NULL; i++)
     checked_hash_insert (aarch64_sys_regs_ic_hsh,
-			 aarch64_sys_regs_ic[i].template,
+			 aarch64_sys_regs_ic[i].name,
 			 (void *) (aarch64_sys_regs_ic + i));
 
-  for (i = 0; aarch64_sys_regs_dc[i].template != NULL; i++)
+  for (i = 0; aarch64_sys_regs_dc[i].name != NULL; i++)
     checked_hash_insert (aarch64_sys_regs_dc_hsh,
-			 aarch64_sys_regs_dc[i].template,
+			 aarch64_sys_regs_dc[i].name,
 			 (void *) (aarch64_sys_regs_dc + i));
 
-  for (i = 0; aarch64_sys_regs_at[i].template != NULL; i++)
+  for (i = 0; aarch64_sys_regs_at[i].name != NULL; i++)
     checked_hash_insert (aarch64_sys_regs_at_hsh,
-			 aarch64_sys_regs_at[i].template,
+			 aarch64_sys_regs_at[i].name,
 			 (void *) (aarch64_sys_regs_at + i));
 
-  for (i = 0; aarch64_sys_regs_tlbi[i].template != NULL; i++)
+  for (i = 0; aarch64_sys_regs_tlbi[i].name != NULL; i++)
     checked_hash_insert (aarch64_sys_regs_tlbi_hsh,
-			 aarch64_sys_regs_tlbi[i].template,
+			 aarch64_sys_regs_tlbi[i].name,
 			 (void *) (aarch64_sys_regs_tlbi + i));
 
   for (i = 0; i < ARRAY_SIZE (reg_names); i++)
@@ -7281,6 +7657,17 @@ md_begin (void)
 			   (void *) (aarch64_prfops + i));
     }
 
+  for (i = 0; aarch64_hint_options[i].name != NULL; i++)
+    {
+      const char* name = aarch64_hint_options[i].name;
+
+      checked_hash_insert (aarch64_hint_opt_hsh, name,
+			   (void *) (aarch64_hint_options + i));
+      /* Also hash the name in the upper case.  */
+      checked_hash_insert (aarch64_pldop_hsh, get_upper_str (name),
+			   (void *) (aarch64_hint_options + i));
+    }
+
   /* Set the cpu variant based on the command-line options.  */
   if (!mcpu_cpu_opt)
     mcpu_cpu_opt = march_cpu_opt;
@@ -7325,8 +7712,8 @@ size_t md_longopts_size = sizeof (md_longopts);
 
 struct aarch64_option_table
 {
-  char *option;			/* Option name to match.  */
-  char *help;			/* Help information.  */
+  const char *option;			/* Option name to match.  */
+  const char *help;			/* Help information.  */
   int *var;			/* Variable to change.  */
   int value;			/* What to change it to.  */
   char *deprecated;		/* If non-null, print this message.  */
@@ -7348,7 +7735,7 @@ static struct aarch64_option_table aarch64_opts[] = {
 
 struct aarch64_cpu_option_table
 {
-  char *name;
+  const char *name;
   const aarch64_feature_set value;
   /* The canonical name of the CPU, or NULL to use NAME converted to upper
      case.  */
@@ -7359,18 +7746,28 @@ struct aarch64_cpu_option_table
    recognized by GCC.  */
 static const struct aarch64_cpu_option_table aarch64_cpus[] = {
   {"all", AARCH64_ANY, NULL},
+  {"cortex-a35", AARCH64_FEATURE (AARCH64_ARCH_V8,
+				  AARCH64_FEATURE_CRC), "Cortex-A35"},
   {"cortex-a53", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				  AARCH64_FEATURE_CRC), "Cortex-A53"},
   {"cortex-a57", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				  AARCH64_FEATURE_CRC), "Cortex-A57"},
   {"cortex-a72", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				  AARCH64_FEATURE_CRC), "Cortex-A72"},
+  {"cortex-a73", AARCH64_FEATURE (AARCH64_ARCH_V8,
+				  AARCH64_FEATURE_CRC), "Cortex-A73"},
   {"exynos-m1", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				 AARCH64_FEATURE_CRC | AARCH64_FEATURE_CRYPTO),
 				"Samsung Exynos M1"},
+  {"qdf24xx", AARCH64_FEATURE (AARCH64_ARCH_V8,
+			       AARCH64_FEATURE_CRC | AARCH64_FEATURE_CRYPTO),
+   "Qualcomm QDF24XX"},
   {"thunderx", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				AARCH64_FEATURE_CRC | AARCH64_FEATURE_CRYPTO),
    "Cavium ThunderX"},
+  {"vulcan", AARCH64_FEATURE (AARCH64_ARCH_V8_1,
+			      AARCH64_FEATURE_CRYPTO),
+  "Broadcom Vulcan"},
   /* The 'xgene-1' name is an older name for 'xgene1', which was used
      in earlier releases and is superseded by 'xgene1' in all
      tools.  */
@@ -7385,7 +7782,7 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
 
 struct aarch64_arch_option_table
 {
-  char *name;
+  const char *name;
   const aarch64_feature_set value;
 };
 
@@ -7395,39 +7792,86 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"all", AARCH64_ANY},
   {"armv8-a", AARCH64_ARCH_V8},
   {"armv8.1-a", AARCH64_ARCH_V8_1},
+  {"armv8.2-a", AARCH64_ARCH_V8_2},
   {NULL, AARCH64_ARCH_NONE}
 };
 
 /* ISA extensions.  */
 struct aarch64_option_cpu_value_table
 {
-  char *name;
+  const char *name;
   const aarch64_feature_set value;
+  const aarch64_feature_set require; /* Feature dependencies.  */
 };
 
 static const struct aarch64_option_cpu_value_table aarch64_features[] = {
-  {"crc",		AARCH64_FEATURE (AARCH64_FEATURE_CRC, 0)},
-  {"crypto",		AARCH64_FEATURE (AARCH64_FEATURE_CRYPTO, 0)},
-  {"fp",		AARCH64_FEATURE (AARCH64_FEATURE_FP, 0)},
-  {"lse",		AARCH64_FEATURE (AARCH64_FEATURE_LSE, 0)},
-  {"simd",		AARCH64_FEATURE (AARCH64_FEATURE_SIMD, 0)},
-  {"pan",		AARCH64_FEATURE (AARCH64_FEATURE_PAN, 0)},
-  {"lor",		AARCH64_FEATURE (AARCH64_FEATURE_LOR, 0)},
-  {"rdma",		AARCH64_FEATURE (AARCH64_FEATURE_SIMD
-					 | AARCH64_FEATURE_RDMA, 0)},
-  {NULL,		AARCH64_ARCH_NONE}
+  {"crc",		AARCH64_FEATURE (AARCH64_FEATURE_CRC, 0),
+			AARCH64_ARCH_NONE},
+  {"crypto",		AARCH64_FEATURE (AARCH64_FEATURE_CRYPTO, 0),
+			AARCH64_ARCH_NONE},
+  {"fp",		AARCH64_FEATURE (AARCH64_FEATURE_FP, 0),
+			AARCH64_ARCH_NONE},
+  {"lse",		AARCH64_FEATURE (AARCH64_FEATURE_LSE, 0),
+			AARCH64_ARCH_NONE},
+  {"simd",		AARCH64_FEATURE (AARCH64_FEATURE_SIMD, 0),
+			AARCH64_ARCH_NONE},
+  {"pan",		AARCH64_FEATURE (AARCH64_FEATURE_PAN, 0),
+			AARCH64_ARCH_NONE},
+  {"lor",		AARCH64_FEATURE (AARCH64_FEATURE_LOR, 0),
+			AARCH64_ARCH_NONE},
+  {"ras",		AARCH64_FEATURE (AARCH64_FEATURE_RAS, 0),
+			AARCH64_ARCH_NONE},
+  {"rdma",		AARCH64_FEATURE (AARCH64_FEATURE_RDMA, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_SIMD, 0)},
+  {"fp16",		AARCH64_FEATURE (AARCH64_FEATURE_F16, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_FP, 0)},
+  {"profile",		AARCH64_FEATURE (AARCH64_FEATURE_PROFILE, 0),
+			AARCH64_ARCH_NONE},
+  {NULL,		AARCH64_ARCH_NONE, AARCH64_ARCH_NONE},
 };
 
 struct aarch64_long_option_table
 {
-  char *option;			/* Substring to match.  */
-  char *help;			/* Help information.  */
-  int (*func) (char *subopt);	/* Function to decode sub-option.  */
+  const char *option;			/* Substring to match.  */
+  const char *help;			/* Help information.  */
+  int (*func) (const char *subopt);	/* Function to decode sub-option.  */
   char *deprecated;		/* If non-null, print this message.  */
 };
 
+/* Transitive closure of features depending on set.  */
+static aarch64_feature_set
+aarch64_feature_disable_set (aarch64_feature_set set)
+{
+  const struct aarch64_option_cpu_value_table *opt;
+  aarch64_feature_set prev = 0;
+
+  while (prev != set) {
+    prev = set;
+    for (opt = aarch64_features; opt->name != NULL; opt++)
+      if (AARCH64_CPU_HAS_ANY_FEATURES (opt->require, set))
+        AARCH64_MERGE_FEATURE_SETS (set, set, opt->value);
+  }
+  return set;
+}
+
+/* Transitive closure of dependencies of set.  */
+static aarch64_feature_set
+aarch64_feature_enable_set (aarch64_feature_set set)
+{
+  const struct aarch64_option_cpu_value_table *opt;
+  aarch64_feature_set prev = 0;
+
+  while (prev != set) {
+    prev = set;
+    for (opt = aarch64_features; opt->name != NULL; opt++)
+      if (AARCH64_CPU_HAS_FEATURE (set, opt->value))
+        AARCH64_MERGE_FEATURE_SETS (set, set, opt->require);
+  }
+  return set;
+}
+
 static int
-aarch64_parse_features (char *str, const aarch64_feature_set **opt_p,
+aarch64_parse_features (const char *str, const aarch64_feature_set **opt_p,
 			bfd_boolean ext_only)
 {
   /* We insist on extensions being added before being removed.  We achieve
@@ -7435,7 +7879,7 @@ aarch64_parse_features (char *str, const aarch64_feature_set **opt_p,
      adding an extension (1) or removing it (0) and only allowing it to
      change in the order -1 -> 1 -> 0.  */
   int adding_value = -1;
-  aarch64_feature_set *ext_set = xmalloc (sizeof (aarch64_feature_set));
+  aarch64_feature_set *ext_set = XNEW (aarch64_feature_set);
 
   /* Copy the feature set, so that we can modify it.  */
   *ext_set = **opt_p;
@@ -7444,7 +7888,7 @@ aarch64_parse_features (char *str, const aarch64_feature_set **opt_p,
   while (str != NULL && *str != 0)
     {
       const struct aarch64_option_cpu_value_table *opt;
-      char *ext = NULL;
+      const char *ext = NULL;
       int optlen;
 
       if (!ext_only)
@@ -7493,11 +7937,19 @@ aarch64_parse_features (char *str, const aarch64_feature_set **opt_p,
       for (opt = aarch64_features; opt->name != NULL; opt++)
 	if (strncmp (opt->name, str, optlen) == 0)
 	  {
+	    aarch64_feature_set set;
+
 	    /* Add or remove the extension.  */
 	    if (adding_value)
-	      AARCH64_MERGE_FEATURE_SETS (*ext_set, *ext_set, opt->value);
+	      {
+		set = aarch64_feature_enable_set (opt->value);
+		AARCH64_MERGE_FEATURE_SETS (*ext_set, *ext_set, set);
+	      }
 	    else
-	      AARCH64_CLEAR_FEATURE (*ext_set, *ext_set, opt->value);
+	      {
+		set = aarch64_feature_disable_set (opt->value);
+		AARCH64_CLEAR_FEATURE (*ext_set, *ext_set, set);
+	      }
 	    break;
 	  }
 
@@ -7514,10 +7966,10 @@ aarch64_parse_features (char *str, const aarch64_feature_set **opt_p,
 }
 
 static int
-aarch64_parse_cpu (char *str)
+aarch64_parse_cpu (const char *str)
 {
   const struct aarch64_cpu_option_table *opt;
-  char *ext = strchr (str, '+');
+  const char *ext = strchr (str, '+');
   size_t optlen;
 
   if (ext != NULL)
@@ -7546,10 +7998,10 @@ aarch64_parse_cpu (char *str)
 }
 
 static int
-aarch64_parse_arch (char *str)
+aarch64_parse_arch (const char *str)
 {
   const struct aarch64_arch_option_table *opt;
-  char *ext = strchr (str, '+');
+  const char *ext = strchr (str, '+');
   size_t optlen;
 
   if (ext != NULL)
@@ -7580,32 +8032,30 @@ aarch64_parse_arch (char *str)
 /* ABIs.  */
 struct aarch64_option_abi_value_table
 {
-  char *name;
+  const char *name;
   enum aarch64_abi_type value;
 };
 
 static const struct aarch64_option_abi_value_table aarch64_abis[] = {
   {"ilp32",		AARCH64_ABI_ILP32},
   {"lp64",		AARCH64_ABI_LP64},
-  {NULL,		0}
 };
 
 static int
-aarch64_parse_abi (char *str)
+aarch64_parse_abi (const char *str)
 {
-  const struct aarch64_option_abi_value_table *opt;
-  size_t optlen = strlen (str);
+  unsigned int i;
 
-  if (optlen == 0)
+  if (str[0] == '\0')
     {
       as_bad (_("missing abi name `%s'"), str);
       return 0;
     }
 
-  for (opt = aarch64_abis; opt->name != NULL; opt++)
-    if (strlen (opt->name) == optlen && strncmp (str, opt->name, optlen) == 0)
+  for (i = 0; i < ARRAY_SIZE (aarch64_abis); i++)
+    if (strcmp (str, aarch64_abis[i].name) == 0)
       {
-	aarch64_abi = opt->value;
+	aarch64_abi = aarch64_abis[i].value;
 	return 1;
       }
 
@@ -7626,7 +8076,7 @@ static struct aarch64_long_option_table aarch64_long_opts[] = {
 };
 
 int
-md_parse_option (int c, char *arg)
+md_parse_option (int c, const char *arg)
 {
   struct aarch64_option_table *opt;
   struct aarch64_long_option_table *lopt;

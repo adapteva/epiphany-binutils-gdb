@@ -1,5 +1,5 @@
 /* Altera Nios II assembler.
-   Copyright (C) 2012-2015 Free Software Foundation, Inc.
+   Copyright (C) 2012-2016 Free Software Foundation, Inc.
    Contributed by Nigel Gray (ngray@altera.com).
    Contributed by Mentor Graphics, Inc.
 
@@ -25,7 +25,6 @@
 #include "elf/nios2.h"
 #include "tc-nios2.h"
 #include "bfd.h"
-#include "libbfd.h"
 #include "dwarf2dbg.h"
 #include "subsegs.h"
 #include "safe-ctype.h"
@@ -98,7 +97,7 @@ typedef enum
 } relax_optionT;
 
 /* Struct contains all assembler options set with .set.  */
-struct
+static struct
 {
   /* .set noat -> noat = 1 allows assembly code to use at without warning
      and macro expansions generate a warning.
@@ -106,7 +105,7 @@ struct
      do not generate warnings.  */
   bfd_boolean noat;
 
-  /* .set nobreak -> nobreak = 1 allows assembly code to use ba,bt without 
+  /* .set nobreak -> nobreak = 1 allows assembly code to use ba,bt without
 				 warning.
      .set break -> nobreak = 0, assembly code using ba,bt warns.  */
   bfd_boolean nobreak;
@@ -145,7 +144,7 @@ typedef struct nios2_insn_info
 
   /* Constant bits masked into insn_code for self-check mode.  */
   unsigned long constant_bits;
-  
+
   /* Pointer to the relevant bit of the opcode table.  */
   const struct nios2_opcode *insn_nios2_opcode;
   /* After parsing ptrs to the tokens in the instruction fill this array
@@ -264,7 +263,7 @@ md_number_to_chars (char *buf, valueT val, int n)
    of type TYPE, and store the appropriate bytes in *LITP.  The number
    of LITTLENUMS emitted is stored in *SIZEP.  An error message is
    returned, or NULL on OK.  */
-char *
+const char *
 md_atof (int type, char *litP, int *sizeP)
 {
   int prec;
@@ -566,21 +565,23 @@ s_nios2_sdata (int ignore ATTRIBUTE_UNUSED)
 static void
 s_nios2_set (int equiv)
 {
-  char *directive = input_line_pointer;
-  char delim = get_symbol_end ();
+  char *save = input_line_pointer;
+  char *directive;
+  char delim = get_symbol_name (&directive);
   char *endline = input_line_pointer;
-  *endline = delim;
+
+  (void) restore_line_pointer (delim);
 
   /* We only want to handle ".set XXX" if the
      user has tried ".set XXX, YYY" they are not
      trying a directive.  This prevents
      us from polluting the name space.  */
   SKIP_WHITESPACE ();
-  if (is_end_of_line[(unsigned char) *input_line_pointer]) 
+  if (is_end_of_line[(unsigned char) *input_line_pointer])
     {
       bfd_boolean done = TRUE;
       *endline = 0;
-      
+
       if (!strcmp (directive, "noat"))
 	  nios2_as_options.noat = TRUE;
       else if (!strcmp (directive, "at"))
@@ -597,7 +598,7 @@ s_nios2_set (int equiv)
 	  nios2_as_options.relax = relax_all;
       else
 	done = FALSE;
-	
+
       if (done)
 	{
 	  *endline = delim;
@@ -607,10 +608,9 @@ s_nios2_set (int equiv)
     }
 
   /* If we fall through to here, either we have ".set XXX, YYY"
-     or we have ".set XXX" where XXX is unknown or we have 
+     or we have ".set XXX" where XXX is unknown or we have
      a syntax error.  */
-  input_line_pointer = directive;
-  *endline = delim;
+  input_line_pointer = save;
   s_set (equiv);
 }
 
@@ -652,7 +652,7 @@ const pseudo_typeS md_pseudo_table[] = {
    Nios II PC-relative branch instructions only support 16-bit offsets.
    And, there's no good way to add a 32-bit constant to the PC without
    using two registers.
-  
+
    To deal with this, for the pc-relative relaxation mode we convert
      br label
    into a series of 16-bit adds, like:
@@ -691,7 +691,7 @@ const pseudo_typeS md_pseudo_table[] = {
 
    16-bit CDX branch instructions are relaxed first into equivalent
    32-bit branches and then the above transformations are applied
-   if necessary.  
+   if necessary.
 
 */
 
@@ -1020,7 +1020,7 @@ md_convert_frag (bfd *headers ATTRIBUTE_UNUSED, segT segment ATTRIBUTE_UNUSED,
       md_number_to_chars (buffer, op, 4);
       fragp->fr_fix += 4;
       buffer += 4;
-  
+
       /* We need to know whether the offset is positive or negative.  */
       target += S_GET_VALUE (symbolp);
       offset = target - fragp->fr_address - fragp->fr_fix;
@@ -1127,7 +1127,7 @@ nios2_check_overflow (valueT fixup, reloc_howto_type *howto)
       if ((fixup & 0x80000000) > 0)
 	{
 	  /* Check for negative overflow.  */
-	  if ((signed) fixup < ((signed) ~0 << (howto->bitsize-1)))
+	  if ((signed) fixup < (signed) (~0U << (howto->bitsize - 1)))
 	    return TRUE;
 	}
       else
@@ -1183,7 +1183,7 @@ nios2_diagnose_overflow (valueT fixup, reloc_howto_type *howto,
 	    = ((fixP->fx_frag->fr_address + fixP->fx_where) & 0xf0000000);
 	  range_max = range_min + 0x0fffffff;
 	  address = fixup | range_min;
-	  
+
 	  as_bad_where (fixP->fx_file, fixP->fx_line,
 			_("call target address 0x%08x out of range 0x%08x to 0x%08x"),
 			address, range_min, range_max);
@@ -1304,7 +1304,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   if (fixP->fx_r_type == BFD_RELOC_64)
     {
       /* We may reach here due to .8byte directives, but we never output
-	 BFD_RELOC_64; it must be resolved.  */	     
+	 BFD_RELOC_64; it must be resolved.  */
       if (fixP->fx_addsy != NULL)
 	as_bad_where (fixP->fx_file, fixP->fx_line,
 		      _("cannot create 64-bit relocation"));
@@ -1481,7 +1481,7 @@ static nios2_insn_relocS *
 nios2_insn_reloc_new (bfd_reloc_code_real_type reloc_type, unsigned int pcrel)
 {
   nios2_insn_relocS *retval;
-  retval = (nios2_insn_relocS *) malloc (sizeof (nios2_insn_relocS));
+  retval = XNEW (nios2_insn_relocS);
   if (retval == NULL)
     {
       as_bad (_("can't create relocation"));
@@ -1749,7 +1749,7 @@ nios2_parse_base_register (char *str, int *direction, int *writeback, int *ret)
 /* The various nios2_assemble_* functions call this
    function to generate an expression from a string representing an expression.
    It then tries to evaluate the expression, and if it can, returns its value.
-   If not, it creates a new nios2_insn_relocS and stores the expression and 
+   If not, it creates a new nios2_insn_relocS and stores the expression and
    reloc_type for future use.  */
 static unsigned long
 nios2_assemble_expression (const char *exprstr,
@@ -1774,7 +1774,7 @@ nios2_assemble_expression (const char *exprstr,
       {
 	reloc_type = nios2_special_reloc[i].reloc_type;
 	exprstr += strlen (nios2_special_reloc[i].string) + 1;
-	
+
 	/* %lo and %hiadj have different meanings for PC-relative
 	   expressions.  */
 	if (pcrel)
@@ -1784,7 +1784,7 @@ nios2_assemble_expression (const char *exprstr,
 	    if (reloc_type == BFD_RELOC_NIOS2_HIADJ16)
 	      reloc_type = BFD_RELOC_NIOS2_PCREL_HA;
 	  }
-	
+
 	break;
       }
 
@@ -1851,7 +1851,7 @@ nios2_assemble_reg3 (const char *token)
 
 
 /* Control register index.  */
-static void 
+static void
 nios2_assemble_arg_c (const char *token, nios2_insn_infoS *insn)
 {
   struct nios2_reg *reg = nios2_parse_reg (token, REG_CONTROL);
@@ -1874,7 +1874,7 @@ nios2_assemble_arg_c (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Destination register.  */
-static void 
+static void
 nios2_assemble_arg_d (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -1919,7 +1919,7 @@ nios2_assemble_arg_d (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Source register 1.  */
-static void 
+static void
 nios2_assemble_arg_s (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -1996,7 +1996,7 @@ nios2_assemble_arg_s (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Source register 2.  */
-static void 
+static void
 nios2_assemble_arg_t (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2062,12 +2062,12 @@ nios2_assemble_arg_t (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Destination register w/3-bit encoding.  */
-static void 
+static void
 nios2_assemble_arg_D (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
   int reg = nios2_assemble_reg3 (token);
-  
+
   switch (op->format)
     {
     case iw_T1I7_type:
@@ -2097,12 +2097,12 @@ nios2_assemble_arg_D (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Source register w/3-bit encoding.  */
-static void 
+static void
 nios2_assemble_arg_S (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
   int reg = nios2_assemble_reg3 (token);
-  
+
   switch (op->format)
     {
     case iw_T1I7_type:
@@ -2142,12 +2142,12 @@ nios2_assemble_arg_S (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Source register 2 w/3-bit encoding.  */
-static void 
+static void
 nios2_assemble_arg_T (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
   int reg = nios2_assemble_reg3 (token);
-  
+
   switch (op->format)
     {
     case iw_T2I4_type:
@@ -2165,7 +2165,7 @@ nios2_assemble_arg_T (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 16-bit signed immediate.  */
-static void 
+static void
 nios2_assemble_arg_i (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2189,7 +2189,7 @@ nios2_assemble_arg_i (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 12-bit signed immediate.  */
-static void 
+static void
 nios2_assemble_arg_I (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2213,7 +2213,7 @@ nios2_assemble_arg_I (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 16-bit unsigned immediate.  */
-static void 
+static void
 nios2_assemble_arg_u (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2237,7 +2237,7 @@ nios2_assemble_arg_u (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 7-bit unsigned immediate with 2-bit shift.  */
-static void 
+static void
 nios2_assemble_arg_U (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2261,7 +2261,7 @@ nios2_assemble_arg_U (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 5-bit unsigned immediate with 2-bit shift.  */
-static void 
+static void
 nios2_assemble_arg_V (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2280,7 +2280,7 @@ nios2_assemble_arg_V (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 4-bit unsigned immediate with 2-bit shift.  */
-static void 
+static void
 nios2_assemble_arg_W (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2294,7 +2294,7 @@ nios2_assemble_arg_W (const char *token, nios2_insn_infoS *insn)
       insn->constant_bits |= SET_IW_T2I4_IMM4 (val >> 2);
       break;
     case iw_L5I4X1_type:
-      /* This argument is optional for push.n/pop.n, and defaults to 
+      /* This argument is optional for push.n/pop.n, and defaults to
 	 zero if unspecified.  */
       if (token == NULL)
 	return;
@@ -2309,7 +2309,7 @@ nios2_assemble_arg_W (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 4-bit unsigned immediate with 1-bit shift.  */
-static void 
+static void
 nios2_assemble_arg_X (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2328,7 +2328,7 @@ nios2_assemble_arg_X (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 4-bit unsigned immediate without shift.  */
-static void 
+static void
 nios2_assemble_arg_Y (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2348,7 +2348,7 @@ nios2_assemble_arg_Y (const char *token, nios2_insn_infoS *insn)
 
 
 /* 16-bit signed immediate address offset.  */
-static void 
+static void
 nios2_assemble_arg_o (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2372,7 +2372,7 @@ nios2_assemble_arg_o (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 10-bit signed address offset with 1-bit shift.  */
-static void 
+static void
 nios2_assemble_arg_O (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2391,7 +2391,7 @@ nios2_assemble_arg_O (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 7-bit signed address offset with 1-bit shift.  */
-static void 
+static void
 nios2_assemble_arg_P (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2410,7 +2410,7 @@ nios2_assemble_arg_P (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 5-bit unsigned immediate.  */
-static void 
+static void
 nios2_assemble_arg_j (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2458,7 +2458,7 @@ nios2_assemble_arg_j (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Second 5-bit unsigned immediate field.  */
-static void 
+static void
 nios2_assemble_arg_k (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2483,7 +2483,7 @@ nios2_assemble_arg_k (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 8-bit unsigned immediate.  */
-static void 
+static void
 nios2_assemble_arg_l (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2507,7 +2507,7 @@ nios2_assemble_arg_l (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 26-bit unsigned immediate.  */
-static void 
+static void
 nios2_assemble_arg_m (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2537,7 +2537,7 @@ nios2_assemble_arg_m (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 6-bit unsigned immediate with no shifting.  */
-static void 
+static void
 nios2_assemble_arg_M (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2556,7 +2556,7 @@ nios2_assemble_arg_M (const char *token, nios2_insn_infoS *insn)
 }
 
 /* 6-bit unsigned immediate with 2-bit shift.  */
-static void 
+static void
 nios2_assemble_arg_N (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2576,7 +2576,7 @@ nios2_assemble_arg_N (const char *token, nios2_insn_infoS *insn)
 
 
 /* Encoded enumeration for addi.n/subi.n.  */
-static void 
+static void
 nios2_assemble_arg_e (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2603,7 +2603,7 @@ nios2_assemble_arg_e (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Encoded enumeration for slli.n/srli.n.  */
-static void 
+static void
 nios2_assemble_arg_f (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2630,7 +2630,7 @@ nios2_assemble_arg_f (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Encoded enumeration for andi.n.  */
-static void 
+static void
 nios2_assemble_arg_g (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2657,7 +2657,7 @@ nios2_assemble_arg_g (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Encoded enumeration for movi.n.  */
-static void 
+static void
 nios2_assemble_arg_h (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2688,7 +2688,7 @@ nios2_assemble_arg_h (const char *token, nios2_insn_infoS *insn)
 }
 
 /* Encoded REGMASK for ldwm/stwm or push.n/pop.n.  */
-static void 
+static void
 nios2_assemble_arg_R (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2739,14 +2739,14 @@ nios2_assemble_arg_R (const char *token, nios2_insn_infoS *insn)
 	  insn->insn_code |= SET_IW_L5I4X1_CS (1);
 	}
       break;
-	
+
     default:
       bad_opcode (op);
     }
 }
 
 /* Base register for ldwm/stwm.  */
-static void 
+static void
 nios2_assemble_arg_B (const char *token, nios2_insn_infoS *insn)
 {
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
@@ -2762,7 +2762,7 @@ nios2_assemble_arg_B (const char *token, nios2_insn_infoS *insn)
   switch (op->format)
     {
     case iw_F1X4L17_type:
-      /* For ldwm, check to see if the base register is already inside the 
+      /* For ldwm, check to see if the base register is already inside the
 	 register list.  */
       if (op->match == MATCH_R2_LDWM
 	  && (nios2_reglist_mask & (1 << reg->index)))
@@ -2828,71 +2828,71 @@ nios2_assemble_args (nios2_insn_infoS *insn)
       case 'c':
 	nios2_assemble_arg_c (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'd':
 	nios2_assemble_arg_d (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 's':
 	nios2_assemble_arg_s (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 't':
 	nios2_assemble_arg_t (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'D':
 	nios2_assemble_arg_D (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'S':
 	nios2_assemble_arg_S (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'T':
 	nios2_assemble_arg_T (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'i':
 	nios2_assemble_arg_i (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'I':
 	nios2_assemble_arg_I (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'u':
 	nios2_assemble_arg_u (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'U':
 	nios2_assemble_arg_U (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'V':
 	nios2_assemble_arg_V (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'W':
 	nios2_assemble_arg_W (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'X':
 	nios2_assemble_arg_X (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'Y':
 	nios2_assemble_arg_Y (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'o':
 	nios2_assemble_arg_o (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'O':
 	nios2_assemble_arg_O (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'P':
 	nios2_assemble_arg_P (insn->insn_tokens[tokidx++], insn);
 	break;
@@ -2900,15 +2900,15 @@ nios2_assemble_args (nios2_insn_infoS *insn)
       case 'j':
 	nios2_assemble_arg_j (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'k':
 	nios2_assemble_arg_k (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'l':
 	nios2_assemble_arg_l (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'm':
 	nios2_assemble_arg_m (insn->insn_tokens[tokidx++], insn);
 	break;
@@ -2924,19 +2924,19 @@ nios2_assemble_args (nios2_insn_infoS *insn)
       case 'e':
 	nios2_assemble_arg_e (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'f':
 	nios2_assemble_arg_f (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'g':
 	nios2_assemble_arg_g (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'h':
 	nios2_assemble_arg_h (insn->insn_tokens[tokidx++], insn);
 	break;
-	
+
       case 'R':
 	nios2_assemble_arg_R (insn->insn_tokens[tokidx++], insn);
 	break;
@@ -2950,7 +2950,7 @@ nios2_assemble_args (nios2_insn_infoS *insn)
 	break;
       }
 
-  /* Perform argument checking.  */  
+  /* Perform argument checking.  */
   nios2_check_assembly (insn->insn_code | insn->constant_bits,
 			insn->insn_tokens[tokidx]);
 }
@@ -2966,7 +2966,7 @@ static char *
 nios2_consume_arg (char *argstr, const char *parsestr)
 {
   char *temp;
-  
+
   switch (*parsestr)
     {
     case 'c':
@@ -3015,7 +3015,7 @@ nios2_consume_arg (char *argstr, const char *parsestr)
     case 'h':
     case 'M':
     case 'N':
-      
+
       /* We can't have %hi, %lo or %hiadj here.  */
       if (*argstr == '%')
 	as_bad (_("badly formed expression near %s"), argstr);
@@ -3102,7 +3102,7 @@ nios2_parse_args (nios2_insn_infoS *insn, char *argstr,
   p = argstr;
   i = 0;
   bfd_boolean terminate = FALSE;
-  
+
   /* This rest of this function is it too fragile and it mostly works,
      therefore special case this one.  */
   if (*parsestr == 0 && argstr != 0)
@@ -3111,7 +3111,7 @@ nios2_parse_args (nios2_insn_infoS *insn, char *argstr,
       parsed_args[0] = NULL;
       return;
     }
-  
+
   while (p != NULL && !terminate && i < NIOS2_MAX_INSN_TOKENS)
     {
       parsed_args[i] = nios2_consume_arg (p, parsestr);
@@ -3158,10 +3158,7 @@ nios2_modify_arg (char **parsed_args, const char *modifier,
 {
   char *tmp = parsed_args[ndx];
 
-  parsed_args[ndx]
-    = (char *) malloc (strlen (parsed_args[ndx]) + strlen (modifier) + 1);
-  strcpy (parsed_args[ndx], tmp);
-  strcat (parsed_args[ndx], modifier);
+  parsed_args[ndx] = concat (tmp, modifier, (char *) NULL);
 }
 
 /* Modify parsed_args[ndx] by negating that argument.  */
@@ -3171,13 +3168,7 @@ nios2_negate_arg (char **parsed_args, const char *modifier ATTRIBUTE_UNUSED,
 {
   char *tmp = parsed_args[ndx];
 
-  parsed_args[ndx]
-    = (char *) malloc (strlen ("~(") + strlen (parsed_args[ndx]) +
-		       strlen (")+1") + 1);
-
-  strcpy (parsed_args[ndx], "~(");
-  strcat (parsed_args[ndx], tmp);
-  strcat (parsed_args[ndx], ")+1");
+  parsed_args[ndx] = concat ("~(", tmp, ")+1", (char *) NULL);
 }
 
 /* The function nios2_swap_args swaps the pointers at indices index_1 and
@@ -3219,7 +3210,7 @@ nios2_append_arg (char **parsed_args, const char *appnd, int num,
   parsed_args[i + 1] = NULL;
 }
 
-/* This function inserts the string insert num times in the array 
+/* This function inserts the string insert num times in the array
    parsed_args, starting at the index start.  */
 static void
 nios2_insert_arg (char **parsed_args, const char *insert, int num,
@@ -3323,7 +3314,7 @@ static void
 output_insn (nios2_insn_infoS *insn)
 {
   char *f;
-  nios2_insn_relocS *reloc; 
+  nios2_insn_relocS *reloc;
   f = frag_more (insn->insn_nios2_opcode->size);
   /* This allocates enough space for the instruction
      and puts it in the current frag.  */
@@ -3470,7 +3461,7 @@ output_movia (nios2_insn_infoS *insn)
      and puts it in the current frag.  */
   char *f = frag_more (8);
   nios2_insn_relocS *reloc = insn->insn_reloc;
-  unsigned long reg, code;
+  unsigned long reg, code = 0;
   const struct nios2_opcode *op = insn->insn_nios2_opcode;
 
   /* If the reloc is NULL, there was an error assembling the movia.  */
@@ -3539,7 +3530,7 @@ nios2_use_arch (const char *arch)
 /* The following functions are called by machine-independent parts of
    the assembler. */
 int
-md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
+md_parse_option (int c, const char *arg ATTRIBUTE_UNUSED)
 {
   switch (c)
     {
@@ -3619,7 +3610,7 @@ md_begin (void)
       break;
     }
 
-  /* Create and fill a hashtable for the Nios II opcodes, registers and 
+  /* Create and fill a hashtable for the Nios II opcodes, registers and
      arguments.  */
   nios2_opcode_hash = hash_new ();
   nios2_reg_hash = hash_new ();
@@ -3688,7 +3679,7 @@ md_begin (void)
 void
 md_assemble (char *op_str)
 {
-  char *argstr; 
+  char *argstr;
   char *op_strdup = NULL;
   unsigned long saved_pinfo = 0;
   nios2_insn_infoS thisinsn;
@@ -3731,11 +3722,11 @@ md_assemble (char *op_str)
 	nios2_parse_args (insn, argstr, insn->insn_nios2_opcode->args_test,
 			  (char **) &insn->insn_tokens[1]);
 
-      /* We need to preserve the MOVIA macro as this is clobbered by 
+      /* We need to preserve the MOVIA macro as this is clobbered by
 	 translate_pseudo_insn.  */
       if (insn->insn_nios2_opcode->pinfo == NIOS2_INSN_MACRO_MOVIA)
 	saved_pinfo = NIOS2_INSN_MACRO_MOVIA;
-      /* If the instruction is an pseudo-instruction, we want to replace it 
+      /* If the instruction is an pseudo-instruction, we want to replace it
 	 with its real equivalent, and then continue.  */
       if ((insn->insn_nios2_opcode->pinfo & NIOS2_INSN_MACRO)
 	  == NIOS2_INSN_MACRO)
@@ -3862,8 +3853,8 @@ nios2_frob_symbol (symbolS *symp)
 arelent *
 tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 {
-  arelent *reloc = (arelent *) xmalloc (sizeof (arelent));
-  reloc->sym_ptr_ptr = (asymbol **) xmalloc (sizeof (asymbol *));
+  arelent *reloc = XNEW (arelent);
+  reloc->sym_ptr_ptr = XNEW (asymbol *);
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
 
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
@@ -3909,7 +3900,7 @@ md_pcrel_from (fixS *fixP ATTRIBUTE_UNUSED)
 
 /* Called just before the assembler exits.  */
 void
-md_end ()
+md_end (void)
 {
   /* FIXME - not yet implemented */
 }
@@ -3979,7 +3970,7 @@ nios2_cons_align (int size)
 /* Map 's' to SHF_NIOS2_GPREL.  */
 /* This is from the Alpha code tc-alpha.c.  */
 int
-nios2_elf_section_letter (int letter, char **ptr_msg)
+nios2_elf_section_letter (int letter, const char **ptr_msg)
 {
   if (letter == 's')
     return SHF_NIOS2_GPREL;

@@ -1,5 +1,5 @@
 /* ldlang.h - linker command language support
-   Copyright (C) 1991-2015 Free Software Foundation, Inc.
+   Copyright (C) 1991-2016 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -464,6 +464,7 @@ struct lang_nocrossrefs
 {
   struct lang_nocrossrefs *next;
   lang_nocrossref_type *list;
+  bfd_boolean onlyfirst;
 };
 
 /* This structure is used to hold a list of input section names which
@@ -592,7 +593,7 @@ extern void lang_process
 extern void ldlang_add_file
   (lang_input_statement_type *);
 extern lang_output_section_statement_type *lang_output_section_find_by_flags
-  (const asection *, lang_output_section_statement_type **,
+  (const asection *, flagword, lang_output_section_statement_type **,
    lang_match_sec_type_func);
 extern lang_output_section_statement_type *lang_insert_orphan
   (asection *, const char *, int, lang_output_section_statement_type *,
@@ -609,6 +610,8 @@ extern lang_output_section_statement_type *next_matching_output_section_statemen
   (lang_output_section_statement_type *, int);
 extern void ldlang_add_undef
   (const char *const, bfd_boolean);
+extern void ldlang_add_require_defined
+  (const char *const);
 extern void lang_add_output_format
   (const char *, const char *, const char *, int);
 extern void lang_list_init
@@ -652,6 +655,8 @@ extern void lang_new_phdr
    etree_type *);
 extern void lang_add_nocrossref
   (lang_nocrossref_type *);
+extern void lang_add_nocrossref_to
+  (lang_nocrossref_type *);
 extern void lang_enter_overlay
   (etree_type *, etree_type *);
 extern void lang_enter_overlay_section
@@ -690,5 +695,8 @@ lang_ld_feature (char *);
 
 extern void
 lang_print_memory_usage (void);
+
+extern void
+lang_add_gc_name (const char *);
 
 #endif

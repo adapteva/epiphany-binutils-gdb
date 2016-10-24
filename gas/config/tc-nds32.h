@@ -1,5 +1,5 @@
 /* tc-nds32.h -- Header file for tc-nds32.c.
-   Copyright (C) 2012-2015 Free Software Foundation, Inc.
+   Copyright (C) 2012-2016 Free Software Foundation, Inc.
    Contributed by Andes Technology Corporation.
 
    This file is part of GAS.
@@ -44,7 +44,7 @@
 
 /* as.c.  */
 /* Extend GAS command line option handling capability.  */
-extern int nds32_parse_option (int, char *);
+extern int nds32_parse_option (int, const char *);
 extern void nds32_after_parse_args (void);
 /* The endianness of the target format may change based on command
    line arguments.  */
@@ -131,7 +131,8 @@ extern void nds32_do_align (int);
 #define md_macro_start()			nds32_macro_start ()
 #define md_macro_end()				nds32_macro_end ()
 #define md_macro_info(args)			nds32_macro_info (args)
-#define TC_START_LABEL(C, S, STR)		(C == ':' && nds32_start_label (0, 0))
+#define TC_START_LABEL(STR, NUL_CHAR, NEXT_CHAR)	\
+  (NEXT_CHAR == ':' && nds32_start_label (0, 0))
 #define tc_check_label(label)			nds32_check_label (label)
 #define tc_frob_label(label)			nds32_frob_label (label)
 #define md_end					md_end

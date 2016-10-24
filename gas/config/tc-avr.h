@@ -1,5 +1,5 @@
 /* This file is tc-avr.h
-   Copyright (C) 1999-2015 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
 
    Contributed by Denis Chertykov <denisc@overta.ru>
 
@@ -44,6 +44,8 @@
 /* If you define this macro, GAS will warn about the use of
    nonstandard escape sequences in a string.  */
 #define ONLY_STANDARD_ESCAPES
+
+#define DIFF_EXPR_OK    /* .-foo gets turned into PC relative relocs */
 
 /* GAS will call this function for any expression that can not be
    recognized.  When the function is called, `input_line_pointer'

@@ -1,6 +1,6 @@
 ## Process this file with automake to generate Makefile.in
 #
-#   Copyright (C) 2012-2015 Free Software Foundation, Inc.
+#   Copyright (C) 2012-2016 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ LEX = `if [ -f ../flex/flex ] ; then echo ../flex/flex ; else echo @LEX@ ; fi`
 am__skiplex =
 am__skipyacc =
 
-WARN_CFLAGS = @WARN_CFLAGS@
+WARN_CFLAGS = @WARN_CFLAGS@ @WARN_WRITE_STRINGS@
 NO_WERROR = @NO_WERROR@
 AM_CFLAGS = $(WARN_CFLAGS) $(ZLIBINC)
 
@@ -484,7 +484,7 @@ bfin-parse.c: $(srcdir)/config/bfin-parse.y
 bfin-parse.h: bfin-parse.c
 bfin-parse.@OBJEXT@: bfin-parse.c \
  $(srcdir)/config/bfin-aux.h $(srcdir)/config/bfin-defs.h \
- $(INCDIR)/elf/common.h $(INCDIR)/elf/bfin.h $(BFDDIR)/libbfd.h
+ $(INCDIR)/elf/common.h $(INCDIR)/elf/bfin.h
 
 bfin-parse.h: ; @true
 $(srcdir)/config/bfin-parse.h: ; @true
@@ -507,7 +507,7 @@ rl78-parse.c: $(srcdir)/config/rl78-parse.y
 	$(SHELL) $(YLWRAP) $(srcdir)/config/rl78-parse.y y.tab.c rl78-parse.c y.tab.h rl78-parse.h -- $(YACCCOMPILE) -d ;
 rl78-parse.h: rl78-parse.c
 rl78-parse.@OBJEXT@: rl78-parse.c rl78-parse.h $(srcdir)/config/rl78-defs.h \
- $(INCDIR)/elf/common.h $(INCDIR)/elf/rl78.h $(BFDDIR)/libbfd.h
+ $(INCDIR)/elf/common.h $(INCDIR)/elf/rl78.h
 
 rl78-defs.h: ; @true
 
@@ -515,7 +515,7 @@ rx-parse.c: $(srcdir)/config/rx-parse.y
 	$(SHELL) $(YLWRAP) $(srcdir)/config/rx-parse.y y.tab.c rx-parse.c y.tab.h rx-parse.h -- $(YACCCOMPILE) -d ;
 rx-parse.h: rx-parse.c
 rx-parse.@OBJEXT@: rx-parse.c rx-parse.h $(srcdir)/config/rx-defs.h \
- $(INCDIR)/elf/common.h $(INCDIR)/elf/rx.h $(BFDDIR)/libbfd.h
+ $(INCDIR)/elf/common.h $(INCDIR)/elf/rx.h
 
 rx-defs.h: ; @true
 $(srcdir)/config/rx-defs.h: ; @true

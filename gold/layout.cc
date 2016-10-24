@@ -1,6 +1,6 @@
 // layout.cc -- lay out output file sections for gold
 
-// Copyright (C) 2006-2015 Free Software Foundation, Inc.
+// Copyright (C) 2006-2016 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -913,6 +913,7 @@ Layout::get_output_section_flags(elfcpp::Elf_Xword input_section_flags)
   // copied to the output section.
   input_section_flags &= ~ (elfcpp::SHF_INFO_LINK
 			    | elfcpp::SHF_GROUP
+			    | elfcpp::SHF_COMPRESSED
 			    | elfcpp::SHF_MERGE
 			    | elfcpp::SHF_STRINGS);
 
@@ -1159,8 +1160,12 @@ Layout::layout(Sized_relobj_file<size, big_endian>* object, unsigned int shndx,
   if (parameters->options().relocatable()
       && (shdr.get_sh_flags() & elfcpp::SHF_GROUP) != 0)
     {
+      // Some flags in the input section should not be automatically
+      // copied to the output section.
+      elfcpp::Elf_Xword flags = (shdr.get_sh_flags()
+				 & ~ elfcpp::SHF_COMPRESSED);
       name = this->namepool_.add(name, true, NULL);
-      os = this->make_output_section(name, sh_type, shdr.get_sh_flags(),
+      os = this->make_output_section(name, sh_type, flags,
 				     ORDER_INVALID, false);
     }
   else
@@ -4404,7 +4409,7 @@ Layout::create_dynamic_symtab(const Input_objects* input_objects,
 	{
 	  if (dynsym != NULL)
 	    hashsec->set_link_section(dynsym);
-	  hashsec->set_entsize(4);
+	  hashsec->set_entsize(parameters->target().hash_entry_size() / 8);
 	}
 
       if (odyn != NULL)
@@ -4717,6 +4722,15 @@ Layout::add_target_dynamic_tags(bool use_rel, const Output_data* plt_got,
       // linker at run time, and used by the debugger.
       odyn->add_constant(elfcpp::DT_DEBUG, 0);
     }
+}
+
+void
+Layout::add_target_specific_dynamic_tag(elfcpp::DT tag, unsigned int val)
+{
+  Output_data_dynamic* odyn = this->dynamic_data_;
+  if (odyn == NULL)
+    return;
+  odyn->add_constant(tag, val);
 }
 
 // Finish the .dynamic section and PT_DYNAMIC segment.

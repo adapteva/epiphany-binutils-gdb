@@ -1,5 +1,5 @@
 /* tc-h8300.c -- Assemble code for the Renesas H8/300
-   Copyright (C) 1991-2015 Free Software Foundation, Inc.
+   Copyright (C) 1991-2016 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -152,7 +152,7 @@ h8300_elf_section (int push)
   static const char * known_data_sections [] = { ".rodata", ".tdata", ".tbss" };
   static const char * known_data_prefixes [] = { ".debug", ".zdebug", ".gnu.warning" };
   char * saved_ilp = input_line_pointer;
-  char * name;
+  const char * name;
 
   name = obj_elf_section_name ();
   if (name == NULL)
@@ -251,9 +251,8 @@ md_begin (void)
   prev_buffer[0] = 0;
 
   nopcodes = sizeof (h8_opcodes) / sizeof (struct h8_opcode);
-  
-  h8_instructions = (struct h8_instruction *)
-    xmalloc (nopcodes * sizeof (struct h8_instruction));
+
+  h8_instructions = XNEWVEC (struct h8_instruction, nopcodes);
 
   pi = h8_instructions;
   p1 = h8_opcodes;
@@ -266,14 +265,14 @@ md_begin (void)
     {
       struct h8_opcode *first_skipped = 0;
       int len, cmplen = 0;
-      char *src = p1->name;
+      const char *src = p1->name;
       char *dst, *buffer;
 
       if (p1->name == 0)
 	break;
       /* Strip off any . part when inserting the opcode and only enter
 	 unique codes into the hash table.  */
-      dst = buffer = malloc (strlen (src) + 1);
+      dst = buffer = XNEWVEC (char, strlen (src) + 1);
       while (*src)
 	{
 	  if (*src == '.')
@@ -355,7 +354,7 @@ static void clever_message (const struct h8_instruction *, struct h8_op *);
 static void fix_operand_size (struct h8_op *, int);
 static void build_bytes (const struct h8_instruction *, struct h8_op *);
 static void do_a_fix_imm (int, int, struct h8_op *, int, const struct h8_instruction *);
-static void check_operand (struct h8_op *, unsigned int, char *);
+static void check_operand (struct h8_op *, unsigned int, const char *);
 static const struct h8_instruction * get_specific (const struct h8_instruction *, struct h8_op *, int) ;
 static char *get_operands (unsigned, char *, struct h8_op *);
 static void get_operand (char **, struct h8_op *, int);
@@ -384,7 +383,7 @@ parse_reg (char *src, op_type *mode, unsigned int *reg, int direction)
   char *end;
   int len;
 
-  /* Cribbed from get_symbol_end.  */
+  /* Cribbed from get_symbol_name.  */
   if (!is_name_beginner (*src) || *src == '\001')
     return 0;
   end = src + 1;
@@ -398,36 +397,36 @@ parse_reg (char *src, op_type *mode, unsigned int *reg, int direction)
       *reg = 7;
       return len;
     }
-  if (len == 3 && 
-      TOLOWER (src[0]) == 'c' && 
-      TOLOWER (src[1]) == 'c' && 
+  if (len == 3 &&
+      TOLOWER (src[0]) == 'c' &&
+      TOLOWER (src[1]) == 'c' &&
       TOLOWER (src[2]) == 'r')
     {
       *mode = CCR;
       *reg = 0;
       return len;
     }
-  if (len == 3 && 
-      TOLOWER (src[0]) == 'e' && 
-      TOLOWER (src[1]) == 'x' && 
+  if (len == 3 &&
+      TOLOWER (src[0]) == 'e' &&
+      TOLOWER (src[1]) == 'x' &&
       TOLOWER (src[2]) == 'r')
     {
       *mode = EXR;
       *reg = 1;
       return len;
     }
-  if (len == 3 && 
-      TOLOWER (src[0]) == 'v' && 
-      TOLOWER (src[1]) == 'b' && 
+  if (len == 3 &&
+      TOLOWER (src[0]) == 'v' &&
+      TOLOWER (src[1]) == 'b' &&
       TOLOWER (src[2]) == 'r')
     {
       *mode = VBR;
       *reg = 6;
       return len;
     }
-  if (len == 3 && 
-      TOLOWER (src[0]) == 's' && 
-      TOLOWER (src[1]) == 'b' && 
+  if (len == 3 &&
+      TOLOWER (src[0]) == 's' &&
+      TOLOWER (src[1]) == 'b' &&
       TOLOWER (src[2]) == 'r')
     {
       *mode = SBR;
@@ -621,7 +620,7 @@ get_operand (char **ptr, struct h8_op *op, int direction)
 
   /* Gross.  Gross.  ldm and stm have a format not easily handled
      by get_operand.  We deal with it explicitly here.  */
-  if (TOLOWER (src[0]) == 'e' && TOLOWER (src[1]) == 'r' && 
+  if (TOLOWER (src[0]) == 'e' && TOLOWER (src[1]) == 'r' &&
       ISDIGIT (src[2]) && src[3] == '-' &&
       TOLOWER (src[4]) == 'e' && TOLOWER (src[5]) == 'r' && ISDIGIT (src[6]))
     {
@@ -764,7 +763,7 @@ get_operand (char **ptr, struct h8_op *op, int direction)
 		}
 	      if (mode
 		  && src[len + 2] == ','
-		  && TOLOWER (src[len + 3]) != 'p' 
+		  && TOLOWER (src[len + 3]) != 'p'
 		  && TOLOWER (src[len + 4]) != 'c'
 		  && src[len + 5] != ')')
 		{
@@ -826,7 +825,7 @@ get_operand (char **ptr, struct h8_op *op, int direction)
 	    op->mode |= DISP | direction;
 	  src = skip_colonthing (src, &op->mode);
 
-	  if (*src != ')' && '(')
+	  if (*src != ')')
 	    {
 	      as_bad (_("expected @(exp, reg16)"));
 	      return;
@@ -878,9 +877,9 @@ get_operand (char **ptr, struct h8_op *op, int direction)
       *ptr = parse_exp (src + 1, op);
       return;
     }
-  else if (strncmp (src, "mach", 4) == 0 || 
+  else if (strncmp (src, "mach", 4) == 0 ||
 	   strncmp (src, "macl", 4) == 0 ||
-	   strncmp (src, "MACH", 4) == 0 || 
+	   strncmp (src, "MACH", 4) == 0 ||
 	   strncmp (src, "MACL", 4) == 0)
     {
       op->reg = TOLOWER (src[3]) == 'l';
@@ -979,7 +978,7 @@ get_mova_operands (char *op_end, struct h8_op *operand)
     }
   else if ((operand[1].mode & MODE) == LOWREG)
     {
-      switch (operand[1].mode & SIZE) 
+      switch (operand[1].mode & SIZE)
 	{
 	case L_8:
 	  operand[0].mode = (operand[0].mode & ~MODE) | INDEXB;
@@ -1286,7 +1285,7 @@ get_specific (const struct h8_instruction *instruction,
 }
 
 static void
-check_operand (struct h8_op *operand, unsigned int width, char *string)
+check_operand (struct h8_op *operand, unsigned int width, const char *string)
 {
   if (operand->exp.X_add_symbol == 0
       && operand->exp.X_op_symbol == 0)
@@ -1340,7 +1339,7 @@ do_a_fix_imm (int offset, int nibble, struct h8_op *operand, int relaxmode, cons
   int where;
   char *bytes = frag_now->fr_literal + offset;
 
-  char *t = ((operand->mode & MODE) == IMM) ? "#" : "@";
+  const char *t = ((operand->mode & MODE) == IMM) ? "#" : "@";
 
   if (operand->exp.X_add_symbol == 0)
     {
@@ -1483,12 +1482,12 @@ build_bytes (const struct h8_instruction *this_try, struct h8_op *operand)
   if (!Hmode && this_try->opcode->available != AV_H8)
     as_warn (_("Opcode `%s' with these operand types not available in H8/300 mode"),
 	     this_try->opcode->name);
-  else if (!Smode 
-	   && this_try->opcode->available != AV_H8 
+  else if (!Smode
+	   && this_try->opcode->available != AV_H8
 	   && this_try->opcode->available != AV_H8H)
     as_warn (_("Opcode `%s' with these operand types not available in H8/300H mode"),
 	     this_try->opcode->name);
-  else if (!SXmode 
+  else if (!SXmode
 	   && this_try->opcode->available != AV_H8
 	   && this_try->opcode->available != AV_H8H
 	   && this_try->opcode->available != AV_H8S)
@@ -1748,7 +1747,7 @@ build_bytes (const struct h8_instruction *this_try, struct h8_op *operand)
 	  /* To be compatible with the proposed H8 ELF format, we
 	     want the relocation's offset to point to the first byte
 	     that will be modified, not to the start of the instruction.  */
-	  
+
 	  if ((operand->mode & SIZE) == L_32)
 	    {
 	      where = 2;
@@ -1760,8 +1759,8 @@ build_bytes (const struct h8_instruction *this_try, struct h8_op *operand)
 
 	  /* This jmp may be a jump or a branch.  */
 
-	  check_operand (operand + i, 
-			 SXmode ? 0xffffffff : Hmode ? 0xffffff : 0xffff, 
+	  check_operand (operand + i,
+			 SXmode ? 0xffffffff : Hmode ? 0xffffff : 0xffff,
 			 "@");
 
 	  if (operand[i].exp.X_add_number & 1)
@@ -1891,7 +1890,7 @@ fix_operand_size (struct h8_op *operand, int size)
 	   is safe.  get_specific() will relax L_24 into L_32 where
 	   necessary.  */
 	if (Hmode
-	    && !Nmode 
+	    && !Nmode
 	    && ((((addressT) operand->exp.X_add_number + 0x8000)
 		 & 0xffffffff) > 0xffff
 		|| operand->exp.X_add_symbol != 0
@@ -2101,7 +2100,7 @@ md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
 
 /* Various routines to kill one day.  */
 
-char *
+const char *
 md_atof (int type, char *litP, int *sizeP)
 {
   return ieee_md_atof (type, litP, sizeP, TRUE);
@@ -2197,7 +2196,7 @@ const struct mach_func mach_table[] =
 };
 
 int
-md_parse_option (int c ATTRIBUTE_UNUSED, char *arg ATTRIBUTE_UNUSED)
+md_parse_option (int c ATTRIBUTE_UNUSED, const char *arg ATTRIBUTE_UNUSED)
 {
   unsigned int i;
   switch (c)
@@ -2335,8 +2334,8 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	}
     }
 
-  rel = xmalloc (sizeof (arelent));
-  rel->sym_ptr_ptr = xmalloc (sizeof (asymbol *));
+  rel = XNEW (arelent);
+  rel->sym_ptr_ptr = XNEW (asymbol *);
   *rel->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   rel->address = fixp->fx_frag->fr_address + fixp->fx_where;
   rel->addend = fixp->fx_offset;

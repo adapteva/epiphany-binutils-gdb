@@ -1,5 +1,5 @@
 /* dw2gencfi.c - Support for generating Dwarf2 CFI information.
-   Copyright (C) 2003-2015 Free Software Foundation, Inc.
+   Copyright (C) 2003-2016 Free Software Foundation, Inc.
    Contributed by Michal Ludvig <mludvig@suse.cz>
 
    This file is part of GAS, the GNU Assembler.
@@ -434,11 +434,9 @@ struct frch_cfi_data
 static struct fde_entry *
 alloc_fde_entry (void)
 {
-  struct fde_entry *fde = (struct fde_entry *)
-      xcalloc (1, sizeof (struct fde_entry));
+  struct fde_entry *fde = XCNEW (struct fde_entry);
 
-  frchain_now->frch_cfi_data = (struct frch_cfi_data *)
-      xcalloc (1, sizeof (struct frch_cfi_data));
+  frchain_now->frch_cfi_data = XCNEW (struct frch_cfi_data);
   frchain_now->frch_cfi_data->cur_fde_data = fde;
   *last_fde_data = fde;
   last_fde_data = &fde->next;
@@ -467,8 +465,7 @@ static struct fde_entry *last_fde;
 static struct cfi_insn_data *
 alloc_cfi_insn_data (void)
 {
-  struct cfi_insn_data *insn = (struct cfi_insn_data *)
-      xcalloc (1, sizeof (struct cfi_insn_data));
+  struct cfi_insn_data *insn = XCNEW (struct cfi_insn_data);
   struct fde_entry *cur_fde_data = frchain_now->frch_cfi_data->cur_fde_data;
 
   *cur_fde_data->last = insn;
@@ -509,6 +506,7 @@ void
 cfi_set_sections (void)
 {
   frchain_now->frch_cfi_data->cur_fde_data->sections = all_cfi_sections;
+  cfi_sections_set = TRUE;
 }
 
 /* Universal functions to store new instructions.  */
@@ -661,7 +659,7 @@ cfi_add_CFA_remember_state (void)
 
   cfi_add_CFA_insn (DW_CFA_remember_state);
 
-  p = (struct cfa_save_data *) xmalloc (sizeof (*p));
+  p = XNEW (struct cfa_save_data);
   p->cfa_offset = frchain_now->frch_cfi_data->cur_cfa_offset;
   p->next = frchain_now->frch_cfi_data->cfa_save_stack;
   frchain_now->frch_cfi_data->cfa_save_stack = p;
@@ -754,13 +752,12 @@ tc_parse_to_dw2regnum (expressionS *exp)
     {
       char *name, c;
 
-      name = input_line_pointer;
-      c = get_symbol_end ();
+      c = get_symbol_name (& name);
 
       exp->X_op = O_constant;
       exp->X_add_number = tc_regname_to_dw2regnum (name);
 
-      *input_line_pointer = c;
+      restore_line_pointer (c);
     }
   else
 # endif
@@ -947,7 +944,7 @@ dot_cfi_escape (int ignored ATTRIBUTE_UNUSED)
   tail = &head;
   do
     {
-      e = (struct cfi_escape_data *) xmalloc (sizeof (*e));
+      e = XNEW (struct cfi_escape_data);
       do_parse_cons_expression (&e->exp, 1);
       *tail = e;
       tail = &e->next;
@@ -1187,6 +1184,7 @@ dot_cfi_label (int ignored ATTRIBUTE_UNUSED)
     cfi_add_advance_loc (symbol_temp_new_now ());
 
   cfi_add_label (name);
+  free (name);
 
   demand_empty_rest_of_line ();
 }
@@ -1197,13 +1195,14 @@ dot_cfi_sections (int ignored ATTRIBUTE_UNUSED)
   int sections = 0;
 
   SKIP_WHITESPACE ();
-  if (is_name_beginner (*input_line_pointer))
+  if (is_name_beginner (*input_line_pointer) || *input_line_pointer == '"')
     while (1)
       {
+	char * saved_ilp;
 	char *name, c;
 
-	name = input_line_pointer;
-	c = get_symbol_end ();
+	saved_ilp = input_line_pointer;
+	c = get_symbol_name (& name);
 
 	if (strncmp (name, ".eh_frame", sizeof ".eh_frame") == 0
 	    && name[9] != '_')
@@ -1224,30 +1223,29 @@ dot_cfi_sections (int ignored ATTRIBUTE_UNUSED)
 	else
 	  {
 	    *input_line_pointer = c;
-	    input_line_pointer = name;
+	    input_line_pointer = saved_ilp;
 	    break;
 	  }
 
 	*input_line_pointer = c;
-	SKIP_WHITESPACE ();
+	SKIP_WHITESPACE_AFTER_NAME ();
 	if (*input_line_pointer == ',')
 	  {
 	    name = input_line_pointer++;
 	    SKIP_WHITESPACE ();
-	    if (!is_name_beginner (*input_line_pointer))
+	    if (!is_name_beginner (*input_line_pointer) && *input_line_pointer != '"')
 	      {
 		input_line_pointer = name;
 		break;
 	      }
 	  }
-	else if (is_name_beginner (*input_line_pointer))
+	else if (is_name_beginner (*input_line_pointer) || *input_line_pointer == '"')
 	  break;
       }
 
   demand_empty_rest_of_line ();
   if (cfi_sections_set && cfi_sections != sections)
     as_bad (_("inconsistent uses of .cfi_sections"));
-  cfi_sections_set = TRUE;
   cfi_sections = sections;
 }
 
@@ -1266,23 +1264,24 @@ dot_cfi_startproc (int ignored ATTRIBUTE_UNUSED)
   cfi_new_fde (symbol_temp_new_now ());
 
   SKIP_WHITESPACE ();
-  if (is_name_beginner (*input_line_pointer))
+  if (is_name_beginner (*input_line_pointer) || *input_line_pointer == '"')
     {
+      char * saved_ilp = input_line_pointer;
       char *name, c;
 
-      name = input_line_pointer;
-      c = get_symbol_end ();
+      c = get_symbol_name (& name);
 
       if (strcmp (name, "simple") == 0)
 	{
 	  simple = 1;
-	  *input_line_pointer = c;
+	  restore_line_pointer (c);
 	}
       else
-	input_line_pointer = name;
+	input_line_pointer = saved_ilp;
     }
   demand_empty_rest_of_line ();
 
+  cfi_sections_set = TRUE;
   all_cfi_sections |= cfi_sections;
   cfi_set_sections ();
   frchain_now->frch_cfi_data->cur_cfa_offset = 0;
@@ -1309,6 +1308,7 @@ dot_cfi_endproc (int ignored ATTRIBUTE_UNUSED)
 
   demand_empty_rest_of_line ();
 
+  cfi_sections_set = TRUE;
   if ((cfi_sections & CFI_EMIT_target) != 0)
     tc_cfi_endproc (last_fde);
 }
@@ -1371,6 +1371,7 @@ dot_cfi_fde_data (int ignored ATTRIBUTE_UNUSED)
 
   last_fde = frchain_now->frch_cfi_data->cur_fde_data;
 
+  cfi_sections_set = TRUE;
   if ((cfi_sections & CFI_EMIT_target) != 0
       || (cfi_sections & CFI_EMIT_eh_frame_compact) != 0)
     {
@@ -1383,7 +1384,7 @@ dot_cfi_fde_data (int ignored ATTRIBUTE_UNUSED)
 	  num_ops = 0;
 	  do
 	    {
-	      e = (struct cfi_escape_data *) xmalloc (sizeof (*e));
+	      e = XNEW (struct cfi_escape_data);
 	      do_parse_cons_expression (&e->exp, 1);
 	      *tail = e;
 	      tail = &e->next;
@@ -1405,7 +1406,7 @@ dot_cfi_fde_data (int ignored ATTRIBUTE_UNUSED)
 	num_ops = 3;
 
       last_fde->eh_data_size = num_ops;
-      last_fde->eh_data = (bfd_byte *) xmalloc (num_ops);
+      last_fde->eh_data =  XNEWVEC (bfd_byte, num_ops);
       num_ops = 0;
       while (head)
 	{
@@ -2089,7 +2090,7 @@ select_cie_for_fde (struct fde_entry *fde, bfd_boolean eh_frame,
     fail:;
     }
 
-  cie = (struct cie_entry *) xmalloc (sizeof (struct cie_entry));
+  cie = XNEW (struct cie_entry);
   cie->next = cie_root;
   cie_root = cie;
   SET_CUR_SEG (cie, CUR_SEG (fde));
@@ -2222,6 +2223,7 @@ cfi_finish (void)
   if (all_fde_data == 0)
     return;
 
+  cfi_sections_set = TRUE;
   if ((all_cfi_sections & CFI_EMIT_eh_frame) != 0
       || (all_cfi_sections & CFI_EMIT_eh_frame_compact) != 0)
     {
@@ -2407,6 +2409,7 @@ cfi_finish (void)
       flag_traditional_format = save_flag_traditional_format;
     }
 
+  cfi_sections_set = TRUE;
   if ((all_cfi_sections & CFI_EMIT_debug_frame) != 0)
     {
       int alignment = ffs (DWARF2_ADDR_SIZE (stdoutput)) - 1;

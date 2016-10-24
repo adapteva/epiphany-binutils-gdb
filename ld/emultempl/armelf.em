@@ -1,5 +1,5 @@
 # This shell script emits a C file. -*- C -*-
-#   Copyright (C) 1991-2015 Free Software Foundation, Inc.
+#   Copyright (C) 1991-2016 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -35,6 +35,7 @@ static char * target2_type = "${TARGET2_TYPE}";
 static int fix_v4bx = 0;
 static int use_blx = 0;
 static bfd_arm_vfp11_fix vfp11_denorm_fix = BFD_ARM_VFP11_FIX_DEFAULT;
+static bfd_arm_stm32l4xx_fix stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_NONE;
 static int fix_cortex_a8 = -1;
 static int no_enum_size_warning = 0;
 static int no_wchar_size_warning = 0;
@@ -54,6 +55,19 @@ gld${EMULATION_NAME}_before_parse (void)
 }
 
 static void
+gld${EMULATION_NAME}_set_symbols (void)
+{
+  /* PR 19106: The section resizing code in gldarmelf_after_allocation
+     is effectively the same as relaxation, so prevent early memory
+     region checks which produce bogus error messages.
+     Note - this test has nothing to do with symbols.  It is just here
+     because this is the first emulation routine that is called after
+     the command line has been parsed.  */
+  if (!bfd_link_relocatable (&link_info))
+    TARGET_ENABLE_RELAXATION;
+}
+
+static void
 arm_elf_before_allocation (void)
 {
   bfd_elf32_arm_set_byteswap_code (&link_info, byteswap_code);
@@ -62,8 +76,16 @@ arm_elf_before_allocation (void)
      due to architecture version.  */
   bfd_elf32_arm_set_vfp11_fix (link_info.output_bfd, &link_info);
 
+  /* Choose type of STM32L4XX erratum fix, or warn if specified fix is
+     unnecessary due to architecture version.  */
+  bfd_elf32_arm_set_stm32l4xx_fix (link_info.output_bfd, &link_info);
+
   /* Auto-select Cortex-A8 erratum fix if it wasn't explicitly specified.  */
   bfd_elf32_arm_set_cortex_a8_fix (link_info.output_bfd, &link_info);
+
+  /* Ensure the output sections of veneers needing a dedicated one is not
+     removed.  */
+  bfd_elf32_arm_keep_private_stub_output_sections (&link_info);
 
   /* We should be able to set the size of the interworking stub section.  We
      can't do it until later if we have dynamic sections, though.  */
@@ -77,7 +99,9 @@ arm_elf_before_allocation (void)
 
 	  if (!bfd_elf32_arm_process_before_allocation (is->the_bfd,
 							&link_info)
-	      || !bfd_elf32_arm_vfp11_erratum_scan (is->the_bfd, &link_info))
+	      || !bfd_elf32_arm_vfp11_erratum_scan (is->the_bfd, &link_info)
+	      || !bfd_elf32_arm_stm32l4xx_erratum_scan (is->the_bfd,
+							&link_info))
 	    /* xgettext:c-format */
 	    einfo (_("Errors encountered processing file %s"), is->filename);
 	}
@@ -183,12 +207,12 @@ hook_in_stub (struct hook_stub_info *info, lang_statement_union_type **lp)
 
 static asection *
 elf32_arm_add_stub_section (const char * stub_sec_name,
-			    asection *   input_section,
+			    asection *   output_section,
+			    asection *   after_input_section,
 			    unsigned int alignment_power)
 {
   asection *stub_sec;
   flagword flags;
-  asection *output_section;
   lang_output_section_statement_type *os;
   struct hook_stub_info info;
 
@@ -201,18 +225,34 @@ elf32_arm_add_stub_section (const char * stub_sec_name,
 
   bfd_set_section_alignment (stub_file->the_bfd, stub_sec, alignment_power);
 
-  output_section = input_section->output_section;
   os = lang_output_section_get (output_section);
 
-  info.input_section = input_section;
+  info.input_section = after_input_section;
   lang_list_init (&info.add);
   lang_add_section (&info.add, stub_sec, NULL, os);
 
   if (info.add.head == NULL)
     goto err_ret;
 
-  if (hook_in_stub (&info, &os->children.head))
-    return stub_sec;
+  if (after_input_section == NULL)
+    {
+      lang_statement_union_type **lp = &os->children.head;
+      lang_statement_union_type *l, *lprev = NULL;
+
+      for (; (l = *lp) != NULL; lp = &l->header.next, lprev = l);
+
+      if (lprev)
+	lprev->header.next = info.add.head;
+      else
+	os->children.head = info.add.head;
+
+      return stub_sec;
+    }
+  else
+    {
+      if (hook_in_stub (&info, &os->children.head))
+	return stub_sec;
+    }
 
  err_ret:
   einfo ("%X%P: can not make stub section: %E\n");
@@ -273,55 +313,52 @@ gld${EMULATION_NAME}_after_allocation (void)
 {
   int ret;
 
-  if (!link_info.relocatable)
+  /* Build a sorted list of input text sections, then use that to process
+     the unwind table index.  */
+  unsigned int list_size = 10;
+  asection **sec_list = (asection **)
+      xmalloc (list_size * sizeof (asection *));
+  unsigned int sec_count = 0;
+
+  LANG_FOR_EACH_INPUT_STATEMENT (is)
     {
-      /* Build a sorted list of input text sections, then use that to process
-	 the unwind table index.  */
-      unsigned int list_size = 10;
-      asection **sec_list = (asection **)
-          xmalloc (list_size * sizeof (asection *));
-      unsigned int sec_count = 0;
+      bfd *abfd = is->the_bfd;
+      asection *sec;
 
-      LANG_FOR_EACH_INPUT_STATEMENT (is)
+      if ((abfd->flags & (EXEC_P | DYNAMIC)) != 0)
+	continue;
+
+      for (sec = abfd->sections; sec != NULL; sec = sec->next)
 	{
-	  bfd *abfd = is->the_bfd;
-	  asection *sec;
+	  asection *out_sec = sec->output_section;
 
-	  if ((abfd->flags & (EXEC_P | DYNAMIC)) != 0)
-	    continue;
-
-	  for (sec = abfd->sections; sec != NULL; sec = sec->next)
+	  if (out_sec
+	      && elf_section_data (sec)
+	      && elf_section_type (sec) == SHT_PROGBITS
+	      && (elf_section_flags (sec) & SHF_EXECINSTR) != 0
+	      && (sec->flags & SEC_EXCLUDE) == 0
+	      && sec->sec_info_type != SEC_INFO_TYPE_JUST_SYMS
+	      && out_sec != bfd_abs_section_ptr)
 	    {
-	      asection *out_sec = sec->output_section;
-
-	      if (out_sec
-		  && elf_section_data (sec)
-		  && elf_section_type (sec) == SHT_PROGBITS
-		  && (elf_section_flags (sec) & SHF_EXECINSTR) != 0
-		  && (sec->flags & SEC_EXCLUDE) == 0
-		  && sec->sec_info_type != SEC_INFO_TYPE_JUST_SYMS
-		  && out_sec != bfd_abs_section_ptr)
+	      if (sec_count == list_size)
 		{
-		  if (sec_count == list_size)
-		    {
-		      list_size *= 2;
-		      sec_list = (asection **)
-                          xrealloc (sec_list, list_size * sizeof (asection *));
-		    }
-
-		  sec_list[sec_count++] = sec;
+		  list_size *= 2;
+		  sec_list = (asection **)
+		      xrealloc (sec_list, list_size * sizeof (asection *));
 		}
+
+	      sec_list[sec_count++] = sec;
 	    }
 	}
-
-      qsort (sec_list, sec_count, sizeof (asection *), &compare_output_sec_vma);
-
-      if (elf32_arm_fix_exidx_coverage (sec_list, sec_count, &link_info,
-					   merge_exidx_entries))
-	need_laying_out = 1;
-
-      free (sec_list);
     }
+
+  qsort (sec_list, sec_count, sizeof (asection *), &compare_output_sec_vma);
+
+  if (elf32_arm_fix_exidx_coverage (sec_list, sec_count, &link_info,
+				    merge_exidx_entries))
+    need_laying_out = 1;
+
+  free (sec_list);
 
   /* bfd_elf32_discard_info just plays with debugging sections,
      ie. doesn't affect any code, so we can delay resizing the
@@ -338,7 +375,7 @@ gld${EMULATION_NAME}_after_allocation (void)
 
   /* If generating a relocatable output file, then we don't
      have to examine the relocs.  */
-  if (stub_file != NULL && !link_info.relocatable)
+  if (stub_file != NULL && !bfd_link_relocatable (&link_info))
     {
       ret = elf32_arm_setup_section_lists (link_info.output_bfd, &link_info);
       if (ret != 0)
@@ -380,10 +417,14 @@ gld${EMULATION_NAME}_finish (void)
         /* Figure out where VFP11 erratum veneers (and the labels returning
            from same) have been placed.  */
         bfd_elf32_arm_vfp11_fix_veneer_locations (is->the_bfd, &link_info);
+
+	 /* Figure out where STM32L4XX erratum veneers (and the labels returning
+	   from them) have been placed.  */
+	bfd_elf32_arm_stm32l4xx_fix_veneer_locations (is->the_bfd, &link_info);
       }
   }
 
-  if (! link_info.relocatable)
+  if (!bfd_link_relocatable (&link_info))
     {
       /* Now build the linker stubs.  */
       if (stub_file->the_bfd->sections != NULL)
@@ -410,7 +451,8 @@ gld${EMULATION_NAME}_finish (void)
       h = bfd_link_hash_lookup (link_info.hash, entry_symbol.name,
 				FALSE, FALSE, TRUE);
       eh = (struct elf_link_hash_entry *)h;
-      if (!h || eh->target_internal != ST_BRANCH_TO_THUMB)
+      if (!h || ARM_GET_SYM_BRANCH_TYPE (eh->target_internal)
+		!= ST_BRANCH_TO_THUMB)
 	return;
     }
 
@@ -468,7 +510,8 @@ arm_elf_create_output_section_statements (void)
   bfd_elf32_arm_set_target_relocs (link_info.output_bfd, &link_info,
 				   target1_is_rel,
 				   target2_type, fix_v4bx, use_blx,
-				   vfp11_denorm_fix, no_enum_size_warning,
+				   vfp11_denorm_fix, stm32l4xx_fix,
+				   no_enum_size_warning,
 				   no_wchar_size_warning,
 				   pic_veneer, fix_cortex_a8,
 				   fix_arm1176);
@@ -539,6 +582,7 @@ PARSE_AND_LIST_PROLOGUE='
 #define OPTION_FIX_ARM1176		317
 #define OPTION_NO_FIX_ARM1176		318
 #define OPTION_LONG_PLT			319
+#define OPTION_STM32L4XX_FIX		320
 '
 
 PARSE_AND_LIST_SHORTOPTS=p
@@ -554,6 +598,7 @@ PARSE_AND_LIST_LONGOPTS='
   { "fix-v4bx-interworking", no_argument, NULL, OPTION_FIX_V4BX_INTERWORKING},
   { "use-blx", no_argument, NULL, OPTION_USE_BLX},
   { "vfp11-denorm-fix", required_argument, NULL, OPTION_VFP11_DENORM_FIX},
+  { "fix-stm32l4xx-629360", optional_argument, NULL, OPTION_STM32L4XX_FIX},
   { "no-enum-size-warning", no_argument, NULL, OPTION_NO_ENUM_SIZE_WARNING},
   { "pic-veneer", no_argument, NULL, OPTION_PIC_VENEER},
   { "stub-group-size", required_argument, NULL, OPTION_STUBGROUP_SIZE },
@@ -576,6 +621,7 @@ PARSE_AND_LIST_OPTIONS='
   fprintf (file, _("  --fix-v4bx-interworking     Rewrite BX rn branch to ARMv4 interworking veneer\n"));
   fprintf (file, _("  --use-blx                   Enable use of BLX instructions\n"));
   fprintf (file, _("  --vfp11-denorm-fix          Specify how to fix VFP11 denorm erratum\n"));
+  fprintf (file, _("  --fix-stm32l4xx-629360      Specify how to fix STM32L4XX 629360 erratum\n"));
   fprintf (file, _("  --no-enum-size-warning      Don'\''t warn about objects with incompatible\n"
 		   "                                enum sizes\n"));
   fprintf (file, _("  --no-wchar-size-warning     Don'\''t warn about objects with incompatible\n"
@@ -645,6 +691,19 @@ PARSE_AND_LIST_ARGS_CASES='
         einfo (_("Unrecognized VFP11 fix type '\''%s'\''.\n"), optarg);
       break;
 
+    case OPTION_STM32L4XX_FIX:
+      if (!optarg)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_DEFAULT;
+      else if (strcmp (optarg, "none") == 0)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_NONE;
+      else if (strcmp (optarg, "default") == 0)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_DEFAULT;
+      else if (strcmp (optarg, "all") == 0)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_ALL;
+      else
+        einfo (_("Unrecognized STM32L4XX fix type '\''%s'\''.\n"), optarg);
+      break;
+
     case OPTION_NO_ENUM_SIZE_WARNING:
       no_enum_size_warning = 1;
       break;
@@ -700,6 +759,7 @@ LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=arm_elf_create_output_section_statements
 
 # Replace the elf before_parse function with our own.
 LDEMUL_BEFORE_PARSE=gld"${EMULATION_NAME}"_before_parse
+LDEMUL_SET_SYMBOLS=gld"${EMULATION_NAME}"_set_symbols
 
 # Call the extra arm-elf function
 LDEMUL_FINISH=gld${EMULATION_NAME}_finish

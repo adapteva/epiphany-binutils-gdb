@@ -1,5 +1,5 @@
 /* coffgrok.c
-   Copyright (C) 1994-2015 Free Software Foundation, Inc.
+   Copyright (C) 1994-2016 Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
@@ -886,7 +886,7 @@ coff_grok (bfd *inabfd)
       non_fatal (_("%s: is not a COFF format file"), bfd_get_filename (abfd));
       return NULL;
     }
-  
+
   storage = bfd_get_symtab_upper_bound (abfd);
 
   if (storage < 0)

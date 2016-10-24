@@ -1,5 +1,5 @@
 /* ECOFF debugging support.
-   Copyright (C) 1993-2015 Free Software Foundation, Inc.
+   Copyright (C) 1993-2016 Free Software Foundation, Inc.
    Contributed by Cygnus Support.
    This file was put together by Ian Lance Taylor <ian@cygnus.com>.  A
    good deal of it comes directly from mips-tfile.c, by Michael
@@ -2196,12 +2196,9 @@ add_file (const char *file_name, int indx ATTRIBUTE_UNUSED, int fake)
      want to use the actual file name.  */
   if (file_name == (const char *) NULL)
     {
-      char *file;
-
       if (first_file != (efdr_t *) NULL)
 	as_fatal (_("fake .file after real one"));
-      as_where (&file, (unsigned int *) NULL);
-      file_name = (const char *) file;
+      file_name = as_where ((unsigned int *) NULL);
 
       /* Automatically generate ECOFF debugging information, since I
          think that's what other ECOFF assemblers do.  We don't do
@@ -2434,14 +2431,13 @@ ecoff_directive_begin (int ignore ATTRIBUTE_UNUSED)
       return;
     }
 
-  name = input_line_pointer;
-  name_end = get_symbol_end ();
+  name_end = get_symbol_name (&name);
 
   (void) add_ecoff_symbol ((const char *) NULL, st_Block, sc_Text,
 			   symbol_find_or_make (name),
 			   (bfd_vma) 0, (symint_t) 0, (symint_t) 0);
 
-  *input_line_pointer = name_end;
+  (void) restore_line_pointer (name_end);
 
   /* The line number follows, but we don't use it.  */
   (void) get_absolute_expression ();
@@ -2472,8 +2468,7 @@ ecoff_directive_bend (int ignore ATTRIBUTE_UNUSED)
       return;
     }
 
-  name = input_line_pointer;
-  name_end = get_symbol_end ();
+  name_end = get_symbol_name (&name);
 
   /* The value is the distance between the .bend directive and the
      corresponding symbol.  We fill in the offset when we write out
@@ -2485,7 +2480,7 @@ ecoff_directive_bend (int ignore ATTRIBUTE_UNUSED)
     (void) add_ecoff_symbol ((const char *) NULL, st_End, sc_Text, endsym,
 			     (bfd_vma) 0, (symint_t) 0, (symint_t) 0);
 
-  *input_line_pointer = name_end;
+  restore_line_pointer (name_end);
 
   /* The line number follows, but we don't use it.  */
   (void) get_absolute_expression ();
@@ -2519,8 +2514,7 @@ ecoff_directive_def (int ignore ATTRIBUTE_UNUSED)
 
   SKIP_WHITESPACE ();
 
-  name = input_line_pointer;
-  name_end = get_symbol_end ();
+  name_end = get_symbol_name (&name);
 
   if (coff_sym_name != (char *) NULL)
     as_warn (_(".def pseudo-op used inside of .def/.endef; ignored"));
@@ -2544,7 +2538,7 @@ ecoff_directive_def (int ignore ATTRIBUTE_UNUSED)
       coff_sym_addend = 0;
     }
 
-  *input_line_pointer = name_end;
+  restore_line_pointer (name_end);
 
   demand_empty_rest_of_line ();
 }
@@ -2757,12 +2751,11 @@ ecoff_directive_tag (int ignore ATTRIBUTE_UNUSED)
       return;
     }
 
-  name = input_line_pointer;
-  name_end = get_symbol_end ();
+  name_end = get_symbol_name (&name);
 
   coff_tag = xstrdup (name);
 
-  *input_line_pointer = name_end;
+  (void) restore_line_pointer (name_end);
 
   demand_empty_rest_of_line ();
 }
@@ -3004,13 +2997,12 @@ ecoff_directive_end (int ignore ATTRIBUTE_UNUSED)
       return;
     }
 
-  name = input_line_pointer;
-  name_end = get_symbol_end ();
+  name_end = get_symbol_name (&name);
 
   if (name == input_line_pointer)
     {
       as_warn (_(".end directive has no name"));
-      *input_line_pointer = name_end;
+      (void) restore_line_pointer (name_end);
       demand_empty_rest_of_line ();
       return;
     }
@@ -3031,7 +3023,7 @@ ecoff_directive_end (int ignore ATTRIBUTE_UNUSED)
 
   cur_proc_ptr = (proc_t *) NULL;
 
-  *input_line_pointer = name_end;
+  (void) restore_line_pointer (name_end);
   demand_empty_rest_of_line ();
 }
 
@@ -3053,20 +3045,19 @@ ecoff_directive_ent (int ignore ATTRIBUTE_UNUSED)
       return;
     }
 
-  name = input_line_pointer;
-  name_end = get_symbol_end ();
+  name_end = get_symbol_name (&name);
 
   if (name == input_line_pointer)
     {
       as_warn (_(".ent directive has no name"));
-      *input_line_pointer = name_end;
+      (void) restore_line_pointer (name_end);
       demand_empty_rest_of_line ();
       return;
     }
 
   add_procedure (name);
 
-  *input_line_pointer = name_end;
+  (void) restore_line_pointer (name_end);
 
   /* The .ent directive is sometimes followed by a number.  I'm not
      really sure what the number means.  I don't see any way to store
@@ -3095,10 +3086,9 @@ ecoff_directive_extern (int ignore ATTRIBUTE_UNUSED)
   symbolS *symbolp;
   valueT size;
 
-  name = input_line_pointer;
-  c = get_symbol_end ();
+  c = get_symbol_name (&name);
   symbolp = symbol_find_or_make (name);
-  *input_line_pointer = c;
+  (void) restore_line_pointer (c);
 
   S_SET_EXTERNAL (symbolp);
 
@@ -3348,10 +3338,9 @@ ecoff_directive_weakext (int ignore ATTRIBUTE_UNUSED)
   symbolS *symbolP;
   expressionS exp;
 
-  name = input_line_pointer;
-  c = get_symbol_end ();
+  c = get_symbol_name (&name);
   symbolP = symbol_find_or_make (name);
-  *input_line_pointer = c;
+  (void) restore_line_pointer (c);
 
   SKIP_WHITESPACE ();
 
@@ -3489,11 +3478,9 @@ ecoff_stab (segT sec ATTRIBUTE_UNUSED,
 	  return;
 	}
 
-      name = input_line_pointer;
-      name_end = get_symbol_end ();
-
+      name_end = get_symbol_name (&name);
       sym = symbol_find_or_make (name);
-      *input_line_pointer = name_end;
+      (void) restore_line_pointer (name_end);
 
       value = 0;
       addend = 0;
@@ -3623,7 +3610,7 @@ ecoff_add_bytes (char **buf,
   if (need < PAGE_SIZE)
     need = PAGE_SIZE;
   want = (*bufend - *buf) + need;
-  *buf = (char *) xrealloc (*buf, want);
+  *buf = XRESIZEVEC (char, *buf, want);
   *bufend = *buf + want;
   return *buf + at;
 }
@@ -4704,7 +4691,7 @@ ecoff_build_debug (HDRR *hdr,
 
   /* Build the symbolic information.  */
   offset = 0;
-  buf = (char *) xmalloc (PAGE_SIZE);
+  buf = XNEWVEC (char, PAGE_SIZE);
   bufend = buf + PAGE_SIZE;
 
   /* Build the line number information.  */
@@ -4863,7 +4850,7 @@ allocate_scope (void)
 
 #else
 
-  ptr = (scope_t *) xmalloc (sizeof (scope_t));
+  ptr = XNEW (scope_t);
 
 #endif
 
@@ -4912,7 +4899,7 @@ allocate_vlinks (void)
 
 #else
 
-  ptr = (vlinks_t *) xmalloc (sizeof (vlinks_t));
+  ptr = XNEW (vlinks_t);
 
 #endif
 
@@ -4946,7 +4933,7 @@ allocate_shash (void)
 
 #else
 
-  ptr = (shash_t *) xmalloc (sizeof (shash_t));
+  ptr = XNEW (shash_t);
 
 #endif
 
@@ -4980,7 +4967,7 @@ allocate_thash (void)
 
 #else
 
-  ptr = (thash_t *) xmalloc (sizeof (thash_t));
+  ptr = XNEW (thash_t);
 
 #endif
 
@@ -5020,7 +5007,7 @@ allocate_tag (void)
 
 #else
 
-  ptr = (tag_t *) xmalloc (sizeof (tag_t));
+  ptr = XNEW (tag_t);
 
 #endif
 
@@ -5069,7 +5056,7 @@ allocate_forward (void)
 
 #else
 
-  ptr = (forward_t *) xmalloc (sizeof (forward_t));
+  ptr = XNEW (forward_t);
 
 #endif
 
@@ -5109,7 +5096,7 @@ allocate_thead (void)
 
 #else
 
-  ptr = (thead_t *) xmalloc (sizeof (thead_t));
+  ptr = XNEW (thead_t);
 
 #endif
 
@@ -5156,7 +5143,7 @@ allocate_lineno_list (void)
 
 #else
 
-  ptr = (lineno_list_t *) xmalloc (sizeof (lineno_list_t));
+  ptr = XNEW (lineno_list_t);
 
 #endif
 
@@ -5191,10 +5178,10 @@ void
 ecoff_generate_asm_lineno (void)
 {
   unsigned int lineno;
-  char *filename;
+  const char *filename;
   lineno_list_t *list;
 
-  as_where (&filename, &lineno);
+  filename = as_where (&lineno);
 
   if (current_stabs_filename == (char *) NULL
       || filename_cmp (current_stabs_filename, filename))

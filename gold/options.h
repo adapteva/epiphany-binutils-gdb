@@ -1,6 +1,6 @@
 // options.h -- handle command line options for gold  -*- C++ -*-
 
-// Copyright (C) 2006-2015 Free Software Foundation, Inc.
+// Copyright (C) 2006-2016 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -644,6 +644,11 @@ class General_options
 	      N_("Allow unresolved references in shared libraries"),
 	      N_("Do not allow unresolved references in shared libraries"));
 
+  DEFINE_bool(apply_dynamic_relocs, options::TWO_DASHES, '\0', true,
+	      N_("Apply link-time values for dynamic relocations (default)"),
+	      N_("(aarch64 only) Do not apply link-time values "
+	         "for dynamic relocations"));
+
   DEFINE_bool(as_needed, options::TWO_DASHES, '\0', false,
 	      N_("Only set DT_NEEDED for shared libraries if used"),
 	      N_("Always DT_NEEDED for shared libraries"));
@@ -697,8 +702,8 @@ class General_options
 
   DEFINE_enum(compress_debug_sections, options::TWO_DASHES, '\0', "none",
 	      N_("Compress .debug_* sections in the output file"),
-	      ("[none,zlib]"),
-	      {"none", "zlib"});
+	      ("[none,zlib,zlib-gnu,zlib-gabi]"),
+	      {"none", "zlib", "zlib-gnu", "zlib-gabi"});
 
   DEFINE_bool(copy_dt_needed_entries, options::TWO_DASHES, '\0', false,
 	      N_("Not supported"),
@@ -828,6 +833,10 @@ class General_options
 		 N_("(ARM only) Rewrite BX rn branch to ARMv4 interworking "
 		    "veneer"),
 		 NULL);
+
+  DEFINE_bool(long_plt, options::TWO_DASHES, '\0', false,
+	      N_("(ARM only) Generate long PLT entries"),
+	      N_("(ARM only) Do not generate long PLT entries"));
 
   DEFINE_bool(g, options::EXACTLY_ONE_DASH, '\0', false,
 	      N_("Ignored"), NULL);
@@ -981,6 +990,10 @@ class General_options
 		    N_("Create a position independent executable"),
 		    N_("Do not create a position independent executable"),
 		    false);
+
+  DEFINE_bool(pic_veneer, options::TWO_DASHES, '\0', false,
+	      N_("Force PIC sequences for ARM/Thumb interworking veneers"),
+	      NULL);
 
   DEFINE_bool(pipeline_knowledge, options::ONE_DASH, '\0', false,
 	      NULL, N_("(ARM only) Ignore for backward compatibility"));
@@ -1323,7 +1336,7 @@ class General_options
   DEFINE_bool(origin, options::DASH_Z, '\0', false,
 	      N_("Mark DSO to indicate that needs immediate $ORIGIN "
 		 "processing at runtime"), NULL);
-  DEFINE_bool(relro, options::DASH_Z, '\0', false,
+  DEFINE_bool(relro, options::DASH_Z, '\0', DEFAULT_LD_Z_RELRO,
 	      N_("Where possible mark variables read-only after relocation"),
 	      N_("Don't mark variables read-only after relocation"));
   DEFINE_bool(text, options::DASH_Z, '\0', false,

@@ -1,5 +1,5 @@
 /* tc-z8k.c -- Assemble code for the Zilog Z800n
-   Copyright (C) 1992-2015 Free Software Foundation, Inc.
+   Copyright (C) 1992-2016 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -162,7 +162,7 @@ md_begin (void)
   for (idx = 0; md_pseudo_table[idx].poc_name; idx++)
     {
       opcode_entry_type *fake_opcode;
-      fake_opcode = (opcode_entry_type *) malloc (sizeof (opcode_entry_type));
+      fake_opcode = XNEW (opcode_entry_type);
       fake_opcode->name = md_pseudo_table[idx].poc_name;
       fake_opcode->func = (void *) (md_pseudo_table + idx);
       fake_opcode->opcode = 250;
@@ -380,7 +380,7 @@ checkfor (char *ptr, char what)
 /* Make sure the mode supplied is the size of a word.  */
 
 static void
-regword (int mode, char *string)
+regword (int mode, const char *string)
 {
   int ok;
 
@@ -394,7 +394,7 @@ regword (int mode, char *string)
 /* Make sure the mode supplied is the size of an address.  */
 
 static void
-regaddr (int mode, char *string)
+regaddr (int mode, const char *string)
 {
   int ok;
 
@@ -407,7 +407,7 @@ regaddr (int mode, char *string)
 
 struct ctrl_names {
   int value;
-  char *name;
+  const char *name;
 };
 
 static struct ctrl_names ctrl_table[] = {
@@ -450,7 +450,7 @@ get_ctrl_operand (char **ptr, struct z8k_op *mode, unsigned int dst ATTRIBUTE_UN
 
 struct flag_names {
   int value;
-  char *name;
+  const char *name;
 };
 
 static struct flag_names flag_table[] = {
@@ -500,7 +500,7 @@ get_flags_operand (char **ptr, struct z8k_op *mode, unsigned int dst ATTRIBUTE_U
 
 struct interrupt_names {
   int value;
-  char *name;
+  const char *name;
 };
 
 static struct interrupt_names intr_table[] = {
@@ -564,7 +564,7 @@ get_interrupt_operand (char **ptr, struct z8k_op *mode, unsigned int dst ATTRIBU
 
 struct cc_names {
   int value;
-  char *name;
+  const char *name;
 };
 
 static struct cc_names table[] = {
@@ -956,9 +956,8 @@ get_specific (opcode_entry_type *opcode, op_type *operands)
 static char buffer[20];
 
 static void
-newfix (int ptr, int type, int size, expressionS *operand)
+newfix (int ptr, bfd_reloc_code_real_type type, int size, expressionS *operand)
 {
-  int is_pcrel = 0;
   fixS *fixP;
 
   /* Size is in nibbles.  */
@@ -966,12 +965,17 @@ newfix (int ptr, int type, int size, expressionS *operand)
       || operand->X_op_symbol
       || operand->X_add_number)
     {
+      int is_pcrel;
       switch(type)
         {
         case BFD_RELOC_8_PCREL:
         case BFD_RELOC_Z8K_CALLR:
         case BFD_RELOC_Z8K_DISP7:
           is_pcrel = 1;
+	  break;
+	default:
+	  is_pcrel = 0;
+	  break;
         }
       fixP = fix_new_exp (frag_now, ptr, size / 2,
                           operand, is_pcrel, type);
@@ -981,7 +985,8 @@ newfix (int ptr, int type, int size, expressionS *operand)
 }
 
 static char *
-apply_fix (char *ptr, int type, expressionS *operand, int size)
+apply_fix (char *ptr, bfd_reloc_code_real_type type, expressionS *operand,
+	   int size)
 {
   long n = operand->X_add_number;
 
@@ -1285,7 +1290,7 @@ md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
 
 /* Various routines to kill one day.  */
 
-char *
+const char *
 md_atof (int type, char *litP, int *sizeP)
 {
   return ieee_md_atof (type, litP, sizeP, TRUE);
@@ -1303,7 +1308,7 @@ struct option md_longopts[] =
 size_t md_longopts_size = sizeof (md_longopts);
 
 int
-md_parse_option (int c, char *arg)
+md_parse_option (int c, const char *arg)
 {
   switch (c)
     {
@@ -1357,8 +1362,8 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED,
 {
   arelent *reloc;
 
-  reloc = xmalloc (sizeof (*reloc));
-  reloc->sym_ptr_ptr = xmalloc (sizeof (asymbol *));
+  reloc = XNEW (arelent);
+  reloc->sym_ptr_ptr = XNEW (asymbol *);
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc->addend = fixp->fx_offset;

@@ -1,6 +1,6 @@
 // script-sections.h -- linker script SECTIONS for gold   -*- C++ -*-
 
-// Copyright (C) 2008-2015 Free Software Foundation, Inc.
+// Copyright (C) 2008-2016 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -240,7 +240,7 @@ class Script_sections
 
   // Find a memory region that should be used by a given output section.
   Memory_region*
-  find_memory_region(Output_section_definition*, bool,
+  find_memory_region(Output_section_definition*, bool, bool,
 		     Output_section_definition**);
 
   // Returns true if the provide block of memory is contained

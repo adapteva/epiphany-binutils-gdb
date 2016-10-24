@@ -1,6 +1,6 @@
 /* tc-avr.c -- Assembler code for the ATMEL AVR
 
-   Copyright (C) 1999-2015 Free Software Foundation, Inc.
+   Copyright (C) 1999-2016 Free Software Foundation, Inc.
    Contributed by Denis Chertykov <denisc@overta.ru>
 
    This file is part of GAS, the GNU Assembler.
@@ -37,9 +37,9 @@ struct avr_property_record_link
 
 struct avr_opcodes_s
 {
-  char *        name;
-  char *        constraints;
-  char *        opcode;
+  const char *        name;
+  const char *        constraints;
+  const char *        opcode;
   int           insn_size;		/* In words.  */
   int           isa;
   unsigned int  bin_opcode;
@@ -61,7 +61,7 @@ const char line_separator_chars[] = "$";
 const char *md_shortopts = "m:";
 struct mcu_type_s
 {
-  char *name;
+  const char *name;
   int isa;
   int mach;
 };
@@ -380,7 +380,7 @@ const pseudo_typeS md_pseudo_table[] =
 
 struct exp_mod_s
 {
-  char *                    name;
+  const char *                    name;
   bfd_reloc_code_real_type  reloc;
   bfd_reloc_code_real_type  neg_reloc;
   int                       have_pm;
@@ -555,26 +555,16 @@ avr_set_arch (int dummy ATTRIBUTE_UNUSED)
 }
 
 int
-md_parse_option (int c, char *arg)
+md_parse_option (int c, const char *arg)
 {
   switch (c)
     {
     case OPTION_MMCU:
       {
 	int i;
-	char *s = alloca (strlen (arg) + 1);
-
-	{
-	  char *t = s;
-	  char *arg1 = arg;
-
-	  do
-	    *t = TOLOWER (*arg1++);
-	  while (*t++);
-	}
 
 	for (i = 0; mcu_types[i].name; ++i)
-	  if (strcmp (mcu_types[i].name, s) == 0)
+	  if (strcasecmp (mcu_types[i].name, arg) == 0)
 	    break;
 
 	if (!mcu_types[i].name)
@@ -587,12 +577,12 @@ md_parse_option (int c, char *arg)
 	   type - this for allows passing -mmcu=... via gcc ASM_SPEC as well
 	   as .arch ... in the asm output at the same time.  */
 	if (avr_mcu == &default_mcu || avr_mcu->mach == mcu_types[i].mach)
-      {
-        specified_mcu.name = mcu_types[i].name;
-        specified_mcu.isa  |= mcu_types[i].isa;
-        specified_mcu.mach = mcu_types[i].mach;
-        avr_mcu = &specified_mcu;
-      }
+	  {
+	    specified_mcu.name = mcu_types[i].name;
+	    specified_mcu.isa  |= mcu_types[i].isa;
+	    specified_mcu.mach = mcu_types[i].mach;
+	    avr_mcu = &specified_mcu;
+	  }
 	else
 	  as_fatal (_("redefinition of mcu type `%s' to `%s'"),
 		    avr_mcu->name, mcu_types[i].name);
@@ -627,7 +617,7 @@ md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
   return NULL;
 }
 
-char *
+const char *
 md_atof (int type, char *litP, int *sizeP)
 {
   return ieee_md_atof (type, litP, sizeP, FALSE);
@@ -860,7 +850,7 @@ avr_ldi_expression (expressionS *exp)
 static unsigned int
 avr_operand (struct avr_opcodes_s *opcode,
 	     int where,
-	     char *op,
+	     const char *op,
 	     char **line)
 {
   expressionS op_expr;
@@ -998,7 +988,7 @@ avr_operand (struct avr_opcodes_s *opcode,
       if (*str == '+')
 	{
 	  ++str;
-          char *s;
+          const char *s;
           for (s = opcode->opcode; *s; ++s)
             {
               if (*s == '+')
@@ -1145,7 +1135,7 @@ avr_operand (struct avr_opcodes_s *opcode,
 static unsigned int
 avr_operands (struct avr_opcodes_s *opcode, char **line)
 {
-  char *op = opcode->constraints;
+  const char *op = opcode->constraints;
   unsigned int bin = opcode->bin_opcode;
   char *frag = frag_more (opcode->insn_size * 2);
   char *str = *line;
@@ -1230,7 +1220,7 @@ valueT
 md_section_align (asection *seg, valueT addr)
 {
   int align = bfd_get_section_alignment (stdoutput, seg);
-  return ((addr + (1 << align) - 1) & (-1 << align));
+  return ((addr + (1 << align) - 1) & (-1UL << align));
 }
 
 /* If you define this macro, it should return the offset between the
@@ -1618,6 +1608,7 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED,
 	      fixS *fixp)
 {
   arelent *reloc;
+  bfd_reloc_code_real_type code = fixp->fx_r_type;
 
   if (fixp->fx_subsy != NULL)
     {
@@ -1625,13 +1616,27 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED,
       return NULL;
     }
 
-  reloc = xmalloc (sizeof (arelent));
+  reloc = XNEW (arelent);
 
-  reloc->sym_ptr_ptr = xmalloc (sizeof (asymbol *));
+  reloc->sym_ptr_ptr = XNEW (asymbol *);
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
 
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
-  reloc->howto = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
+
+  if ((fixp->fx_r_type == BFD_RELOC_32) && (fixp->fx_pcrel))
+    {
+      if (seg->use_rela_p)
+        fixp->fx_offset -= md_pcrel_from_section (fixp, seg);
+      else
+        fixp->fx_offset = reloc->address;
+
+      code = BFD_RELOC_32_PCREL;
+    }
+
+  reloc->addend = fixp->fx_offset;
+
+  reloc->howto = bfd_reloc_type_lookup (stdoutput, code);
+
   if (reloc->howto == (reloc_howto_type *) NULL)
     {
       as_bad_where (fixp->fx_file, fixp->fx_line,
@@ -1644,7 +1649,6 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED,
       || fixp->fx_r_type == BFD_RELOC_VTABLE_ENTRY)
     reloc->address = fixp->fx_offset;
 
-  reloc->addend = fixp->fx_offset;
 
   return reloc;
 }
@@ -1727,8 +1731,6 @@ const exp_mod_data_t exp_mod_data[] =
   { "hi8",  1, BFD_RELOC_AVR_8_HI,  "`hi8' "  },
   { "hlo8", 1, BFD_RELOC_AVR_8_HLO, "`hlo8' " },
   { "hh8",  1, BFD_RELOC_AVR_8_HLO, "`hh8' "  },
-  /* End of list.  */
-  { NULL, 0, 0, NULL }
 };
 
 /* Parse special CONS expression: pm (expression) or alternatively
@@ -1738,16 +1740,17 @@ const exp_mod_data_t exp_mod_data[] =
 const exp_mod_data_t *
 avr_parse_cons_expression (expressionS *exp, int nbytes)
 {
-  const exp_mod_data_t *pexp = &exp_mod_data[0];
   char *tmp;
+  unsigned int i;
 
   tmp = input_line_pointer = skip_space (input_line_pointer);
 
   /* The first entry of exp_mod_data[] contains an entry if no
      expression modifier is present.  Skip it.  */
 
-  for (pexp++; pexp->name; pexp++)
+  for (i = 0; i < ARRAY_SIZE (exp_mod_data); i++)
     {
+      const exp_mod_data_t *pexp = &exp_mod_data[i];
       int len = strlen (pexp->name);
 
       if (nbytes == pexp->nbytes
@@ -1979,7 +1982,7 @@ avr_output_property_record (char * const frag_base, char *frag_ptr,
 
     case RECORD_ALIGN_AND_FILL:
       md_number_to_chars (frag_ptr, record->data.align.bytes, 4);
-      md_number_to_chars (frag_ptr, record->data.align.fill, 4);
+      md_number_to_chars (frag_ptr + 4, record->data.align.fill, 4);
       frag_ptr += 8;
       break;
 
@@ -2024,11 +2027,14 @@ avr_handle_align (fragS *fragP)
          alignment mechanism.  */
       if ((fragP->fr_type == rs_align
            || fragP->fr_type == rs_align_code)
-          && fragP->fr_address > 0
           && fragP->fr_offset > 0)
         {
+          char *p = fragP->fr_literal + fragP->fr_fix;
+
           fragP->tc_frag_data.is_align = TRUE;
           fragP->tc_frag_data.alignment = fragP->fr_offset;
+          fragP->tc_frag_data.fill = *p;
+          fragP->tc_frag_data.has_fill = (fragP->tc_frag_data.fill != 0);
         }
 
       if (fragP->fr_type == rs_org && fragP->fr_offset > 0)
@@ -2062,8 +2068,8 @@ create_record_for_frag (segT sec, fragS *fragP)
 {
   struct avr_property_record_link *prop_rec_link;
 
-  prop_rec_link = xmalloc (sizeof (struct avr_property_record_link));
-  memset (prop_rec_link, 0, sizeof (*prop_rec_link));
+  prop_rec_link = XCNEW (struct avr_property_record_link);
+  gas_assert (fragP->fr_next != NULL);
 
   if (fragP->tc_frag_data.is_org)
     {
@@ -2080,7 +2086,7 @@ create_record_for_frag (segT sec, fragS *fragP)
     }
   else
     {
-      prop_rec_link->record.offset = fragP->fr_address;
+      prop_rec_link->record.offset = fragP->fr_next->fr_address;
       prop_rec_link->record.section = sec;
 
       gas_assert (fragP->tc_frag_data.is_align);

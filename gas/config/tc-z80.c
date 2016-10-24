@@ -1,5 +1,5 @@
 /* tc-z80.c -- Assemble code for the Zilog Z80 and ASCII R800
-   Copyright (C) 2005-2015 Free Software Foundation, Inc.
+   Copyright (C) 2005-2016 Free Software Foundation, Inc.
    Contributed by Arnold Metselaar <arnold_m@operamail.com>
 
    This file is part of GAS, the GNU Assembler.
@@ -81,7 +81,7 @@ static int ins_err = INS_R800;
 static int ins_used = INS_Z80;
 
 int
-md_parse_option (int c, char* arg ATTRIBUTE_UNUSED)
+md_parse_option (int c, const char* arg ATTRIBUTE_UNUSED)
 {
   switch (c)
     {
@@ -163,7 +163,7 @@ static symbolS * zero;
 
 struct reg_entry
 {
-  char* name;
+  const char* name;
   int number;
 };
 #define R_STACKABLE (0x80)
@@ -249,7 +249,7 @@ md_begin (void)
         }
     }
   p = input_line_pointer;
-  input_line_pointer = "0";
+  input_line_pointer = (char *) "0";
   nul.X_md=0;
   expression (& nul);
   input_line_pointer = p;
@@ -332,6 +332,7 @@ z80_start_line_hook (void)
   /* Check for <label>[:] [.](EQU|DEFL) <value>.  */
   if (is_name_beginner (*input_line_pointer))
     {
+      char *name;
       char c, *rest, *line_start;
       int len;
 
@@ -339,7 +340,7 @@ z80_start_line_hook (void)
       if (ignore_input ())
 	return 0;
 
-      c = get_symbol_end ();
+      c = get_symbol_name (&name);
       rest = input_line_pointer + 1;
 
       if (*rest == ':')
@@ -364,13 +365,13 @@ z80_start_line_hook (void)
 	    }
 	  input_line_pointer = rest + len - 1;
 	  /* Allow redefining with "DEFL" (len == 4), but not with "EQU".  */
-	  equals (line_start, len == 4);
+	  equals (name, len == 4);
 	  return 1;
 	}
       else
 	{
 	  /* Restore line and pointer.  */
-	  *input_line_pointer = c;
+	  (void) restore_line_pointer (c);
 	  input_line_pointer = line_start;
 	}
     }
@@ -383,7 +384,7 @@ md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
   return NULL;
 }
 
-char *
+const char *
 md_atof (int type ATTRIBUTE_UNUSED, char *litP ATTRIBUTE_UNUSED,
 	 int *sizeP ATTRIBUTE_UNUSED)
 {
@@ -407,9 +408,9 @@ typedef const char * (asfunc)(char, char, const char*);
 
 typedef struct _table_t
 {
-  char* name;
-  char prefix;
-  char opcode;
+  const char* name;
+  unsigned char prefix;
+  unsigned char opcode;
   asfunc * fp;
 } table_t;
 
@@ -524,14 +525,14 @@ is_indir (const char *s)
 }
 
 /* Check whether a symbol involves a register.  */
-static int 
+static int
 contains_register(symbolS *sym)
 {
   if (sym)
   {
     expressionS * ex = symbol_get_value_expression(sym);
-    return (O_register == ex->X_op) 
-      || (ex->X_add_symbol && contains_register(ex->X_add_symbol)) 
+    return (O_register == ex->X_op)
+      || (ex->X_add_symbol && contains_register(ex->X_add_symbol))
       || (ex->X_op_symbol && contains_register(ex->X_op_symbol));
   }
   else
@@ -693,7 +694,7 @@ void z80_cons_fix_new (fragS *frag_p, int offset, int nbytes, expressionS *exp)
       BFD_RELOC_32
     };
 
-  if (nbytes < 1 || nbytes > 4) 
+  if (nbytes < 1 || nbytes > 4)
     {
       as_bad (_("unsupported BFD relocation size %u"), nbytes);
     }
@@ -1822,7 +1823,7 @@ const pseudo_typeS md_pseudo_table[] =
   { "d32", cons, 4},
   { "def24", cons, 3},
   { "def32", cons, 4},
-  { "defb", emit_data, 1},  
+  { "defb", emit_data, 1},
   { "defs", s_space, 1}, /* Synonym for ds on some assemblers.  */
   { "defw", cons, 2},
   { "ds",   s_space, 1}, /* Fill with bytes rather than words.  */
@@ -1929,12 +1930,12 @@ md_assemble (char* str)
     }
   else if ((*p) && (!ISSPACE (*p)))
     as_bad (_("syntax error"));
-  else 
+  else
     {
       buf[i] = 0;
       p = skip_space (p);
       key = buf;
-      
+
       insp = bsearch (&key, instab, ARRAY_SIZE (instab),
 		    sizeof (instab[0]), key_cmp);
       if (!insp)
@@ -1997,7 +1998,7 @@ md_apply_fix (fixS * fixP, valueT* valP, segT seg ATTRIBUTE_UNUSED)
       if (val > 255 || val < -128)
 	as_warn_where (fixP->fx_file, fixP->fx_line, _("overflow"));
       *p_lit++ = val;
-      fixP->fx_no_overflow = 1; 
+      fixP->fx_no_overflow = 1;
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = 1;
       break;
@@ -2005,7 +2006,7 @@ md_apply_fix (fixS * fixP, valueT* valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_16:
       *p_lit++ = val;
       *p_lit++ = (val >> 8);
-      fixP->fx_no_overflow = 1; 
+      fixP->fx_no_overflow = 1;
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = 1;
       break;
@@ -2014,7 +2015,7 @@ md_apply_fix (fixS * fixP, valueT* valP, segT seg ATTRIBUTE_UNUSED)
       *p_lit++ = val;
       *p_lit++ = (val >> 8);
       *p_lit++ = (val >> 16);
-      fixP->fx_no_overflow = 1; 
+      fixP->fx_no_overflow = 1;
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = 1;
       break;
@@ -2057,8 +2058,8 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED , fixS *fixp)
       return NULL;
     }
 
-  reloc               = xmalloc (sizeof (arelent));
-  reloc->sym_ptr_ptr  = xmalloc (sizeof (asymbol *));
+  reloc               = XNEW (arelent);
+  reloc->sym_ptr_ptr  = XNEW (asymbol *);
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address      = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc->howto        = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
