@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
@@ -24,6 +24,10 @@ This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
 #ifndef EPIPHANY_CPU_H
 #define EPIPHANY_CPU_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define CGEN_ARCH epiphany
 
@@ -116,11 +120,6 @@ typedef enum insn_fop {
 typedef enum insn_fopexn {
   OPF_FMAX = 7
 } INSN_FOPEXN;
-
-/* Enum declaration for multiply integer operators.  */
-typedef enum insn_iopmul {
-  OPBM_MUL = 2, OPBM_UMUL = 3
-} INSN_IOPMUL;
 
 /* Enum declaration for immediate operators.  */
 typedef enum insn_immop {
@@ -518,5 +517,9 @@ extern CGEN_KEYWORD epiphany_cgen_opval_crmesh_names;
 extern const CGEN_HW_ENTRY epiphany_cgen_hw_table[];
 
 
+
+   #ifdef __cplusplus
+   }
+   #endif
 
 #endif /* EPIPHANY_CPU_H */

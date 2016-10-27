@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
@@ -24,6 +24,10 @@ This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
 #ifndef EPIPHANY_OPC_H
 #define EPIPHANY_OPC_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* -- opc.h */
 
@@ -143,14 +147,14 @@ typedef enum cgen_insn_type {
  , EPIPHANY_INSN_F_SUBF32, EPIPHANY_INSN_F_MULF16, EPIPHANY_INSN_F_MULF32, EPIPHANY_INSN_F_MADDF16
  , EPIPHANY_INSN_F_MADDF32, EPIPHANY_INSN_F_MSUBF16, EPIPHANY_INSN_F_MSUBF32, EPIPHANY_INSN_F_ABSF16
  , EPIPHANY_INSN_F_ABSF32, EPIPHANY_INSN_F_LOATF16, EPIPHANY_INSN_F_LOATF32, EPIPHANY_INSN_F_IXF16
- , EPIPHANY_INSN_F_IXF32, EPIPHANY_INSN_FMAX, EPIPHANY_INSN_UMUL, EPIPHANY_INSN_MUL
+ , EPIPHANY_INSN_F_IXF32, EPIPHANY_INSN_FMAX
 } CGEN_INSN_TYPE;
 
 /* Index of `invalid' insn place holder.  */
 #define CGEN_INSN_INVALID EPIPHANY_INSN_INVALID
 
 /* Total number of insns in table.  */
-#define MAX_INSNS ((int) EPIPHANY_INSN_MUL + 1)
+#define MAX_INSNS ((int) EPIPHANY_INSN_FMAX + 1)
 
 /* This struct records data prior to insertion or after extraction.  */
 struct cgen_fields
@@ -241,5 +245,9 @@ struct cgen_fields
 {\
 }
 
+
+   #ifdef __cplusplus
+   }
+   #endif
 
 #endif /* EPIPHANY_OPC_H */
