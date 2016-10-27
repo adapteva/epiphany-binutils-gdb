@@ -1,5 +1,10 @@
 2016-10-27  Ola Jeppsson  <ola@adapteva.com>
 
+	* config.in: Regenerated.
+	* configure: Regenerated.
+
+2016-10-27  Ola Jeppsson  <ola@adapteva.com>
+
 	* arch.c: Regenerated.
 	* arch.h: Regenerated.
 	* cpu.c: Regenerated.
