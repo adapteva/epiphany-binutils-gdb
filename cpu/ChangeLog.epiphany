@@ -1,3 +1,9 @@
+2016-10-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany.cpu (insn-iopmul): Remove enum.
+	(dni MUL): Remove instruction.
+	(dni UMUL): Remove instruction.
+
 2016-07-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (h-int-idlebit): Remove hardware.
