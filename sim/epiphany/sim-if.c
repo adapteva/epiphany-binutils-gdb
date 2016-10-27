@@ -173,13 +173,16 @@ static const OPTION options_epiphany[] =
 static void
 free_state (SIM_DESC sd)
 {
+#if WITH_EMESH_SIM
+  if (STATE_ESIM (sd) != NULL)
+    {
+      es_fini (STATE_ESIM (sd));
+      STATE_CPU(sd, 0) = sd->orig_cpu[0];
+    }
+#endif
   if (STATE_MODULES (sd) != NULL)
     sim_module_uninstall (sd);
-#if WITH_EMESH_SIM
-  es_fini(STATE_ESIM(sd));
-#else
   sim_cpu_free_all (sd);
-#endif
   sim_state_free (sd);
 }
 
@@ -326,8 +329,11 @@ epiphany_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 SIM_RC
 sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes)
 {
-  static unsigned freed = 0; /* Original sim_cpu struct is malloced */
   sim_cpu *new_cpu;
+
+  /* Save pointer to originally allocated cpu struct for generic
+   * sim_close (). We restore it in epiphany_sim_close ()  */
+  sd->orig_cpu[0] = STATE_CPU(sd, 0);
 
   if (! (new_cpu = es_set_cpu_state(STATE_ESIM(sd), STATE_CPU(sd, 0),
 			sizeof(sim_cpu) + extra_bytes)))
@@ -336,12 +342,8 @@ sim_esim_cpu_relocate (SIM_DESC sd, int extra_bytes)
       return SIM_RC_FAIL;
     }
 
-  if (!freed)
-    {
-      sim_cpu_free(STATE_CPU(sd, 0));
-      freed = 1;
-    }
-  STATE_CPU(sd, 0) = new_cpu;
+  STATE_CPU (sd, 0) = new_cpu;
+
   return SIM_RC_OK;
 }
 
@@ -589,7 +591,7 @@ SIM_DESC
 sim_open (SIM_OPEN_KIND kind,
 	  host_callback *callback,
 	  struct bfd *abfd,
-	  char **argv)
+	  char * const *argv)
 {
   SIM_DESC sd = sim_state_alloc (kind, callback);
   char c;
@@ -741,12 +743,10 @@ sim_open (SIM_OPEN_KIND kind,
 }
 
 void
-sim_close (SIM_DESC sd,
-	   int quitting)
+epiphany_sim_close (SIM_DESC sd, int quitting)
 {
-  epiphany_cgen_cpu_close (CPU_CPU_DESC (STATE_CPU (sd, 0)));
 #if WITH_EMESH_SIM
-  if (es_initialized(STATE_ESIM(sd)) == ES_OK)
+  if (es_initialized (STATE_ESIM(sd)) == ES_OK)
     {
       if (STATE_VERBOSE_P (sd))
         sim_io_eprintf(sd, "ESIM: Waiting for other cores...");
@@ -755,10 +755,24 @@ sim_close (SIM_DESC sd,
 
       if (STATE_VERBOSE_P (sd))
         sim_io_eprintf(sd, " done.\n");
+
+      es_fini (STATE_ESIM (sd));
     }
+
+  /* Restore pointer to originally allocated cpu struct */
+  STATE_CPU (sd, 0) = sd->orig_cpu[0];
+
+  /* Fake it for generic sim_close () */
+  {
+    CGEN_CPU_DESC cd = epiphany_cgen_cpu_open_1 (STATE_ARCHITECTURE (sd)->printable_name,
+						 CGEN_ENDIAN_LITTLE);
+    SIM_CPU *cpu = STATE_CPU (sd, 0);
+    CPU_CPU_DESC (cpu) = cd;
+    CPU_DISASSEMBLER (cpu) = sim_cgen_disassemble_insn;
+    epiphany_cgen_init_dis (cd);
+    cgen_init (sd);
+  }
 #endif
-  sim_module_uninstall (sd);
-  free_state(sd);
 }
 
 static SIM_RC
@@ -816,8 +830,8 @@ setup_workgroup_cfg (SIM_DESC sd)
 SIM_RC
 sim_create_inferior (SIM_DESC sd,
 		     struct bfd *abfd,
-		     char **argv,
-		     char **envp)
+		     char * const *argv,
+		     char * const *envp)
 {
   SIM_CPU *current_cpu = STATE_CPU (sd, 0);
   SIM_ADDR addr;

@@ -9,9 +9,8 @@ SIM_AC_COMMON
 # For dv-rv and rvdummy.
 AC_CHECK_HEADERS(sys/socket.h sys/select.h limits.h sys/param.h)
 
-SIM_AC_OPTION_ENDIAN(LITTLE_ENDIAN)
+SIM_AC_OPTION_ENDIAN(LITTLE)
 SIM_AC_OPTION_ALIGNMENT(STRICT_ALIGNMENT)
-SIM_AC_OPTION_HOSTENDIAN
 SIM_AC_OPTION_SCACHE(16384)
 SIM_AC_OPTION_WARNINGS
 SIM_AC_OPTION_BITSIZE(32,31,64)
@@ -111,7 +110,7 @@ fi
 
 AC_SUBST(esim)
 AC_SUBST(esim_net)
-AC_SUBST(sim_cflags, ["${sim_cflags} ${esim_cflags}"])
+AC_SUBST(esim_cflags, ["${esim_cflags}"])
 AC_SUBST(epiphany_extra_libs, [${epiphany_extra_libs}])
 dnl end --enable-emesh-sim
 

@@ -49,6 +49,9 @@ do { \
   sim_pc_set ((cpu), (cia)); \
 } while (0)
 
+extern void epiphany_sim_close (SIM_DESC sd, int quitting);
+#define SIM_CLOSE_HOOK(...) epiphany_sim_close (__VA_ARGS__)
+
 #include "sim-base.h"
 #include "sim-fpu.h"
 #include "cgen-sim.h"
@@ -148,6 +151,8 @@ struct sim_state {
 #if WITH_EMESH_SIM
   bool external_fetch; /* True if external instruction fetch is supported */
   es_state *esim;
+  sim_cpu *orig_cpu[MAX_NR_PROCESSORS];
+
 #define STATE_ESIM(sd) (sd->esim)
 #endif
 };

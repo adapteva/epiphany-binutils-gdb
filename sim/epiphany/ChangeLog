@@ -1,3 +1,22 @@
+2016-10-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* Makefile.in (SIM_EXTRA_CFLAGS): Append @esim_cflags@
+	* configure.ac: Delete --enable-sim-cflags and sim_cflags.
+	Substitute esim_cflags directly.
+	(SIM_AC_OPTION_ENDIAN): Change LITTLE_ENDIAN to LITTLE.
+	(SIM_AC_OPTION_HOSTENDIAN): Remove.
+	* sim-if.c (free_state): Restore sd->cpu from sd->orig_cpu.
+	(sim_esim_cpu_relocate): Save originally allocated cpu to
+	sd->orig_cpu.
+	(sim_open): Mark argv const.
+	(sim_create_inferior): Mark argv and envp const.
+	(sim_close): Rename from ...
+	(epiphany_sim_close): ... to. Don't do things generic sim_close()
+	already does. Restore sd->cpu from sd->orig_cpu. Fake things for
+	generic sim_close ().
+	* sim-main.h (SIM_CLOSE_HOOK): Added.
+	(sim_state): Add orig_cpu.
+
 2016-10-20  Ola Jeppsson  <ola@adapteva.com>
 
 	* cpu.c: Regenerated.
