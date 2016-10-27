@@ -363,17 +363,6 @@
 (define-normal-insn-enum insn-fopexn "extended floating operators" () OPF_ f-opc-6-3
   (- - - - - - - FMAX))
 
-(define-normal-insn-enum
-  insn-iopmul
-  "multiply integer operators"
-  ()
-  OPBM_ f-opc-6-3
-  (
-    (MUL      2)
-    (UMUL     3)
-  )
-)
-
 ; Immediate operation secondary opcodes
 (define-normal-insn-enum insn-immop "immediate operators" () OPI_ f-opc-6-3
   (- ADD - SUB - - - TRAP) ; TRAP is special extension for simulator
@@ -3400,48 +3389,4 @@
     )
   ))
   (fmax.l fmax64 fmax64.l) ("" "-di" "-di")
-)
-
-;; UMUL
-(dni
-  umul
-  "umul"
-  () ;; TODO: (attr (MACH epiphany-v))
-  "umul $rd6,$rn6,$rm6"
-  (+ OP4_MISC OPBM_UMUL (f-opc-21-6 #x17) (f-dc-22-1 #x0) rd6 rn6 rm6)
-  (sequence ()
-    (set rd6 (mul USI rn6 rm6))
-    (set bzbit (zflag USI rd6))
-    (set bnbit 0)
-  )
-  ()
-)
-(dnmi
-  (%sym "umul.l")
-  (%str "umul.l")
-  (NO-DIS)
-  "umul.l $rd6,$rn6,$rm6"
-  (emit umul rd6 rn6 rm6)
-)
-
-;; mul
-(dni
-  mul
-  "mul"
-  () ;; TODO: (attr (MACH epiphany-v))
-  "mul $rd6,$rn6,$rm6"
-  (+ OP4_MISC OPBM_MUL (f-opc-21-6 #x17) (f-dc-22-1 #x0) rd6 rn6 rm6)
-  (sequence ()
-    (set rd6 (mul SI rn6 rm6))
-    (set bzbit (zflag SI rd6))
-    (set bnbit (nflag SI rd6))
-  )
-  ()
-)
-(dnmi
-  (%sym "mul.l")
-  (%str "mul.l")
-  (NO-DIS)
-  "mul.l $rd6,$rn6,$rm6"
-  (emit mul rd6 rn6 rm6)
 )
