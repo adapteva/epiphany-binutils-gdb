@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
@@ -1455,18 +1455,6 @@ static const CGEN_OPCODE epiphany_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RD6), ',', OP (RN6), ',', OP (RM6), 0 } },
     & ifmt_fmax, { 0x17007f }
   },
-/* umul $rd6,$rn6,$rm6 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RD6), ',', OP (RN6), ',', OP (RM6), 0 } },
-    & ifmt_fmax, { 0x17003f }
-  },
-/* mul $rd6,$rn6,$rm6 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RD6), ',', OP (RN6), ',', OP (RM6), 0 } },
-    & ifmt_fmax, { 0x17002f }
-  },
 };
 
 #undef A
@@ -2206,14 +2194,6 @@ static const CGEN_IFMT ifmt_fmax64 ATTRIBUTE_UNUSED = {
 };
 
 static const CGEN_IFMT ifmt_fmax64_l ATTRIBUTE_UNUSED = {
-  32, 32, 0x7f007f, { { F (F_OPC) }, { F (F_OPC_6_3) }, { F (F_OPC_21_6) }, { F (F_DC_22_1) }, { F (F_RD6) }, { F (F_RN6) }, { F (F_RM6) }, { 0 } }
-};
-
-static const CGEN_IFMT ifmt_umul_l ATTRIBUTE_UNUSED = {
-  32, 32, 0x7f007f, { { F (F_OPC) }, { F (F_OPC_6_3) }, { F (F_OPC_21_6) }, { F (F_DC_22_1) }, { F (F_RD6) }, { F (F_RN6) }, { F (F_RM6) }, { 0 } }
-};
-
-static const CGEN_IFMT ifmt_mul_l ATTRIBUTE_UNUSED = {
   32, 32, 0x7f007f, { { F (F_OPC) }, { F (F_OPC_6_3) }, { F (F_OPC_21_6) }, { F (F_DC_22_1) }, { F (F_RD6) }, { F (F_RN6) }, { F (F_RM6) }, { 0 } }
 };
 
@@ -3143,16 +3123,6 @@ static const CGEN_IBASE epiphany_cgen_macro_insn_table[] =
 /* fmax64.l ${rd6-di},${rn6-di},${rm6-di} */
   {
     -1, "fmax64.l", "fmax64.l", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* umul.l $rd6,$rn6,$rm6 */
-  {
-    -1, "umul.l", "umul.l", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* mul.l $rd6,$rn6,$rm6 */
-  {
-    -1, "mul.l", "mul.l", 32,
     { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
   },
 };
@@ -4259,18 +4229,6 @@ static const CGEN_OPCODE epiphany_cgen_macro_insn_opcode_table[] =
     { { MNEM, ' ', OP (RD6_DI), ',', OP (RN6_DI), ',', OP (RM6_DI), 0 } },
     & ifmt_fmax64_l, { 0x17007f }
   },
-/* umul.l $rd6,$rn6,$rm6 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RD6), ',', OP (RN6), ',', OP (RM6), 0 } },
-    & ifmt_umul_l, { 0x17003f }
-  },
-/* mul.l $rd6,$rn6,$rm6 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RD6), ',', OP (RN6), ',', OP (RM6), 0 } },
-    & ifmt_mul_l, { 0x17002f }
-  },
 };
 
 #undef A
@@ -4290,15 +4248,13 @@ static const CGEN_OPCODE epiphany_cgen_macro_insn_opcode_table[] =
    Targets are free to override CGEN_{ASM,DIS}_HASH_P in the .opc file.  */
 
 static int
-asm_hash_insn_p (insn)
-     const CGEN_INSN *insn ATTRIBUTE_UNUSED;
+asm_hash_insn_p (const CGEN_INSN *insn ATTRIBUTE_UNUSED)
 {
   return CGEN_ASM_HASH_P (insn);
 }
 
 static int
-dis_hash_insn_p (insn)
-     const CGEN_INSN *insn;
+dis_hash_insn_p (const CGEN_INSN *insn)
 {
   /* If building the hash table and the NO-DIS attribute is present,
      ignore.  */
@@ -4330,8 +4286,7 @@ dis_hash_insn_p (insn)
    Targets are free to override CGEN_{ASM,DIS}_HASH in the .opc file.  */
 
 static unsigned int
-asm_hash_insn (mnem)
-     const char * mnem;
+asm_hash_insn (const char *mnem)
 {
   return CGEN_ASM_HASH (mnem);
 }
@@ -4340,9 +4295,8 @@ asm_hash_insn (mnem)
    VALUE is the first base_insn_bitsize bits as an int in host order.  */
 
 static unsigned int
-dis_hash_insn (buf, value)
-     const char * buf ATTRIBUTE_UNUSED;
-     CGEN_INSN_INT value ATTRIBUTE_UNUSED;
+dis_hash_insn (const char *buf ATTRIBUTE_UNUSED,
+		     CGEN_INSN_INT value ATTRIBUTE_UNUSED)
 {
   return CGEN_DIS_HASH (buf, value);
 }
