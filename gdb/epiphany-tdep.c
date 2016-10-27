@@ -1780,7 +1780,7 @@ epiphany_return_value (struct gdbarch  *gdbarch,
 
   enum type_code  rv_type    = TYPE_CODE (valtype);
   unsigned int    rv_size    = TYPE_LENGTH (valtype);
-  int             byte_order = gdbarch_byte_order (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   epiphany_debug_infrun ("Return value rv_size %d\n", rv_size);
   epiphany_debug_infrun ("  readbuf 0x%p, writebuf 0x%p\n", readbuf, writebuf);
@@ -2548,29 +2548,35 @@ epiphany_register_reggroup_p (struct gdbarch  *gdbarch,
 
     @param[in]     this_frame  THIS frame.
     @param[in,out] cache_ptr   The prologue cache. If not supplied, we build
-     it.                                                                      */
+     it.
+
+    @return  Frame ID for THIS frame                                          */
+
 /*----------------------------------------------------------------------------*/
-static void
+static struct trad_frame_cache *
 epiphany_frame_cache (struct frame_info  *this_frame,
 		      void              **cache_ptr)
 {
+  struct trad_frame_cache *cache;
+
   epiphany_frame_debug ("epiphany_frame_cache called\n");
 
-  /* Create the cache if we don't have one. */
-  if (NULL == *cache_ptr)
-    {
-      struct trad_frame_cache *cache = trad_frame_cache_zalloc (this_frame);
+  if (*cache_ptr)
+    return (struct trad_frame_cache *) *cache_ptr;
 
-      CORE_ADDR  prologue_start;
-      CORE_ADDR  prologue_end;
+  cache = trad_frame_cache_zalloc (this_frame);
+  *cache_ptr = cache;
 
-      epiphany_scan_prologue (this_frame, &prologue_start, &prologue_end);
-      epiphany_frame_debug (" prologue start %p, end %p\n", prologue_start,
-			    prologue_end);
-      epiphany_analyse_prologue (this_frame, prologue_start, prologue_end,
-				 cache);
-      *cache_ptr = cache;
-    }
+  CORE_ADDR  prologue_start;
+  CORE_ADDR  prologue_end;
+
+  epiphany_scan_prologue (this_frame, &prologue_start, &prologue_end);
+  epiphany_frame_debug (" prologue start %p, end %p\n", prologue_start,
+		        prologue_end);
+  epiphany_analyse_prologue (this_frame, prologue_start, prologue_end,
+			     cache);
+
+  return cache;
 }	/* epiphany_frame_cache() */
 
 
@@ -2592,9 +2598,9 @@ epiphany_frame_this_id (struct frame_info  *this_frame,
 			void              **cache_ptr,
 			struct frame_id    *this_id_ptr)
 {
-  epiphany_frame_cache (this_frame, cache_ptr);
-  trad_frame_get_id (*cache_ptr, this_id_ptr);
-
+  struct trad_frame_cache *cache =
+    epiphany_frame_cache (this_frame, cache_ptr);
+  trad_frame_get_id (cache, this_id_ptr);
 }	/* epiphany_frame_this_id() */
 
 
@@ -2617,9 +2623,10 @@ epiphany_frame_prev_register (struct frame_info  *this_frame,
 			      void              **cache_ptr,
 			      int                 regnum)
 {
-  epiphany_frame_cache (this_frame, cache_ptr);
+  struct trad_frame_cache *cache =
+    epiphany_frame_cache (this_frame, cache_ptr);
 
-  return  trad_frame_get_register (*cache_ptr, this_frame, regnum);
+  return  trad_frame_get_register (cache, this_frame, regnum);
 
 }	/* epiphany_frame_prev_register() */
 
@@ -2680,9 +2687,10 @@ static CORE_ADDR
 epiphany_frame_base_address (struct frame_info  *this_frame,
 			     void              **cache_ptr)
 {
-  epiphany_frame_cache (this_frame, cache_ptr);
+  struct trad_frame_cache *cache =
+    epiphany_frame_cache (this_frame, cache_ptr);
 
-  return trad_frame_get_this_base (*cache_ptr);
+  return trad_frame_get_this_base (cache);
 
 }	/* epiphany_frame_base_address() */
 
@@ -2980,7 +2988,7 @@ epiphany_set_coreid (char                    *args,
     {
       /* Only set a valid core ID if it has changed. Copy it to the actual
 	 value. */
-      char *coreid_str = xmalloc (strlen ("coreid:") + 9);
+      char *coreid_str = (char *) xmalloc (strlen ("coreid:") + 9);
 
       epiphany_coreid = epiphany_tmp_coreid;
       sprintf (coreid_str, "coreid:%d", epiphany_coreid);

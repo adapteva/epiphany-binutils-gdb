@@ -1,3 +1,15 @@
+2016-10-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-tdep.c (epiphany_return_value): Change type of
+	byte_order to enum bfd_endian.
+	(epiphany_frame_cache): Return the cache.
+	(epiphany_frame_this_id): Use cache returned from
+	epiphany_frame_cache.
+	(epiphany_frame_prev_register): Fix C++ void pointer
+	assignment type error.
+	(epiphany_frame_base_address): Likewise.
+	(epiphany_set_coreid): Likewise.
+
 2016-03-17  Pedro Alves  <pedro@palves.net>
 
 	* epiphany-tdep.c (epiphany_gdbarch_init): Set
