@@ -1,3 +1,7 @@
+2016-10-27  Ola Jeppsson  <ola@adapteva.com>
+
+	* mul.cgs: Remove.
+
 2016-01-12  Ola Jeppsson  <ola@adapteva.com>
 
 	* multicore/mmr-deadlock.c: New test.
