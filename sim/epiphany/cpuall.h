@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
@@ -39,7 +39,7 @@ This file is part of the GNU simulators.
 #include "decode.h"
 #endif
 
-extern const MACH epiphany32_mach;
+extern const SIM_MACH epiphany32_mach;
 
 #ifndef WANT_CPU
 /* The ARGBUF struct.  */

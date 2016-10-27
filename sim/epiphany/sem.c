@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
@@ -17620,72 +17620,6 @@ cgen_rtx_error (current_cpu, "unreachable");
 #undef FLD
 }
 
-/* umul: umul $rd6,$rn6,$rm6 */
-
-static SEM_PC
-SEM_FN_NAME (epiphanybf,umul) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_testsett.f
-  ARGBUF *abuf = SEM_ARGBUF (sem_arg);
-  int UNUSED written = 0;
-  IADDR UNUSED pc = abuf->addr;
-  SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
-
-{
-  {
-    USI opval = MULSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
-    SET_H_REGISTERS (FLD (f_rd6), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-  {
-    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
-    SET_H_BZBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
-  }
-  {
-    BI opval = 0;
-    SET_H_BNBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
-  }
-}
-
-  return vpc;
-#undef FLD
-}
-
-/* mul: mul $rd6,$rn6,$rm6 */
-
-static SEM_PC
-SEM_FN_NAME (epiphanybf,mul) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_testsett.f
-  ARGBUF *abuf = SEM_ARGBUF (sem_arg);
-  int UNUSED written = 0;
-  IADDR UNUSED pc = abuf->addr;
-  SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
-
-{
-  {
-    USI opval = MULSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
-    SET_H_REGISTERS (FLD (f_rd6), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-  {
-    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
-    SET_H_BZBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
-  }
-  {
-    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
-    SET_H_BNBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
-  }
-}
-
-  return vpc;
-#undef FLD
-}
-
 /* Table of all semantic fns.  */
 
 static const struct sem_fn_desc sem_fns[] = {
@@ -17898,8 +17832,6 @@ static const struct sem_fn_desc sem_fns[] = {
   { EPIPHANYBF_INSN_F_IXF16, SEM_FN_NAME (epiphanybf,f_ixf16) },
   { EPIPHANYBF_INSN_F_IXF32, SEM_FN_NAME (epiphanybf,f_ixf32) },
   { EPIPHANYBF_INSN_FMAX, SEM_FN_NAME (epiphanybf,fmax) },
-  { EPIPHANYBF_INSN_UMUL, SEM_FN_NAME (epiphanybf,umul) },
-  { EPIPHANYBF_INSN_MUL, SEM_FN_NAME (epiphanybf,mul) },
   { 0, 0 }
 };
 

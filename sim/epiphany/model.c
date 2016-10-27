@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
@@ -3282,38 +3282,6 @@ model_epiphany32_fmax (SIM_CPU *current_cpu, void *sem_arg)
 #undef FLD
 }
 
-static int
-model_epiphany32_umul (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_testsett.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
-static int
-model_epiphany32_mul (SIM_CPU *current_cpu, void *sem_arg)
-{
-#define FLD(f) abuf->fields.sfmt_testsett.f
-  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
-  const IDESC * UNUSED idesc = abuf->idesc;
-  int cycles = 0;
-  {
-    int referenced = 0;
-    int UNUSED insn_referenced = abuf->written;
-    cycles += epiphanybf_model_epiphany32_u_exec (current_cpu, idesc, 0, referenced);
-  }
-  return cycles;
-#undef FLD
-}
-
 /* We assume UNIT_NONE == 0 because the tables don't always terminate
    entries with it.  */
 
@@ -3529,8 +3497,6 @@ static const INSN_TIMING epiphany32_timing[] = {
   { EPIPHANYBF_INSN_F_IXF16, model_epiphany32_f_ixf16, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_F_IXF32, model_epiphany32_f_ixf32, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
   { EPIPHANYBF_INSN_FMAX, model_epiphany32_fmax, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_UMUL, model_epiphany32_umul, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
-  { EPIPHANYBF_INSN_MUL, model_epiphany32_mul, { { (int) UNIT_EPIPHANY32_U_EXEC, 1, 1 } } },
 };
 
 #endif /* WITH_PROFILE_MODEL_P */
@@ -3547,7 +3513,7 @@ epiphany32_model_init (SIM_CPU *cpu)
 #define TIMING_DATA(td) 0
 #endif
 
-static const MODEL epiphany32_models[] =
+static const SIM_MODEL epiphany32_models[] =
 {
   { "epiphany32", & epiphany32_mach, MODEL_EPIPHANY32, TIMING_DATA (& epiphany32_timing[0]), epiphany32_model_init },
   { 0 }
@@ -3555,7 +3521,7 @@ static const MODEL epiphany32_models[] =
 
 /* The properties of this cpu's implementation.  */
 
-static const MACH_IMP_PROPERTIES epiphanybf_imp_properties =
+static const SIM_MACH_IMP_PROPERTIES epiphanybf_imp_properties =
 {
   sizeof (SIM_CPU),
 #if WITH_SCACHE
@@ -3597,7 +3563,7 @@ epiphany32_init_cpu (SIM_CPU *cpu)
 #endif
 }
 
-const MACH epiphany32_mach =
+const SIM_MACH epiphany32_mach =
 {
   "epiphany32", "epiphany32", MACH_EPIPHANY32,
   32, 32, & epiphany32_models[0], & epiphanybf_imp_properties,

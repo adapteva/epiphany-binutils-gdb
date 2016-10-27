@@ -2,7 +2,7 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright (C) 1996-2016 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
@@ -241,8 +241,6 @@ This file is part of the GNU simulators.
     { EPIPHANYBF_INSN_F_IXF16, && case_sem_INSN_F_IXF16 },
     { EPIPHANYBF_INSN_F_IXF32, && case_sem_INSN_F_IXF32 },
     { EPIPHANYBF_INSN_FMAX, && case_sem_INSN_FMAX },
-    { EPIPHANYBF_INSN_UMUL, && case_sem_INSN_UMUL },
-    { EPIPHANYBF_INSN_MUL, && case_sem_INSN_MUL },
     { 0, 0 }
   };
   int i;
@@ -263,7 +261,7 @@ This file is part of the GNU simulators.
 
 /* If hyper-fast [well not unnecessarily slow] execution is selected, turn
    off frills like tracing and profiling.  */
-/* FIXME: A better way would be to have CGEN_TRACE_RESULT check for something
+/* FIXME: A better way would be to have TRACE_RESULT check for something
    that can cause it to be optimized out.  Another way would be to emit
    special handlers into the instruction "stream".  */
 
@@ -17455,68 +17453,6 @@ cgen_rtx_error (current_cpu, "unreachable");
 }
 
   abuf->written = written;
-#undef FLD
-}
-  NEXT (vpc);
-
-  CASE (sem, INSN_UMUL) : /* umul $rd6,$rn6,$rm6 */
-{
-  SEM_ARG sem_arg = SEM_SEM_ARG (vpc, sc);
-  ARGBUF *abuf = SEM_ARGBUF (sem_arg);
-#define FLD(f) abuf->fields.sfmt_testsett.f
-  int UNUSED written = 0;
-  IADDR UNUSED pc = abuf->addr;
-  vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
-
-{
-  {
-    USI opval = MULSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
-    SET_H_REGISTERS (FLD (f_rd6), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-  {
-    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
-    SET_H_BZBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
-  }
-  {
-    BI opval = 0;
-    SET_H_BNBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
-  }
-}
-
-#undef FLD
-}
-  NEXT (vpc);
-
-  CASE (sem, INSN_MUL) : /* mul $rd6,$rn6,$rm6 */
-{
-  SEM_ARG sem_arg = SEM_SEM_ARG (vpc, sc);
-  ARGBUF *abuf = SEM_ARGBUF (sem_arg);
-#define FLD(f) abuf->fields.sfmt_testsett.f
-  int UNUSED written = 0;
-  IADDR UNUSED pc = abuf->addr;
-  vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
-
-{
-  {
-    USI opval = MULSI (GET_H_REGISTERS (FLD (f_rn6)), GET_H_REGISTERS (FLD (f_rm6)));
-    SET_H_REGISTERS (FLD (f_rd6), opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "registers", 'x', opval);
-  }
-  {
-    BI opval = EQSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
-    SET_H_BZBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bzbit", 'x', opval);
-  }
-  {
-    BI opval = LTSI (GET_H_REGISTERS (FLD (f_rd6)), 0);
-    SET_H_BNBIT (opval);
-    CGEN_TRACE_RESULT (current_cpu, abuf, "bnbit", 'x', opval);
-  }
-}
-
 #undef FLD
 }
   NEXT (vpc);
