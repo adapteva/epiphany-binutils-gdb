@@ -131,7 +131,7 @@ makeNAN (SI x)
 
 typedef long double float_calc_type;
 
-inline SI
+static inline SI
 float_as_int (float f)
 {
   union { float f; SI i; } u;
@@ -140,7 +140,7 @@ float_as_int (float f)
   return u.i;
 }
 
-inline float
+static inline float
 int_as_float (SI i)
 {
   union { float f; SI i; } u;

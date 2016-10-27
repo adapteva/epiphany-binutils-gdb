@@ -1,5 +1,10 @@
 2016-10-27  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-fp.c (float_as_int): Make static inline.
+	(int_as_float): Likewise.
+
+2016-10-27  Ola Jeppsson  <ola@adapteva.com>
+
 	* config.in: Regenerated.
 	* configure: Regenerated.
 
