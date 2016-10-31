@@ -743,8 +743,11 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
 		 epiphany_elf_create_plt_section (abfd, info);
 		 h->needs_plt = 1;
 		 h->plt.refcount +=1;
-		 /* Enables analysis of dynamic sections */
-		 info->dynamic = 1;
+		 /* Disable analysis of dynamic sections.
+		    N.B: We might want to enable this in the future, but then
+		    we'd need to at least define
+		    elf_backend_create_dynamic_sections  */
+		 info->dynamic = 0;
 		 /* If we have not seen this symbol before space needs
 		    allocating in the PLT */
 		 if (h->plt.refcount == 0)

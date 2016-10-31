@@ -1,3 +1,8 @@
+2016-10-31  Ola Jeppsson  <ola@adapteva.com>
+
+	* elf32-epiphany.c (epiphany_elf_create_plt_section): Don't set
+	dynamic flag.
+
 2015-09-04  Ola Jeppsson  <ola@adapteva.com>
 
 	* libbfd-in.h (_bfd_dwarf2_find_symbol_bias): Add missing function
