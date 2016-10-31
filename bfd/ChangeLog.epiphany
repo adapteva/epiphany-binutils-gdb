@@ -1,5 +1,9 @@
 2016-10-31  Ola Jeppsson  <ola@adapteva.com>
 
+	* bfd/elf32-epiphany.c (elf_symbol_leading_char): Remove define.
+
+2016-10-31  Ola Jeppsson  <ola@adapteva.com>
+
 	* elf32-epiphany.c (epiphany_elf_create_plt_section): Don't set
 	dynamic flag.
 
