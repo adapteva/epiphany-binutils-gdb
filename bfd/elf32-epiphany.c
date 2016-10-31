@@ -832,7 +832,6 @@ epiphany_elf_finish_dynamic_sections (bfd * output_bfd,
 #define elf_backend_check_relocs                epiphany_elf_check_relocs
 #define elf_backend_plt_alignment               4
 
-#define elf_symbol_leading_char			'_'
 #define bfd_elf32_bfd_reloc_type_lookup		epiphany_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup		epiphany_reloc_name_lookup
 #define bfd_elf32_bfd_relax_section		epiphany_elf_relax_section
