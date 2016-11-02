@@ -1,3 +1,8 @@
+2016-11-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-tdep.c (epiphany_stack_frame_destroyed_p):
+	Adjust opcodes for fp register move from r11 to r15.
+
 2016-10-27  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-tdep.c (epiphany_return_value): Change type of

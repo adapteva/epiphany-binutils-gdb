@@ -2274,10 +2274,11 @@ epiphany_stack_frame_destroyed_p (struct gdbarch *gdbarch,
       insn = read_memory_unsigned_integer (epc, 4, byte_order_fc);
 
       if (   ((insn & 0xe300e07f) == 0x2000a01b)
-	  || ((insn & 0xe300e07f) == 0x2000601b))
+	  || ((insn & 0xe300e07f) == 0x2000e01b))
 	{
-	  /* add sp,rN,#<simm>  001nnn00ssssssss101nnnsss0011011.
-             add fp,rN,#<simm>  001nnn00ssssssss011nnnsss0011011.
+	  /*			   7   6   5   4   3   2   1   0
+	     add sp,rN,#<simm>  001nnn00ssssssss101nnnsss0011011.
+             add fp,rN,#<simm>  001nnn00ssssssss111nnnsss0011011.
 
 	     Starts an epilogue if the offset is positive and a multiple of
 	     bpw. If we are already in an epilogue, just stay in it. */
@@ -2293,42 +2294,45 @@ epiphany_stack_frame_destroyed_p (struct gdbarch *gdbarch,
 	      in_epilogue = 1;
 	    }
 	}
-      else if (   ((insn & 0xfe00fc7f) == 0x2400ac4c)
+      else if (   ((insn & 0xfe00fc7f) == 0x2400bc4c)
 	       || ((insn & 0xfe00fc7f) == 0x2400b44c)
-               || ((insn & 0xfe00fc7f) == 0x24006c4c)
-	       || ((insn & 0xfe00fc7f) == 0x2400744c)
+               || ((insn & 0xfe00fc7f) == 0x2400fc4c)
+	       || ((insn & 0xfe00fc7f) == 0x2400f44c)
 
-	       || ((insn & 0xfc7ffc7f) == 0x2400ac49)
+	       || ((insn & 0xfc7ffc7f) == 0x2400bc49)
 	       || ((insn & 0xfc7ffc7f) == 0x2400b449)
-	       || ((insn & 0xfc7ffc7f) == 0x24006c49)
-	       || ((insn & 0xfc7ffc7f) == 0x24007449)
+	       || ((insn & 0xfc7ffc7f) == 0x2400fc49)
+	       || ((insn & 0xfc7ffc7f) == 0x2400f449)
 
-               || ((insn & 0xfc7ffc7f) == 0x2400ac4d)
+               || ((insn & 0xfc7ffc7f) == 0x2400bc4d)
 	       || ((insn & 0x1c7f1c7f) == 0x0400144d)
-               || ((insn & 0xfc7ffc7f) == 0x2400744d)
-	       || ((insn & 0x1c7f1c7f) == 0x04000c4d))
+               || ((insn & 0xfc7ffc7f) == 0x2400f44d)
+	       || ((insn & 0x1c7f1c7f) == 0x04001c4d))
 	{
-	  /* ldr sp,[fp,#+/-<imm>]. 0010010+iiiiiiii101011iii1001100
+	  /*			       7   6   5   4   3   2   1   0
+	     ldr sp,[fp,#+/-<imm>]. 0010010+iiiiiiii101111iii1001100
              ldr sp,[sp,#+/-<imm>]. 0010010+iiiiiiii101101iii1001100
-	     ldr fp,[fp,#+/-<imm>]. 0010010+iiiiiiii011011iii1001100
-             ldr fp,[sp,#+/-<imm>]. 0010010+iiiiiiii011101iii1001100
+	     ldr fp,[fp,#+/-<imm>]. 0010010+iiiiiiii111111iii1001100
+             ldr fp,[sp,#+/-<imm>]. 0010010+iiiiiiii111101iii1001100
 
 	     Displacement load of SP/FP from the stack.
 
-	     ldr sp,[fp,+/-rM].     001001mmm000000+101011mmm1001001
+				       7   6   5   4   3   2   1   0
+	     ldr sp,[fp,+/-rM].     001001mmm000000+101111mmm1001001
              ldr sp,[sp,+/-rM].     001001mmm000000+101101mmm1001001
-	     ldr fp,[fp,+/-rM].     001001mmm000000+011011mmm1001001
-             ldr fp,[sp,+/-rM].     001001mmm000000+011101mmm1001001
+	     ldr fp,[fp,+/-rM].     001001mmm000000+111111mmm1001001
+             ldr fp,[sp,+/-rM].     001001mmm000000+111101mmm1001001
 
 	     Indexed load of SP/FP, but we are only interested if it is from
 	     the stack.
 
 	     @todo Should we consider the case where rM is FP or SP?
 
-	     ldr sp,[fp],+/-rM.     001001mmm000000+101011mmm1001101
+				       7   6   5   4   3   2   1   0
+	     ldr sp,[fp],+/-rM.     001001mmm000000+101111mmm1001101
 	     ldr rD,[sp],+/-rM.     ddd001mmm000000+ddd101mmm1001101
-	     ldr fp,[sp],+/-rM.     001001mmm000000+011101mmm1001101
-	     ldr rD,[fp],+/-rM.     ddd001mmm000000+ddd011mmm1001101
+	     ldr fp,[sp],+/-rM.     001001mmm000000+111101mmm1001101
+	     ldr rD,[fp],+/-rM.     ddd001mmm000000+ddd111mmm1001101
 
 	     Postmodified load which affects SP/FP.
 
@@ -2340,15 +2344,16 @@ epiphany_stack_frame_destroyed_p (struct gdbarch *gdbarch,
 	  ep_start = in_epilogue ? ep_start : epc;
 	  in_epilogue = 1;
 	}
-      else if (   ((insn & 0xfe00fc7f) == 0x2600ac4c)
+      else if (   ((insn & 0xfe00fc7f) == 0x2600bc4c)
 	       || ((insn & 0x1e001c7f) == 0x0600144c)
-               || ((insn & 0xfe00fc7f) == 0x2600744c)
-	       || ((insn & 0x1e001c7f) == 0x06000c4c))
+               || ((insn & 0xfe00fc7f) == 0x2600f44c)
+	       || ((insn & 0x1e001c7f) == 0x06001c4c))
 	{
-	  /* ldr sp,[fp],+<imm>. 00100110iiiiiiii101011iii1001100
+	  /*			    7   6   5   4   3   2   1   0
+	     ldr sp,[fp],+<imm>. 00100110iiiiiiii101111iii1001100
 	     ldr rD,[sp],+<imm>. ddd00110iiiiiiiiddd101iii1001100
-             ldr fp,[sp],+<imm>. 00100110iiiiiiii011101iii1001100
-	     ldr rD,[fp],+<imm>. ddd00110iiiiiiiiddd011iii1001100
+             ldr fp,[sp],+<imm>. 00100110iiiiiiii111101iii1001100
+	     ldr rD,[fp],+<imm>. ddd00110iiiiiiiiddd111iii1001100
 
 	     Indexed load with postmodify which affects SP/FP. Only of
 	     interest if the postmodify is adding a multiple of words.
