@@ -1,3 +1,21 @@
+2016-11-08  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-tdep.c (epiphany_analyse_prologue): Rename to ...
+	(epiphany_analyze_prologue): ... this. Return address of first
+	instruction after prologue instead of void. Handle
+	"str<sz> rD,[<sp,fp>],#+/-<imm>" case. Fix calcuation of
+	register offsets in stack frame. Prettify frame debug output.
+	(epiphany_scan_prologue): Rename 'prologue_start_ptr' argument to
+	'prologue_start'. Rename 'prologue_end_ptr' argument to
+	'prologue_end'. Use find_pc_line instead of skip_prologue_using_sal.
+	Limit prologue_end to never point past prev_pc.
+	(epiphany_skip_prologue): If we can use debug information, return max
+	of pc and prologue_end. Use epiphany_analyze_prologue as fallback.
+	(epiphany_frame_cache): Prettify frame debug output.
+	(epiphany_frame_this_id): Add frame debug output.
+	(epiphany_frame_prev_register): Clarify comments. Special-case
+	handling of the PC register. Add frame debug output.
+
 2016-11-02  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-tdep.c (epiphany_stack_frame_destroyed_p):

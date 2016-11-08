@@ -316,6 +316,7 @@ epiphany_debug_infrun (const char *fmt,
     }
 }	/* epiphany_debug_infrun () */
 
+static const char * epiphany_register_name (struct gdbarch *, int);
 
 /*----------------------------------------------------------------------------*/
 /*!Analyse the prologue
@@ -382,33 +383,35 @@ epiphany_debug_infrun (const char *fmt,
    middle of the prologue. Data should only be set up insofar as it has been
    computed.
 
+   @param[in]  gdbarch         The architecture to use.
    @param[in]  this_frame      The frame to analyse.
    @param[in]  prologue_start  Start of the prologue.
    @param[in]  prologue_end    Conservative estimate of the end of the
                                prologue.
-   @param[out] cache           The prologue cache to populate.                */
+   @param[out] cache           The prologue cache to populate.
+
+   @return  Address of prologue end.                                          */
+
 /*----------------------------------------------------------------------------*/
-static void
-epiphany_analyse_prologue (struct frame_info       *this_frame,
-			   CORE_ADDR                prologue_start,
-			   CORE_ADDR                prologue_end,
+static CORE_ADDR
+epiphany_analyze_prologue (struct gdbarch                *gdbarch,
+			   struct frame_info             *this_frame,
+			   const CORE_ADDR                prologue_start,
+			   const CORE_ADDR                prologue_end,
 			   struct trad_frame_cache *cache)
 {
-  struct gdbarch  *gdbarch             = get_frame_arch (this_frame);
   enum bfd_endian  byte_order          = gdbarch_byte_order (gdbarch);
   enum bfd_endian  byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   unsigned int     bpw                 = EPIPHANY_BYTES_PER_WORD;
 
   int        regnum;
   CORE_ADDR  current_pc;
-  CORE_ADDR  this_sp;
-  int        framesize;
 
-  pv_t            regs[EPIPHANY_NUM_REGS];
+  pv_t            regs[EPIPHANY_NUM_GPRS];
   struct pv_area *stack;
   struct cleanup *stack_cleanup;
 
-  epiphany_frame_debug ("epiphany_analyse_prologue called\n");
+  epiphany_frame_debug ("%s called\n", __func__);
 
   /* Initialize the register and stack records. */
   for (regnum = 0; regnum < EPIPHANY_NUM_GPRS; regnum++)
@@ -418,10 +421,6 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 
   stack         = make_pv_area (EPIPHANY_SP_REGNUM, gdbarch_addr_bit (gdbarch));
   stack_cleanup = make_cleanup_free_pv_area (stack);
-
-  /* On entry, the value in the previous program counter is now found in the
-     link register. */
-  regs[EPIPHANY_PC_REGNUM] = regs[EPIPHANY_LR_REGNUM];
 
   /* Work through the prologue looking for instructions that set up the FP,
      adjust the SP and save callee-saved registers. */
@@ -436,7 +435,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	  || ( 4 == opc) || ( 5 == opc) || ( 6 == opc) || ( 7 == opc)
 	  || (10 == opc) || (14 == opc))
 	{
-	  epiphany_frame_debug ("PC %p: insn 0x%04x: 16-bit insn",
+	  epiphany_frame_debug ("  PC %p: insn 0x%04x: 16-bit insn",
 				(void *) current_pc, insn);
 	  epiphany_frame_debug (" ** prologue ends **\n");
 	  break;		/* End of prologue */
@@ -465,7 +464,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	  if (0 != (simm % bpw) || (simm >= 0))
 	    {
 	      epiphany_frame_debug (
-		"PC %p: insn 0x%08x: add r%d,r%d,#%d ** prologue ends\n",
+		"  PC %p: insn 0x%08x: add r%d,r%d,#%d ** prologue ends\n",
 		(void *) current_pc, insn, rd, rn, simm);
 
 	      /* Not word sized and negative, end of prologue */
@@ -473,7 +472,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	    }
 	  else
 	    {
-	      epiphany_frame_debug ("PC %p: insn 0x%08x: add r%d,r%d,#%d\n",
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: add r%d,r%d,#%d\n",
 				    (void *) current_pc, insn, rd, rn, simm);
 	      regs[rd] = pv_add_constant (regs[rn], (CORE_ADDR) simm);
 	    }
@@ -481,7 +480,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
       else if ((insn & 0xffffffff) == 0x2402bcef)
 	{
 	  /* mov sp,fp. 0010 0100 0000 0010 1011 1100 1110 1111. */
-	  epiphany_frame_debug ("PC %p: insn 0x%08x: mov sp,fp\n",
+	  epiphany_frame_debug ("  PC %p: insn 0x%08x: mov sp,fp\n",
 				(void *) current_pc, insn);
 
 	  regs[EPIPHANY_SP_REGNUM] = regs[EPIPHANY_FP_REGNUM];
@@ -489,7 +488,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
       else if ((insn & 0xffffffff) == 0x2402f4ef)
 	{
 	  /* mov fp,sp. 0010 0100 0000 0010 1111 0100 1110 1111. */
-	  epiphany_frame_debug ("PC %p: insn 0x%08x: mov fp,sp\n",
+	  epiphany_frame_debug ("  PC %p: insn 0x%08x: mov fp,sp\n",
 				(void *) current_pc, insn);
 
 	  regs[EPIPHANY_FP_REGNUM] = regs[EPIPHANY_SP_REGNUM];
@@ -511,7 +510,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	  if (pv_area_store_would_trash (stack, regs[rn]))
 	    {
 	      epiphany_frame_debug (
-		"PC %p: insn 0x%08x: str<sz> rD,[r%d,#+/-<imm>] ** prologue ends **\n",
+		"  PC %p: insn 0x%08x: str<sz> rD,[r%d,#+/-<imm>] ** prologue ends **\n",
 		(void *) current_pc, insn, rn);
 	      break;		/* Jump out of the main loop */
 	    }
@@ -527,7 +526,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	      /* Byte sized store */
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm), 1,
 			     regs[rd]);
-	      epiphany_frame_debug ("PC %p: insn 0x%08x: strb r%d,[r%d,#%d]\n",
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strb r%d,[r%d,#%d]\n",
 				    (void *) current_pc, insn, rd, rn, imm);
 	      break;
 
@@ -535,7 +534,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	      /* Half word sized store */
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 2), 2,
 			     regs[rd]);
-	      epiphany_frame_debug ("PC %p: insn 0x%08x: strh r%d,[r%d,#%d]\n",
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strh r%d,[r%d,#%d]\n",
 				    (void *) current_pc, insn, rd, rn, imm);
 	      break;
 
@@ -543,7 +542,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 	      /* Word sized store */
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 4), 4,
 			     regs[rd]);
-	      epiphany_frame_debug ("PC %p: insn 0x%08x: str r%d,[r%d,#%d]\n",
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: str r%d,[r%d,#%d]\n",
 				    (void *) current_pc, insn, rd, rn, imm);
 	      break;
 
@@ -553,49 +552,55 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 			     regs[rd]);
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 8 + 4), 4,
 			     regs[rd + 1]);
-	      epiphany_frame_debug ("PC %p: insn 0x%08x: strd r%d,[r%d,#%d]\n",
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strd r%d,[r%d,#%d]\n",
 				    (void *) current_pc, insn, rd, rn, imm);
 
 	      break;
 	    }
 	}
-      else if (   ((insn & 0x1e001c7f) == 0x0600145c)
-	       || ((insn & 0x1e001c7f) == 0x06001c5c))
+      else if (   ((insn & 0x1e001c1f) == 0x0600141c)
+	       || ((insn & 0x1e001c1f) == 0x06001c1c))
 	{
 	  /*                        dddn nn             dddn nn
-	     str rD,[sp],#+/-<imm>. ddd0 011+ iiii iiii ddd1 01ii i101 1100
-	     str rD,[fp],#+/-<imm>. ddd0 011+ iiii iiii ddd1 11ii i101 1100
+	     str<sz> rD,[sp],#+/-<imm>. ddd0 011+ iiii iiii ddd1 01ii izz1 1100
+	     str<sz> rD,[fp],#+/-<imm>. ddd0 011+ iiii iiii ddd1 11ii izz1 1100
 
 	     Displacement-postmodify. Potentially this trashes, the stack, in
 	     which case we stop here. */
 
 	  int  rd;
 	  int  rn = BITS (insn, 28, 26) << 3 | BITS (insn, 12, 10);
+	  int  sz, bytes;
 	  int  imm;
+	  char *insn_str[] = { "strb", "strh", "str", "strd" };
 
 	  if (pv_area_store_would_trash (stack, regs[rn]))
 	    {
 	      epiphany_frame_debug (
-	        "PC %p: insn 0x%08x: str rD,[r%d,#+/-<imm>] ** prologue ends **\n",
+	        "  PC %p: insn 0x%08x: str rD,[r%d,#+/-<imm>] ** prologue ends **\n",
 		(void *) current_pc, insn, rn);
 	      break;		/* Jump out of the main loop */
 	    }
 
 	  rd  = (BITS (insn, 31, 29) << 3) | BITS (insn, 15, 13);
+	  sz  =  BITS (insn, 6, 5);
+	  bytes = 1 << sz;
 	  imm = (BITS (insn, 23, 16) << 3) | BITS (insn, 9,7);
 	  imm = (1 == BIT (insn, 24)) ? -imm : imm;
 
-	  /* Word sized store */
-	  pv_area_store (stack, pv_add_constant (regs[rn], imm * 4), 4,
-			 regs[rd]);
-	  regs[rn] = pv_add_constant (regs[rn], imm * 4);
-	  epiphany_frame_debug ("PC %p: insn 0x%08x: str r%d,[r%d],#%d\n",
-				(void *) current_pc, insn, rd, rn, imm);
+	  pv_area_store (stack, regs[rn], min (4, bytes), regs[rd]);
+	  if (sz == 3)
+	    pv_area_store (stack, pv_add_constant (regs[rn], 4), 4,
+			   regs[rd + 1]);
+	  regs[rn] = pv_add_constant (regs[rn], imm * bytes);
+	  epiphany_frame_debug ("  PC %p: insn 0x%08x: %s r%d,[r%d],#%d\n",
+				(void *) current_pc, insn, insn_str[sz], rd,
+				rn, imm);
 	}
       else
 	{
 	  /* Any other instruction ends the prologue */
-	  epiphany_frame_debug ("PC %p: insn 0x%08x: ** prologue ends **\n",
+	  epiphany_frame_debug ("  PC %p: insn 0x%08x: ** prologue ends **\n",
 				(void *) current_pc, insn);
 	  break;		/* Jump out of the main loop */
 	}
@@ -604,50 +609,71 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
       current_pc += 4;
     }
 
-  /* Frame size is the amount by which the SP has been advanced from its
-     original value. */
-  if (pv_is_register (regs[EPIPHANY_SP_REGNUM], EPIPHANY_SP_REGNUM))
-    {
-      framesize = -regs[EPIPHANY_SP_REGNUM].k;
-    }
-  else
-    {
-      framesize = 0;			/* Not set, or don;t know. */
-    }
-
-  epiphany_frame_debug ("framesize %d\n", framesize);
-
   /* Set up the frame ID and cache. Possibly we have a null frame, in which
-     case we cannot set up a frame ID. */
-  if (NULL != this_frame)
+     case we cannot set up a frame ID.
+     @todo: handle case where frame is stored in fp  */
+  if (cache)
     {
+      int framesize;
+      /* Frame base after prologue has been executed */
+      CORE_ADDR unwound_fb;
+      /* Address of stack pointer when this function was called */
+      CORE_ADDR prev_sp;
+
+      gdb_assert (this_frame);
+
+      /* Frame size is the amount by which the SP has been advanced from its
+	 original value. */
+      if (pv_is_register (regs[EPIPHANY_SP_REGNUM], EPIPHANY_SP_REGNUM))
+	framesize = -regs[EPIPHANY_SP_REGNUM].k;
+      else
+	framesize = 0;
+
       /* Frame cache is based on the SP *at entry*, which will be the SP minus
 	 the framesize. */
-      this_sp = get_frame_register_unsigned (this_frame, EPIPHANY_SP_REGNUM);
-      epiphany_frame_debug ("stack pointer %p\n", (void *) this_sp);
+      unwound_fb = get_frame_register_unsigned (this_frame, EPIPHANY_SP_REGNUM);
 
-      trad_frame_set_id (cache, frame_id_build (this_sp + framesize,
-						prologue_start));
-      epiphany_frame_debug ("frame_id (%p, %p)\n",
-			    (void *) (this_sp + framesize), prologue_start);
+      prev_sp = unwound_fb + framesize;
+      trad_frame_set_reg_value (cache, EPIPHANY_SP_REGNUM, prev_sp);
+
+      trad_frame_set_id (cache, frame_id_build (prev_sp, prologue_start));
+
+      epiphany_frame_debug ("  frame_id=(%p, %p)\n",
+			    (void *) prev_sp, prologue_start);
+      epiphany_frame_debug ("    framesize=%d\n", framesize);
+      epiphany_frame_debug ("    prev_sp=%#x\n", (void *) prev_sp);
+      epiphany_frame_debug ("    unwound_fb=%#x\n", (int) unwound_fb);
+
+      if (framesize)
+	epiphany_frame_debug ("    saved regs:\n");
 
       /* Populate the cache register data. Only meaningful if we have a
 	 frame. */
       for (regnum = 0; regnum < EPIPHANY_NUM_GPRS; regnum++)
 	{
-	  CORE_ADDR  offset;
+	  CORE_ADDR offset;
 
-	  if (pv_area_find_reg (stack, gdbarch, regnum, &offset))
+	  if (!pv_area_find_reg (stack, gdbarch, regnum, &offset))
+	    continue;
+
+	  trad_frame_set_reg_addr (cache, regnum, prev_sp + offset);
+
+	  if (frame_debug)
 	    {
-	      trad_frame_set_reg_addr (cache, regnum, offset);
-	      epiphany_frame_debug ("r%d offset %d\n", regnum,
-				    offset + this_sp);
+	      LONGEST regval = 0xbaadc0de;
+
+	      safe_read_memory_integer (prev_sp + offset, 4, byte_order,
+					&regval);
+	      epiphany_frame_debug ("      %3s: offset=%-4d addr=0x%05x value=0x%08x\n",
+				    epiphany_register_name (gdbarch, regnum),
+				    offset, prev_sp + offset, (int) regval);
 	    }
 	}
     }
   do_cleanups (stack_cleanup);
 
-}	/* epiphany_analyse_prologue () */
+  return current_pc;
+}	/* epiphany_analyze_prologue () */
 
 
 /*----------------------------------------------------------------------------*/
@@ -658,7 +684,7 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 
    The SAL information for Epiphany can give ridiculous results. So instead we
    find the start and end of the whole function and let
-   epiphany_analyse_prologue () get a more refined view.
+   epiphany_analyze_prologue () get a more refined view.
 
    @param[in]  this_frame               The frame to analyse.
    @param[out] prologue_start_addr_ptr  The start addr of the prologue.
@@ -667,31 +693,40 @@ epiphany_analyse_prologue (struct frame_info       *this_frame,
 /*----------------------------------------------------------------------------*/
 static void
 epiphany_scan_prologue (struct frame_info *this_frame,
-			CORE_ADDR         *prologue_start_ptr,
-			CORE_ADDR         *prologue_end_ptr)
+			CORE_ADDR         *prologue_start,
+			CORE_ADDR         *prologue_end)
 {
   CORE_ADDR block_addr = get_frame_address_in_block (this_frame);
 
   /* If we have symtab and line data we have this in our hand. */
-  if (find_pc_partial_function (block_addr, NULL, prologue_start_ptr,
-				prologue_end_ptr))
+  if (find_pc_partial_function (block_addr, NULL, prologue_start,
+				prologue_end))
     {
       /* Try to find the end using SAL. If not, then the function end address
 	 will have to do. */
-      struct gdbarch *gdbarch = get_frame_arch (this_frame);
-      CORE_ADDR       new_end = skip_prologue_using_sal (gdbarch,
-							 *prologue_start_ptr);
-      if (new_end != 0)
+
+      struct symtab_and_line sal = find_pc_line (*prologue_start, 0);
+      CORE_ADDR prev_pc = get_frame_pc (this_frame);
+
+      if (sal.line == 0)
 	{
-	  *prologue_end_ptr = new_end;
+	  /* No line info so use the current PC.  */
+	  *prologue_end = prev_pc;
 	}
+      else if (sal.end < *prologue_end)
+	{
+	  /* The next line begins after the function end.  */
+	  *prologue_end = sal.end;
+	}
+
+      *prologue_end = min (*prologue_end, prev_pc);
     }
   else
     {
       /* Can't find the function. Give up. No point in using block_addr - not
 	 likely to be in the prologue. */
-      *prologue_start_ptr = 0;
-      *prologue_end_ptr   = 0;
+      *prologue_start = 0;
+      *prologue_end = 0;
     }
 }	/* epiphany_scan_prologue () */
 
@@ -1925,21 +1960,30 @@ static CORE_ADDR
 epiphany_skip_prologue (struct gdbarch *gdbarch,
 			CORE_ADDR       pc)
 {
-  CORE_ADDR  func_start, func_end;
+  CORE_ADDR func_start, limit_pc;
 
-  if (find_pc_partial_function (pc, NULL, &func_start, &func_end))
+  /* Can we find the prologue using the symbol table? */
+  if (find_pc_partial_function (pc, NULL, &func_start, NULL))
     {
-      /* Can we find the prologue end using SAL? */
       CORE_ADDR  prologue_end = skip_prologue_using_sal (gdbarch, func_start);
 
-      return  (0 == prologue_end) ? pc : prologue_end;
-    }
-  else
-    {
-      /* Can't find the function. Give up. */
-      return  pc;
+      if (prologue_end != 0)
+	return max (pc, prologue_end);
     }
 
+  /* Can't determine prologue from the symbol table, need to examine
+     instructions.  */
+
+  limit_pc = skip_prologue_using_sal (gdbarch, pc);
+  if (limit_pc == 0)
+    {
+      /* Assume compiler never creates larger prologue than this */
+      const CORE_ADDR max_prologue = 128;
+
+      limit_pc = pc + max_prologue;
+    }
+
+  return epiphany_analyze_prologue (gdbarch, NULL, pc, limit_pc, NULL);
 }	/* epiphany_skip_prologue() */
 
 
@@ -2563,8 +2607,11 @@ epiphany_frame_cache (struct frame_info  *this_frame,
 		      void              **cache_ptr)
 {
   struct trad_frame_cache *cache;
+  struct gdbarch *gdbarch;
+  CORE_ADDR prologue_start;
+  CORE_ADDR prologue_end;
 
-  epiphany_frame_debug ("epiphany_frame_cache called\n");
+  epiphany_frame_debug ("%s called\n", __func__);
 
   if (*cache_ptr)
     return (struct trad_frame_cache *) *cache_ptr;
@@ -2572,13 +2619,11 @@ epiphany_frame_cache (struct frame_info  *this_frame,
   cache = trad_frame_cache_zalloc (this_frame);
   *cache_ptr = cache;
 
-  CORE_ADDR  prologue_start;
-  CORE_ADDR  prologue_end;
-
+  gdbarch = get_frame_arch (this_frame);
   epiphany_scan_prologue (this_frame, &prologue_start, &prologue_end);
-  epiphany_frame_debug (" prologue start %p, end %p\n", prologue_start,
-		        prologue_end);
-  epiphany_analyse_prologue (this_frame, prologue_start, prologue_end,
+  epiphany_frame_debug ("  prologue_start=%p, prologue_end=%p\n",
+			prologue_start, prologue_end);
+  epiphany_analyze_prologue (gdbarch, this_frame, prologue_start, prologue_end,
 			     cache);
 
   return cache;
@@ -2603,6 +2648,8 @@ epiphany_frame_this_id (struct frame_info  *this_frame,
 			void              **cache_ptr,
 			struct frame_id    *this_id_ptr)
 {
+  epiphany_frame_debug ("%s called\n", __func__);
+
   struct trad_frame_cache *cache =
     epiphany_frame_cache (this_frame, cache_ptr);
   trad_frame_get_id (cache, this_id_ptr);
@@ -2612,7 +2659,7 @@ epiphany_frame_this_id (struct frame_info  *this_frame,
 /*----------------------------------------------------------------------------*/
 /*! Get a register from THIS frame
 
-    Given a pointer to the NEXT frame, return the details of a register in the
+    Given a pointer to THIS_FRAME, return the details of a register in the
     PREVIOUS frame.
 
     @param[in]     this_frame  THIS frame.
@@ -2628,10 +2675,19 @@ epiphany_frame_prev_register (struct frame_info  *this_frame,
 			      void              **cache_ptr,
 			      int                 regnum)
 {
+  epiphany_frame_debug ("%s called regnum=%d\n", __func__, regnum);
   struct trad_frame_cache *cache =
     epiphany_frame_cache (this_frame, cache_ptr);
 
-  return  trad_frame_get_register (cache, this_frame, regnum);
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+
+  /* If we are asked to unwind the PC, then we need to return this frame's LR
+     instead. LR in this frame points to the previous frame's function's resume
+     location, i.e., the previous frame's PC.  */
+  if (regnum == gdbarch_pc_regnum (gdbarch))
+    regnum = EPIPHANY_LR_REGNUM;
+
+  return trad_frame_get_register (cache, this_frame, regnum);
 
 }	/* epiphany_frame_prev_register() */
 
