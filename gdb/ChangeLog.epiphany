@@ -1,3 +1,9 @@
+2016-11-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-tdep.c (epiphany_analyze_prologue): Allow #<simm> to be
+	positive for "add [fs]p,[fs]p,#<simm>" type instructions when rd is
+	fp. Support prologues that store the frame pointer in fp.
+
 2016-11-08  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-tdep.c (epiphany_analyse_prologue): Rename to ...

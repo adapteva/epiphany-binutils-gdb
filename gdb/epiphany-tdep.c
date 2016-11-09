@@ -461,7 +461,7 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	  int rd = BITS (insn, 31, 29) << 3 | BITS (insn, 15, 13);
 	  int rn = BITS (insn, 28, 26) << 3 | BITS (insn, 12, 10);
 
-	  if (0 != (simm % bpw) || (simm >= 0))
+	  if (0 != (simm % bpw) || ((simm >= 0) && rd == EPIPHANY_SP_REGNUM))
 	    {
 	      epiphany_frame_debug (
 		"  PC %p: insn 0x%08x: add r%d,r%d,#%d ** prologue ends\n",
@@ -610,11 +610,12 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
     }
 
   /* Set up the frame ID and cache. Possibly we have a null frame, in which
-     case we cannot set up a frame ID.
-     @todo: handle case where frame is stored in fp  */
+     case we cannot set up a frame ID.  */
   if (cache)
     {
       int framesize;
+      /* Register that holds the frame */
+      int framereg;
       /* Frame base after prologue has been executed */
       CORE_ADDR unwound_fb;
       /* Address of stack pointer when this function was called */
@@ -622,16 +623,27 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 
       gdb_assert (this_frame);
 
-      /* Frame size is the amount by which the SP has been advanced from its
-	 original value. */
-      if (pv_is_register (regs[EPIPHANY_SP_REGNUM], EPIPHANY_SP_REGNUM))
-	framesize = -regs[EPIPHANY_SP_REGNUM].k;
+      /* Determine frame register */
+      if (pv_is_register (regs[EPIPHANY_FP_REGNUM], EPIPHANY_SP_REGNUM))
+	{
+	  framereg = EPIPHANY_FP_REGNUM;
+	  framesize = -regs[EPIPHANY_FP_REGNUM].k;
+	}
+      else if (pv_is_register (regs[EPIPHANY_SP_REGNUM], EPIPHANY_SP_REGNUM))
+	{
+	  framereg = EPIPHANY_SP_REGNUM;
+	  framesize = -regs[EPIPHANY_SP_REGNUM].k;
+	}
       else
-	framesize = 0;
+	{
+	  /* We don't know where the frame is so bail */
+	  epiphany_frame_debug ("  can't find any frame.\n");
+	  goto cleanup;
+	}
 
       /* Frame cache is based on the SP *at entry*, which will be the SP minus
 	 the framesize. */
-      unwound_fb = get_frame_register_unsigned (this_frame, EPIPHANY_SP_REGNUM);
+      unwound_fb = get_frame_register_unsigned (this_frame, framereg);
 
       prev_sp = unwound_fb + framesize;
       trad_frame_set_reg_value (cache, EPIPHANY_SP_REGNUM, prev_sp);
@@ -640,6 +652,8 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 
       epiphany_frame_debug ("  frame_id=(%p, %p)\n",
 			    (void *) prev_sp, prologue_start);
+      epiphany_frame_debug ("    framereg=%s\n",
+			    epiphany_register_name (gdbarch, framereg));
       epiphany_frame_debug ("    framesize=%d\n", framesize);
       epiphany_frame_debug ("    prev_sp=%#x\n", (void *) prev_sp);
       epiphany_frame_debug ("    unwound_fb=%#x\n", (int) unwound_fb);
@@ -670,6 +684,8 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	    }
 	}
     }
+
+cleanup:
   do_cleanups (stack_cleanup);
 
   return current_pc;
