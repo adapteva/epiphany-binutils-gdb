@@ -1,5 +1,18 @@
 2016-11-09  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-tdep.c (SEXTEND11): New macro for extracting simm11 from
+	instructions.
+	(epiphany_primary_opc): New enum.
+	(epiphany_insn_size): New function.
+	(epiphany_maybe_in_prologue): New function.
+	(epiphany_analyze_prologue): Rename 'prologue_end' parameter to
+	'limit'. Add basic support for optimized prologues. Print registers
+	by name when debugging frame. For "add [fs]p,[fs]p,#<simm>": use
+	SEXTEND11 (), and add more constraints for valid prologue
+	instructions.
+
+2016-11-09  Ola Jeppsson  <ola@adapteva.com>
+
 	* epiphany-tdep.c (epiphany_analyze_prologue): Allow #<simm> to be
 	positive for "add [fs]p,[fs]p,#<simm>" type instructions when rd is
 	fp. Support prologues that store the frame pointer in fp.

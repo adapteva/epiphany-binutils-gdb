@@ -247,6 +247,7 @@
 #define BIT(obj,st) (((obj) >> (st)) & 1)
 #define BITS(obj,fn,st) (((obj) >> (st)) & SUBMASK ((fn) - (st)))
 #define SEXTEND8(v) (((v) ^ (long int) 0x80) - (long int) 0x80)
+#define SEXTEND11(v) (((v) ^ (long int) 0x0400) - (long int) 0x0400)
 #define SEXTEND16(v) (((v) ^ (long int) 0x8000) - (long int) 0x8000)
 #define SEXTEND24(v) (((v) ^ (long int) 0x800000) - (long int) 0x800000)
 
@@ -259,6 +260,25 @@ enum epiphany_ss_type {
   OTHER
 };
 
+/* Epiphany primary opcode in insn[3:0] */
+enum epiphany_primary_opc {
+  OPC_BRANCH16,
+  OPC_LDSTR16X,
+  OPC_FLOW16,
+  OPC_IMM16,
+  OPC_LDSTR16D,
+  OPC_LDSTR16P,
+  OPC_LSHIFT16,
+  OPC_DSP16,
+  OPC_BRANCH,
+  OPC_LDSTRX,
+  OPC_ALU16,
+  OPC_IMM32,
+  OPC_LDSTRD,
+  OPC_LDSTRP,
+  OPC_ASHIFT16,
+  OPC_MISC
+};
 
 /* External debug flags */
 extern unsigned int frame_debug;		/*!< frame debugging flag */
@@ -315,6 +335,83 @@ epiphany_debug_infrun (const char *fmt,
       va_end (args);
     }
 }	/* epiphany_debug_infrun () */
+
+static unsigned
+epiphany_insn_size (ULONGEST insn)
+{
+  unsigned opc = BITS (insn, 3, 0);
+
+  switch (opc)
+    {
+    case 8: case 9: case 11: case 12: case 13: case 15:
+      return 4;
+    default:
+      return 2;
+    }
+}
+
+static int
+epiphany_maybe_in_prologue (ULONGEST insn)
+{
+  unsigned opc = BITS (insn, 3, 0);
+
+  switch (opc)
+    {
+    /* These we *know* cannot be in the prologue  */
+    case OPC_BRANCH16:
+    case OPC_BRANCH:
+      return 0;
+
+    case OPC_FLOW16:
+      /* "mov $rd,$rn" and "mov<cond> $rd,$rn"  */
+      if (BITS (insn, 9, 8) == 0x0)
+	return 1;
+      /* "movts $sn,$rd"  */
+      if (BITS (insn, 9, 4) == 0x10)
+	return 1;
+      /* "movfs $rd,$sn"  */
+      if (BITS (insn, 9, 4) == 0x11)
+	return 1;
+      /* "nop" / "snop" */
+      if (insn == 0x01a2 || insn == 0x03a2)
+	return 1;
+
+      return 0;
+
+    /* These should be reasonable */
+    case OPC_LDSTR16X:
+    case OPC_IMM16:
+    case OPC_LDSTR16D:
+    case OPC_LDSTR16P:
+    case OPC_LSHIFT16:
+    case OPC_LDSTRX:
+    case OPC_ALU16:
+    case OPC_IMM32:
+    case OPC_LDSTRD:
+    case OPC_LDSTRP:
+    case OPC_ASHIFT16:
+      return 1;
+
+    /* Allow FPU instructions in prologue */
+    case OPC_DSP16:
+      return 1;
+
+    case OPC_MISC:
+      /* "jr $rn6" / "rts"  */
+      if (BITS (insn, 8, 4) == 0x14 && BITS (insn, 19, 16) == 0x2)
+	return 0;
+      /* "jalr $rn6"  */
+      if (BITS (insn, 8, 4) == 0x15 && BITS (insn, 19, 16) == 0x2)
+	return 0;
+
+      return 1;
+
+    default:
+      gdb_assert (0);
+    }
+
+  return 0;
+}
 
 static const char * epiphany_register_name (struct gdbarch *, int);
 
@@ -386,18 +483,19 @@ static const char * epiphany_register_name (struct gdbarch *, int);
    @param[in]  gdbarch         The architecture to use.
    @param[in]  this_frame      The frame to analyse.
    @param[in]  prologue_start  Start of the prologue.
-   @param[in]  prologue_end    Conservative estimate of the end of the
+   @param[in]  limit           Conservative estimate of the end of the
                                prologue.
    @param[out] cache           The prologue cache to populate.
 
    @return  Address of prologue end.                                          */
 
 /*----------------------------------------------------------------------------*/
+
 static CORE_ADDR
 epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 			   struct frame_info             *this_frame,
 			   const CORE_ADDR                prologue_start,
-			   const CORE_ADDR                prologue_end,
+			   const CORE_ADDR                limit,
 			   struct trad_frame_cache *cache)
 {
   enum bfd_endian  byte_order          = gdbarch_byte_order (gdbarch);
@@ -406,6 +504,8 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 
   int        regnum;
   CORE_ADDR  current_pc;
+  CORE_ADDR  prologue_end = prologue_start;
+  unsigned   insn_size;
 
   pv_t            regs[EPIPHANY_NUM_GPRS];
   struct pv_area *stack;
@@ -424,25 +524,32 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 
   /* Work through the prologue looking for instructions that set up the FP,
      adjust the SP and save callee-saved registers. */
-  for (current_pc = prologue_start; current_pc < prologue_end;)
+  for (current_pc = prologue_start;
+       current_pc < limit;
+       current_pc += insn_size)
     {
-      unsigned long int insn =
-	read_memory_unsigned_integer (current_pc, 2, byte_order_for_code);
-      unsigned int opc = BITS (insn, 3, 0);
+      ULONGEST insn;
 
-      /* 16-bit instructions cannot be in the prologue. */
-      if (   ( 0 == opc) || ( 1 == opc) || ( 2 == opc) || ( 3 == opc)
-	  || ( 4 == opc) || ( 5 == opc) || ( 6 == opc) || ( 7 == opc)
-	  || (10 == opc) || (14 == opc))
+      insn = read_memory_unsigned_integer (current_pc, 2, byte_order_for_code);
+      insn_size = epiphany_insn_size(insn);
+
+      if (insn_size == 4)
 	{
-	  epiphany_frame_debug ("  PC %p: insn 0x%04x: 16-bit insn",
-				(void *) current_pc, insn);
-	  epiphany_frame_debug (" ** prologue ends **\n");
-	  break;		/* End of prologue */
+	  /* Get entire 32-bit instruction. */
+	  insn = read_memory_unsigned_integer (current_pc, 4,
+					       byte_order_for_code);
 	}
 
-      /* Get 32-bit instruction. */
-      insn = read_memory_unsigned_integer (current_pc, 4, byte_order_for_code);
+      if (!epiphany_maybe_in_prologue (insn))
+	{
+	  /* We know for sure this instruction cannot be in the prologue */
+	  epiphany_frame_debug (
+	    insn_size == 2 ? "  PC %p: insn 0x%04x ** prologue ends\n" :
+			     "  PC %p: insn 0x%08x ** prologue ends\n",
+	    (void *) current_pc, insn);
+
+	  break;
+	}
 
       if (   ((insn & 0xff00fc7f) == 0x2400b41b)
 	  || ((insn & 0xff00fc7f) == 0x2400bc1b)
@@ -457,23 +564,52 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 
 	     The constant should be a negative multiple of words (falling
 	     stack). */
-	  int simm = SEXTEND16 ((BITS (insn, 23, 16) << 3) | BITS (insn, 9, 7));
+	  int simm = SEXTEND11 ((BITS (insn, 23, 16) << 3) | BITS (insn, 9, 7));
 	  int rd = BITS (insn, 31, 29) << 3 | BITS (insn, 15, 13);
 	  int rn = BITS (insn, 28, 26) << 3 | BITS (insn, 12, 10);
+	  int end_prologue = 0;
+	  const char *rds = epiphany_register_name (gdbarch, rd);
+	  const char *rns = epiphany_register_name (gdbarch, rn);
 
-	  if (0 != (simm % bpw) || ((simm >= 0) && rd == EPIPHANY_SP_REGNUM))
+	  if (0 != (simm % bpw))
+	    {
+	      /* Not word sized */
+	      end_prologue = 1;
+	    }
+	  else if (   rd == EPIPHANY_SP_REGNUM
+		   && rn == EPIPHANY_SP_REGNUM
+		   && pv_is_register (regs[EPIPHANY_FP_REGNUM],
+				      EPIPHANY_SP_REGNUM))
+	    {
+	      /* If sp is already in fp, then this add is not in the
+		 prologue  */
+	      end_prologue = 1;
+	    }
+	  else if (   rd == EPIPHANY_SP_REGNUM
+		   && rn == EPIPHANY_FP_REGNUM)
+	    {
+	      /* This is an epilogue type function  */
+	      end_prologue = 1;
+	    }
+	  else if (   rd == EPIPHANY_SP_REGNUM
+		   && simm > 0)
+	    {
+	      /* sp is not increased in prologue  */
+	      end_prologue = 1;
+	    }
+
+	  if (end_prologue)
 	    {
 	      epiphany_frame_debug (
-		"  PC %p: insn 0x%08x: add r%d,r%d,#%d ** prologue ends\n",
-		(void *) current_pc, insn, rd, rn, simm);
+		"  PC %p: insn 0x%08x: add %s,%s,#%d ** prologue ends\n",
+		(void *) current_pc, insn, rds, rns, simm);
 
-	      /* Not word sized and negative, end of prologue */
 	      break;
 	    }
 	  else
 	    {
-	      epiphany_frame_debug ("  PC %p: insn 0x%08x: add r%d,r%d,#%d\n",
-				    (void *) current_pc, insn, rd, rn, simm);
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: add %s, %s,#%d\n",
+				    (void *) current_pc, insn, rds, rns, simm);
 	      regs[rd] = pv_add_constant (regs[rn], (CORE_ADDR) simm);
 	    }
 	}
@@ -506,12 +642,15 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	  int  rn = BITS (insn, 28, 26) << 3 | BITS (insn, 12, 10);
 	  int  sz;
 	  int  imm;
+	  const char *rns, *rds;
+
+	  rns = epiphany_register_name (gdbarch, rn);
 
 	  if (pv_area_store_would_trash (stack, regs[rn]))
 	    {
 	      epiphany_frame_debug (
-		"  PC %p: insn 0x%08x: str<sz> rD,[r%d,#+/-<imm>] ** prologue ends **\n",
-		(void *) current_pc, insn, rn);
+		"  PC %p: insn 0x%08x: str<sz> rD,[%s,#+/-<imm>] ** prologue ends **\n",
+		(void *) current_pc, insn, rns);
 	      break;		/* Jump out of the main loop */
 	    }
 
@@ -520,30 +659,32 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	  imm = (BITS (insn, 23, 16) << 3) | BITS (insn, 9,7);
 	  imm = (1 == BIT (insn, 24)) ? -imm : imm;
 
+	  rds = epiphany_register_name (gdbarch, rd);
+
 	  switch (sz)
 	    {
 	    case 0:
 	      /* Byte sized store */
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm), 1,
 			     regs[rd]);
-	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strb r%d,[r%d,#%d]\n",
-				    (void *) current_pc, insn, rd, rn, imm);
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strb %s,[%s,#%d]\n",
+				    (void *) current_pc, insn, rds, rns, imm);
 	      break;
 
 	    case 1:
 	      /* Half word sized store */
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 2), 2,
 			     regs[rd]);
-	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strh r%d,[r%d,#%d]\n",
-				    (void *) current_pc, insn, rd, rn, imm);
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strh %s,[%s,#%d]\n",
+				    (void *) current_pc, insn, rds, rns, imm);
 	      break;
 
 	    case 2:
 	      /* Word sized store */
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 4), 4,
 			     regs[rd]);
-	      epiphany_frame_debug ("  PC %p: insn 0x%08x: str r%d,[r%d,#%d]\n",
-				    (void *) current_pc, insn, rd, rn, imm);
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: str %s,[%s,#%d]\n",
+				    (void *) current_pc, insn, rds, rns, imm);
 	      break;
 
 	    case 3:
@@ -552,8 +693,8 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 			     regs[rd]);
 	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 8 + 4), 4,
 			     regs[rd + 1]);
-	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strd r%d,[r%d,#%d]\n",
-				    (void *) current_pc, insn, rd, rn, imm);
+	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strd %s,[%s,#%d]\n",
+				    (void *) current_pc, insn, rds, rns, imm);
 
 	      break;
 	    }
@@ -588,26 +729,34 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	  imm = (BITS (insn, 23, 16) << 3) | BITS (insn, 9,7);
 	  imm = (1 == BIT (insn, 24)) ? -imm : imm;
 
+	  const char *rds = epiphany_register_name (gdbarch, rd);
+	  const char *rns = epiphany_register_name (gdbarch, rn);
+
 	  pv_area_store (stack, regs[rn], min (4, bytes), regs[rd]);
 	  if (sz == 3)
 	    pv_area_store (stack, pv_add_constant (regs[rn], 4), 4,
 			   regs[rd + 1]);
 	  regs[rn] = pv_add_constant (regs[rn], imm * bytes);
-	  epiphany_frame_debug ("  PC %p: insn 0x%08x: %s r%d,[r%d],#%d\n",
-				(void *) current_pc, insn, insn_str[sz], rd,
-				rn, imm);
+	  epiphany_frame_debug ("  PC %p: insn 0x%08x: %s %s,[%s],#%d\n",
+				(void *) current_pc, insn, insn_str[sz], rds,
+				rns, imm);
 	}
       else
 	{
-	  /* Any other instruction ends the prologue */
-	  epiphany_frame_debug ("  PC %p: insn 0x%08x: ** prologue ends **\n",
-				(void *) current_pc, insn);
-	  break;		/* Jump out of the main loop */
+	  epiphany_frame_debug (
+	    insn_size == 2 ? "  PC %p: insn 0x%04x ** instruction ignored\n" :
+			     "  PC %p: insn 0x%08x ** instruction ignored\n",
+	    (void *) current_pc, insn);
+
+	  /* skip updating prologue_end */
+	  continue;
 	}
 
-      /* Advance the instruction pointer */
-      current_pc += 4;
+      /* Only update prologue_end when we found a recognized instruction.  */
+      prologue_end = current_pc + insn_size;
     }
+
+  epiphany_frame_debug ("  prologue_end=%#x\n", prologue_end);
 
   /* Set up the frame ID and cache. Possibly we have a null frame, in which
      case we cannot set up a frame ID.  */
@@ -688,7 +837,7 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 cleanup:
   do_cleanups (stack_cleanup);
 
-  return current_pc;
+  return prologue_end;
 }	/* epiphany_analyze_prologue () */
 
 
