@@ -1,3 +1,9 @@
+2016-11-12  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/18360
+	* gdb.threads/interrupt-while-step-over.c: New file.
+	* gdb.threads/interrupt-while-step-over.exp: New file.
+
 2011-11-15  Jeremy Bennett  <jeremy.bennett@embecosm.com>
 
 	* gdb.base/float.exp: Add test for Epiphany architecture.
