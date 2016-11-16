@@ -1,3 +1,9 @@
+2016-11-17  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-if.c (epiphany_user_init): New function.
+	(sim_create_inferior): Fix copying of argv. Call epiphany_user_init
+	in USER_ENVIRONMENT.
+
 2016-10-27  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-fp.c (float_as_int): Make static inline.

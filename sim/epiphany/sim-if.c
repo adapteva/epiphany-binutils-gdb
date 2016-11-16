@@ -827,6 +827,138 @@ setup_workgroup_cfg (SIM_DESC sd)
   return SIM_RC_OK;
 }
 
+static void
+epiphany_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
+		    char * const *argv, char * const *env)
+{
+  asection *s;
+  unsigned_word addr, sp, args_size;
+  unsigned_word argcp, argvpp, envp, auxvp, argvp, strp;
+  unsigned_word argv_flat;
+  const unsigned_word null = 0;
+  int argc;
+  SIM_CPU *current_cpu = STATE_CPU (sd, 0);
+  bfd *prog_bfd = STATE_PROG_BFD (sd);
+  es_cluster_cfg cluster;
+#define LOADER_ARGV_IN_SP_FLAG 4 /* newlib/libgloss/epiphany/crt0.S  */
+  const unsigned_word flags = LOADER_ARGV_IN_SP_FLAG;
+  int i;
+  bool found = false;
+
+
+  /* Set up stack like this:
+
+     offset:
+     0x00             <-- sp
+     0x08 argc
+     0x0c pointer to argv
+     0x10 pointer to envp (null for now)
+     0x14 pointer to auxv (null for now)
+     0x18 argv[0]      <-- pointer to actual argv strings
+     0x1c argv[1]
+     ...  argv[argc-1]
+          NULL         <-- argv terminating NULL ptr
+          argv[0..N][0..M] <-- actual argv strings
+
+
+     crt0 will take care of setting up regs:
+     r0 = argc
+     r1 = argv
+     r2 = envp
+     r3 = auxv  */
+
+
+  assert (sizeof (unsigned_word) == 4);
+
+  if (!prog_bfd)
+    return;
+
+  for (s = prog_bfd->sections; s; s = s->next)
+    if (strcmp (bfd_get_section_name (prog_bfd, s), "loader_cfg") == 0)
+      {
+	found = true;
+	break;
+      }
+
+  if (!found)
+    return;
+
+  if (STATE_VERBOSE_P (sd))
+    sim_io_eprintf(sd, "setting loader flags\n");
+
+  addr = bfd_get_section_vma (prog_bfd, s);
+
+  sim_core_write_buffer (sd, current_cpu, write_map, &flags, addr,
+			 sizeof(flags));
+
+  es_get_cluster_cfg(STATE_ESIM (sd), &cluster);
+
+  /* Figure out how much storage the argv strings need.  */
+  argc = countargv ((char **)argv);
+  if (argc == -1)
+    argc = 0;
+  argv_flat = argc; /* NUL bytes  */
+  for (i = 0; i < argc; i++)
+    argv_flat += strlen (argv[i]);
+
+#if 0
+  /* Pushing the environment can eat up several KBs of SRAM.
+     Ignore it for now, if we ever need it, create a memory slice inside the
+     core's 1MB region above physical SRAM.  */
+  envc = countargv ((char **)env);
+  env_flat = envc; /* NUL bytes  */
+  for (i = 0; i < envc; i++)
+    env_flat += strlen (env[i]);
+#endif
+
+  args_size = argv_flat; /* size of argv strings  */
+  args_size += 4;        /* argc  */
+  args_size += 4;        /* argv pointer  */
+  args_size += 4;        /* envp pointer  */
+  args_size += 4;        /* auxv pointer  */
+  args_size += 4 * argc; /* size of argv pointer vector  */
+  args_size += 4;        /* null pointer terminating argv  */
+
+  args_size = (args_size + 8) & ~7; /* round up for alignment */
+
+  argcp  = cluster.core_phys_mem - args_size; /* Pointer to argc */
+  argvpp = argcp  + 4; /* Address of pointer to argv pointer vector  */
+  envp   = argvpp + 4; /* Address of pointer to envp vector  */
+  auxvp  = envp   + 4; /* Address of pointer to auxv vector  */
+  argvp  = auxvp  + 4; /* Address of argv pointer vector  */
+  strp   = argvp  + 4 * (argc + 1); /* Address of argv strings  */
+
+  /* Set actual stack pointer  */
+  epiphanybf_h_all_registers_set (current_cpu, H_REG_SP, argcp - 8);
+
+  /* Write argc */
+  sim_core_write_buffer (sd, current_cpu, write_map, &argc, argcp, 4);
+
+  /* Write pointer to argv pointer vector */
+  sim_core_write_buffer (sd, current_cpu, write_map, &argvp, argvpp, 4);
+
+  /* Write envp null pointer */
+  sim_core_write_buffer (sd, current_cpu, write_map, &null, envp, 4);
+
+  /* Write auxv null pointer */
+  sim_core_write_buffer (sd, current_cpu, write_map, &null, auxvp, 4);
+
+  /* Write argv pointers + argv strings */
+  for (i = 0; i < argc; i++)
+    {
+      int l = strlen (argv[i]) + 1;
+
+      sim_core_write_buffer (sd, current_cpu, write_map, argv[i], strp, l);
+      sim_core_write_buffer (sd, current_cpu, write_map, &strp, argvp, 4);
+
+      argvp += 4;
+      strp += l;
+    }
+
+  /* Write argv terminating null pointer  */
+  sim_core_write_buffer (sd, current_cpu, write_map, &null, argvp, 4);
+}
+
 SIM_RC
 sim_create_inferior (SIM_DESC sd,
 		     struct bfd *abfd,
@@ -855,10 +987,15 @@ sim_create_inferior (SIM_DESC sd,
     addr = 0;
   sim_pc_set (current_cpu, addr);
 
-#if 0
-  STATE_ARGV (sd) = sim_copy_argv (argv);
-  STATE_ENVP (sd) = sim_copy_argv (envp);
-#endif
+  /* Standalone mode (i.e. `run`) will take care of the argv for us in
+     sim_open() -> sim_parse_args().  But in debug mode (i.e. 'target sim'
+     with `gdb`), we need to handle it because the user can change the
+     argv on the fly via gdb's 'run'.  */
+  if (STATE_PROG_ARGV (sd) != argv)
+    {
+      freeargv (STATE_PROG_ARGV (sd));
+      STATE_PROG_ARGV (sd) = dupargv ((char **)argv);
+    }
 
 #if WITH_EMESH_SIM
 
@@ -870,6 +1007,7 @@ sim_create_inferior (SIM_DESC sd,
       /* set up workgroup configuration according to mesh properties */
       if (setup_workgroup_cfg (sd) != SIM_RC_OK)
 	return SIM_RC_FAIL;
+
     }
 
   /* Set coreid in cpu register. Do it via backdoor since it is (should be)
@@ -883,6 +1021,8 @@ sim_create_inferior (SIM_DESC sd,
     case ALL_ENVIRONMENT:
       /* Fall through, default environment is USER */
     case USER_ENVIRONMENT:
+      /* set up arguments */
+      epiphany_user_init (sd, current_cpu, abfd, argv, envp);
       /* Start by setting caibit */
       epiphanybf_h_caibit_set (current_cpu, 1);
       break;
