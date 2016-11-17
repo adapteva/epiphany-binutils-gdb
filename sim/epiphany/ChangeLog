@@ -1,5 +1,11 @@
 2016-11-17  Ola Jeppsson  <ola@adapteva.com>
 
+	* esim/esim.c (es_validate_cluster_cfg): Allow
+	non power of two core_phys_mem.
+	(es_init_impl): Truncate core_phys_mem to ES_CORE_MMR_BASE.
+
+2016-11-17  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-if.c (epiphany_user_init): New function.
 	(sim_create_inferior): Fix copying of argv. Call epiphany_user_init
 	in USER_ENVIRONMENT.

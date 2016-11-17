@@ -1012,8 +1012,6 @@ es_validate_cluster_cfg(const es_cluster_cfg *c)
 			    "Core SRAM size must be at least 32KB");
   FAIL_IF(c->core_phys_mem > c->core_mem_region,
 			    "Core SRAM size cannot be larger than core memory region");
-  FAIL_IF(c->core_phys_mem & (c->core_phys_mem-1),
-			    "Core SRAM size must be power of two");
 
   /* Only support up to 4GB for now */
   FAIL_IF((uint64_t) c->ext_ram_size > (1ULL<<32ULL),
@@ -1397,6 +1395,9 @@ es_init_impl(es_state **handle,
       fprintf(stderr, "ESIM: Could not open esim file `/dev/shm%s'\n", shm_name);
       goto err_out;
     }
+
+  /* Silently truncate physical memory to below MMR region */
+  cluster.core_phys_mem = min (cluster.core_phys_mem, ES_CORE_MMR_BASE);
 
 #if WITH_EMESH_NET
   /* Initialize networking */
