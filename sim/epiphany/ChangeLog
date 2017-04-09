@@ -1,3 +1,9 @@
+2017-04-09  Ola Jeppsson  <ola@adapteva.com>
+
+	* configure.ac: Do not use += operator for appending to
+	variables. It is not Bourne Shell compatible.
+	* configure: Regenerated.
+
 2016-11-17  Ola Jeppsson  <ola@adapteva.com>
 
 	* esim/esim.c (es_validate_cluster_cfg): Allow

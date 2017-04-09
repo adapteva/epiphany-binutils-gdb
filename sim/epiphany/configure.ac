@@ -33,15 +33,15 @@ AC_ARG_ENABLE(emesh-sim,
 [  --disable-emesh-sim			Disable simulation of eMesh],
 [
 case "x${enableval}" in
-  x)    esim="yes"; esim_cflags+=" ${esim_enabled_cflags}";;
-  xyes) esim="yes"; esim_cflags+=" ${esim_enabled_cflags}";;
-  xno)  esim=""   ; esim_cflags+=" ${esim_disabled_cflags}";;
+  x)    esim="yes"; esim_cflags="${esim_cflags} ${esim_enabled_cflags}";;
+  xyes) esim="yes"; esim_cflags="${esim_cflags} ${esim_enabled_cflags}";;
+  xno)  esim=""   ; esim_cflags="${esim_cflags} ${esim_disabled_cflags}";;
   *)    AC_MSG_ERROR([--enable-emesh-sim does not take a value]); ;;
 esac
 ],
 [
   esim="yes"
-  esim_cflags+=" ${esim_enabled_cflags}"
+  esim_cflags="${esim_cflags} ${esim_enabled_cflags}"
 ]
 )
 
@@ -67,13 +67,13 @@ AC_ARG_ENABLE(emesh-net,
 [  --enable-emesh-net			Enable eMesh sim network support],
 [
 case "x${enableval}" in
-  x)    esim_net="yes"; esim_cflags+=" ${esim_net_enabled_cflags}";;
-  xyes) esim_net="yes"; esim_cflags+=" ${esim_net_enabled_cflags}";;
-  xno)  esim_net=""   ; esim_cflags+=" ${esim_net_disabled_cflags}";;
+  x)    esim_net="yes"; esim_cflags="${esim_cflags} ${esim_net_enabled_cflags}";;
+  xyes) esim_net="yes"; esim_cflags="${esim_cflags} ${esim_net_enabled_cflags}";;
+  xno)  esim_net=""   ; esim_cflags="${esim_cflags} ${esim_net_disabled_cflags}";;
   *)    AC_MSG_ERROR([--enable-emesh-net does not take a value]); ;;
 esac
 ],
-[esim_cflags+=" ${esim_net_disabled_cflags}"]
+[esim_cflags="${esim_cflags} ${esim_net_disabled_cflags}"]
 )
 dnl Need MPI for esim-net
 if test x"${esim_net}" = x"yes"; then
@@ -87,17 +87,17 @@ fi
 epihany_extra_libs=
 if test "x$esim" = "xyes"; then
 AC_CHECK_LIB(rt, shm_open,
-  [ epiphany_extra_libs+=" -lrt" ],
+  [ epiphany_extra_libs="${epiphany_extra_libs} -lrt" ],
   [ AC_MSG_ERROR([Could not find rt]) ]
 )
 AC_CHECK_LIB(pthread, pthread_barrier_init,
-  [ epiphany_extra_libs+=" -lpthread" ],
+  [ epiphany_extra_libs="${epiphany_extra_libs} -lpthread" ],
   [ AC_MSG_ERROR([Could not find pthread]) ]
 )
 AC_CHECK_LIB(e-xml, e_xml_new,
   [
-    epiphany_extra_libs+=" -le-xml"
-    esim_cflags+=" -DHAVE_E_XML=1"
+    epiphany_extra_libs="${epiphany_extra_libs} -le-xml"
+    esim_cflags="${esim_cflags} -DHAVE_E_XML=1"
   ],
   []
 )

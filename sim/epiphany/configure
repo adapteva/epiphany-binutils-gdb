@@ -14107,16 +14107,16 @@ esim_disabled_cflags="-DEMESH_SIM=0 -DWITH_EMESH_SIM=0"
 if test "${enable_emesh_sim+set}" = set; then :
   enableval=$enable_emesh_sim;
 case "x${enableval}" in
-  x)    esim="yes"; esim_cflags+=" ${esim_enabled_cflags}";;
-  xyes) esim="yes"; esim_cflags+=" ${esim_enabled_cflags}";;
-  xno)  esim=""   ; esim_cflags+=" ${esim_disabled_cflags}";;
+  x)    esim="yes"; esim_cflags="${esim_cflags} ${esim_enabled_cflags}";;
+  xyes) esim="yes"; esim_cflags="${esim_cflags} ${esim_enabled_cflags}";;
+  xno)  esim=""   ; esim_cflags="${esim_cflags} ${esim_disabled_cflags}";;
   *)    as_fn_error "--enable-emesh-sim does not take a value" "$LINENO" 5; ;;
 esac
 
 else
 
   esim="yes"
-  esim_cflags+=" ${esim_enabled_cflags}"
+  esim_cflags="${esim_cflags} ${esim_enabled_cflags}"
 
 
 fi
@@ -14144,14 +14144,14 @@ esim_net_disabled_cflags="-DEMESH_NET=0 -DWITH_EMESH_NET=0"
 if test "${enable_emesh_net+set}" = set; then :
   enableval=$enable_emesh_net;
 case "x${enableval}" in
-  x)    esim_net="yes"; esim_cflags+=" ${esim_net_enabled_cflags}";;
-  xyes) esim_net="yes"; esim_cflags+=" ${esim_net_enabled_cflags}";;
-  xno)  esim_net=""   ; esim_cflags+=" ${esim_net_disabled_cflags}";;
+  x)    esim_net="yes"; esim_cflags="${esim_cflags} ${esim_net_enabled_cflags}";;
+  xyes) esim_net="yes"; esim_cflags="${esim_cflags} ${esim_net_enabled_cflags}";;
+  xno)  esim_net=""   ; esim_cflags="${esim_cflags} ${esim_net_disabled_cflags}";;
   *)    as_fn_error "--enable-emesh-net does not take a value" "$LINENO" 5; ;;
 esac
 
 else
-  esim_cflags+=" ${esim_net_disabled_cflags}"
+  esim_cflags="${esim_cflags} ${esim_net_disabled_cflags}"
 
 fi
 
@@ -14385,7 +14385,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rt_shm_open" >&5
 $as_echo "$ac_cv_lib_rt_shm_open" >&6; }
 if test "x$ac_cv_lib_rt_shm_open" = x""yes; then :
-   epiphany_extra_libs+=" -lrt"
+   epiphany_extra_libs="${epiphany_extra_libs} -lrt"
 else
    as_fn_error "Could not find rt" "$LINENO" 5
 
@@ -14428,7 +14428,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_barrier_init" >&5
 $as_echo "$ac_cv_lib_pthread_pthread_barrier_init" >&6; }
 if test "x$ac_cv_lib_pthread_pthread_barrier_init" = x""yes; then :
-   epiphany_extra_libs+=" -lpthread"
+   epiphany_extra_libs="${epiphany_extra_libs} -lpthread"
 else
    as_fn_error "Could not find pthread" "$LINENO" 5
 
@@ -14472,8 +14472,8 @@ fi
 $as_echo "$ac_cv_lib_e_xml_e_xml_new" >&6; }
 if test "x$ac_cv_lib_e_xml_e_xml_new" = x""yes; then :
 
-    epiphany_extra_libs+=" -le-xml"
-    esim_cflags+=" -DHAVE_E_XML=1"
+    epiphany_extra_libs="${epiphany_extra_libs} -le-xml"
+    esim_cflags="${esim_cflags} -DHAVE_E_XML=1"
 
 fi
 
