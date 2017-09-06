@@ -827,12 +827,44 @@ setup_workgroup_cfg (SIM_DESC sd)
   return SIM_RC_OK;
 }
 
+static bool
+find_sym (struct bfd *prog_bfd, char *name, unsigned_word *val)
+{
+  struct bfd_symbol **asymbols;
+  long symsize;
+  long symbol_count;
+  long i;
+  bool found = false;
+
+  symsize = bfd_get_symtab_upper_bound (prog_bfd);
+  if (symsize < 0)
+    return false;
+  asymbols = (asymbol **) xmalloc (symsize);
+  symbol_count = bfd_canonicalize_symtab (prog_bfd, asymbols);
+  if (symbol_count < 0)
+    goto free;
+
+  for (i = 0; i < symbol_count; i++)
+    {
+      if (!strcmp (asymbols[i]->name, name))
+	{
+	  *val = asymbols[i]->section->vma + asymbols[i]->value;
+	  found = true;
+	  goto free;
+	}
+    }
+
+free:
+  free (asymbols);
+  return found;
+}
+
 static void
 epiphany_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
 		    char * const *argv, char * const *env)
 {
   asection *s;
-  unsigned_word addr, sp, args_size;
+  unsigned_word addr, initial_stack = 0, args_size;
   unsigned_word argcp, argvpp, envp, auxvp, argvp, strp;
   unsigned_word argv_flat;
   const unsigned_word null = 0;
@@ -893,6 +925,21 @@ epiphany_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
 
   es_get_cluster_cfg(STATE_ESIM (sd), &cluster);
 
+  /* Figure out where to put the initial stack.
+     If the "__stack" symbol points to a global address (above 1MB), place
+     the initial stack there. Otherwise adjust it to available SRAM size.  */
+  find_sym (prog_bfd, "__stack", &initial_stack);
+  if (initial_stack < cluster.core_mem_region)
+    {
+      if (STATE_VERBOSE_P (sd) && initial_stack > cluster.core_phys_mem)
+	{
+	  sim_io_eprintf(sd,
+			 "WARNING: truncating stack size to %#x\n",
+			 initial_stack);
+	}
+      initial_stack = cluster.core_phys_mem;
+    }
+
   /* Figure out how much storage the argv strings need.  */
   argc = countargv ((char **)argv);
   if (argc == -1)
@@ -921,7 +968,7 @@ epiphany_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
 
   args_size = (args_size + 8) & ~7; /* round up for alignment */
 
-  argcp  = cluster.core_phys_mem - args_size; /* Pointer to argc */
+  argcp  = initial_stack - args_size; /* Pointer to argc */
   argvpp = argcp  + 4; /* Address of pointer to argv pointer vector  */
   envp   = argvpp + 4; /* Address of pointer to envp vector  */
   auxvp  = envp   + 4; /* Address of pointer to auxv vector  */
