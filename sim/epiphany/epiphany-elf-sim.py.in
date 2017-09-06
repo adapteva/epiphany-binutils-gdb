@@ -127,18 +127,18 @@ Press Ctrl-C at any time to abort the simulation.
             choices=['parallella16', 'parallella64', 'parallella1k'],
             help=
             """
-            parallella16: '--rows 4  --cols  4 --first-core 0x808 --external-fetch --core-mem 32k'
-            parallella64: '--rows 8  --cols  8 --first-core 0x808 --external-fetch --core-mem 32k'
-            parallella1k: '--rows 32 --cols 32 --first-core 0x020 --core-mem 64k'
+            parallella16: '--rows 4  --cols  4 --first-core 0x808 --external-fetch --core-mem 32kB'
+            parallella64: '--rows 8  --cols  8 --first-core 0x808 --external-fetch --core-mem 32kB'
+            parallella1k: '--rows 32 --cols 32 --first-core 0x020 --core-mem 64kB'
 
             All presets also implies:
             '--ext-ram-size 32M --ext-ram-base 0x8e000000'
             """)
 
     parser.add_argument(
-            '-r', '--rows', type=auto_int, default=32, help='Number of rows')
+            '-r', '--rows', type=auto_int, help='Number of rows')
     parser.add_argument(
-            '-c', '--cols', type=auto_int, default=32, help='Number of columns')
+            '-c', '--cols', type=auto_int, help='Number of columns')
 
 
     parser.add_argument(
@@ -160,14 +160,13 @@ Press Ctrl-C at any time to abort the simulation.
             where the default environment setting is `user'""")
 
     parser.add_argument(
-            '--ext-ram-size', type=str, default='32MB',
+            '--ext-ram-size', type=str,
             help='External RAM size. Allowed suffixes: KB, MB, GB. No spaces. Default: 32MB.')
     parser.add_argument(
-            '--ext-ram-base', type=auto_int, default=0x8e000000,
-            help='External RAM base address')
+            '--ext-ram-base', type=auto_int, help='External RAM base address')
 
     parser.add_argument(
-            '--core-mem', type=str, default='64kB',
+            '--core-mem', type=str,
             help='Core memory size (SRAM). Allowed suffixes: KB, MB, GB. No spaces. Default: 64kB.')
 
     parser.add_argument(
@@ -218,26 +217,31 @@ Press Ctrl-C at any time to abort the simulation.
     args.wait_attach = sum(args.wait_attach, [])
 
 
-    if args.preset:
-        args.ext_ram_size = '32M'
-        args.ext_ram_base = 0x8e000000
-        if args.preset == 'parallella16':
-            args.rows = 4
-            args.cols = 4
-            args.first_core = 0x808
-            args.core_mem = '32k'
-            args.external_fetch = True
-        if args.preset == 'parallella64':
-            args.rows = 8
-            args.cols = 8
-            args.first_core = 0x808
-            args.core_mem = '32k'
-            args.external_fetch = True
-        if args.preset == 'parallella1k':
-            args.rows = 32
-            args.cols = 32
-            args.first_core = 0x020
-            args.core_mem = '64k'
+    # Defaults
+
+    if_not_set = lambda val, new: val if val else new
+
+    args.ext_ram_size = if_not_set(args.ext_ram_size, '32MB')
+    args.ext_ram_base = if_not_set(args.ext_ram_base, 0x8e000000)
+
+    if not args.preset or args.preset == 'parallella1k':
+        args.rows = if_not_set(args.rows, 32)
+        args.cols = if_not_set(args.cols, 32)
+        args.first_core = if_not_set(args.first_core, 0x020)
+        args.core_mem = if_not_set(args.core_mem, '64kB')
+        args.external_fetch = if_not_set(args.external_fetch, False)
+    elif args.preset == 'parallella16':
+        args.rows = if_not_set(args.rows, 4)
+        args.cols = if_not_set(args.cols, 4)
+        args.first_core = if_not_set(args.first_core, 0x808)
+        args.core_mem = if_not_set(args.core_mem, '32kB')
+        args.external_fetch = if_not_set(args.external_fetch, True)
+    elif args.preset == 'parallella64':
+        args.rows = if_not_set(args.rows, 8)
+        args.cols = if_not_set(args.cols, 8)
+        args.first_core = if_not_set(args.first_core, 0x808)
+        args.core_mem = if_not_set(args.core_mem, '32kB')
+        args.external_fetch = if_not_set(args.external_fetch, True)
 
     # Check arguments
     if args.rows < 1 or 64 < args.rows:
@@ -257,8 +261,10 @@ Press Ctrl-C at any time to abort the simulation.
         parser.error('Core memory size must be power of two')
 
     if args.host:
+        if which(args.host[0]):
+            args.host[0] = which(args.host[0])
         args.environment = 'operating'
-        if not (os.path.isfile(args.host[0]) or which(args.host[0])):
+        if not os.path.isfile(args.host[0]):
             parser.error("Host program `%s' not found" % args.host[0])
 
     if not {args.environment} & {'user', 'virtual', 'operating'}:
@@ -402,6 +408,11 @@ def redirect_stdio(prefix):
     os.close(old_stdout_fd); os.close(new_stdout_fd)
     os.close(old_stderr_fd); os.close(new_stderr_fd)
 
+def tryhex(val):
+    try:
+        return hex(val)
+    except TypeError:
+        return val
 
 def spawn(args, i, j):
     """ Fork and spawn one simulator process """
@@ -429,13 +440,13 @@ def spawn(args, i, j):
         sim_args.append('--verbose')
 
     sim_args += map(lambda x: str(x), [
-        '--e-coreid'      , coreid,
-        '--e-first-core'  , args.first_core,
+        '--e-coreid'      , tryhex(coreid),
+        '--e-first-core'  , tryhex(args.first_core),
         '--e-rows'        , args.rows,
         '--e-cols'        , args.cols,
         '--e-ext-ram-size', args.ext_ram_size,
-        '--e-ext-ram-base', args.ext_ram_base,
-        '--e-core-mem'    , args.core_mem,
+        '--e-ext-ram-base', tryhex(args.ext_ram_base),
+        '--e-core-mem'    , tryhex(args.core_mem),
         '--environment'   , args.environment
         ])
 
@@ -503,6 +514,8 @@ def which(command):
         full_path = os.path.join(p, command)
         if os.path.exists(full_path):
             return full_path
+    if os.path.exists(command):
+        return os.path.realpath(command)
     return None
 
 def in_build_tree():

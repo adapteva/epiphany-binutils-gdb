@@ -1,5 +1,14 @@
 2017-09-06  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany-elf-sim.py.in (tryhex): New function.
+	(which): Check in current working directory if not found in path.
+	(spawn): Convert epiphany-elf-run arguments to hex where it makes
+	sense.
+	(parse_or_die): Don't let presets override other command-line
+	options.
+
+2017-09-06  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-if.c (find_sym): New function.
 	(epiphany_user_init): Do not move stack if __stack is a global
 	address.
