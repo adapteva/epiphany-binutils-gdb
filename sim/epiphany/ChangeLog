@@ -1,5 +1,11 @@
 2019-02-10  Ola Jeppsson  <ola@adapteva.com>
 
+	* sim-if.c (sim_open): Initialize sd->orig_cpu to NULL.
+	(epiphany_sim_close): Null check sd->orig_cpu before doing
+	anything.
+
+2019-02-10  Ola Jeppsson  <ola@adapteva.com>
+
 	* dv-epiphany_dma.c (union dma_stride): Make src_stride and
 	dst_stride signed types.
 	(epiphany_dma_hw_event_callback): Support negative strides.

@@ -640,6 +640,9 @@ sim_open (SIM_OPEN_KIND kind,
     }
 
 #if WITH_EMESH_SIM
+  for (i = 0; i < MAX_NR_PROCESSORS; i++)
+    sd->orig_cpu[i] = NULL;
+
   if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
     {
       if (sim_esim_init(sd) != SIM_RC_OK)
@@ -745,6 +748,10 @@ sim_open (SIM_OPEN_KIND kind,
 void
 epiphany_sim_close (SIM_DESC sd, int quitting)
 {
+
+  if (! sd->orig_cpu[0])
+    return;
+
 #if WITH_EMESH_SIM
   if (es_initialized (STATE_ESIM(sd)) == ES_OK)
     {
