@@ -6321,7 +6321,12 @@ assembler and not (currently) written to any object files.  */
 /* Adapteva EPIPHANY - 11 bit signed number - add/sub immediate  */
   BFD_RELOC_EPIPHANY_SIMM11,
 
-/* Adapteva EPIPHANY - 11 bit sign-magnitude number (ld/st displacement)  */
+#if 1
+/* Adapteva EPIPHANY - 3 bit sign-magnitude number (ld/st displacement) */
+  BFD_RELOC_EPIPHANY_IMM3,
+#endif
+
+/* Adapteva EPIPHANY - 11 bit sign-magnitude number (ld/st displacement) */
   BFD_RELOC_EPIPHANY_IMM11,
 
 /* Adapteva EPIPHANY - 8 bit immediate for 16 bit mov instruction.  */

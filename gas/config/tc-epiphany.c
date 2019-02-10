@@ -258,6 +258,9 @@ epiphany_apply_fix (fixS *fixP, valueT *valP, segT seg)
       char *where = fixP->fx_frag->fr_literal + fixP->fx_where;
       unsigned char *insn = (unsigned char *)where;
       valueT value = * valP;
+      bfd_boolean negative = (long long) value < 0 ? TRUE : FALSE;
+
+      fixP->fx_done = 1;
 
       switch (fixP->fx_r_type)
 	{
@@ -274,9 +277,12 @@ epiphany_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  return;
 
 	case BFD_RELOC_EPIPHANY_IMM11:
+	  /* ld/stS can negative */
+	  value = negative ? -value : value;
 	  where[0] = where[0] | ((value & 1) << 7);
 	  where[1] = where[1] | ((value & 6) >> 1);
 	  where[2] = (value >> 3) & 0xff;
+	  where[3] = (where[3] & 0xfe) | (negative ? 1 : 0);
 	  return;
 
 	case BFD_RELOC_EPIPHANY_SIMM8:
@@ -299,9 +305,24 @@ epiphany_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  return;
 	}
     }
+  else if (fixP->fx_addsy == 0)
+    {
+      long long value = (long long) *valP;
+      printf("fx_done\n");
+
+      switch (fixP->fx_cgen.opinfo)
+        {
+          case BFD_RELOC_EPIPHANY_HIGH:
+	    *valP >>= 16;
+	    /* fall through */
+          case BFD_RELOC_EPIPHANY_LOW:
+	    *valP &= 0xffff;
+            break;
+        }
+    }
 
   /* Just do the default if we can't special case.  */
-  return gas_cgen_md_apply_fix (fixP, valP, seg);
+  gas_cgen_md_apply_fix (fixP, valP, seg);
 }
 
 
@@ -673,22 +694,30 @@ md_estimate_size_before_relax (fragS *fragP, segT segment)
       fragP->fr_subtype = subtype;
 
       {
-	const CGEN_INSN *insn;
-	int i;
+	const CGEN_INSN *insn = NULL;
+	CGEN_INSN_LIST *ilist;
 
 	/* Update the recorded insn.  */
 
-	for (i = 0, insn = fragP->fr_cgen.insn; i < 4; i++, insn++)
+	/* The instructions are stored in hashed lists. */
+	ilist = CGEN_ASM_LOOKUP_INSN (gas_cgen_cpu_desc,
+				      CGEN_INSN_MNEMONIC (fragP->fr_cgen.insn));
+
+	for ( ; ilist != NULL; ilist = CGEN_ASM_NEXT_INSN (ilist))
 	  {
-	    if ((strcmp (CGEN_INSN_MNEMONIC (insn),
+	    const CGEN_INSN *candidate = ilist->insn;
+	    if ((strcmp (CGEN_INSN_MNEMONIC (candidate),
 			 CGEN_INSN_MNEMONIC (fragP->fr_cgen.insn))
 		 == 0)
-		&& CGEN_INSN_ATTR_VALUE (insn, CGEN_INSN_RELAXED))
-	      break;
+		&& CGEN_INSN_ATTR_VALUE (candidate, CGEN_INSN_RELAXED))
+	      {
+		insn = candidate;
+		break;
+	      }
 	  }
 
-	if (i == 4)
-	  abort ();
+	if (insn == NULL)
+	  as_bad (_("could not find relaxed insn"));
 
 	fragP->fr_cgen.insn = insn;
       }
@@ -750,11 +779,11 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
       extension += 3;
 
       addend
-	= (((addend & 0x7) << 7)
-	   | opcode[0]
+	= ((addend & 0x7) << 7)
+	   | (opcode[0] & 0xff)
 	   | ((addend & 0x7f8) << 13)
-	   | (opcode[1] << 8)
-	   | (opcode[2] << 16));
+	   | ((opcode[1] & 0xff ) << 8)
+	   | ((opcode[2] & 0xff ) << 16);
 
       opindx = EPIPHANY_OPERAND_SIMM11;
       break;
@@ -775,10 +804,10 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
 
       addend
 	= (((addend & 0xff00) << 12)
-	   | (opcode[2] << 16)
+	   | ((opcode[2] & 0xff) << 16)
 	   | ((addend & 0x00ff) << 5)
-	   | (opcode[1] << 8)
-	   | opcode[0]);
+	   | ((opcode[1] & 0xff) << 8)
+	   | ((opcode[0]) & 0xff));
       displacement = &opcode[0];
       opindx = EPIPHANY_OPERAND_IMM16;
       break;
@@ -794,21 +823,21 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
 
       addend
 	= (((addend & 0x7) << 5)
-	   | opcode[0]
+	   | (opcode[0] & 0xff)
 	   | ((addend & 0xff8) << 13)
-	   | (opcode[1] << 8)
-	   | (opcode[2] << 16));
+	   | ((opcode[1] & 0xff) << 8)
+	   | ((opcode[2] & 0xff) << 16));
 
       opindx = EPIPHANY_OPERAND_DISP11;
       break;
 
     case EPIPHANY_RELAX_ARITH_SIMM3:
-      addend = ((addend & 7) << 5) | opcode[0];
+      addend = ((addend & 7) << 5) | (opcode[0] & 0xff);
       opindx = EPIPHANY_OPERAND_SIMM3;
       break;
 
     case EPIPHANY_RELAX_LDST_IMM3:
-      addend = ((addend & 7) << 5) | opcode[0];
+      addend = ((addend & 7) << 5) | (opcode[0] & 0xff);
       opindx = EPIPHANY_OPERAND_DISP3;
       break;
 
@@ -821,8 +850,8 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
     case EPIPHANY_RELAX_MOV_IMM8:
       addend
 	= (((addend & 0xff) << 5)
-	   | opcode[0]
-	   | (opcode[1] << 8));
+	   | (opcode[0] & 0xff)
+	   | ((opcode[1] & 0xff) << 8));
       opindx = EPIPHANY_OPERAND_IMM8;
       break;
 
@@ -897,6 +926,10 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
     {
     case EPIPHANY_OPERAND_SIMM11:
       return BFD_RELOC_EPIPHANY_SIMM11;
+#if 1
+    case EPIPHANY_OPERAND_DISP3:
+      return BFD_RELOC_EPIPHANY_IMM3;
+#endif
     case EPIPHANY_OPERAND_DISP11:
       return BFD_RELOC_EPIPHANY_IMM11;
 

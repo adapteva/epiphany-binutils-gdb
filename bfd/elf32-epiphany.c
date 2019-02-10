@@ -413,8 +413,30 @@ epiphany_get_plt_address (bfd_vma relocation,
   asection *s;
 
   s = bfd_get_section_by_name (output_bfd, ".plt");
+  if (!s)
+    {
+      (*_bfd_error_handler) (_("%B: missing .plt output section."), output_bfd);
+      bfd_set_error (bfd_error_bad_value);
+      return -1;
+    }
   BFD_ASSERT (s != 0);
 
+  /* HACK: can happen with a weak undefined symbol */
+  if (relocation == 0 && h->root.type == bfd_link_hash_undefweak)
+    return 0;
+#if 0
+  if (h->plt.refcount == -1)
+    {
+      BFD_ASSERT (relocation == 0);
+      return 0;
+    }
+#endif
+
+#if 0
+  bfd_put_32 (output_bfd, relocation, s->contents + h->plt.offset + 8);
+  bfd_put_32 (output_bfd, h->size, s->contents + h->plt.offset + 12);
+  return s->contents + h->plt.offset;
+#else
   /* Look for either entry corresponding to function or fill in next entry
      Note here that i is a memory offset, so increases by entry size */
   for (i = 0; i < s->size; i += PLT_ENTRY_SIZE)
@@ -436,7 +458,8 @@ epiphany_get_plt_address (bfd_vma relocation,
 	  return s->vma + i;
 	}
     }
-
+  BFD_ASSERT (i <= s->size);
+#endif
   return relocation;
 }
 
@@ -669,11 +692,28 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
 {
    flagword flags;
    struct elf_link_hash_entry *h;
-   asection *s;
+   asection *s, *cacheman;
    const struct elf_backend_data *bed = get_elf_backend_data (dynobj);
    struct elf_link_hash_table *htab = elf_hash_table (info);
    bfd *output_bfd = info->output_bfd;
-   
+
+  /* Create cache manager ".cacheman" section here if it doesn't exist
+   * ???: should be moved to ... */
+  cacheman = bfd_get_section_by_name (dynobj, ".cacheman");
+  if (cacheman == NULL)
+    {
+      flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS);
+      cacheman = bfd_make_section_anyway_with_flags (dynobj, ".cacheman", flags);
+      bfd_set_section_alignment (dynobj, cacheman, 3);
+      BFD_ASSERT (bfd_get_section_alignment (dynobj, cacheman) == 3);
+    }
+  if (cacheman == NULL)
+    {
+      (*_bfd_error_handler)
+	(_("%B: could not create .cacheman section."), dynobj);
+      return FALSE;
+    }
+
    /* If .plt already exists, we don't need to recreate it */
    if (htab->splt != NULL)
      return TRUE;
@@ -690,7 +730,7 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
    
    /* Define PLT symbol */
    h = _bfd_elf_define_linkage_sym (dynobj, info, s,
-				    "_PROCEDURE_LINKAGE_TABLE");
+				    "_PROCEDURE_LINKAGE_TABLE_");
    htab->hplt = h;
    if (h == NULL)
      return FALSE;
@@ -702,10 +742,10 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
    where required. */
  static bfd_boolean
  epiphany_elf_check_relocs (bfd *abfd,
-			    struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			    struct bfd_link_info *info,
 			    asection *sec ATTRIBUTE_UNUSED,
 			    const Elf_Internal_Rela *relocs)
- {
+{
    Elf_Internal_Shdr *symtab_hdr;
    struct elf_link_hash_entry **sym_hashes;
    const Elf_Internal_Rela *rel;
@@ -738,11 +778,16 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
 	   case R_EPIPHANY_CACHE32:
 	   case R_EPIPHANY_CACHEHIGH:
 	     if (h != NULL)
+#if 0
+		 && h->root.type != bfd_link_hash_undefweak
+		 && h->root.type != bfd_link_hash_undefined)
+#endif
 	       {
 		 /* Should this call be elsewhere? */
 		 epiphany_elf_create_plt_section (abfd, info);
+
 		 h->needs_plt = 1;
-		 h->plt.refcount +=1;
+		 h->plt.refcount += 1;
 		 /* Disable analysis of dynamic sections.
 		    N.B: We might want to enable this in the future, but then
 		    we'd need to at least define
@@ -752,6 +797,42 @@ epiphany_elf_create_plt_section (bfd *dynobj, struct bfd_link_info *info)
 		    allocating in the PLT */
 		 if (h->plt.refcount == 0)
 		   elf_hash_table (info)->splt->size += PLT_ENTRY_SIZE;
+#if 0
+		   {
+		     /* Define PLT symbol */
+		     struct elf_link_hash_table *htab = elf_hash_table (info);
+		     bfd *output_bfd = info->output_bfd;
+		     const char *name = h->root.root.string;
+		     const struct elf_backend_data *bed =
+		       get_elf_backend_data (output_bfd);
+		     size_t len = strlen (name) + sizeof ("@plt");
+		     char *pltname = (char *) bfd_malloc (len);
+		     struct bfd_link_hash_entry *bh = NULL;
+		     struct elf_link_hash_entry *eh;
+
+		     snprintf (pltname, len, "%s%s", name, "@plt");
+
+		     _bfd_generic_link_add_one_symbol (info,
+				  output_bfd,
+				  pltname,
+				  BSF_LOCAL | BSF_OBJECT | BSF_FUNCTION,
+				  htab->splt,
+				  htab->splt->size,
+				  NULL,
+				  TRUE,
+				  bed->collect,
+				  &bh);
+
+		     BFD_ASSERT (bh != NULL);
+		     eh = (struct elf_link_hash_entry *) bh;
+		     eh->type = ELF_ST_INFO (STB_LOCAL, STT_OBJECT);
+		     eh->size = PLT_ENTRY_SIZE;
+
+		     free (pltname);
+
+		     htab->splt->size += PLT_ENTRY_SIZE;
+		   }
+#endif
 	       }
 	     break;
 	   /* Do we need anything else here? */
@@ -793,9 +874,12 @@ epiphany_elf_finish_dynamic_sections (bfd * output_bfd,
 
   /* We assume our chache manager is in .cacheman */
   cacheman = bfd_get_section_by_name (output_bfd, ".cacheman");
-  BFD_ASSERT (cacheman != NULL);
   if (cacheman == NULL)
-    return FALSE;
+    {
+      (*_bfd_error_handler)
+	(_("%B: missing .cacheman output section."), output_bfd);
+      return FALSE;
+    }
 
   for (i = 0; i < plt->size; i += PLT_ENTRY_SIZE)
     {

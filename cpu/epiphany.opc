@@ -48,7 +48,7 @@ typedef enum epiphany_relax_types
   EPIPHANY_RELAX_MOV_IMM16,	/* mov r,imm16 */
 
   EPIPHANY_RELAX_LDST_IMM3,	/* (ldr|str)* r,[r,disp3] */
-  EPIPHANY_RELAX_LDST_IMM11	/* (ldr|str)* r,[r,disp11] */
+  EPIPHANY_RELAX_LDST_IMM11	/* (ldr|str)* r,[r,[+-]disp11] */
 
 } EPIPHANY_RELAX_TYPES;
 

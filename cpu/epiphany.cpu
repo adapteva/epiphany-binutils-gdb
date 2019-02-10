@@ -1370,18 +1370,18 @@
 
 (dimmop simm3   "signed 3-bit literal"    h-sint f-sdisp3)
 (dimmop simm11  "signed 11-bit literal"   h-sint f-sdisp11)
-(dnop disp3  "short data displacement"   () h-uint f-disp3)
+(dnop disp3     "short data displacement" (RELAX) h-uint f-disp3)
 (dnop trapnum6 "parameter for swi or trap" () h-uint f-trap-num)
 
-(define-pmacro (duimmop nm cmt hwtype idx)
+(define-pmacro (duimmop nm cmt hwtype idx attrs)
   (define-operand (name nm) (comment cmt) (type hwtype) (index idx)
-    (attrs)
+    attrs
     (handlers (parse "uimm_not_reg")
 	      (print "uimm_not_reg")))
   )
 
-(duimmop swi_num "unsigned 6-bit swi#" h-uint f-trap-num)
-(duimmop disp11 "sign-magnitude data displacement" h-uint f-disp11)
+(duimmop swi_num "unsigned 6-bit swi#" h-uint f-trap-num (attrs))
+(duimmop disp11 "sign-magnitude data displacement" h-uint f-disp11 (attrs RELAX))
 
 (dnop shift   "immediate shift amount"   () h-uint f-shift)
 
@@ -1715,7 +1715,7 @@
   (dni (%sym name "x16.s")
        (%str "load " mode " indexed")
        (SHORT-INSN)
-       (%str name " ${rd" sfx "},[$rn,$rm]")
+       (%str name ".s ${rd" sfx "},[$rn,$rm]")
        (+ OP4_LDSTR16X sel OP_LOAD rd rn rm)
        (sem-if-64bmode ((regno rn-di) (regno rm-di))
          (sem-op rd-op (add DI rn-di rm-di) mode sel)
@@ -1724,10 +1724,17 @@
        ()
        )
 
+  (dnmi (%sym name "xs")
+        (%str "load " mode " indexed")
+        ()
+        (%str name " ${rd" sfx "},[$rn,$rm]")
+        (emit (%sym name "x16.s") rd rn rm)
+        )
+
   (dni (%sym name "x.l")
        (%str "load " mode " indexed")
        ()
-       (%str name " ${rd6" sfx "},[$rn6,$direction$rm6]")
+       (%str name ".l ${rd6" sfx "},[$rn6,$direction$rm6]")
        (+ OP4_LDSTRX sel OP_LOAD (f-opc-19-4 #x0) (f-dc-22-1 #x0) (f-dc-21-1 #x0) rd6 rn6 direction rm6)
        (sem-if-64bmode ((regno rn6-di) (regno rm6-di))
          (if (ifield f-addsubx)
@@ -1742,10 +1749,10 @@
        ()
        )
 
-  (dnmi (%sym name "x")
+  (dnmi (%sym name "xl")
         (%str "load " mode " indexed")
-        (NO-DIS)
-        (%str name ".l ${rd6" sfx "},[$rn6,$direction$rm6]")
+        ()
+        (%str name " ${rd6" sfx "},[$rn6,$direction$rm6]")
         (emit  (%sym name "x.l") rd6 rn6 direction rm6)
         )
 
@@ -1806,7 +1813,7 @@
   (dni (%sym name "d16.s")
        (%str "load " mode " displacement")
        (SHORT-INSN IMM3)
-       (%str name " ${rd" sfx "},[$rn,$disp3]")
+       (%str name ".s ${rd" sfx "},[$rn,$disp3]")
        (+ OP4_LDSTR16D sel OP_LOAD rd rn disp3) ;; convert size to 'B'
        (sem-if-64bmode ((regno rn-di))
          (sequence ((DI effa) (SI scale))
@@ -1823,10 +1830,17 @@
        ()
        )
 
-  (dni (%sym name "d.l")
+  (dnmi (%sym name "d16.sr") (%str "relaxable load " mode " displacement")
+        (RELAXABLE)
+        (%str name " ${rd" sfx "},[$rn,$disp3]")
+        (emit (%sym name "d16.s") rd rn disp3)
+        )
+
+
+  (dni (%sym name "d32.l")
        (%str "load " mode " displacement")
        ()
-       (%str name " ${rd6" sfx "},[$rn6,$dpmi$disp11]")
+       (%str name ".l ${rd6" sfx "},[$rn6,$dpmi$disp11]")
        (+ OP4_LDSTRD sel OP_LOAD PMOD_DISP rd6 rn6 dpmi disp11)
        (sem-if-64bmode ((regno rn6-di))
          (sequence ((DI effa) (SI scale))
@@ -1849,11 +1863,25 @@
        ()
        )
 
-  (dnmi (%sym name "d")
+  (dnmi (%sym name "d32m")
         (%str "load " mode " displacement")
-        (NO-DIS)
+        ()
+        (%str name " ${rd6" sfx "},[$rn6,$dpmi$disp11]")
+        (emit  (%sym name "d32.l") rd6 rn6  dpmi disp11)
+        )
+
+  (dnmi (%sym name "d32r")
+        (%str "load " mode " displacement")
+        (RELAXED)
+        (%str name " ${rd6" sfx "},[$rn6,$dpmi$disp11]")
+        (emit  (%sym name "d32.l") rd6 rn6  dpmi disp11)
+        )
+
+  (dnmi (%sym name "d32r2")
+        (%str "load " mode " displacement")
+        ()
         (%str name ".l ${rd6" sfx "},[$rn6,$dpmi$disp11]")
-        (emit  (%sym name "d.l") rd6 rn6  dpmi disp11)
+        (emit (%sym name "d32.l") rd6 rn6  dpmi disp11)
         )
 
   (dni (%sym name "dpm.l")
@@ -1891,21 +1919,29 @@
 
   ;; macro form with a zero displacement
   (dnmi (%sym name "ds0") "load with 0 disp"
-        (SHORT-INSN IMM3)
+        (SHORT-INSN IMM3 RELAXABLE)
         (%str name " ${rd" sfx "},[$rn]")
         (emit (%sym name "d16.s") rd rn (disp3 0))
         )
+
   (dnmi (%sym name "dl0") "load with 0 disp"
         (NO-DIS)
         (%str name " ${rd6" sfx "},[$rn6]")
-        (emit (%sym name "d.l") rd6 rn6 (dpmi 0) (disp11 0))
+        (emit (%sym name "d32.l") rd6 rn6 (dpmi 0) (disp11 0))
+        )
+
+  (dnmi (%sym name "dl0r") "load with 0 disp"
+        (NO-DIS RELAXED)
+        (%str name " ${rd6" sfx "},[$rn6]")
+        (emit (%sym name "d32.l") rd6 rn6 (dpmi 0) (disp11 0))
         )
   (dnmi (%sym name "dl0.l") "load with 0 disp"
         (NO-DIS)
         (%str name ".l ${rd6" sfx "},[$rn6]")
-        (emit (%sym name "d.l") rd6 rn6 (dpmi 0) (disp11 0))
+        (emit (%sym name "d32.l") rd6 rn6 (dpmi 0) (disp11 0))
         )
-  ))
+  )
+  )
 )
 
 (load-insn ldrb QI OPW_BYTE   load-from-ea "")
