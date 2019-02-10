@@ -1,3 +1,9 @@
+2019-02-10  Ola Jeppsson  <ola@adapteva.com>
+
+	* dv-epiphany_dma.c (union dma_stride): Make src_stride and
+	dst_stride signed types.
+	(epiphany_dma_hw_event_callback): Support negative strides.
+
 2017-09-06  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-elf-sim.py.in (tryhex): New function.

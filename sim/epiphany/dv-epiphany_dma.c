@@ -104,8 +104,8 @@ union dma_status {
 union dma_stride {
   uint32_t reg;
   struct {
-    uint16_t src_stride;
-    uint16_t dst_stride;
+    int16_t src_stride;
+    int16_t dst_stride;
   } __attribute__((packed));
 } __attribute__((packed));
 
@@ -354,8 +354,13 @@ epiphany_dma_hw_event_callback (struct hw *me, void *data)
 	      shift_src = regs->config.shift_src_out ? 16 : 0;
 	      shift_dst = regs->config.shift_dst_out ? 16 : 0;
 	    }
-	  regs->src_addr += (regs->stride.src_stride << shift_src);
-	  regs->dst_addr += (regs->stride.dst_stride << shift_dst);
+
+	  regs->src_addr = (uint32_t)
+	    (((signed) regs->src_addr) +
+	     (regs->stride.src_stride << shift_src));
+	  regs->dst_addr = (uint32_t)
+	    (((signed) regs->dst_addr) +
+	     (regs->stride.dst_stride << shift_src));
 
 	  epiphany_dma_reschedule (me, 1);
 	  return;
