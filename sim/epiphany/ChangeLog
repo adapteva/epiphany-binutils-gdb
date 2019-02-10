@@ -1,5 +1,10 @@
 2019-02-10  Ola Jeppsson  <ola@adapteva.com>
 
+	* epiphany.c (epiphanybf_model_insn_after): Remove dead code. Fix
+	name of function argument.
+
+2019-02-10  Ola Jeppsson  <ola@adapteva.com>
+
 	* sim-if.c (sim_open): Initialize sd->orig_cpu to NULL.
 	(epiphany_sim_close): Null check sd->orig_cpu before doing
 	anything.

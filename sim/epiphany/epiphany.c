@@ -622,18 +622,12 @@ epiphanybf_model_insn_before (SIM_CPU * cpu ATTRIBUTE_UNUSED,
 
 void
 epiphanybf_model_insn_after (SIM_CPU * cpu ATTRIBUTE_UNUSED,
-			     int first_p ATTRIBUTE_UNUSED, int cycles)
+			     int last_p ATTRIBUTE_UNUSED, int cycles)
 {
 #ifdef DEBUG
   fprintf (stderr,
 	   "--$$$$$$$$-----------epiphanybf_model_epiphany32_d_u_exec\n");
 #endif
-  /* Implemented the instruction counting only, no interrupt.  */
-  /* Get timer.  */
-  unsigned ctimerValue = epiphanybf_h_core_registers_get (cpu, 7);
-
-  if (ctimerValue > 0)
-    epiphanybf_h_core_registers_set (cpu, 7, ctimerValue - 1);
 }
 
 
