@@ -1,6 +1,6 @@
 /* Target-dependent code for the NEC V850 for GDB, the GNU debugger.
 
-   Copyright (C) 1996-2016 Free Software Foundation, Inc.
+   Copyright (C) 1996-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1013,13 +1013,13 @@ v850_push_dummy_call (struct gdbarch *gdbarch,
 		      int nargs,
 		      struct value **args,
 		      CORE_ADDR sp,
-		      int struct_return,
+		      function_call_return_method return_method,
 		      CORE_ADDR struct_addr)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int argreg;
   int argnum;
-  int len = 0;
+  int arg_space = 0;
   int stack_offset;
 
   if (gdbarch_tdep (gdbarch)->abi == V850_ABI_RH850)
@@ -1034,12 +1034,12 @@ v850_push_dummy_call (struct gdbarch *gdbarch,
 
   /* Now make space on the stack for the args.  */
   for (argnum = 0; argnum < nargs; argnum++)
-    len += ((TYPE_LENGTH (value_type (args[argnum])) + 3) & ~3);
-  sp -= len + stack_offset;
+    arg_space += ((TYPE_LENGTH (value_type (args[argnum])) + 3) & ~3);
+  sp -= arg_space + stack_offset;
 
   argreg = E_ARG0_REGNUM;
   /* The struct_return pointer occupies the first parameter register.  */
-  if (struct_return)
+  if (return_method == return_method_struct)
     regcache_cooked_write_unsigned (regcache, argreg++, struct_addr);
 
   /* Now load as many as possible of the first arguments into
@@ -1111,7 +1111,7 @@ static void
 v850_extract_return_value (struct type *type, struct regcache *regcache,
 			   gdb_byte *valbuf)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int len = TYPE_LENGTH (type);
 
@@ -1128,7 +1128,7 @@ v850_extract_return_value (struct type *type, struct regcache *regcache,
       gdb_byte buf[v850_reg_size];
       for (i = 0; len > 0; i += 4, len -= 4)
 	{
-	  regcache_raw_read (regcache, regnum++, buf);
+	  regcache->raw_read (regnum++, buf);
 	  memcpy (valbuf + i, buf, len > 4 ? 4 : len);
 	}
     }
@@ -1138,7 +1138,7 @@ static void
 v850_store_return_value (struct type *type, struct regcache *regcache,
 			 const gdb_byte *valbuf)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int len = TYPE_LENGTH (type);
 
@@ -1150,7 +1150,7 @@ v850_store_return_value (struct type *type, struct regcache *regcache,
     {
       int i, regnum = E_V0_REGNUM;
       for (i = 0; i < len; i += 4)
-	regcache_raw_write (regcache, regnum++, valbuf + i);
+	regcache->raw_write (regnum++, valbuf + i);
     }
 }
 
@@ -1168,28 +1168,44 @@ v850_return_value (struct gdbarch *gdbarch, struct value *function,
   return RETURN_VALUE_REGISTER_CONVENTION;
 }
 
-static const unsigned char *
-v850_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr,
-                         int *lenptr)
-{
-  static unsigned char breakpoint[] = { 0x85, 0x05 };
+/* Implement the breakpoint_kind_from_pc gdbarch method.  */
 
-  *lenptr = sizeof (breakpoint);
-  return breakpoint;
+static int
+v850_breakpoint_kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr)
+{
+  return 2;
 }
 
-/* Implement software breakpoints by using the dbtrap instruction. 
-   Older architectures had no such instruction.  For those, an
-   unconditional branch to self instruction is used.  */
+/* Implement the sw_breakpoint_from_kind gdbarch method.  */
 
-static const unsigned char *
-v850_dbtrap_breakpoint_from_pc (struct gdbarch *gdbarch,
-                                CORE_ADDR *pcptr, int *lenptr)
+static const gdb_byte *
+v850_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
 {
-  static unsigned char breakpoint[] = { 0x40, 0xf8 };
+  *size = kind;
 
-  *lenptr = sizeof (breakpoint);
-  return breakpoint;
+    switch (gdbarch_bfd_arch_info (gdbarch)->mach)
+    {
+    case bfd_mach_v850e2:
+    case bfd_mach_v850e2v3:
+    case bfd_mach_v850e3v5:
+      {
+	/* Implement software breakpoints by using the dbtrap instruction.
+	   Older architectures had no such instruction.  For those, an
+	   unconditional branch to self instruction is used.  */
+
+	static unsigned char dbtrap_breakpoint[] = { 0x40, 0xf8 };
+
+	return dbtrap_breakpoint;
+      }
+      break;
+    default:
+      {
+	static unsigned char breakpoint[] = { 0x85, 0x05 };
+
+	return breakpoint;
+      }
+      break;
+    }
 }
 
 static struct v850_frame_cache *
@@ -1380,7 +1396,7 @@ v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
       return arches->gdbarch;
     }
-  tdep = XNEW (struct gdbarch_tdep);
+  tdep = XCNEW (struct gdbarch_tdep);
   tdep->e_flags = e_flags;
   tdep->e_machine = e_machine;
 
@@ -1440,23 +1456,12 @@ v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_addr_bit (gdbarch, 4 * TARGET_CHAR_BIT);
 
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan);
-  switch (info.bfd_arch_info->mach)
-    {
-    case bfd_mach_v850e2:
-    case bfd_mach_v850e2v3:
-    case bfd_mach_v850e3v5:
-      set_gdbarch_breakpoint_from_pc (gdbarch, v850_dbtrap_breakpoint_from_pc);
-      break;
-    default:
-      set_gdbarch_breakpoint_from_pc (gdbarch, v850_breakpoint_from_pc);
-      break;
-    }
 
+  set_gdbarch_breakpoint_kind_from_pc (gdbarch, v850_breakpoint_kind_from_pc);
+  set_gdbarch_sw_breakpoint_from_kind (gdbarch, v850_sw_breakpoint_from_kind);
   set_gdbarch_return_value (gdbarch, v850_return_value);
   set_gdbarch_push_dummy_call (gdbarch, v850_push_dummy_call);
   set_gdbarch_skip_prologue (gdbarch, v850_skip_prologue);
-
-  set_gdbarch_print_insn (gdbarch, print_insn_v850);
 
   set_gdbarch_frame_align (gdbarch, v850_frame_align);
   set_gdbarch_unwind_sp (gdbarch, v850_unwind_sp);
@@ -1472,8 +1477,6 @@ v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   return gdbarch;
 }
-
-extern initialize_file_ftype _initialize_v850_tdep; /* -Wmissing-prototypes */
 
 void
 _initialize_v850_tdep (void)

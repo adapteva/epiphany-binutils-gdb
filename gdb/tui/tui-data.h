@@ -1,6 +1,6 @@
 /* TUI data manipulation routines.
 
-   Copyright (C) 1998-2016 Free Software Foundation, Inc.
+   Copyright (C) 1998-2019 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -229,7 +229,6 @@ union tui_which_element
 
 struct tui_win_element
 {
-  int highlight;
   union tui_which_element which_element;
 };
 
@@ -278,7 +277,6 @@ struct tui_win_info
     struct tui_source_info source_info;
     struct tui_data_info data_display_info;
     struct tui_command_info command_info;
-    void *opaque;
   }
   detail;
   int can_highlight;	/* Can this window ever be highlighted?  */
@@ -293,7 +291,7 @@ extern void tui_set_win_highlight (struct tui_win_info *win_info,
 
 
 /* Global Data.  */
-extern struct tui_win_info *(tui_win_list[MAX_MAJOR_WINDOWS]);
+extern struct tui_win_info *tui_win_list[MAX_MAJOR_WINDOWS];
 
 #define TUI_SRC_WIN     tui_win_list[SRC_WIN]
 #define TUI_DISASM_WIN	tui_win_list[DISASSEM_WIN]
@@ -317,7 +315,7 @@ extern void tui_free_data_content (tui_win_content, int);
 extern void tui_free_all_source_wins_content (void);
 extern void tui_del_window (struct tui_win_info *);
 extern void tui_del_data_windows (tui_win_content, int);
-extern struct tui_win_info *tui_partial_win_by_name (char *);
+extern struct tui_win_info *tui_partial_win_by_name (const char *);
 extern const char *tui_win_name (const struct tui_gen_win_info *);
 extern enum tui_layout_type tui_current_layout (void);
 extern void tui_set_current_layout_to (enum tui_layout_type);
@@ -333,8 +331,6 @@ extern void tui_clear_source_windows (void);
 extern void tui_clear_source_windows_detail (void);
 extern void tui_clear_win_detail (struct tui_win_info *);
 extern void tui_add_to_source_windows (struct tui_win_info *);
-extern int tui_default_tab_len (void);
-extern void tui_set_default_tab_len (int);
 extern struct tui_win_info *tui_win_with_focus (void);
 extern void tui_set_win_with_focus (struct tui_win_info *);
 extern struct tui_layout_def *tui_layout_def (void);
@@ -345,5 +341,7 @@ extern struct tui_win_info *tui_next_win (struct tui_win_info *);
 extern struct tui_win_info *tui_prev_win (struct tui_win_info *);
 
 extern void tui_add_to_source_windows (struct tui_win_info *);
+
+extern unsigned int tui_tab_width;
 
 #endif /* TUI_DATA_H */

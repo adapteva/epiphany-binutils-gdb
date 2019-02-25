@@ -1,6 +1,6 @@
 /* Declarations for common types.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -56,7 +56,10 @@ typedef unsigned long long ULONGEST;
 #endif /* GDBSERVER */
 
 /* * The largest CORE_ADDR value.  */
-#define CORE_ADDR_MAX (~ (CORE_ADDR) 0)
+#define CORE_ADDR_MAX (~(CORE_ADDR) 0)
+
+/* * The largest ULONGEST value.  */
+#define ULONGEST_MAX (~(ULONGEST) 0)
 
 enum tribool { TRIBOOL_UNKNOWN = -1, TRIBOOL_FALSE = 0, TRIBOOL_TRUE = 1 };
 

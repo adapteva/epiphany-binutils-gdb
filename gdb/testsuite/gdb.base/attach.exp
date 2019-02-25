@@ -1,4 +1,4 @@
-# Copyright 1997-2016 Free Software Foundation, Inc.
+# Copyright 1997-2019 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,14 +30,14 @@ remote_exec build "rm -f ${binfile} ${binfile2}"
 # build the first test case
 #
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-    untested attach.exp
+    untested "failed to compile"
     return -1
 }
 
 # Build the in-system-call test
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile2}" "${binfile2}" executable {debug}] != "" } {
-    untested attach.exp
+    untested "failed to compile in-system-call test"
     return -1
 }
 
@@ -53,19 +53,17 @@ proc do_attach_tests {} {
     global testfile
     global subdir
     global timeout
+    global decimal
     
     # Figure out a regular expression that will match the sysroot,
     # noting that the default sysroot is "target:", and also noting
     # that GDB will strip "target:" from the start of filenames when
-    # operating on the local filesystem
-    set sysroot ""
-    set test "show sysroot"
-    gdb_test_multiple $test $test {
-	-re "The current system root is \"(.*)\"\..*${gdb_prompt} $" {
-	    set sysroot $expect_out(1,string)
-	}
-    }
-    regsub "^target:" "$sysroot" "(target:)?" sysroot
+    # operating on the local filesystem.  However the default sysroot
+    # can be set via configure option --with-sysroot, which can be "/".
+    # If $binfile is a absolute path, so pattern
+    # "$sysroot$escapedbinfile" below is wrong.  Use [^\r\n]* to make
+    # $sysroot simple.
+    set sysroot "\[^\r\n\]*"
 
     # Start the program running and then wait for a bit, to be sure
     # that it can be attached to.
@@ -167,10 +165,10 @@ proc do_attach_tests {} {
     set test "set file, before attach1"
     gdb_test_multiple "file $binfile" "$test" {
 	-re "Load new symbol table from.*y or n. $" {
-	    gdb_test "y" "Reading symbols from $escapedbinfile\.\.\.*done." \
+	    gdb_test "y" "Reading symbols from $escapedbinfile\.\.\.*" \
 		"$test (re-read)"
 	}
-	-re "Reading symbols from $escapedbinfile\.\.\.*done.*$gdb_prompt $" {
+	-re "Reading symbols from $escapedbinfile\.\.\.*$gdb_prompt $" {
 	    pass "$test"
 	}
     }
@@ -194,7 +192,7 @@ proc do_attach_tests {} {
     # Detach the process.
    
     gdb_test "detach" \
-	"Detaching from program: .*$escapedbinfile, process $testpid" \
+	"Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
 	"attach1 detach"
 
     # Wait a bit for gdb to finish detaching
@@ -226,7 +224,7 @@ proc do_attach_tests {} {
 	    # executable's symbol table.  This in turn always results in
 	    # asking the user for actually loading the symbol table of the
 	    # executable.
-	    gdb_test "y" "Reading symbols from $sysroot$escapedbinfile\.\.\.*done." \
+	    gdb_test "y" "Reading symbols from $sysroot$escapedbinfile\.\.\.*" \
 		"$test (reset file)"
 
 	    set found_exec_file 1
@@ -241,10 +239,10 @@ proc do_attach_tests {} {
 	set test "load file manually, after attach2"
 	gdb_test_multiple "file $binfile" "$test" {
 	    -re "A program is being debugged already..*Are you sure you want to change the file.*y or n. $" {
-		gdb_test "y" "Reading symbols from $escapedbinfile\.\.\.*done." \
+		gdb_test "y" "Reading symbols from $escapedbinfile\.\.\.*" \
 		    "$test (re-read)"
 	    }
-	    -re "Reading symbols from $escapedbinfile\.\.\.*done.*$gdb_prompt $" {
+	    -re "Reading symbols from $escapedbinfile\.\.\.*$gdb_prompt $" {
 		pass "$test"
 	    }
 	}
@@ -324,7 +322,7 @@ proc do_call_attach_tests {} {
 
     # Attach
    
-    gdb_test "file $binfile2" ".*" "force switch to gdb64, if necessary"
+    gdb_test "file $binfile2" ".*" "load file"
     set test "attach call"
     gdb_test_multiple "attach $testpid" "$test" {
 	-re "warning: reading register.*I.*O error.*$gdb_prompt $" {
@@ -378,7 +376,8 @@ proc do_command_attach_tests {} {
 
     gdb_exit
 
-    set res [gdb_spawn_with_cmdline_opts "--pid=$testpid"]
+    set res [gdb_spawn_with_cmdline_opts \
+		 "-quiet -iex \"set height 0\" -iex \"set width 0\" --pid=$testpid"]
     set test "starting with --pid"
     gdb_test_multiple "" $test {
 	-re "Reading symbols from.*$gdb_prompt $" {
@@ -410,7 +409,7 @@ proc test_command_line_attach_run {} {
 	gdb_exit
 
 	set res [gdb_spawn_with_cmdline_opts \
-		     "-iex \"set height 0\" -iex \"set width 0\" --pid=$testpid -ex \"start\""]
+		     "-quiet -iex \"set height 0\" -iex \"set width 0\" --pid=$testpid -ex \"start\""]
 	if { $res != 0} {
 	    fail $test
 	    kill_wait_spawned_process $test_spawn_id

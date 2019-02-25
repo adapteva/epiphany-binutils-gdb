@@ -1,7 +1,7 @@
 #objdump: -dr --prefix-addresses --show-raw-insn
 #name: MIPS JALR relocation against local symbol
 #as: -32
-#not-target: *-*-irix*
+#notarget: *-*-irix*
 #source: jal-svr4pic-local.s
 
 .*: +file format .*mips.*
@@ -27,6 +27,5 @@ Disassembly of section \.text:
 [0-9a-f]+ <[^>]*> 459f      	jr	ra
 [0-9a-f]+ <[^>]*> 4c11      	addiu	sp,sp,32
 [0-9a-f]+ <[^>]*> 0000 0000 	nop
-[0-9a-f]+ <[^>]*> 459f      	jr	ra
-[0-9a-f]+ <[^>]*> 0c00      	nop
+[0-9a-f]+ <[^>]*> 45bf      	jrc	ra
 	\.\.\.

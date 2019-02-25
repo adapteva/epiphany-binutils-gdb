@@ -1,5 +1,5 @@
 /* Tracepoint code for remote server for GDB.
-   Copyright (C) 1993-2016 Free Software Foundation, Inc.
+   Copyright (C) 1993-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -83,8 +83,6 @@ int tracepoint_was_hit (struct thread_info *tinfo, CORE_ADDR stop_pc);
 
 void release_while_stepping_state_list (struct thread_info *tinfo);
 
-extern int current_traceframe;
-
 int in_readonly_region (CORE_ADDR addr, ULONGEST length);
 int traceframe_read_mem (int tfnum, CORE_ADDR addr,
 			 unsigned char *buf, ULONGEST length,
@@ -115,9 +113,25 @@ struct fast_tpoint_collect_status
   CORE_ADDR adjusted_insn_addr_end;
 };
 
-int fast_tracepoint_collecting (CORE_ADDR thread_area,
-				CORE_ADDR stop_pc,
-				struct fast_tpoint_collect_status *status);
+/* The possible states a thread can be in, related to the collection of fast
+   tracepoint.  */
+
+enum class fast_tpoint_collect_result
+{
+  /* Not collecting a fast tracepoint.  */
+  not_collecting,
+
+  /* In the jump pad, but before the relocated instruction.  */
+  before_insn,
+
+  /* In the jump pad, but at (or after) the relocated instruction.  */
+  at_insn,
+};
+
+fast_tpoint_collect_result fast_tracepoint_collecting
+  (CORE_ADDR thread_area, CORE_ADDR stop_pc,
+   struct fast_tpoint_collect_status *status);
+
 void force_unlock_trace_buffer (void);
 
 int handle_tracepoint_bkpts (struct thread_info *tinfo, CORE_ADDR stop_pc);

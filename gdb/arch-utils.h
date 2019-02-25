@@ -1,6 +1,6 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2016 Free Software Foundation, Inc.
+   Copyright (C) 1998-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,25 +25,53 @@ struct frame_info;
 struct minimal_symbol;
 struct type;
 struct gdbarch_info;
+struct dwarf2_frame_state;
 
-/* An implementation of gdbarch_displaced_step_copy_insn for
-   processors that don't need to modify the instruction before
-   single-stepping the displaced copy.
+template <size_t bp_size, const gdb_byte *break_insn>
+struct bp_manipulation
+{
+  static int
+  kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr)
+  {
+    return bp_size;
+  }
 
-   Simply copy gdbarch_max_insn_length (ARCH) bytes from FROM to TO.
-   The closure is an array of that many bytes containing the
-   instruction's bytes, allocated with xmalloc.  */
-extern struct displaced_step_closure *
-  simple_displaced_step_copy_insn (struct gdbarch *gdbarch,
-                                   CORE_ADDR from, CORE_ADDR to,
-                                   struct regcache *regs);
+  static const gdb_byte *
+  bp_from_kind (struct gdbarch *gdbarch, int kind, int *size)
+  {
+    *size = kind;
+    return break_insn;
+  }
+};
 
-/* Simple implementation of gdbarch_displaced_step_free_closure: Call
-   xfree.
-   This is appropriate for use with simple_displaced_step_copy_insn.  */
-extern void
-  simple_displaced_step_free_closure (struct gdbarch *gdbarch,
-                                      struct displaced_step_closure *closure);
+template <size_t bp_size,
+	  const gdb_byte *break_insn_little,
+	  const gdb_byte *break_insn_big>
+struct bp_manipulation_endian
+{
+  static int
+  kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr)
+  {
+    return bp_size;
+  }
+
+  static const gdb_byte *
+  bp_from_kind (struct gdbarch *gdbarch, int kind, int *size)
+  {
+    *size = kind;
+    if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
+      return break_insn_big;
+    else
+      return break_insn_little;
+  }
+};
+
+#define BP_MANIPULATION(BREAK_INSN) \
+  bp_manipulation<sizeof (BREAK_INSN), BREAK_INSN>
+
+#define BP_MANIPULATION_ENDIAN(BREAK_INSN_LITTLE, BREAK_INSN_BIG) \
+  bp_manipulation_endian<sizeof (BREAK_INSN_LITTLE),		  \
+  BREAK_INSN_LITTLE, BREAK_INSN_BIG>
 
 /* Default implementation of gdbarch_displaced_hw_singlestep.  */
 extern int
@@ -84,6 +112,11 @@ CORE_ADDR default_adjust_dwarf2_addr (CORE_ADDR pc);
 
 CORE_ADDR default_adjust_dwarf2_line (CORE_ADDR addr, int rel);
 
+/* Default DWARF vendor CFI handler.  */
+
+bool default_execute_dwarf_cfa_vendor_op (struct gdbarch *gdbarch, gdb_byte op,
+					  struct dwarf2_frame_state *fs);
+
 /* Version of cannot_fetch_register() / cannot_store_register() that
    always fails.  */
 
@@ -94,6 +127,11 @@ int cannot_register_not (struct gdbarch *gdbarch, int regnum);
    raw.  */
 
 extern gdbarch_virtual_frame_pointer_ftype legacy_virtual_frame_pointer;
+
+/* Default implementation of gdbarch_floatformat_for_type.  */
+extern const struct floatformat **
+  default_floatformat_for_type (struct gdbarch *gdbarch,
+				const char *name, int len);
 
 extern CORE_ADDR generic_skip_trampoline_code (struct frame_info *frame,
 					       CORE_ADDR pc);
@@ -164,10 +202,15 @@ extern struct gdbarch *get_current_arch (void);
 extern int default_has_shared_address_space (struct gdbarch *);
 
 extern int default_fast_tracepoint_valid_at (struct gdbarch *gdbarch,
-					     CORE_ADDR addr, char **msg);
+					     CORE_ADDR addr, std::string *msg);
 
-extern void default_remote_breakpoint_from_pc (struct gdbarch *,
-					       CORE_ADDR *pcptr, int *kindptr);
+extern const gdb_byte *default_breakpoint_from_pc (struct gdbarch *gdbarch,
+						   CORE_ADDR *pcptr,
+						   int *lenptr);
+
+extern int default_breakpoint_kind_from_current_state (struct gdbarch *gdbarch,
+						       struct regcache *regcache,
+						       CORE_ADDR *pcptr);
 
 extern void default_gen_return_address (struct gdbarch *gdbarch,
 					struct agent_expr *ax,
@@ -210,5 +253,22 @@ extern int default_addressable_memory_unit_size (struct gdbarch *gdbarch);
 extern void default_guess_tracepoint_registers (struct gdbarch *gdbarch,
 						struct regcache *regcache,
 						CORE_ADDR addr);
+
+extern int default_print_insn (bfd_vma memaddr, disassemble_info *info);
+
+/* Wrapper to gdbarch_skip_prologue, but doesn't throw exception.  Catch
+   exception thrown from gdbarch_skip_prologue, and return PC.  */
+
+extern CORE_ADDR gdbarch_skip_prologue_noexcept (gdbarch *gdbarch,
+						 CORE_ADDR pc) noexcept;
+
+/* Default implementation of gdbarch_in_indirect_branch_thunk that returns
+   false.  */
+extern bool default_in_indirect_branch_thunk (gdbarch *gdbarch,
+					      CORE_ADDR pc);
+
+/* Default implementation of gdbarch type_align method.  */
+extern ULONGEST default_type_align (struct gdbarch *gdbarch,
+				    struct type *type);
 
 #endif

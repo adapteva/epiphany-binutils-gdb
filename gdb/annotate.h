@@ -1,5 +1,5 @@
 /* Annotation routines for GDB.
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -73,6 +73,16 @@ extern void annotate_arg_begin (void);
 extern void annotate_arg_name_end (void);
 extern void annotate_arg_value (struct type *);
 extern void annotate_arg_end (void);
+
+/* Wrap calls to annotate_arg_begin and annotate_arg_end in an RAII
+   class. */
+struct annotate_arg_emitter
+{
+  annotate_arg_emitter () { annotate_arg_begin (); }
+  ~annotate_arg_emitter () { annotate_arg_end (); }
+
+  DISABLE_COPY_AND_ASSIGN (annotate_arg_emitter);
+};
 
 extern void annotate_source (char *, int, int, int,
 			     struct gdbarch *, CORE_ADDR);

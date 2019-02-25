@@ -1,6 +1,6 @@
 /* TUI display locator.
 
-   Copyright (C) 1998-2016 Free Software Foundation, Inc.
+   Copyright (C) 1998-2019 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -53,7 +53,7 @@ static int tui_set_locator_info (struct gdbarch *gdbarch,
 				 const char *procname,
                                  int lineno, CORE_ADDR addr);
 
-static void tui_update_command (char *, int);
+static void tui_update_command (const char *, int);
 
 
 /* Create the status line to display as much information as we can on
@@ -68,14 +68,11 @@ tui_make_status_line (struct tui_locator_element *loc)
   int status_size;
   int i, proc_width;
   const char *pid_name;
-  const char *pc_buf;
   int target_width;
   int pid_width;
   int line_width;
-  int pc_width;
-  struct ui_file *pc_out;
 
-  if (ptid_equal (inferior_ptid, null_ptid))
+  if (inferior_ptid == null_ptid)
     pid_name = "No process";
   else
     pid_name = target_pid_to_str (inferior_ptid);
@@ -102,12 +99,14 @@ tui_make_status_line (struct tui_locator_element *loc)
     line_width = MIN_LINE_WIDTH;
 
   /* Translate PC address.  */
-  pc_out = tui_sfileopen (128);
+  string_file pc_out;
+
   fputs_filtered (loc->gdbarch? paddress (loc->gdbarch, loc->addr) : "??",
-		  pc_out);
-  pc_buf = tui_file_get_strbuf (pc_out);
-  pc_width = strlen (pc_buf);
-  
+		  &pc_out);
+
+  const char *pc_buf = pc_out.c_str ();
+  int pc_width = pc_out.size ();
+
   /* First determine the amount of proc name width we have available.
      The +1 are for a space separator between fields.
      The -1 are to take into account the \0 counted by sizeof.  */
@@ -204,7 +203,6 @@ tui_make_status_line (struct tui_locator_element *loc)
     string[i] = ' ';
   string[status_size] = (char) 0;
 
-  ui_file_delete (pc_out);
   return string;
 }
 
@@ -215,21 +213,21 @@ static char*
 tui_get_function_from_frame (struct frame_info *fi)
 {
   static char name[256];
-  struct ui_file *stream = tui_sfileopen (256);
-  char *p;
+  string_file stream;
 
   print_address_symbolic (get_frame_arch (fi), get_frame_pc (fi),
-			  stream, demangle, "");
-  p = tui_file_get_strbuf (stream);
+			  &stream, demangle, "");
 
   /* Use simple heuristics to isolate the function name.  The symbol
      can be demangled and we can have function parameters.  Remove
      them because the status line is too short to display them.  */
-  if (*p == '<')
-    p++;
-  strncpy (name, p, sizeof (name) - 1);
+  const char *d = stream.c_str ();
+  if (*d == '<')
+    d++;
+  strncpy (name, d, sizeof (name) - 1);
   name[sizeof (name) - 1] = 0;
-  p = strchr (name, '(');
+
+  char *p = strchr (name, '(');
   if (!p)
     p = strchr (name, '>');
   if (p)
@@ -237,7 +235,6 @@ tui_get_function_from_frame (struct frame_info *fi)
   p = strchr (name, '+');
   if (p)
     *p = 0;
-  ui_file_delete (stream);
   return name;
 }
 
@@ -361,7 +358,6 @@ tui_show_frame_info (struct frame_info *fi)
 {
   struct tui_win_info *win_info;
   int locator_changed_p;
-  int i;
 
   if (fi)
     {
@@ -369,10 +365,9 @@ tui_show_frame_info (struct frame_info *fi)
       CORE_ADDR low;
       struct tui_gen_win_info *locator = tui_locator_win_info_ptr ();
       int source_already_displayed;
-      struct symtab_and_line sal;
       CORE_ADDR pc;
 
-      find_frame_sal (fi, &sal);
+      symtab_and_line sal = find_frame_sal (fi);
 
       source_already_displayed = sal.symtab != 0
         && tui_source_is_displayed (symtab_to_fullname (sal.symtab));
@@ -477,7 +472,7 @@ tui_show_frame_info (struct frame_info *fi)
 	return 0;
 
       tui_show_locator_content ();
-      for (i = 0; i < (tui_source_windows ())->count; i++)
+      for (int i = 0; i < (tui_source_windows ())->count; i++)
 	{
 	  win_info = (tui_source_windows ())->list[i];
 	  tui_clear_source_content (win_info, EMPTY_SOURCE_PROMPT);
@@ -491,9 +486,6 @@ tui_show_frame_info (struct frame_info *fi)
 /* Function to initialize gdb commands, for tui window stack
    manipulation.  */
 
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_tui_stack;
-
 void
 _initialize_tui_stack (void)
 {
@@ -504,10 +496,7 @@ _initialize_tui_stack (void)
 
 /* Command to update the display with the current execution point.  */
 static void
-tui_update_command (char *arg, int from_tty)
+tui_update_command (const char *arg, int from_tty)
 {
-  char cmd[sizeof("frame 0")];
-
-  strcpy (cmd, "frame 0");
-  execute_command (cmd, from_tty);
+  execute_command ("frame 0", from_tty);
 }

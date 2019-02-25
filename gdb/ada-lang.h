@@ -1,6 +1,6 @@
 /* Ada language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2016 Free Software Foundation, Inc.
+   Copyright (C) 1992-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -108,7 +108,8 @@ enum ada_exception_catchpoint_kind
 {
   ada_catch_exception,
   ada_catch_exception_unhandled,
-  ada_catch_assert
+  ada_catch_assert,
+  ada_catch_handlers
 };
 
 /* Ada task structures.  */
@@ -141,6 +142,12 @@ struct ada_task_info
   /* If the task is accepting a rendezvous with another task, this field
      contains the ID of the calling task.  Zero otherwise.  */
   CORE_ADDR caller_task;
+
+  /* The CPU on which the task is running.  This is dependent on
+     the runtime actually providing that info, which is not always
+     the case.  Normally, we should be able to count on it on
+     bare-metal targets.  */
+  int base_cpu;
 };
 
 /* Assuming V points to an array of S objects,  make sure that it contains at
@@ -159,8 +166,6 @@ extern int ada_get_field_index (const struct type *type,
 
 extern int ada_parse (struct parser_state *);    /* Defined in ada-exp.y */
 
-extern void ada_yyerror (char *); /* Defined in ada-exp.y */
-
                         /* Defined in ada-typeprint.c */
 extern void ada_print_type (struct type *, const char *, struct ui_file *, int,
                             int, const struct type_print_options *);
@@ -168,9 +173,9 @@ extern void ada_print_type (struct type *, const char *, struct ui_file *, int,
 extern void ada_print_typedef (struct type *type, struct symbol *new_symbol,
 			       struct ui_file *stream);
 
-extern void ada_val_print (struct type *, const gdb_byte *, int, CORE_ADDR,
+extern void ada_val_print (struct type *, int, CORE_ADDR,
 			   struct ui_file *, int,
-			   const struct value *,
+			   struct value *,
 			   const struct value_print_options *);
 
 extern void ada_value_print (struct value *, struct ui_file *,
@@ -188,6 +193,8 @@ extern void ada_printstr (struct ui_file *, struct type *, const gdb_byte *,
 
 struct value *ada_convert_actual (struct value *actual,
                                   struct type *formal_type0);
+
+extern bool ada_is_access_to_unconstrained_array (struct type *type);
 
 extern struct value *ada_value_subscript (struct value *, int,
                                           struct value **);
@@ -225,7 +232,8 @@ extern const char *ada_decode (const char*);
 extern enum language ada_update_initial_language (enum language);
 
 extern int ada_lookup_symbol_list (const char *, const struct block *,
-                                   domain_enum, struct block_symbol**);
+                                   domain_enum,
+				   std::vector<struct block_symbol> *);
 
 extern char *ada_fold_name (const char *);
 
@@ -243,7 +251,7 @@ extern void ada_fill_in_ada_prototype (struct symbol *);
 
 extern int user_select_syms (struct block_symbol *, int, int);
 
-extern int get_selections (int *, int, int, int, char *);
+extern int get_selections (int *, int, int, int, const char *);
 
 extern int ada_scan_number (const char *, int, LONGEST *, int *);
 
@@ -288,9 +296,9 @@ extern int ada_is_others_clause (struct type *, int);
 
 extern int ada_in_variant (LONGEST, struct type *, int);
 
-extern char *ada_variant_discrim_name (struct type *);
+extern const char *ada_variant_discrim_name (struct type *);
 
-extern struct value *ada_value_struct_elt (struct value *, char *, int);
+extern struct value *ada_value_struct_elt (struct value *, const char *, int);
 
 extern int ada_is_aligner_type (struct type *);
 
@@ -305,11 +313,9 @@ extern int ada_is_fixed_point_type (struct type *);
 
 extern int ada_is_system_address_type (struct type *);
 
-extern DOUBLEST ada_delta (struct type *);
+extern struct value *ada_delta (struct type *);
 
-extern DOUBLEST ada_fixed_to_float (struct type *, LONGEST);
-
-extern LONGEST ada_float_to_fixed (struct type *, DOUBLEST);
+extern struct value *ada_scaling_factor (struct type *);
 
 extern struct type *ada_system_address_type (void);
 
@@ -335,7 +341,7 @@ extern const char *ada_type_name (struct type *);
 extern struct type *ada_find_parallel_type (struct type *,
                                             const char *suffix);
 
-extern LONGEST get_int_var_value (char *, int *);
+extern bool get_int_var_value (const char *, LONGEST &value);
 
 extern struct symbol *ada_find_renaming_symbol (struct symbol *name_sym,
                                                 const struct block *block);
@@ -370,37 +376,40 @@ extern char *ada_breakpoint_rewrite (char *, int *);
 
 extern char *ada_main_name (void);
 
-extern char *ada_name_for_lookup (const char *name);
-
 extern void create_ada_exception_catchpoint
   (struct gdbarch *gdbarch, enum ada_exception_catchpoint_kind ex_kind,
-   char *excep_string, char *cond_string, int tempflag, int disabled,
-   int from_tty);
+   const std::string &excep_string, const std::string &cond_string, int tempflag,
+   int disabled, int from_tty);
 
 /* Some information about a given Ada exception.  */
 
-typedef struct ada_exc_info
+struct ada_exc_info
 {
   /* The name of the exception.  */
   const char *name;
 
   /* The address of the symbol corresponding to that exception.  */
   CORE_ADDR addr;
-} ada_exc_info;
 
-DEF_VEC_O(ada_exc_info);
+  bool operator< (const ada_exc_info &) const;
+  bool operator== (const ada_exc_info &) const;
+};
 
-extern VEC(ada_exc_info) *ada_exceptions_list (const char *regexp);
+extern std::vector<ada_exc_info> ada_exceptions_list (const char *regexp);
 
 /* Tasking-related: ada-tasks.c */
 
 extern int valid_task_id (int);
 
-extern int ada_get_task_number (ptid_t);
+extern struct ada_task_info *ada_get_task_info_from_ptid (ptid_t ptid);
+
+extern int ada_get_task_number (thread_info *thread);
 
 typedef void (ada_task_list_iterator_ftype) (struct ada_task_info *task);
 extern void iterate_over_live_ada_tasks
   (ada_task_list_iterator_ftype *iterator);
+
+extern const char *ada_get_tcb_types_info (void);
 
 extern int ada_build_task_list (void);
 

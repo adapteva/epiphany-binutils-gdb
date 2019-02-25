@@ -259,11 +259,13 @@ main (int argc, char **argv)
 	  break;
 	case 'E':
 	  sym_id_add (optarg, EXCL_TIME);
+	  /* Fall through.  */
 	case 'e':
 	  sym_id_add (optarg, EXCL_GRAPH);
 	  break;
 	case 'F':
 	  sym_id_add (optarg, INCL_TIME);
+	  /* Fall through.  */
 	case 'f':
 	  sym_id_add (optarg, INCL_GRAPH);
 	  break;
@@ -450,7 +452,7 @@ This program is free software.  This program has absolutely no warranty.\n"));
 	    {
 	      output_style &= ~STYLE_EXEC_COUNTS;
 	    }
-	  user_specified |= STYLE_ANNOTATED_SOURCE;
+	  user_specified |= STYLE_EXEC_COUNTS;
 	  break;
 	case OPTION_DEMANGLE:
 	  demangle = TRUE;

@@ -1,6 +1,6 @@
 
 /* YACC parser for Fortran expressions, for GDB.
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2019 Free Software Foundation, Inc.
 
    Contributed by Motorola.  Adapted from the C parser by Farooq Butt
    (fmbutt@engage.sps.mot.com).
@@ -53,6 +53,7 @@
 #include "objfiles.h" /* For have_full_symbols and have_partial_symbols */
 #include "block.h"
 #include <ctype.h>
+#include <algorithm>
 
 #define parse_type(ps) builtin_type (parse_gdbarch (ps))
 #define parse_f_type(ps) builtin_f_type (parse_gdbarch (ps))
@@ -71,7 +72,7 @@ int yyparse (void);
 
 static int yylex (void);
 
-void yyerror (char *);
+static void yyerror (const char *);
 
 static void growbuf_by_size (int);
 
@@ -90,7 +91,10 @@ static int match_string_literal (void);
       LONGEST val;
       struct type *type;
     } typed_val;
-    DOUBLEST dval;
+    struct {
+      gdb_byte val[16];
+      struct type *type;
+    } typed_val_float;
     struct symbol *sym;
     struct type *tval;
     struct stoken sval;
@@ -121,7 +125,7 @@ static int parse_number (struct parser_state *, const char *, int,
 %type <tval> ptype
 
 %token <typed_val> INT
-%token <dval> FLOAT
+%token <typed_val_float> FLOAT
 
 /* Both NAME and TYPENAME tokens represent symbols in the input,
    and both convey their data as strings.
@@ -157,7 +161,7 @@ static int parse_number (struct parser_state *, const char *, int,
 %token BOOL_AND BOOL_OR BOOL_NOT   
 %token <lval> CHARACTER 
 
-%token <voidval> VARIABLE
+%token <voidval> DOLLAR_VARIABLE
 
 %token <opcode> ASSIGN_MODIFY
 
@@ -413,18 +417,16 @@ exp	:	NAME_OR_INT
 	;
 
 exp	:	FLOAT
-			{ write_exp_elt_opcode (pstate, OP_DOUBLE);
-			  write_exp_elt_type (pstate,
-					      parse_f_type (pstate)
-					      ->builtin_real_s8);
-			  write_exp_elt_dblcst (pstate, $1);
-			  write_exp_elt_opcode (pstate, OP_DOUBLE); }
+			{ write_exp_elt_opcode (pstate, OP_FLOAT);
+			  write_exp_elt_type (pstate, $1.type);
+			  write_exp_elt_floatcst (pstate, $1.val);
+			  write_exp_elt_opcode (pstate, OP_FLOAT); }
 	;
 
 exp	:	variable
 	;
 
-exp	:	VARIABLE
+exp	:	DOLLAR_VARIABLE
 	;
 
 exp	:	SIZEOF '(' type ')'	%prec UNARY
@@ -459,12 +461,7 @@ variable:	name_not_typename
 			  if (sym.symbol)
 			    {
 			      if (symbol_read_needs_frame (sym.symbol))
-				{
-				  if (innermost_block == 0
-				      || contained_in (sym.block,
-						       innermost_block))
-				    innermost_block = sym.block;
-				}
+				innermost_block.update (sym);
 			      write_exp_elt_opcode (pstate, OP_VAR_VALUE);
 			      write_exp_elt_block (pstate, sym.block);
 			      write_exp_elt_sym (pstate, sym.symbol);
@@ -512,7 +509,7 @@ ptype	:	typebase
 			follow_type = lookup_pointer_type (follow_type);
 			break;
 		      case tp_reference:
-			follow_type = lookup_reference_type (follow_type);
+			follow_type = lookup_lvalue_reference_type (follow_type);
 			break;
 		      case tp_array:
 			array_size = pop_type_int ();
@@ -646,16 +643,22 @@ parse_number (struct parser_state *par_state,
   if (parsed_float)
     {
       /* It's a float since it contains a point or an exponent.  */
-      /* [dD] is not understood as an exponent by atof, change it to 'e'.  */
+      /* [dD] is not understood as an exponent by parse_float,
+	 change it to 'e'.  */
       char *tmp, *tmp2;
 
       tmp = xstrdup (p);
       for (tmp2 = tmp; *tmp2; ++tmp2)
 	if (*tmp2 == 'd' || *tmp2 == 'D')
 	  *tmp2 = 'e';
-      putithere->dval = atof (tmp);
+
+      /* FIXME: Should this use different types?  */
+      putithere->typed_val_float.type = parse_f_type (pstate)->builtin_real_s8;
+      bool parsed = parse_float (tmp, len,
+				 putithere->typed_val_float.type,
+				 putithere->typed_val_float.val);
       free (tmp);
-      return FLOAT;
+      return parsed? FLOAT : ERROR;
     }
 
   /* Handle base-switching prefixes 0x, 0t, 0d, 0 */
@@ -772,7 +775,7 @@ parse_number (struct parser_state *par_state,
 
 struct token
 {
-  char *oper;
+  const char *oper;
   int token;
   enum exp_opcode opcode;
 };
@@ -806,7 +809,7 @@ static const struct token dot_ops[] =
 
 struct f77_boolean_val 
 {
-  char *name;
+  const char *name;
   int value;
 }; 
 
@@ -866,7 +869,7 @@ growbuf_by_size (int count)
 {
   int growby;
 
-  growby = max (count, GROWBY_MIN_SIZE);
+  growby = std::max (count, GROWBY_MIN_SIZE);
   tempbufsize += growby;
   if (tempbuf == NULL)
     tempbuf = (char *) malloc (tempbufsize);
@@ -920,7 +923,7 @@ yylex (void)
 {
   int c;
   int namelen;
-  unsigned int i,token;
+  unsigned int token;
   const char *tokstart;
   
  retry:
@@ -934,7 +937,7 @@ yylex (void)
   
   if (*lexptr == '.')
     { 
-      for (i = 0; boolean_values[i].name != NULL; i++)
+      for (int i = 0; boolean_values[i].name != NULL; i++)
 	{
 	  if (strncmp (tokstart, boolean_values[i].name,
 		       strlen (boolean_values[i].name)) == 0)
@@ -948,7 +951,7 @@ yylex (void)
   
   /* See if it is a special .foo. operator.  */
   
-  for (i = 0; dot_ops[i].oper != NULL; i++)
+  for (int i = 0; dot_ops[i].oper != NULL; i++)
     if (strncmp (tokstart, dot_ops[i].oper,
 		 strlen (dot_ops[i].oper)) == 0)
       {
@@ -1005,7 +1008,7 @@ yylex (void)
       /* Might be a floating point number.  */
       if (lexptr[1] < '0' || lexptr[1] > '9')
 	goto symbol;		/* Nope, must be a symbol.  */
-      /* FALL THRU into number case.  */
+      /* FALL THRU.  */
       
     case '0':
     case '1':
@@ -1117,7 +1120,7 @@ yylex (void)
   
   /* Catch specific keywords.  */
   
-  for (i = 0; f77_keywords[i].oper != NULL; i++)
+  for (int i = 0; f77_keywords[i].oper != NULL; i++)
     if (strlen (f77_keywords[i].oper) == namelen
 	&& strncmp (tokstart, f77_keywords[i].oper, namelen) == 0)
       {
@@ -1132,7 +1135,7 @@ yylex (void)
   if (*tokstart == '$')
     {
       write_dollar_variable (pstate, yylval.sval);
-      return VARIABLE;
+      return DOLLAR_VARIABLE;
     }
   
   /* Use token-type TYPENAME for symbols that happen to be defined
@@ -1148,10 +1151,9 @@ yylex (void)
       VAR_DOMAIN,
       MODULE_DOMAIN
     };
-    int i;
     int hextype;
 
-    for (i = 0; i < ARRAY_SIZE (lookup_domains); ++i)
+    for (int i = 0; i < ARRAY_SIZE (lookup_domains); ++i)
       {
 	/* Initialize this in case we *don't* use it in this call; that
 	   way we can refer to it unconditionally below.  */
@@ -1205,23 +1207,19 @@ yylex (void)
 int
 f_parse (struct parser_state *par_state)
 {
-  int result;
-  struct cleanup *c = make_cleanup_clear_parser_state (&pstate);
-
   /* Setting up the parser state.  */
+  scoped_restore pstate_restore = make_scoped_restore (&pstate);
   gdb_assert (par_state != NULL);
   pstate = par_state;
 
-  result = yyparse ();
-  do_cleanups (c);
-  return result;
+  return yyparse ();
 }
 
-void
-yyerror (char *msg)
+static void
+yyerror (const char *msg)
 {
   if (prev_lexptr)
     lexptr = prev_lexptr;
 
-  error (_("A %s in expression, near `%s'."), (msg ? msg : "error"), lexptr);
+  error (_("A %s in expression, near `%s'."), msg, lexptr);
 }

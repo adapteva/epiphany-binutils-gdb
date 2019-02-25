@@ -1,5 +1,5 @@
 /* Include file for stabs debugging format support functions.
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,6 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 struct objfile;
+enum language;
 
 /* Definitions, prototypes, etc for stabs debugging format support
    functions.
@@ -30,6 +31,33 @@ struct objfile;
 #define	EXTERN extern
 #endif
 
+#define HASHSIZE 127		/* Size of things hashed via
+				   hashname().  */
+
+/* Compute a small integer hash code for the given name.  */
+
+extern int hashname (const char *name);
+
+/* Count symbols as they are processed, for error messages.  */
+
+EXTERN unsigned int symnum;
+
+#define next_symbol_text(objfile) (*next_symbol_text_func)(objfile)
+
+/* Function to invoke get the next symbol.  Return the symbol name.  */
+
+EXTERN const char *(*next_symbol_text_func) (struct objfile *);
+
+/* Global variable which, when set, indicates that we are processing a
+   .o file compiled with gcc */
+
+EXTERN unsigned char processing_gcc_compilation;
+
+/* Nonzero if within a function (so symbols should be local, if
+   nothing says specifically).  */
+
+EXTERN int within_function;
+
 /* Hash table of global symbols whose values are not known yet.
    They are chained thru the SYMBOL_VALUE_CHAIN, since we don't
    have the correct data for that slot yet.
@@ -40,7 +68,7 @@ struct objfile;
 
 EXTERN struct symbol *global_sym_chain[HASHSIZE];
 
-extern void common_block_start (char *, struct objfile *);
+extern void common_block_start (const char *, struct objfile *);
 extern void common_block_end (struct objfile *);
 
 /* Kludge for xcoffread.c */
@@ -132,7 +160,7 @@ extern void cleanup_undefined_stabs_types (struct objfile *);
 
 extern long read_number (char **, int);
 
-extern struct symbol *define_symbol (CORE_ADDR, char *, int, int,
+extern struct symbol *define_symbol (CORE_ADDR, const char *, int, int,
 				     struct objfile *);
 
 extern void stabsread_init (void);
@@ -167,9 +195,9 @@ extern struct partial_symtab *dbx_end_psymtab
    struct partial_symtab **dependency_list, int number_dependencies,
    int textlow_not_set);
 
-extern void process_one_symbol (int, int, CORE_ADDR, char *,
+extern void process_one_symbol (int, int, CORE_ADDR, const char *,
 				const struct section_offsets *,
-				struct objfile *);
+				struct objfile *, enum language);
 
 extern void elfstab_build_psymtabs (struct objfile *objfile,
 				    asection *stabsect,
@@ -185,14 +213,20 @@ extern void coffstab_build_psymtabs
 extern void stabsect_build_psymtabs (struct objfile *objfile, char *stab_name,
 				     char *stabstr_name, char *text_name);
 
-extern int symbol_reference_defined (char **);
+extern int symbol_reference_defined (const char **);
 
-extern void ref_add (int, struct symbol *, char *, CORE_ADDR);
+extern void ref_add (int, struct symbol *, const char *, CORE_ADDR);
 
 extern struct symbol *ref_search (int);
 
 extern void free_header_files (void);
 
 extern void init_header_files (void);
+
+/* Scan through all of the global symbols defined in the object file,
+   assigning values to the debugging symbols that need to be assigned
+   to.  Get these symbols from the minimal symbol table.  */
+
+extern void scan_file_globals (struct objfile *objfile);
 
 #undef EXTERN

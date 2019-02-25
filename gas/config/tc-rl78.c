@@ -1,5 +1,5 @@
 /* tc-rl78.c -- Assembler for the Renesas RL78
-   Copyright (C) 2011-2016 Free Software Foundation, Inc.
+   Copyright (C) 2011-2019 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -19,10 +19,8 @@
    02110-1301, USA.  */
 
 #include "as.h"
-#include "struc-symbol.h"
 #include "safe-ctype.h"
 #include "dwarf2dbg.h"
-#include "libbfd.h"
 #include "elf/common.h"
 #include "elf/rl78.h"
 #include "rl78-defs.h"

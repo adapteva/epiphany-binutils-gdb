@@ -1,4 +1,4 @@
-# Copyright 2010-2016 Free Software Foundation, Inc.
+# Copyright 2010-2019 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ set binlibfile [standard_output_file ${testfile}.so]
 if { [get_compiler_info]
      || [gdb_compile_shlib "${srcdir}/${subdir}/${srclibfile}" "${binlibfile}" {debug}] != ""
      || [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable "shlib=${binlibfile}"] != "" } {
-    untested "could not compile sources"
+    untested "failed to compile"
     return -1
 }
 
@@ -71,6 +71,11 @@ foreach nonstop { 0 1 } { with_test_prefix "non-stop $nonstop" {
     # displaced-stepping buffer at unmapped that time address _start.
     gdb_test "set displaced-stepping off"
 
+    # Unset last_loaded_file because we want GDBserver spawn
+    # ${interp_system} not ${last_loaded_file}.
+    global last_loaded_file
+    unset -nocomplain last_loaded_file
+
     # Note we pass ${interp_system}, the program gdbserver spawns, as
     # argument here, instead of using gdb_load, because we don't want
     # to download the interpreter to the target (it's already there)
@@ -83,7 +88,7 @@ foreach nonstop { 0 1 } { with_test_prefix "non-stop $nonstop" {
     # but before "target remote" below so that qSymbol data get already
     # initialized from BINFILE (and not from ld.so first needing a change to
     # BINFILE later).
-    gdb_test "file ${binfile}" {Reading symbols from .*\.\.\.done\..*} "file binfile" \
+    gdb_test "file ${binfile}" {Reading symbols from .*\.\.\..*} "file binfile" \
 	     {(Are you sure you want to change the file|Load new symbol table from ".*")\? \(y or n\) } "y"
 
     set test "target $gdbserver_protocol"

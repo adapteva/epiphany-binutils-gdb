@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,6 +22,7 @@
 
 #include "buffer.h"
 #include "event-loop.h"
+#include "value.h"
 
 struct tl_interp_info;
 
@@ -54,6 +55,12 @@ enum prompt_state
 
 struct ui
 {
+  /* Create a new UI.  */
+  ui (FILE *instream, FILE *outstream, FILE *errstream);
+  ~ui ();
+
+  DISABLE_COPY_AND_ASSIGN (ui);
+
   /* Pointer to next in singly-linked list.  */
   struct ui *next;
 
@@ -74,7 +81,7 @@ struct ui
 
   /* The function to invoke when a complete line of input is ready for
      processing.  */
-  void (*input_handler) (char *);
+  void (*input_handler) (gdb::unique_xmalloc_ptr<char> &&);
 
   /* True if this UI is using the readline library for command
      editing; false if using GDB's own simple readline emulation, with
@@ -155,58 +162,83 @@ extern struct ui *current_ui;
 /* The list of all UIs.  */
 extern struct ui *ui_list;
 
-/* State for SWITCH_THRU_ALL_UIS.  Declared here because it is meant
-   to be created on the stack, but should be treated as opaque.  */
-struct switch_thru_all_uis
+/* State for SWITCH_THRU_ALL_UIS.  */
+class switch_thru_all_uis
 {
-  struct ui *iter;
-  struct cleanup *old_chain;
-};
+public:
 
-/* Functions to drive SWITCH_THRU_ALL_UIS.  Though declared here by
-   necessity, these functions should not be used other than via the
-   SWITCH_THRU_ALL_UIS macro defined below.  */
-extern void switch_thru_all_uis_init (struct switch_thru_all_uis *state);
-extern int switch_thru_all_uis_cond (struct switch_thru_all_uis *state);
-extern void switch_thru_all_uis_next (struct switch_thru_all_uis *state);
+  switch_thru_all_uis () : m_iter (ui_list), m_save_ui (&current_ui)
+  {
+    current_ui = ui_list;
+  }
+
+  /* If done iterating, return true; otherwise return false.  */
+  bool done () const
+  {
+    return m_iter == NULL;
+  }
+
+  /* Move to the next UI, setting current_ui if iteration is not yet
+     complete.  */
+  void next ()
+  {
+    m_iter = m_iter->next;
+    if (m_iter != NULL)
+      current_ui = m_iter;
+  }
+
+ private:
+
+  /* No need for these.  They are intentionally not defined
+     anywhere.  */
+  switch_thru_all_uis &operator= (const switch_thru_all_uis &);
+  switch_thru_all_uis (const switch_thru_all_uis &);
+
+  /* Used to iterate through the UIs.  */
+  struct ui *m_iter;
+
+  /* Save and restore current_ui.  */
+  scoped_restore_tmpl<struct ui *> m_save_ui;
+};
 
   /* Traverse through all UI, and switch the current UI to the one
      being iterated.  */
-#define SWITCH_THRU_ALL_UIS(STATE)		\
-  for (switch_thru_all_uis_init (&STATE);		\
-       switch_thru_all_uis_cond (&STATE);		\
-       switch_thru_all_uis_next (&STATE))
+#define SWITCH_THRU_ALL_UIS()		\
+  for (switch_thru_all_uis stau_state; !stau_state.done (); stau_state.next ())
 
 /* Traverse over all UIs.  */
 #define ALL_UIS(UI)				\
   for (UI = ui_list; UI; UI = UI->next)		\
 
-/* Create a new UI.  */
-extern struct ui *new_ui (FILE *instream, FILE *outstream, FILE *errstream);
-extern void delete_ui (struct ui *todel);
+/* Register the UI's input file descriptor in the event loop.  */
+extern void ui_register_input_event_handler (struct ui *ui);
 
-/* Cleanup that restores the current UI.  */
-extern void restore_ui_cleanup (void *data);
+/* Unregister the UI's input file descriptor from the event loop.  */
+extern void ui_unregister_input_event_handler (struct ui *ui);
 
 /* From top.c.  */
 extern char *saved_command_line;
-extern int in_user_command;
 extern int confirm;
-extern char gdb_dirbuf[1024];
 extern int inhibit_gdbinit;
 extern const char gdbinit[];
 
-extern void print_gdb_version (struct ui_file *);
+/* Print the GDB version banner to STREAM.  If INTERACTIVE is false,
+   then information referring to commands (e.g., "show configuration")
+   is omitted; this mode is used for the --version command line
+   option.  If INTERACTIVE is true, then interactive commands are
+   mentioned.  */
+extern void print_gdb_version (struct ui_file *stream, bool interactive);
+
 extern void print_gdb_configuration (struct ui_file *);
 
 extern void read_command_file (FILE *);
 extern void init_history (void);
 extern void command_loop (void);
 extern int quit_confirm (void);
-extern void quit_force (char *, int);
-extern void quit_command (char *, int);
+extern void quit_force (int *, int);
+extern void quit_command (const char *, int);
 extern void quit_cover (void);
-extern void execute_command (char *, int);
+extern void execute_command (const char *, int);
 
 /* If the interpreter is in sync mode (we're running a user command's
    list, running command hooks or similars), and we just ran a
@@ -224,7 +256,7 @@ extern void check_frame_language_change (void);
 /* Prepare for execution of a command.
    Call this before every command, CLI or MI.
    Returns a cleanup to be run after the command is completed.  */
-extern struct cleanup *prepare_execute_command (void);
+extern scoped_value_mark prepare_execute_command (void);
 
 /* This function returns a pointer to the string that is used
    by gdb for its command prompt.  */
@@ -241,6 +273,7 @@ extern int gdb_in_secondary_prompt_p (struct ui *ui);
 
 /* From random places.  */
 extern int readnow_symbol_files;
+extern int readnever_symbol_files;
 
 /* Perform _initialize initialization.  */
 extern void gdb_init (char *);
@@ -255,18 +288,16 @@ extern char *lim_at_start;
 
 extern void gdb_add_history (const char *);
 
-extern void show_commands (char *args, int from_tty);
+extern void show_commands (const char *args, int from_tty);
 
-extern void set_history (char *, int);
+extern void set_history (const char *, int);
 
-extern void show_history (char *, int);
+extern void show_history (const char *, int);
 
-extern void set_verbose (char *, int, struct cmd_list_element *);
-
-extern void do_restore_instream_cleanup (void *stream);
+extern void set_verbose (const char *, int, struct cmd_list_element *);
 
 extern char *handle_line_of_input (struct buffer *cmd_line_buffer,
-				   char *rl, int repeat,
-				   char *annotation_suffix);
+				   const char *rl, int repeat,
+				   const char *annotation_suffix);
 
 #endif

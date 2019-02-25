@@ -10,37 +10,35 @@
 
 	* configure: Regenerate.
 
-2016-04-20  Trevor Saunders  <tbsaunde+binutils@tbsaunde.org>
+For older changes see ChangeLog-2018
+
+Copyright (C) 2019 Free Software Foundation, Inc.
 
-	* basic_blocks.c: Update old style function definitions.
-	* cg_arcs.c: Likewise.
-	* cg_print.c: Likewise.
-	* gen-c-prog.awk: Likewise.
-	* gmon_io.c: Likewise.
-	* hertz.c: Likewise.
-	* hist.c: Likewise.
-	* sym_ids.c: Likewise.
-
-2016-04-15  H.J. Lu  <hongjiu.lu@intel.com>
-
-	* Makefile.in: Regenerated with automake 1.11.6.
-	* aclocal.m4: Likewise.
-
-2016-03-22  Nick Clifton  <nickc@redhat.com>
-
-	* configure: Regenerate.
-
-2016-01-17  Alan Modra  <amodra@gmail.com>
-
-	* configure: Regenerate.
-
-2016-01-01  Alan Modra  <amodra@gmail.com>
+2019-01-01  Alan Modra  <amodra@gmail.com>
 
 	Update year range in copyright notice of all files.
 
-For older changes see ChangeLog-2015
-
-Copyright (C) 2016 Free Software Foundation, Inc.
+2019-01-09  Andrew Paprocki  <andrew@ishiboo.com>
+
+	* configure: Regenerate.
+
+2018-06-24  Nick Clifton  <nickc@redhat.com>
+
+	2.32 branch created.
+
+2019-01-19  Nick Clifton  <nickc@redhat.com>
+
+	* configure: Regenerate.
+	* po/gprof.pot: Regenerate.
+
+2019-01-21  Nick Clifton  <nickc@redhat.com>
+
+	* po/tr.po: Updated Turkish translation.
+
+2019-02-02  Nick Clifton  <nickc@redhat.com>
+
+	2.32 Release
+	* configure: Regenerate.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

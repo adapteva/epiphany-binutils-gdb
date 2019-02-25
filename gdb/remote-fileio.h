@@ -1,6 +1,6 @@
 /* Remote File-I/O communications
 
-   Copyright (C) 2003-2016 Free Software Foundation, Inc.
+   Copyright (C) 2003-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -28,7 +28,8 @@ struct cmd_list_element;
 
 /* Unified interface to remote fileio, called in remote.c from
    remote_wait () and remote_async_wait ().  */
-extern void remote_fileio_request (char *buf, int ctrlc_pending_p);
+extern void remote_fileio_request (remote_target *remote,
+				   char *buf, int ctrlc_pending_p);
 
 /* Cleanup any remote fileio state.  */
 extern void remote_fileio_reset (void);

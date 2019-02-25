@@ -1,6 +1,6 @@
 /* CLI utilities.
 
-   Copyright (C) 2011-2016 Free Software Foundation, Inc.
+   Copyright (C) 2011-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -33,70 +33,123 @@ extern int get_number_trailer (const char **pp, int trailer);
 
 /* Convenience.  Like get_number_trailer, but with no TRAILER.  */
 
-extern int get_number_const (const char **);
+extern int get_number (const char **);
 
-/* Like get_number_const, but takes a non-const "char **".  */
+/* Like the above, but takes a non-const "char **".  */
 
 extern int get_number (char **);
 
-/* An object of this type is passed to get_number_or_range.  It must
-   be initialized by calling init_number_or_range.  This type is
-   defined here so that it can be stack-allocated, but all members
-   other than `finished' and `string' should be treated as opaque.  */
+/* Extract from ARGS the arguments [-q] [-t TYPEREGEXP] [--] NAMEREGEXP.
 
-struct get_number_or_range_state
-{
-  /* Non-zero if parsing has completed.  */
-  int finished;
+   The caller is responsible to initialize *QUIET to false, *REGEXP
+   and *T_REGEXP to "".
+   extract_info_print_args can then be called iteratively to search
+   for valid arguments, as part of a 'main parsing loop' searching for
+   -q/-t/-- arguments together with other flags and options.
 
-  /* The string being parsed.  When parsing has finished, this points
-     past the last parsed token.  */
-  const char *string;
+   Returns true and updates *ARGS + one of *QUIET, *REGEXP, *T_REGEXP if
+   it finds a valid argument.
+   Returns false if no valid argument is found at the beginning of ARGS.  */
 
-  /* Last value returned.  */
-  int last_retval;
+extern bool extract_info_print_args (const char **args,
+				     bool *quiet,
+				     std::string *regexp,
+				     std::string *t_regexp);
 
-  /* When parsing a range, the final value in the range.  */
-  int end_value;
+/* Throws an error telling the user that ARGS starts with an option
+   unrecognized by COMMAND.  */
 
-  /* When parsing a range, a pointer past the final token in the
-     range.  */
-  const char *end_ptr;
+extern void report_unrecognized_option_error (const char *command,
+					      const char *args);
 
-  /* Non-zero when parsing a range.  */
-  int in_range;
-};
 
-/* Initialize a get_number_or_range_state for use with
-   get_number_or_range_state.  STRING is the string to be parsed.  */
+/* Builds the help string for a command documented by PREFIX,
+   followed by the extract_info_print_args help for ENTITY_KIND.  */
 
-extern void init_number_or_range (struct get_number_or_range_state *state,
-				  const char *string);
+const char *info_print_args_help (const char *prefix,
+				  const char *entity_kind);
 
 /* Parse a number or a range.
    A number will be of the form handled by get_number.
-   A range will be of the form <number1> - <number2>, and 
+   A range will be of the form <number1> - <number2>, and
    will represent all the integers between number1 and number2,
-   inclusive.
+   inclusive.  */
 
-   While processing a range, this fuction is called iteratively;
-   At each call it will return the next value in the range.
+class number_or_range_parser
+{
+public:
+  /* Default construction.  Must call init before calling
+     get_next.  */
+  number_or_range_parser () {}
 
-   At the beginning of parsing a range, the char pointer STATE->string will
-   be advanced past <number1> and left pointing at the '-' token.
-   Subsequent calls will not advance the pointer until the range
-   is completed.  The call that completes the range will advance
-   the pointer past <number2>.  */
+  /* Calls init automatically.  */
+  number_or_range_parser (const char *string);
 
-extern int get_number_or_range (struct get_number_or_range_state *state);
+  /* STRING is the string to be parsed.  */
+  void init (const char *string);
 
-/* Setups STATE such that get_number_or_range returns numbers in range
-   START_VALUE to END_VALUE.  When get_number_or_range returns
-   END_VALUE, the STATE string is advanced to END_PTR.  */
+  /* While processing a range, this fuction is called iteratively; At
+     each call it will return the next value in the range.
 
-extern void number_range_setup_range (struct get_number_or_range_state *state,
-				      int start_value, int end_value,
-				      const char *end_ptr);
+     At the beginning of parsing a range, the char pointer
+     STATE->m_cur_tok will be advanced past <number1> and left
+     pointing at the '-' token.  Subsequent calls will not advance the
+     pointer until the range is completed.  The call that completes
+     the range will advance the pointer past <number2>.  */
+  int get_number ();
+
+  /* Setup internal state such that get_next() returns numbers in the
+     START_VALUE to END_VALUE range.  END_PTR is where the string is
+     advanced to when get_next() returns END_VALUE.  */
+  void setup_range (int start_value, int end_value,
+		    const char *end_ptr);
+
+  /* Returns true if parsing has completed.  */
+  bool finished () const;
+
+  /* Return the string being parsed.  When parsing has finished, this
+     points past the last parsed token.  */
+  const char *cur_tok () const
+  { return m_cur_tok; }
+
+  /* True when parsing a range.  */
+  bool in_range () const
+  { return m_in_range; }
+
+  /* When parsing a range, the final value in the range.  */
+  int end_value () const
+  { return m_end_value; }
+
+  /* When parsing a range, skip past the final token in the range.  */
+  void skip_range ()
+  {
+    gdb_assert (m_in_range);
+    m_cur_tok = m_end_ptr;
+    m_in_range = false;
+  }
+
+private:
+  /* No need for these.  They are intentionally not defined anywhere.  */
+  number_or_range_parser (const number_or_range_parser &);
+  number_or_range_parser &operator= (const number_or_range_parser &);
+
+  /* The string being parsed.  When parsing has finished, this points
+     past the last parsed token.  */
+  const char *m_cur_tok;
+
+  /* Last value returned.  */
+  int m_last_retval;
+
+  /* When parsing a range, the final value in the range.  */
+  int m_end_value;
+
+  /* When parsing a range, a pointer past the final token in the
+     range.  */
+  const char *m_end_ptr;
+
+  /* True when parsing a range.  */
+  bool m_in_range;
+};
 
 /* Accept a number and a string-form list of numbers such as is 
    accepted by get_number_or_range.  Return TRUE if the number is
@@ -111,25 +164,78 @@ extern int number_is_in_list (const char *list, int number);
 /* Reverse S to the last non-whitespace character without skipping past
    START.  */
 
-extern char *remove_trailing_whitespace (const char *start, char *s);
+extern const char *remove_trailing_whitespace (const char *start,
+					       const char *s);
+
+/* Same, for non-const S.  */
+
+static inline char *
+remove_trailing_whitespace (const char *start, char *s)
+{
+  return (char *) remove_trailing_whitespace (start, (const char *) s);
+}
 
 /* A helper function to extract an argument from *ARG.  An argument is
-   delimited by whitespace.  The return value is either NULL if no
-   argument was found, or an xmalloc'd string.  */
+   delimited by whitespace.  The return value is empty if no argument
+   was found.  */
 
-extern char *extract_arg (char **arg);
+extern std::string extract_arg (char **arg);
 
-/* A const-correct version of "extract_arg".
+/* A const-correct version of the above.  */
 
-   Since the returned value is xmalloc'd, it eventually needs to be
-   xfree'ed, which prevents us from making it const as well.  */
-
-extern char *extract_arg_const (const char **arg);
+extern std::string extract_arg (const char **arg);
 
 /* A helper function that looks for an argument at the start of a
    string.  The argument must also either be at the end of the string,
    or be followed by whitespace.  Returns 1 if it finds the argument,
    0 otherwise.  If the argument is found, it updates *STR.  */
-extern int check_for_argument (char **str, char *arg, int arg_len);
+extern int check_for_argument (const char **str, const char *arg, int arg_len);
 
+/* Same, for non-const STR.  */
+
+static inline int
+check_for_argument (char **str, const char *arg, int arg_len)
+{
+  return check_for_argument (const_cast<const char **> (str),
+			     arg, arg_len);
+}
+
+/* A helper function that looks for a set of flags at the start of a
+   string.  The possible flags are given as a null terminated string.
+   A flag in STR must either be at the end of the string,
+   or be followed by whitespace.
+   Returns 0 if no valid flag is found at the start of STR.
+   Otherwise updates *STR, and returns N (which is > 0),
+   such that FLAGS [N - 1] is the valid found flag.  */
+extern int parse_flags (const char **str, const char *flags);
+
+/* qcs_flags struct regroups the flags parsed by parse_flags_qcs.  */
+
+struct qcs_flags
+{
+  bool quiet = false;
+  bool cont = false;
+  bool silent = false;
+};
+
+/* A helper function that uses parse_flags to handle the flags qcs :
+     A flag -q sets FLAGS->QUIET to true.
+     A flag -c sets FLAGS->CONT to true.
+     A flag -s sets FLAGS->SILENT to true.
+
+   The caller is responsible to initialize *FLAGS to false before the (first)
+   call to parse_flags_qcs.
+   parse_flags_qcs can then be called iteratively to search for more
+   valid flags, as part of a 'main parsing loop' searching for -q/-c/-s
+   flags together with other flags and options.
+
+   Returns true and updates *STR and one of FLAGS->QUIET, FLAGS->CONT,
+   FLAGS->SILENT if it finds a valid flag.
+   Returns false if no valid flag is found at the beginning of STR.
+
+   Throws an error if a flag is found such that both FLAGS->CONT and
+   FLAGS->SILENT are true.  */
+
+extern bool parse_flags_qcs (const char *which_command, const char **str,
+			     qcs_flags *flags);
 #endif /* CLI_UTILS_H */

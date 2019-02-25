@@ -1,6 +1,6 @@
 /* CLI utilities.
 
-   Copyright (C) 2011-2016 Free Software Foundation, Inc.
+   Copyright (C) 2011-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,6 +23,8 @@
 
 #include <ctype.h>
 
+static std::string extract_arg_maybe_quoted (const char **arg);
+
 /* See documentation in cli-utils.h.  */
 
 int
@@ -30,6 +32,13 @@ get_number_trailer (const char **pp, int trailer)
 {
   int retval = 0;	/* default */
   const char *p = *pp;
+  bool negative = false;
+
+  if (*p == '-')
+    {
+      ++p;
+      negative = true;
+    }
 
   if (*p == '$')
     {
@@ -51,15 +60,16 @@ get_number_trailer (const char **pp, int trailer)
 	     null-terminate it to pass to lookup_internalvar().  */
 	  char *varname;
 	  const char *start = ++p;
-	  LONGEST val;
+	  LONGEST longest_val;
 
 	  while (isalnum (*p) || *p == '_')
 	    p++;
 	  varname = (char *) alloca (p - start + 1);
 	  strncpy (varname, start, p - start);
 	  varname[p - start] = '\0';
-	  if (get_internalvar_integer (lookup_internalvar (varname), &val))
-	    retval = (int) val;
+	  if (get_internalvar_integer (lookup_internalvar (varname),
+				       &longest_val))
+	    retval = (int) longest_val;
 	  else
 	    {
 	      printf_filtered (_("Convenience variable must "
@@ -70,11 +80,10 @@ get_number_trailer (const char **pp, int trailer)
     }
   else
     {
-      if (*p == '-')
-	++p;
+      const char *p1 = p;
       while (*p >= '0' && *p <= '9')
 	++p;
-      if (p == *pp)
+      if (p == p1)
 	/* There is no number here.  (e.g. "cond a == b").  */
 	{
 	  /* Skip non-numeric token.  */
@@ -84,7 +93,7 @@ get_number_trailer (const char **pp, int trailer)
 	  retval = 0;
 	}
       else
-	retval = atoi (*pp);
+	retval = atoi (p1);
     }
   if (!(isspace (*p) || *p == '\0' || *p == trailer))
     {
@@ -93,15 +102,15 @@ get_number_trailer (const char **pp, int trailer)
 	++p;
       retval = 0;
     }
-  p = skip_spaces_const (p);
+  p = skip_spaces (p);
   *pp = p;
-  return retval;
+  return negative ? -retval : retval;
 }
 
 /* See documentation in cli-utils.h.  */
 
 int
-get_number_const (const char **pp)
+get_number (const char **pp)
 {
   return get_number_trailer (pp, '\0');
 }
@@ -121,39 +130,115 @@ get_number (char **pp)
 
 /* See documentation in cli-utils.h.  */
 
-void
-init_number_or_range (struct get_number_or_range_state *state,
-		      const char *string)
+bool
+extract_info_print_args (const char **args,
+			 bool *quiet,
+			 std::string *regexp,
+			 std::string *t_regexp)
 {
-  memset (state, 0, sizeof (*state));
-  state->string = string;
+  /* Check for NAMEREGEXP or -- NAMEREGEXP.  */
+  if (**args != '-' || check_for_argument (args, "--", 2))
+    {
+      *args = skip_spaces (*args);
+      *regexp = *args;
+      *args = NULL;
+      return true;
+    }
+
+  if (check_for_argument (args, "-t", 2))
+    {
+      *t_regexp = extract_arg_maybe_quoted (args);
+      *args = skip_spaces (*args);
+      return true;
+    }
+
+  if (check_for_argument (args, "-q", 2))
+    {
+      *quiet = true;
+      *args = skip_spaces (*args);
+      return true;
+    }
+
+  return false;
+}
+
+/* See documentation in cli-utils.h.  */
+
+void
+report_unrecognized_option_error (const char *command, const char *args)
+{
+  std::string option = extract_arg (&args);
+
+  error (_("Unrecognized option '%s' to %s command.  "
+	   "Try \"help %s\"."), option.c_str (),
+	 command, command);
+}
+
+/* See documentation in cli-utils.h.  */
+
+const char *
+info_print_args_help (const char *prefix,
+		      const char *entity_kind)
+{
+  return xstrprintf (_("\
+%sIf NAMEREGEXP is provided, only prints the %s whose name\n\
+matches NAMEREGEXP.\n\
+If -t TYPEREGEXP is provided, only prints the %s whose type\n\
+matches TYPEREGEXP.  Note that the matching is done with the type\n\
+printed by the 'whatis' command.\n\
+By default, the command might produce headers and/or messages indicating\n\
+why no %s can be printed.\n\
+The flag -q disables the production of these headers and messages."),
+		     prefix, entity_kind, entity_kind, entity_kind);
+}
+
+/* See documentation in cli-utils.h.  */
+
+number_or_range_parser::number_or_range_parser (const char *string)
+{
+  init (string);
+}
+
+/* See documentation in cli-utils.h.  */
+
+void
+number_or_range_parser::init (const char *string)
+{
+  m_cur_tok = string;
+  m_last_retval = 0;
+  m_end_value = 0;
+  m_end_ptr = NULL;
+  m_in_range = false;
 }
 
 /* See documentation in cli-utils.h.  */
 
 int
-get_number_or_range (struct get_number_or_range_state *state)
+number_or_range_parser::get_number ()
 {
-  if (state->in_range)
+  if (m_in_range)
     {
       /* All number-parsing has already been done.  Return the next
 	 integer value (one greater than the saved previous value).
 	 Do not advance the token pointer until the end of range is
 	 reached.  */
 
-      if (++state->last_retval == state->end_value)
+      if (++m_last_retval == m_end_value)
 	{
 	  /* End of range reached; advance token pointer.  */
-	  state->string = state->end_ptr;
-	  state->in_range = 0;
+	  m_cur_tok = m_end_ptr;
+	  m_in_range = false;
 	}
     }
-  else if (*state->string != '-')
+  else if (*m_cur_tok != '-')
     {
-      /* Default case: state->string is pointing either to a solo
+      /* Default case: state->m_cur_tok is pointing either to a solo
 	 number, or to the first number of a range.  */
-      state->last_retval = get_number_trailer (&state->string, '-');
-      if (*state->string == '-')
+      m_last_retval = get_number_trailer (&m_cur_tok, '-');
+      /* If get_number_trailer has found a -, it might be the start
+	 of a command option.  So, do not parse a range if the - is
+	 followed by an alpha.  */
+      if (*m_cur_tok == '-' && !isalpha (*(m_cur_tok + 1)))
 	{
 	  const char **temp;
 
@@ -161,42 +246,66 @@ get_number_or_range (struct get_number_or_range_state *state)
 	     Skip the '-', parse and remember the second number,
 	     and also remember the end of the final token.  */
 
-	  temp = &state->end_ptr; 
-	  state->end_ptr = skip_spaces_const (state->string + 1);
-	  state->end_value = get_number_const (temp);
-	  if (state->end_value < state->last_retval) 
+	  temp = &m_end_ptr;
+	  m_end_ptr = skip_spaces (m_cur_tok + 1);
+	  m_end_value = ::get_number (temp);
+	  if (m_end_value < m_last_retval)
 	    {
 	      error (_("inverted range"));
 	    }
-	  else if (state->end_value == state->last_retval)
+	  else if (m_end_value == m_last_retval)
 	    {
 	      /* Degenerate range (number1 == number2).  Advance the
 		 token pointer so that the range will be treated as a
-		 single number.  */ 
-	      state->string = state->end_ptr;
+		 single number.  */
+	      m_cur_tok = m_end_ptr;
 	    }
 	  else
-	    state->in_range = 1;
+	    m_in_range = true;
 	}
     }
   else
-    error (_("negative value"));
-  state->finished = *state->string == '\0';
-  return state->last_retval;
+    {
+      if (isdigit (*(m_cur_tok + 1)))
+	error (_("negative value"));
+      if (*(m_cur_tok + 1) == '$')
+	{
+	  /* Convenience variable.  */
+	  m_last_retval = ::get_number (&m_cur_tok);
+	  if (m_last_retval < 0)
+	    error (_("negative value"));
+	}
+    }
+  return m_last_retval;
 }
 
 /* See documentation in cli-utils.h.  */
 
 void
-number_range_setup_range (struct get_number_or_range_state *state,
-			  int start_value, int end_value, const char *end_ptr)
+number_or_range_parser::setup_range (int start_value, int end_value,
+				     const char *end_ptr)
 {
   gdb_assert (start_value > 0);
 
-  state->in_range = 1;
-  state->end_ptr = end_ptr;
-  state->last_retval = start_value - 1;
-  state->end_value = end_value;
+  m_in_range = true;
+  m_end_ptr = end_ptr;
+  m_last_retval = start_value - 1;
+  m_end_value = end_value;
+}
+
+/* See documentation in cli-utils.h.  */
+
+bool
+number_or_range_parser::finished () const
+{
+  /* Parsing is finished when at end of string or null string,
+     or we are not in a range and not in front of an integer, negative
+     integer, convenience var or negative convenience var.  */
+  return (m_cur_tok == NULL || *m_cur_tok == '\0'
+	  || (!m_in_range
+	      && !(isdigit (*m_cur_tok) || *m_cur_tok == '$')
+	      && !(*m_cur_tok == '-'
+		   && (isdigit (m_cur_tok[1]) || m_cur_tok[1] == '$'))));
 }
 
 /* Accept a number and a string-form list of numbers such as is 
@@ -210,18 +319,19 @@ number_range_setup_range (struct get_number_or_range_state *state,
 int
 number_is_in_list (const char *list, int number)
 {
-  struct get_number_or_range_state state;
-
   if (list == NULL || *list == '\0')
     return 1;
 
-  init_number_or_range (&state, list);
-  while (!state.finished)
+  number_or_range_parser parser (list);
+
+  if (parser.finished ())
+    error (_("Arguments must be numbers or '$' variables."));
+  while (!parser.finished ())
     {
-      int gotnum = get_number_or_range (&state);
+      int gotnum = parser.get_number ();
 
       if (gotnum == 0)
-	error (_("Args must be numbers or '$' variables."));
+	error (_("Arguments must be numbers or '$' variables."));
       if (gotnum == number)
 	return 1;
     }
@@ -230,8 +340,8 @@ number_is_in_list (const char *list, int number)
 
 /* See documentation in cli-utils.h.  */
 
-char *
-remove_trailing_whitespace (const char *start, char *s)
+const char *
+remove_trailing_whitespace (const char *start, const char *s)
 {
   while (s > start && isspace (*(s - 1)))
     --s;
@@ -239,40 +349,103 @@ remove_trailing_whitespace (const char *start, char *s)
   return s;
 }
 
-/* See documentation in cli-utils.h.  */
+/* A helper function to extract an argument from *ARG.  An argument is
+   delimited by whitespace, but it can also be optionally quoted.
+   The quoting and special characters are handled similarly to
+   the parsing done by gdb_argv.
+   The return value is empty if no argument was found.  */
 
-char *
-extract_arg_const (const char **arg)
+static std::string
+extract_arg_maybe_quoted (const char **arg)
 {
-  const char *result;
-
-  if (!*arg)
-    return NULL;
+  bool squote = false;
+  bool dquote = false;
+  bool bsquote = false;
+  std::string result;
+  const char *p = *arg;
 
   /* Find the start of the argument.  */
-  *arg = skip_spaces_const (*arg);
-  if (!**arg)
-    return NULL;
-  result = *arg;
+  p = skip_spaces (p);
 
-  /* Find the end of the argument.  */
-  *arg = skip_to_space_const (*arg + 1);
+  /* Parse p similarly to gdb_argv buildargv function.  */
+  while (*p != '\0')
+    {
+      if (isspace (*p) && !squote && !dquote && !bsquote)
+	  break;
+      else
+	{
+	  if (bsquote)
+	    {
+	      bsquote = false;
+	      result += *p;
+	    }
+	  else if (*p == '\\')
+	      bsquote = true;
+	  else if (squote)
+	    {
+	      if (*p == '\'')
+		  squote = false;
+	      else
+		  result += *p;
+	    }
+	  else if (dquote)
+	    {
+	      if (*p == '"')
+		  dquote = false;
+	      else
+		  result += *p;
+	    }
+	  else
+	    {
+	      if (*p == '\'')
+		  squote = true;
+	      else if (*p == '"')
+		  dquote = true;
+	      else
+		  result += *p;
+	    }
+	  p++;
+	}
+    }
 
-  if (result == *arg)
-    return NULL;
-
-  return savestring (result, *arg - result);
+  *arg = p;
+  return result;
 }
 
 /* See documentation in cli-utils.h.  */
 
-char *
+std::string
+extract_arg (const char **arg)
+{
+  const char *result;
+
+  if (!*arg)
+    return std::string ();
+
+  /* Find the start of the argument.  */
+  *arg = skip_spaces (*arg);
+  if (!**arg)
+    return std::string ();
+  result = *arg;
+
+  /* Find the end of the argument.  */
+  *arg = skip_to_space (*arg + 1);
+
+  if (result == *arg)
+    return std::string ();
+
+  return std::string (result, *arg - result);
+}
+
+/* See documentation in cli-utils.h.  */
+
+std::string
 extract_arg (char **arg)
 {
   const char *arg_const = *arg;
-  char *result;
+  std::string result;
 
-  result = extract_arg_const (&arg_const);
+  result = extract_arg (&arg_const);
   *arg += arg_const - *arg;
   return result;
 }
@@ -280,7 +453,7 @@ extract_arg (char **arg)
 /* See documentation in cli-utils.h.  */
 
 int
-check_for_argument (char **str, char *arg, int arg_len)
+check_for_argument (const char **str, const char *arg, int arg_len)
 {
   if (strncmp (*str, arg, arg_len) == 0
       && ((*str)[arg_len] == '\0' || isspace ((*str)[arg_len])))
@@ -289,4 +462,61 @@ check_for_argument (char **str, char *arg, int arg_len)
       return 1;
     }
   return 0;
+}
+
+/* See documentation in cli-utils.h.  */
+
+int
+parse_flags (const char **str, const char *flags)
+{
+  const char *p = skip_spaces (*str);
+
+  if (p[0] == '-'
+      && isalpha (p[1])
+      && (p[2] == '\0' || isspace (p[2])))
+    {
+      const char pf = p[1];
+      const char *f = flags;
+
+      while (*f != '\0')
+	{
+	  if (*f == pf)
+	    {
+	      *str = skip_spaces (p + 2);
+	      return f - flags + 1;
+	    }
+	  f++;
+	}
+    }
+
+  return 0;
+}
+
+/* See documentation in cli-utils.h.  */
+
+bool
+parse_flags_qcs (const char *which_command, const char **str,
+		 qcs_flags *flags)
+{
+  switch (parse_flags (str, "qcs"))
+    {
+    case 0:
+      return false;
+    case 1:
+      flags->quiet = true;
+      break;
+    case 2:
+      flags->cont = true;
+      break;
+    case 3:
+      flags->silent = true;
+      break;
+    default:
+      gdb_assert_not_reached ("int qcs flag out of bound");
+    }
+
+  if (flags->cont && flags->silent)
+    error (_("%s: -c and -s are mutually exclusive"), which_command);
+
+  return true;
 }

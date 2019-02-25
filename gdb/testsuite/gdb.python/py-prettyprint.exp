@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2016 Free Software Foundation, Inc.
+# Copyright (C) 2008-2019 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ if { [skip_python_tests] } { continue }
 proc run_lang_tests {exefile lang} {
     global srcdir subdir srcfile testfile hex
     if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${exefile}" executable "debug $lang"] != "" } {
-	untested "Couldn't compile ${srcfile} in $lang mode"
+	untested "failed to compile in $lang mode"
 	return -1
     }
 
@@ -56,14 +56,17 @@ proc run_lang_tests {exefile lang} {
     set remote_python_file [gdb_remote_download host \
 				${srcdir}/${subdir}/${testfile}.py]
 
-    gdb_test_no_output "python exec (open ('${remote_python_file}').read ())" \
-	"python exec (open ('[file tail ${remote_python_file}]').read ())"
+    gdb_test_no_output "source ${remote_python_file}" "load python file"
     
     gdb_test "print ss" " = a=< a=<1> b=<$hex>> b=< a=<2> b=<$hex>>"
     gdb_test "print ssa\[1\]" " = a=< a=<5> b=<$hex>> b=< a=<6> b=<$hex>>"
     gdb_test "print ssa" " = {a=< a=<3> b=<$hex>> b=< a=<4> b=<$hex>>, a=< a=<5> b=<$hex>> b=< a=<6> b=<$hex>>}"
     
     gdb_test "print arraystruct" " = {$nl *y = 7, *$nl *x = { a=<23> b=<$hex>,  a=<24> b=<$hex>} *$nl *}"
+
+    # Test that when a pretty-printer returns a gdb.Value in its to_string, we
+    # call the pretty-printer of that value too.
+    gdb_test "print tsrvw" " = Inner to_string 1989"
 
     if {$lang == "c++"} {
 	gdb_test "print cps" "=  a=<8> b=<$hex>"
@@ -111,14 +114,35 @@ proc run_lang_tests {exefile lang} {
     gdb_test "print nstype" " = {.0. = 7, .1. = 42}" \
 	"print nstype on one line"
 
+    # Check that GDB doesn't lose typedefs when looking for a printer.
+    gdb_test "print an_int" " = -1"
+    gdb_test "print (int) an_int" " = -1"
+    gdb_test "print (int_type) an_int" " = type=int_type, val=-1"
+
+    gdb_test "print an_int_type" " = type=int_type, val=1"
+    gdb_test "print (int_type) an_int_type" " = type=int_type, val=1"
+
+    gdb_test "print an_int_type2" " = type=int_type2, val=2"
+    gdb_test "print (int) an_int_type2" " = 2"
+    gdb_test "print (int_type) an_int_type2" " = type=int_type, val=2"
+    gdb_test "print (int_type2) an_int_type2" " = type=int_type2, val=2"
+
+    # PR python/16047: it is ok for a pretty printer not to have a
+    # to_string method.
+    gdb_test "print (int_type3) an_int_type2" " = {s = 27}"
+
     gdb_continue_to_end
 }
 
-if { [run_lang_tests "${binfile}" "c"] == -1 } {
-    return
+with_test_prefix c {
+    if { [run_lang_tests "${binfile}" "c"] == -1 } {
+	return
+    }
 }
-if { [run_lang_tests "${binfile}-cxx" "c++"] == -1 } {
-    return
+with_test_prefix c++ {
+    if { [run_lang_tests "${binfile}-cxx" "c++"] == -1 } {
+	return
+    }
 }
 
 # Run various other tests.
@@ -137,8 +161,7 @@ if ![runto_main ] then {
 set remote_python_file [gdb_remote_download host \
 			    ${srcdir}/${subdir}/${testfile}.py]
 
-gdb_test_no_output "python exec (open ('${remote_python_file}').read ())" \
-    "python exec (open ('[file tail ${remote_python_file}]').read ())"
+gdb_test_no_output "source ${remote_python_file}" "load python file"
 
 gdb_breakpoint [gdb_get_line_number "eval-break"]
 gdb_continue_to_breakpoint "eval-break" ".* eval-break .*"

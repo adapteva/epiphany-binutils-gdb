@@ -1,5 +1,5 @@
 /* MI Command Set for GDB, the GNU debugger.
-   Copyright (C) 2000-2016 Free Software Foundation, Inc.
+   Copyright (C) 2000-2019 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -22,8 +22,6 @@
 #include "top.h"
 #include "mi-cmds.h"
 #include "mi-main.h"
-
-extern void _initialize_mi_cmds (void);
 
 struct mi_cmd;
 static struct mi_cmd **lookup_table (const char *command);
@@ -71,6 +69,8 @@ static struct mi_cmd mi_cmds[] =
                    &mi_suppress_notification.breakpoint),
   DEF_MI_CMD_MI_1 ("catch-exception", mi_cmd_catch_exception,
                    &mi_suppress_notification.breakpoint),
+  DEF_MI_CMD_MI_1 ("catch-handlers", mi_cmd_catch_handlers,
+                   &mi_suppress_notification.breakpoint),
   DEF_MI_CMD_MI_1 ("catch-load", mi_cmd_catch_load,
                    &mi_suppress_notification.breakpoint),
   DEF_MI_CMD_MI_1 ("catch-unload", mi_cmd_catch_unload,
@@ -115,6 +115,8 @@ static struct mi_cmd mi_cmds[] =
 		 mi_cmd_file_list_exec_source_file),
   DEF_MI_CMD_MI ("file-list-exec-source-files",
 		 mi_cmd_file_list_exec_source_files),
+  DEF_MI_CMD_MI ("file-list-shared-libraries",
+		 mi_cmd_file_list_shared_libraries),
   DEF_MI_CMD_CLI ("file-symbol-file", "symbol-file", 1),
   DEF_MI_CMD_MI ("gdb-exit", mi_cmd_gdb_exit),
   DEF_MI_CMD_CLI_1 ("gdb-set", "set", 1,
@@ -137,7 +139,8 @@ static struct mi_cmd mi_cmds[] =
   DEF_MI_CMD_MI ("stack-list-frames", mi_cmd_stack_list_frames),
   DEF_MI_CMD_MI ("stack-list-locals", mi_cmd_stack_list_locals),
   DEF_MI_CMD_MI ("stack-list-variables", mi_cmd_stack_list_variables),
-  DEF_MI_CMD_MI ("stack-select-frame", mi_cmd_stack_select_frame),
+  DEF_MI_CMD_MI_1 ("stack-select-frame", mi_cmd_stack_select_frame,
+		   &mi_suppress_notification.user_selected_context),
   DEF_MI_CMD_MI ("symbol-list-lines", mi_cmd_symbol_list_lines),
   DEF_MI_CMD_CLI ("target-attach", "attach", 1),
   DEF_MI_CMD_MI ("target-detach", mi_cmd_target_detach),
@@ -146,10 +149,12 @@ static struct mi_cmd mi_cmds[] =
   DEF_MI_CMD_MI ("target-file-delete", mi_cmd_target_file_delete),
   DEF_MI_CMD_MI ("target-file-get", mi_cmd_target_file_get),
   DEF_MI_CMD_MI ("target-file-put", mi_cmd_target_file_put),
+  DEF_MI_CMD_MI ("target-flash-erase", mi_cmd_target_flash_erase),
   DEF_MI_CMD_CLI ("target-select", "target", 1),
   DEF_MI_CMD_MI ("thread-info", mi_cmd_thread_info),
   DEF_MI_CMD_MI ("thread-list-ids", mi_cmd_thread_list_ids),
-  DEF_MI_CMD_MI ("thread-select", mi_cmd_thread_select),
+  DEF_MI_CMD_MI_1 ("thread-select", mi_cmd_thread_select,
+		   &mi_suppress_notification.user_selected_context),
   DEF_MI_CMD_MI ("trace-define-variable", mi_cmd_trace_define_variable),
   DEF_MI_CMD_MI_1 ("trace-find", mi_cmd_trace_find,
 		   &mi_suppress_notification.traceframe),

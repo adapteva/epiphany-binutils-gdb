@@ -1,6 +1,6 @@
 /* Python interface to symbols.
 
-   Copyright (C) 2008-2016 Free Software Foundation, Inc.
+   Copyright (C) 2008-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,6 +23,7 @@
 #include "symtab.h"
 #include "python-internal.h"
 #include "objfiles.h"
+#include "py-ref.h"
 
 typedef struct sympy_symbol_object {
   PyObject_HEAD
@@ -372,13 +373,14 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
   int domain = VAR_DOMAIN;
   struct field_of_this_result is_a_field_of_this;
   const char *name;
-  static char *keywords[] = { "name", "block", "domain", NULL };
+  static const char *keywords[] = { "name", "block", "domain", NULL };
   struct symbol *symbol = NULL;
-  PyObject *block_obj = NULL, *ret_tuple, *sym_obj, *bool_obj;
+  PyObject *block_obj = NULL, *sym_obj, *bool_obj;
   const struct block *block = NULL;
 
-  if (! PyArg_ParseTupleAndKeywords (args, kw, "s|O!i", keywords, &name,
-				     &block_object_type, &block_obj, &domain))
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!i", keywords, &name,
+					&block_object_type, &block_obj,
+					&domain))
     return NULL;
 
   if (block_obj)
@@ -410,31 +412,28 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
     }
   END_CATCH
 
-  ret_tuple = PyTuple_New (2);
-  if (!ret_tuple)
+  gdbpy_ref<> ret_tuple (PyTuple_New (2));
+  if (ret_tuple == NULL)
     return NULL;
 
   if (symbol)
     {
       sym_obj = symbol_to_symbol_object (symbol);
       if (!sym_obj)
-	{
-	  Py_DECREF (ret_tuple);
-	  return NULL;
-	}
+	return NULL;
     }
   else
     {
       sym_obj = Py_None;
       Py_INCREF (Py_None);
     }
-  PyTuple_SET_ITEM (ret_tuple, 0, sym_obj);
+  PyTuple_SET_ITEM (ret_tuple.get (), 0, sym_obj);
 
   bool_obj = (is_a_field_of_this.type != NULL) ? Py_True : Py_False;
   Py_INCREF (bool_obj);
-  PyTuple_SET_ITEM (ret_tuple, 1, bool_obj);
+  PyTuple_SET_ITEM (ret_tuple.get (), 1, bool_obj);
 
-  return ret_tuple;
+  return ret_tuple.release ();
 }
 
 /* Implementation of
@@ -445,12 +444,12 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
 {
   int domain = VAR_DOMAIN;
   const char *name;
-  static char *keywords[] = { "name", "domain", NULL };
+  static const char *keywords[] = { "name", "domain", NULL };
   struct symbol *symbol = NULL;
   PyObject *sym_obj;
 
-  if (! PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
-				     &domain))
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
+					&domain))
     return NULL;
 
   TRY
@@ -538,6 +537,8 @@ gdbpy_initialize_symbols (void)
 				  LOC_OPTIMIZED_OUT) < 0
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_COMPUTED",
 				  LOC_COMPUTED) < 0
+      || PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_COMMON_BLOCK",
+				  LOC_COMMON_BLOCK) < 0
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_REGPARM_ADDR",
 				  LOC_REGPARM_ADDR) < 0
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_UNDEF_DOMAIN",
@@ -546,14 +547,24 @@ gdbpy_initialize_symbols (void)
 				  VAR_DOMAIN) < 0
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_STRUCT_DOMAIN",
 				  STRUCT_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_LABEL_DOMAIN",
-				  LABEL_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_VARIABLES_DOMAIN",
-				  VARIABLES_DOMAIN) < 0
+      || PyModule_AddIntConstant (gdb_module, "SYMBOL_MODULE_DOMAIN",
+				  MODULE_DOMAIN) < 0
+      || PyModule_AddIntConstant (gdb_module, "SYMBOL_COMMON_BLOCK_DOMAIN",
+				  COMMON_BLOCK_DOMAIN) < 0)
+    return -1;
+
+  /* These remain defined for compatibility, but as they were never
+     correct, they are no longer documented.  Eventually we can remove
+     them.  These exist because at one time, enum search_domain and
+     enum domain_enum_tag were combined -- but different values were
+     used differently.  Here we try to give them values that will make
+     sense if they are passed to gdb.lookup_symbol.  */
+  if (PyModule_AddIntConstant (gdb_module, "SYMBOL_VARIABLES_DOMAIN",
+			       VAR_DOMAIN) < 0
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_FUNCTIONS_DOMAIN",
-				  FUNCTIONS_DOMAIN) < 0
+				  VAR_DOMAIN) < 0
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_TYPES_DOMAIN",
-				  TYPES_DOMAIN) < 0)
+				  VAR_DOMAIN) < 0)
     return -1;
 
   return gdb_pymodule_addobject (gdb_module, "Symbol",
@@ -562,7 +573,7 @@ gdbpy_initialize_symbols (void)
 
 
 
-static PyGetSetDef symbol_object_getset[] = {
+static gdb_PyGetSetDef symbol_object_getset[] = {
   { "type", sympy_get_type, NULL,
     "Type of the symbol.", NULL },
   { "symtab", sympy_get_symtab, NULL,

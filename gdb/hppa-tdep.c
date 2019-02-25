@@ -1,6 +1,6 @@
 /* Target-dependent code for the HP PA-RISC architecture.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2019 Free Software Foundation, Inc.
 
    Contributed by the Center for Software Science at the
    University of Utah (pa-gdb-bugs@cs.utah.edu).
@@ -39,6 +39,7 @@
 #include "gdbtypes.h"
 #include "objfiles.h"
 #include "hppa-tdep.h"
+#include <algorithm>
 
 static int hppa_debug = 0;
 
@@ -204,13 +205,10 @@ hppa_symbol_address(const char *sym)
 static struct hppa_objfile_private *
 hppa_init_objfile_priv_data (struct objfile *objfile)
 {
-  struct hppa_objfile_private *priv;
+  hppa_objfile_private *priv
+    = OBSTACK_ZALLOC (&objfile->objfile_obstack, hppa_objfile_private);
 
-  priv = (struct hppa_objfile_private *)
-  	 obstack_alloc (&objfile->objfile_obstack,
-	 		sizeof (struct hppa_objfile_private));
   set_objfile_data (objfile, hppa_objfile_priv_data, priv);
-  memset (priv, 0, sizeof (*priv));
 
   return priv;
 }
@@ -485,7 +483,6 @@ struct unwind_table_entry *
 find_unwind_entry (CORE_ADDR pc)
 {
   int first, middle, last;
-  struct objfile *objfile;
   struct hppa_objfile_private *priv;
 
   if (hppa_debug)
@@ -500,61 +497,61 @@ find_unwind_entry (CORE_ADDR pc)
       return NULL;
     }
 
-  ALL_OBJFILES (objfile)
-  {
-    struct hppa_unwind_info *ui;
-    ui = NULL;
-    priv = ((struct hppa_objfile_private *)
-	    objfile_data (objfile, hppa_objfile_priv_data));
-    if (priv)
-      ui = ((struct hppa_objfile_private *) priv)->unwind_info;
+  for (objfile *objfile : current_program_space->objfiles ())
+    {
+      struct hppa_unwind_info *ui;
+      ui = NULL;
+      priv = ((struct hppa_objfile_private *)
+	      objfile_data (objfile, hppa_objfile_priv_data));
+      if (priv)
+	ui = ((struct hppa_objfile_private *) priv)->unwind_info;
 
-    if (!ui)
-      {
-	read_unwind_info (objfile);
-        priv = ((struct hppa_objfile_private *)
-		objfile_data (objfile, hppa_objfile_priv_data));
-	if (priv == NULL)
-	  error (_("Internal error reading unwind information."));
-        ui = ((struct hppa_objfile_private *) priv)->unwind_info;
-      }
+      if (!ui)
+	{
+	  read_unwind_info (objfile);
+	  priv = ((struct hppa_objfile_private *)
+		  objfile_data (objfile, hppa_objfile_priv_data));
+	  if (priv == NULL)
+	    error (_("Internal error reading unwind information."));
+	  ui = ((struct hppa_objfile_private *) priv)->unwind_info;
+	}
 
-    /* First, check the cache.  */
+      /* First, check the cache.  */
 
-    if (ui->cache
-	&& pc >= ui->cache->region_start
-	&& pc <= ui->cache->region_end)
-      {
-	if (hppa_debug)
-	  fprintf_unfiltered (gdb_stdlog, "%s (cached) }\n",
-            hex_string ((uintptr_t) ui->cache));
-        return ui->cache;
-      }
+      if (ui->cache
+	  && pc >= ui->cache->region_start
+	  && pc <= ui->cache->region_end)
+	{
+	  if (hppa_debug)
+	    fprintf_unfiltered (gdb_stdlog, "%s (cached) }\n",
+				hex_string ((uintptr_t) ui->cache));
+	  return ui->cache;
+	}
 
-    /* Not in the cache, do a binary search.  */
+      /* Not in the cache, do a binary search.  */
 
-    first = 0;
-    last = ui->last;
+      first = 0;
+      last = ui->last;
 
-    while (first <= last)
-      {
-	middle = (first + last) / 2;
-	if (pc >= ui->table[middle].region_start
-	    && pc <= ui->table[middle].region_end)
-	  {
-	    ui->cache = &ui->table[middle];
-	    if (hppa_debug)
-	      fprintf_unfiltered (gdb_stdlog, "%s }\n",
-                hex_string ((uintptr_t) ui->cache));
-	    return &ui->table[middle];
-	  }
+      while (first <= last)
+	{
+	  middle = (first + last) / 2;
+	  if (pc >= ui->table[middle].region_start
+	      && pc <= ui->table[middle].region_end)
+	    {
+	      ui->cache = &ui->table[middle];
+	      if (hppa_debug)
+		fprintf_unfiltered (gdb_stdlog, "%s }\n",
+				    hex_string ((uintptr_t) ui->cache));
+	      return &ui->table[middle];
+	    }
 
-	if (pc < ui->table[middle].region_start)
-	  last = middle - 1;
-	else
-	  first = middle + 1;
-      }
-  }				/* ALL_OBJFILES() */
+	  if (pc < ui->table[middle].region_start)
+	    last = middle - 1;
+	  else
+	    first = middle + 1;
+	}
+    }
 
   if (hppa_debug)
     fprintf_unfiltered (gdb_stdlog, "NULL (not found) }\n");
@@ -603,20 +600,16 @@ hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   return 0;
 }
 
-static const unsigned char *
-hppa_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pc, int *len)
-{
-  static const unsigned char breakpoint[] = {0x00, 0x01, 0x00, 0x04};
-  (*len) = sizeof (breakpoint);
-  return breakpoint;
-}
+constexpr gdb_byte hppa_break_insn[] = {0x00, 0x01, 0x00, 0x04};
+
+typedef BP_MANIPULATION (hppa_break_insn) hppa_breakpoint;
 
 /* Return the name of a register.  */
 
 static const char *
 hppa32_register_name (struct gdbarch *gdbarch, int i)
 {
-  static char *names[] = {
+  static const char *names[] = {
     "flags",  "r1",      "rp",     "r3",
     "r4",     "r5",      "r6",     "r7",
     "r8",     "r9",      "r10",    "r11",
@@ -659,7 +652,7 @@ hppa32_register_name (struct gdbarch *gdbarch, int i)
 static const char *
 hppa64_register_name (struct gdbarch *gdbarch, int i)
 {
-  static char *names[] = {
+  static const char *names[] = {
     "flags",  "r1",      "rp",     "r3",
     "r4",     "r5",      "r6",     "r7",
     "r8",     "r9",      "r10",    "r11",
@@ -720,7 +713,8 @@ static CORE_ADDR
 hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 			struct regcache *regcache, CORE_ADDR bp_addr,
 			int nargs, struct value **args, CORE_ADDR sp,
-			int struct_return, CORE_ADDR struct_addr)
+			function_call_return_method return_method,
+			CORE_ADDR struct_addr)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
@@ -826,17 +820,15 @@ hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		  int fpLreg = 72 + (param_ptr - 36) / 4 * 2;
 		  int fpreg = 74 + (param_ptr - 32) / 8 * 4;
 
-		  regcache_cooked_write (regcache, grreg, param_val);
-		  regcache_cooked_write (regcache, fpLreg, param_val);
+		  regcache->cooked_write (grreg, param_val);
+		  regcache->cooked_write (fpLreg, param_val);
 
 		  if (param_len > 4)
 		    {
-		      regcache_cooked_write (regcache, grreg + 1, 
-					     param_val + 4);
+		      regcache->cooked_write (grreg + 1, param_val + 4);
 
-		      regcache_cooked_write (regcache, fpreg, param_val);
-		      regcache_cooked_write (regcache, fpreg + 1, 
-					     param_val + 4);
+		      regcache->cooked_write (fpreg, param_val);
+		      regcache->cooked_write (fpreg + 1, param_val + 4);
 		    }
 		}
 	    }
@@ -857,7 +849,7 @@ hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* If a structure has to be returned, set up register 28 to hold its
      address.  */
-  if (struct_return)
+  if (return_method == return_method_struct)
     regcache_cooked_write_unsigned (regcache, 28, struct_addr);
 
   gp = tdep->find_global_pointer (gdbarch, function);
@@ -898,6 +890,7 @@ hppa64_integral_or_pointer_p (const struct type *type)
       }
     case TYPE_CODE_PTR:
     case TYPE_CODE_REF:
+    case TYPE_CODE_RVALUE_REF:
       return (TYPE_LENGTH (type) == 8);
     default:
       break;
@@ -976,7 +969,8 @@ static CORE_ADDR
 hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 			struct regcache *regcache, CORE_ADDR bp_addr,
 			int nargs, struct value **args, CORE_ADDR sp,
-			int struct_return, CORE_ADDR struct_addr)
+			function_call_return_method return_method,
+			CORE_ADDR struct_addr)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -1051,8 +1045,8 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		     passed in floating-point registers, are passed in
 		     the right halves of the floating point registers;
 		     the left halves are unused."  */
-		  regcache_cooked_write_part (regcache, regnum, offset % 8,
-					      len, value_contents (arg));
+		  regcache->cooked_write_part (regnum, offset % 8, len,
+					       value_contents (arg));
 		}
 	    }
 	}
@@ -1093,11 +1087,11 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       regnum = HPPA_ARG0_REGNUM - offset / 8;
       while (regnum > HPPA_ARG0_REGNUM - 8 && len > 0)
 	{
-	  regcache_cooked_write_part (regcache, regnum,
-				      offset % 8, min (len, 8), valbuf);
-	  offset += min (len, 8);
-	  valbuf += min (len, 8);
-	  len -= min (len, 8);
+	  regcache->cooked_write_part (regnum, offset % 8, std::min (len, 8),
+				       valbuf);
+	  offset += std::min (len, 8);
+	  valbuf += std::min (len, 8);
+	  len -= std::min (len, 8);
 	  regnum--;
 	}
 
@@ -1109,7 +1103,7 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* Allocate the outgoing parameter area.  Make sure the outgoing
      parameter area is multiple of 16 bytes in length.  */
-  sp += max (align_up (offset, 16), 64);
+  sp += std::max (align_up (offset, 16), (ULONGEST) 64);
 
   /* Allocate 32-bytes of scratch space.  The documentation doesn't
      mention this, but it seems to be needed.  */
@@ -1120,7 +1114,7 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* If a structure has to be returned, set up GR 28 (%ret0) to hold
      its address.  */
-  if (struct_return)
+  if (return_method == return_method_struct)
     regcache_cooked_write_unsigned (regcache, HPPA_RET0_REGNUM, struct_addr);
 
   /* Set up GR27 (%dp) to hold the global pointer (gp).  */
@@ -1159,20 +1153,18 @@ hppa32_return_value (struct gdbarch *gdbarch, struct value *function,
       if (part > 0)
 	{
 	  if (readbuf != NULL)
-	    regcache_cooked_read_part (regcache, reg, 4 - part,
-				       part, readbuf);
+	    regcache->cooked_read_part (reg, 4 - part, part, readbuf);
 	  if (writebuf != NULL)
-	    regcache_cooked_write_part (regcache, reg, 4 - part,
-					part, writebuf);
+	    regcache->cooked_write_part (reg, 4 - part, part, writebuf);
 	  reg++;
 	}
       /* Now transfer the remaining register values.  */
       for (b = part; b < TYPE_LENGTH (type); b += 4)
 	{
 	  if (readbuf != NULL)
-	    regcache_cooked_read (regcache, reg, readbuf + b);
+	    regcache->cooked_read (reg, readbuf + b);
 	  if (writebuf != NULL)
-	    regcache_cooked_write (regcache, reg, writebuf + b);
+	    regcache->cooked_write (reg, writebuf + b);
 	  reg++;
 	}
       return RETURN_VALUE_REGISTER_CONVENTION;
@@ -1250,10 +1242,10 @@ hppa64_return_value (struct gdbarch *gdbarch, struct value *function,
     {
       while (len > 0)
 	{
-	  regcache_cooked_read_part (regcache, regnum, offset,
-				     min (len, 8), readbuf);
-	  readbuf += min (len, 8);
-	  len -= min (len, 8);
+	  regcache->cooked_read_part (regnum, offset, std::min (len, 8),
+				      readbuf);
+	  readbuf += std::min (len, 8);
+	  len -= std::min (len, 8);
 	  regnum++;
 	}
     }
@@ -1262,10 +1254,10 @@ hppa64_return_value (struct gdbarch *gdbarch, struct value *function,
     {
       while (len > 0)
 	{
-	  regcache_cooked_write_part (regcache, regnum, offset,
-				      min (len, 8), writebuf);
-	  writebuf += min (len, 8);
-	  len -= min (len, 8);
+	  regcache->cooked_write_part (regnum, offset, std::min (len, 8),
+				       writebuf);
+	  writebuf += std::min (len, 8);
+	  len -= std::min (len, 8);
 	  regnum++;
 	}
     }
@@ -1306,13 +1298,13 @@ hppa64_frame_align (struct gdbarch *gdbarch, CORE_ADDR addr)
 }
 
 CORE_ADDR
-hppa_read_pc (struct regcache *regcache)
+hppa_read_pc (readable_regcache *regcache)
 {
   ULONGEST ipsw;
   ULONGEST pc;
 
-  regcache_cooked_read_unsigned (regcache, HPPA_IPSW_REGNUM, &ipsw);
-  regcache_cooked_read_unsigned (regcache, HPPA_PCOQ_HEAD_REGNUM, &pc);
+  regcache->cooked_read (HPPA_IPSW_REGNUM, &ipsw);
+  regcache->cooked_read (HPPA_PCOQ_HEAD_REGNUM, &pc);
 
   /* If the current instruction is nullified, then we are effectively
      still executing the previous instruction.  Pretend we are still
@@ -1849,7 +1841,7 @@ hppa_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
      may be the first instruction of the prologue.  If that happens, then
      the instruction skipping code has a bug that needs to be fixed.  */
   if (post_prologue_pc != 0)
-    return max (pc, post_prologue_pc);
+    return std::max (pc, post_prologue_pc);
   else
     return (skip_prologue_hard_way (gdbarch, pc, 1));
 }
@@ -2444,9 +2436,7 @@ static struct hppa_stub_unwind_cache *
 hppa_stub_frame_unwind_cache (struct frame_info *this_frame,
 			      void **this_cache)
 {
-  struct gdbarch *gdbarch = get_frame_arch (this_frame);
   struct hppa_stub_unwind_cache *info;
-  struct unwind_table_entry *u;
 
   if (*this_cache)
     return (struct hppa_stub_unwind_cache *) *this_cache;
@@ -2456,21 +2446,6 @@ hppa_stub_frame_unwind_cache (struct frame_info *this_frame,
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
   info->base = get_frame_register_unsigned (this_frame, HPPA_SP_REGNUM);
-
-  if (gdbarch_osabi (gdbarch) == GDB_OSABI_HPUX_SOM)
-    {
-      /* HPUX uses export stubs in function calls; the export stub clobbers
-         the return value of the caller, and, later restores it from the
-	 stack.  */
-      u = find_unwind_entry (get_frame_pc (this_frame));
-
-      if (u && u->stub_unwind.stub_type == EXPORT)
-	{
-          info->saved_regs[HPPA_PCOQ_HEAD_REGNUM].addr = info->base - 24;
-
-	  return info;
-	}
-    }
 
   /* By default we assume that stubs do not change the rp.  */
   info->saved_regs[HPPA_PCOQ_HEAD_REGNUM].realreg = HPPA_RP_REGNUM;
@@ -2565,31 +2540,32 @@ struct bound_minimal_symbol
 hppa_lookup_stub_minimal_symbol (const char *name,
                                  enum unwind_stub_types stub_type)
 {
-  struct objfile *objfile;
-  struct minimal_symbol *msym;
   struct bound_minimal_symbol result = { NULL, NULL };
 
-  ALL_MSYMBOLS (objfile, msym)
+  for (objfile *objfile : current_program_space->objfiles ())
     {
-      if (strcmp (MSYMBOL_LINKAGE_NAME (msym), name) == 0)
-        {
-          struct unwind_table_entry *u;
-
-          u = find_unwind_entry (MSYMBOL_VALUE (msym));
-          if (u != NULL && u->stub_unwind.stub_type == stub_type)
+      for (minimal_symbol *msym : objfile->msymbols ())
+	{
+	  if (strcmp (MSYMBOL_LINKAGE_NAME (msym), name) == 0)
 	    {
-	      result.objfile = objfile;
-	      result.minsym = msym;
-	      return result;
+	      struct unwind_table_entry *u;
+
+	      u = find_unwind_entry (MSYMBOL_VALUE (msym));
+	      if (u != NULL && u->stub_unwind.stub_type == stub_type)
+		{
+		  result.objfile = objfile;
+		  result.minsym = msym;
+		  return result;
+		}
 	    }
-        }
+	}
     }
 
   return result;
 }
 
 static void
-unwind_command (char *exp, int from_tty)
+unwind_command (const char *exp, int from_tty)
 {
   CORE_ADDR address;
   struct unwind_table_entry *u;
@@ -2764,14 +2740,14 @@ hppa_fetch_pointer_argument (struct frame_info *frame, int argi,
 }
 
 static enum register_status
-hppa_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
+hppa_pseudo_register_read (struct gdbarch *gdbarch, readable_regcache *regcache,
 			   int regnum, gdb_byte *buf)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   ULONGEST tmp;
   enum register_status status;
 
-  status = regcache_raw_read_unsigned (regcache, regnum, &tmp);
+  status = regcache->raw_read (regnum, &tmp);
   if (status == REG_VALID)
     {
       if (regnum == HPPA_PCOQ_HEAD_REGNUM || regnum == HPPA_PCOQ_TAIL_REGNUM)
@@ -3065,14 +3041,6 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
   struct gdbarch_tdep *tdep;
   struct gdbarch *gdbarch;
-  
-  /* Try to determine the ABI of the object we are loading.  */
-  if (info.abfd != NULL && info.osabi == GDB_OSABI_UNKNOWN)
-    {
-      /* If it's a SOM file, assume it's HP/UX SOM.  */
-      if (bfd_get_flavour (info.abfd) == bfd_target_som_flavour)
-	info.osabi = GDB_OSABI_HPUX_SOM;
-    }
 
   /* find a candidate among the list of pre-declared architectures.  */
   arches = gdbarch_list_lookup_by_info (arches, &info);
@@ -3147,8 +3115,6 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Helper for function argument information.  */
   set_gdbarch_fetch_pointer_argument (gdbarch, hppa_fetch_pointer_argument);
 
-  set_gdbarch_print_insn (gdbarch, print_insn_hppa);
-
   /* When a hardware watchpoint triggers, we'll move the inferior past
      it by removing all eventpoints; stepping past the instruction
      that caused the trigger; reinserting eventpoints; and checking
@@ -3185,7 +3151,8 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       internal_error (__FILE__, __LINE__, _("bad switch"));
     }
       
-  set_gdbarch_breakpoint_from_pc (gdbarch, hppa_breakpoint_from_pc);
+  set_gdbarch_breakpoint_kind_from_pc (gdbarch, hppa_breakpoint::kind_from_pc);
+  set_gdbarch_sw_breakpoint_from_kind (gdbarch, hppa_breakpoint::bp_from_kind);
   set_gdbarch_pseudo_register_read (gdbarch, hppa_pseudo_register_read);
 
   /* Frame unwind methods.  */
@@ -3212,9 +3179,6 @@ hppa_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
                       tdep->bytes_per_address);
   fprintf_unfiltered (file, "elf = %s\n", tdep->is_elf ? "yes" : "no");
 }
-
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_hppa_tdep;
 
 void
 _initialize_hppa_tdep (void)

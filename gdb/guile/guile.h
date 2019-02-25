@@ -1,6 +1,6 @@
 /* General GDB/Scheme code.
 
-   Copyright (C) 2014-2016 Free Software Foundation, Inc.
+   Copyright (C) 2014-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -24,5 +24,8 @@
 
 /* This is all that guile exports to gdb.  */
 extern const struct extension_language_defn extension_language_guile;
+
+/* Command element for the 'guile' command.  */
+extern cmd_list_element *guile_cmd_element;
 
 #endif /* GDB_GUILE_H */

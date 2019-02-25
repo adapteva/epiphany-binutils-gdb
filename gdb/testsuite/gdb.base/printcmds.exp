@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 1992-2016 Free Software Foundation, Inc.
+# Copyright 1992-2019 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 standard_testfile .c
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested printcmds.exp
+     untested "failed to compile"
      return -1
 }
 
@@ -153,6 +153,16 @@ proc test_float_rejected {} {
     test_print_reject "p 1.1x"
     test_print_reject "p 1.1ff"
     test_print_reject "p 1.1ll"
+}
+
+# Regression test for PR gdb/21675
+proc test_radices {} {
+    gdb_test "print/o 16777211" " = 077777773"
+    gdb_test "print/d 1.5" " = 1"
+    gdb_test "print/u 1.5" " = 1"
+
+    gdb_test "print/u (char) -1" " = 255"
+    gdb_test "print/d (unsigned char) -1" " = -1"
 }
 
 proc test_print_all_chars {} {
@@ -683,7 +693,7 @@ proc test_print_string_constants {} {
     gdb_test_no_output "set print elements 50"
 
     if [target_info exists gdb,cannot_call_functions] {
-	unsupported "This target can not call functions"
+	unsupported "this target can not call functions"
 	return
     }
 
@@ -706,7 +716,7 @@ proc test_print_string_constants {} {
 proc test_print_array_constants {} {
 
     if [target_info exists gdb,cannot_call_functions] {
-	unsupported "This target can not call functions"
+	unsupported "this target can not call functions"
 	return
     }
 
@@ -766,6 +776,13 @@ proc test_printf {} {
 	"" \
 	"create hibob command"
     gdb_test "hibob" "hi bob zzz.*y" "run hibob command"
+
+    # PR cli/19918.
+    gdb_test "printf \"%-16dq\\n\", 0" "0               q"
+    gdb_test "printf \"%-16pq\\n\", 0" "\\(nil\\)           q"
+
+    # PR cli/14977.
+    gdb_test "printf \"%s\\n\", 0" "\\(null\\)"
 }
 
 #Test printing DFP values with printf
@@ -931,6 +948,12 @@ gdb_test "ptype \"abc\"" " = char \\\[4\\\]"
 gdb_test "print \$cvar = \"abc\"" " = \"abc\""
 gdb_test "print sizeof (\$cvar)" " = 4"
 
+# GDB used to complete the explicit location options even when
+# printing expressions.
+gdb_test_no_output "complete p -function"
+gdb_test_no_output "complete p -line"
+gdb_test_no_output "complete p -source"
+
 gdb_file_cmd ${binfile}
 
 gdb_test "print \$pc" "No registers\\." "print \$pc (with file)"
@@ -950,7 +973,7 @@ gdb_test "p ctable1\[120\]" "120 'x'" "p ctable1\[120\] #1"
 gdb_load ${binfile}
 
 if ![runto_main] then {
-    fail "Can't run to main"
+    fail "can't run to main"
     return 0
 }
 
@@ -975,3 +998,4 @@ test_printf
 test_printf_with_dfp
 test_print_symbol
 test_repeat_bytes
+test_radices

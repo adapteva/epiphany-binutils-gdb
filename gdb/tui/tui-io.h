@@ -1,6 +1,6 @@
 /* TUI support I/O functions.
 
-   Copyright (C) 1998-2016 Free Software Foundation, Inc.
+   Copyright (C) 1998-2019 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -22,19 +22,23 @@
 #ifndef TUI_IO_H
 #define TUI_IO_H
 
+#include "gdb_curses.h"
+
 struct ui_out;
+class cli_ui_out;
 
 /* Print the string in the curses command window.  */
-extern void tui_puts (const char *);
+extern void tui_puts (const char *, WINDOW * = nullptr);
+
+/* Print LENGTH characters from the buffer pointed to by BUF to the
+   curses command window.  */
+extern void tui_write (const char *buf, size_t length);
 
 /* Setup the IO for curses or non-curses mode.  */
 extern void tui_setup_io (int mode);
 
 /* Initialize the IO for gdb in curses mode.  */
 extern void tui_initialize_io (void);
-
-/* Get a character from the command window.  */
-extern int tui_getc (FILE *);
 
 /* Readline callback.
    Redisplay the command line with its prompt after readline has
@@ -45,11 +49,6 @@ extern void tui_redisplay_readline (void);
 extern char *tui_expand_tabs (const char *, int);
 
 extern struct ui_out *tui_out;
-extern struct ui_out *tui_old_uiout;
-
-extern int key_is_start_sequence (int ch);
-extern int key_is_end_sequence (int ch);
-extern int key_is_backspace (int ch);
-extern int key_is_command_char (int ch);
+extern cli_ui_out *tui_old_uiout;
 
 #endif

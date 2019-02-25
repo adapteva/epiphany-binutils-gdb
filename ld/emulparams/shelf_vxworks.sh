@@ -14,7 +14,8 @@ TEMPLATE_NAME=elf32
 GENERATE_SHLIB_SCRIPT=yes
 ENTRY=__start
 SYMPREFIX=_
+
 GOT=".got          ${RELOCATING-0} : {
-  PROVIDE(__GLOBAL_OFFSET_TABLE_ = .);
-  *(.got.plt) *(.got) }"
+  ${RELOCATING+PROVIDE(__GLOBAL_OFFSET_TABLE_ = .);
+  *(.got.plt) }*(.got) }"
 . ${srcdir}/emulparams/vxworks.sh

@@ -1,5 +1,5 @@
 /* tc-epiphany.c -- Assembler for the Adapteva EPIPHANY
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2019 Free Software Foundation, Inc.
    Contributed by Embecosm on behalf of Adapteva, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -28,7 +28,6 @@
 #include "elf/common.h"
 #include "elf/epiphany.h"
 #include "dwarf2dbg.h"
-#include "libbfd.h"
 
 /* Structure to hold all of the different components describing
    an individual instruction.  */
@@ -289,7 +288,7 @@ epiphany_apply_fix (fixS *fixP, valueT *valP, segT seg)
 
 	case BFD_RELOC_EPIPHANY_HIGH:
 	  value >>= 16;
-	  /* fall thru */
+	  /* fallthru */
 	case BFD_RELOC_EPIPHANY_LOW:
 	  value = (((value & 0xff) << 5) | insn[0])
 	    | (insn[1] << 8)
@@ -445,7 +444,7 @@ epiphany_assemble (const char *str)
   /* 64-bit even register operand constraints is already checked by cgen */
 #define DISPMOD _("destination register modified by displacement-post-modified address")
 
-  /* Helper macros for spliting apart instruction fields.  */
+  /* Helper macros for splitting apart instruction fields.  */
 #define ADDR_POST_MODIFIED(i) (((i) >> 25) & 0x1)
 #define ADDR_SIZE(i)          (((i) >>  5) &   3)
 #define ADDR_LOADSTORE(i)     (((i) >>  4) & 0x1)
@@ -915,7 +914,7 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
 	return fixP->fx_cgen.opinfo;
       else
 	as_bad ("unknown imm16 operand");
-      /* fall-thru */
+      /* fallthru */
 
     default:
       break;
@@ -978,7 +977,7 @@ epiphany_fix_adjustable (fixS *fixP)
     return FALSE;
 
   /* Since we don't use partial_inplace, we must not reduce symbols in
-     mergable sections to their section symbol.  */
+     mergeable sections to their section symbol.  */
   if ((S_GET_SEGMENT (fixP->fx_addsy)->flags & SEC_MERGE) != 0)
     return FALSE;
 

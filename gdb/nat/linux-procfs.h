@@ -1,5 +1,5 @@
 /* Linux-specific PROCFS manipulation routines.
-   Copyright (C) 2011-2016 Free Software Foundation, Inc.
+   Copyright (C) 2011-2019 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -79,5 +79,10 @@ extern int linux_proc_task_list_dir_exists (pid_t pid);
    function is next called.  */
 
 extern char *linux_proc_pid_to_exec_file (int pid);
+
+/* Display possible problems on this system.  Display them only once
+   per GDB execution.  */
+
+extern void linux_proc_init_warnings ();
 
 #endif /* COMMON_LINUX_PROCFS_H */

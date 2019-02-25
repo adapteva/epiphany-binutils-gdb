@@ -1,6 +1,6 @@
 /* A GNU-like <stdlib.h>.
 
-   Copyright (C) 1995, 2001-2004, 2006-2015 Free Software Foundation, Inc.
+   Copyright (C) 1995, 2001-2004, 2006-2016 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -87,9 +87,10 @@ struct random_data
 # endif
 #endif
 
-#if (@GNULIB_MKSTEMP@ || @GNULIB_MKSTEMPS@ || @GNULIB_GETSUBOPT@ || defined GNULIB_POSIXCHECK) && ! defined __GLIBC__ && !((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__)
+#if (@GNULIB_MKSTEMP@ || @GNULIB_MKSTEMPS@ || @GNULIB_MKOSTEMP@ || @GNULIB_MKOSTEMPS@ || @GNULIB_GETSUBOPT@ || defined GNULIB_POSIXCHECK) && ! defined __GLIBC__ && !((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__)
 /* On Mac OS X 10.3, only <unistd.h> declares mkstemp.  */
 /* On Mac OS X 10.5, only <unistd.h> declares mkstemps.  */
+/* On Mac OS X 10.13, only <unistd.h> declares mkostemp and mkostemps.  */
 /* On Cygwin 1.7.1, only <unistd.h> declares getsubopt.  */
 /* But avoid namespace pollution on glibc systems and native Windows.  */
 # include <unistd.h>
@@ -521,6 +522,9 @@ _GL_CXXALIASWARN (putenv);
 #endif
 
 #if @GNULIB_QSORT_R@
+/* Sort an array of NMEMB elements, starting at address BASE, each element
+   occupying SIZE bytes, in ascending order according to the comparison
+   function COMPARE.  */
 # if @REPLACE_QSORT_R@
 #  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #   undef qsort_r
@@ -535,12 +539,24 @@ _GL_CXXALIAS_RPL (qsort_r, void, (void *base, size_t nmemb, size_t size,
                                                   void *),
                                   void *arg));
 # else
+#  if !@HAVE_QSORT_R@
+_GL_FUNCDECL_SYS (qsort_r, void, (void *base, size_t nmemb, size_t size,
+                                  int (*compare) (void const *, void const *,
+                                                  void *),
+                                  void *arg) _GL_ARG_NONNULL ((1, 4)));
+#  endif
 _GL_CXXALIAS_SYS (qsort_r, void, (void *base, size_t nmemb, size_t size,
                                   int (*compare) (void const *, void const *,
                                                   void *),
                                   void *arg));
 # endif
 _GL_CXXALIASWARN (qsort_r);
+#elif defined GNULIB_POSIXCHECK
+# undef qsort_r
+# if HAVE_RAW_DECL_QSORT_R
+_GL_WARN_ON_USE (qsort_r, "qsort_r is not portable - "
+                 "use gnulib module qsort_r for portability");
+# endif
 #endif
 
 

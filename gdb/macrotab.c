@@ -1,5 +1,5 @@
 /* C preprocessor macro tables for GDB.
-   Copyright (C) 2002-2016 Free Software Foundation, Inc.
+   Copyright (C) 2002-2019 Free Software Foundation, Inc.
    Contributed by Red Hat, Inc.
 
    This file is part of GDB.
@@ -478,8 +478,7 @@ macro_include (struct macro_source_file *source,
 
       link_fullname = macro_source_fullname (*link);
       source_fullname = macro_source_fullname (source);
-      complaint (&symfile_complaints,
-		 _("both `%s' and `%s' allegedly #included at %s:%d"),
+      complaint (_("both `%s' and `%s' allegedly #included at %s:%d"),
 		 included, link_fullname, source_fullname, line);
       xfree (source_fullname);
       xfree (link_fullname);
@@ -730,8 +729,7 @@ check_for_redefinition (struct macro_source_file *source, int line,
 	  
 	  source_fullname = macro_source_fullname (source);
 	  found_key_fullname = macro_source_fullname (found_key->start_file);
-	  complaint (&symfile_complaints,
-		     _("macro `%s' redefined at %s:%d; "
+	  complaint (_("macro `%s' redefined at %s:%d; "
 		       "original definition at %s:%d"),
 		     name, source_fullname, line, found_key_fullname,
 		     found_key->start_line);
@@ -859,8 +857,7 @@ macro_undef (struct macro_source_file *source, int line,
 
 	      source_fullname = macro_source_fullname (source);
 	      key_fullname = macro_source_fullname (key->end_file);
-              complaint (&symfile_complaints,
-                         _("macro '%s' is #undefined twice,"
+              complaint (_("macro '%s' is #undefined twice,"
                            " at %s:%d and %s:%d"),
 			 name, source_fullname, line, key_fullname,
 			 key->end_line);
@@ -880,8 +877,7 @@ macro_undef (struct macro_source_file *source, int line,
          has no macro definition in scope is ignored.  So we should
          ignore it too.  */
 #if 0
-      complaint (&symfile_complaints,
-		 _("no definition for macro `%s' in scope to #undef at %s:%d"),
+      complaint (_("no definition for macro `%s' in scope to #undef at %s:%d"),
 		 name, source->filename, line);
 #endif
     }
@@ -965,8 +961,7 @@ macro_definition_location (struct macro_source_file *source,
    the FILE and LINE fields.  */
 struct macro_for_each_data
 {
-  macro_callback_fn fn;
-  void *user_data;
+  gdb::function_view<macro_callback_fn> fn;
   struct macro_source_file *file;
   int line;
 };
@@ -985,20 +980,18 @@ foreach_macro (splay_tree_node node, void *arg)
 			  (struct macro_definition *) node->value);
   xfree (key_fullname);
 
-  (*datum->fn) (key->name, def, key->start_file, key->start_line,
-		datum->user_data);
+  datum->fn (key->name, def, key->start_file, key->start_line);
   return 0;
 }
 
 /* Call FN for every macro in TABLE.  */
 void
-macro_for_each (struct macro_table *table, macro_callback_fn fn,
-		void *user_data)
+macro_for_each (struct macro_table *table,
+		gdb::function_view<macro_callback_fn> fn)
 {
   struct macro_for_each_data datum;
 
   datum.fn = fn;
-  datum.user_data = user_data;
   datum.file = NULL;
   datum.line = 0;
   splay_tree_foreach (table->definitions, foreach_macro, &datum);
@@ -1024,20 +1017,18 @@ foreach_macro_in_scope (splay_tree_node node, void *info)
       && (!key->end_file
 	  || compare_locations (key->end_file, key->end_line,
 				datum->file, datum->line) >= 0))
-    (*datum->fn) (key->name, def, key->start_file, key->start_line,
-		  datum->user_data);
+    datum->fn (key->name, def, key->start_file, key->start_line);
   return 0;
 }
 
 /* Call FN for every macro is visible in SCOPE.  */
 void
 macro_for_each_in_scope (struct macro_source_file *file, int line,
-			 macro_callback_fn fn, void *user_data)
+			 gdb::function_view<macro_callback_fn> fn)
 {
   struct macro_for_each_data datum;
 
   datum.fn = fn;
-  datum.user_data = user_data;
   datum.file = file;
   datum.line = line;
   splay_tree_foreach (file->table->definitions,
