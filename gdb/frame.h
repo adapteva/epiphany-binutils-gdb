@@ -1,6 +1,6 @@
 /* Definitions for dealing with stack frames, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -90,6 +90,9 @@ enum frame_id_stack_status
   /* Stack address is valid, and is found in the stack_addr field.  */
   FID_STACK_VALID = 1,
 
+  /* Sentinel frame.  */
+  FID_STACK_SENTINEL = 2,
+
   /* Stack address is unavailable.  I.e., there's a valid stack, but
      we don't know where it is (because memory or registers we'd
      compute it from were not collected).  */
@@ -150,7 +153,7 @@ struct frame_id
   CORE_ADDR special_addr;
 
   /* Flags to indicate the above fields have valid contents.  */
-  ENUM_BITFIELD(frame_id_stack_status) stack_status : 2;
+  ENUM_BITFIELD(frame_id_stack_status) stack_status : 3;
   unsigned int code_addr_p : 1;
   unsigned int special_addr_p : 1;
 
@@ -161,10 +164,32 @@ struct frame_id
   int artificial_depth;
 };
 
+/* Save and restore the currently selected frame.  */
+
+class scoped_restore_selected_frame
+{
+public:
+  /* Save the currently selected frame.  */
+  scoped_restore_selected_frame ();
+
+  /* Restore the currently selected frame.  */
+  ~scoped_restore_selected_frame ();
+
+  DISABLE_COPY_AND_ASSIGN (scoped_restore_selected_frame);
+
+private:
+
+  /* The ID of the previously selected frame.  */
+  struct frame_id m_fid;
+};
+
 /* Methods for constructing and comparing Frame IDs.  */
 
 /* For convenience.  All fields are zero.  This means "there is no frame".  */
 extern const struct frame_id null_frame_id;
+
+/* Sentinel frame.  */
+extern const struct frame_id sentinel_frame_id;
 
 /* This means "there is no frame ID, but there is a frame".  It should be
    replaced by best-effort frame IDs for the outermost frame, somehow.
@@ -310,6 +335,10 @@ extern void select_frame (struct frame_info *);
 extern struct frame_info *get_prev_frame (struct frame_info *);
 extern struct frame_info *get_next_frame (struct frame_info *);
 
+/* Like get_next_frame(), but allows return of the sentinel frame.  NULL
+   is never returned.  */
+extern struct frame_info *get_next_frame_sentinel_okay (struct frame_info *);
+
 /* Return a "struct frame_info" corresponding to the frame that called
    THIS_FRAME.  Returns NULL if there is no such frame.
 
@@ -320,6 +349,10 @@ extern struct frame_info *get_prev_frame_always (struct frame_info *);
 /* Given a frame's ID, relocate the frame.  Returns NULL if the frame
    is not found.  */
 extern struct frame_info *frame_find_by_id (struct frame_id id);
+
+/* Given a frame's ID, find the previous frame's ID.  Returns null_frame_id
+   if the frame is not found.  */
+extern struct frame_id get_prev_frame_id_by_id (struct frame_id id);
 
 /* Base attributes of a frame: */
 
@@ -394,8 +427,7 @@ extern int get_frame_func_if_available (struct frame_info *fi, CORE_ADDR *);
    find_frame_symtab(), find_frame_function().  Each will need to be
    carefully considered to determine if the real intent was for it to
    apply to the PC or the adjusted PC.  */
-extern void find_frame_sal (struct frame_info *frame,
-			    struct symtab_and_line *sal);
+extern symtab_and_line find_frame_sal (frame_info *frame);
 
 /* Set the current source and line to the location given by frame
    FRAME, if possible.  */
@@ -481,8 +513,10 @@ extern struct program_space *get_frame_program_space (struct frame_info *);
 /* Unwind THIS frame's program space from the NEXT frame.  */
 extern struct program_space *frame_unwind_program_space (struct frame_info *);
 
+class address_space;
+
 /* Return the frame's address space.  */
-extern struct address_space *get_frame_address_space (struct frame_info *);
+extern const address_space *get_frame_address_space (struct frame_info *);
 
 /* For frames where we can not unwind further, describe why.  */
 
@@ -665,8 +699,10 @@ extern void *frame_obstack_zalloc (unsigned long size);
 #define FRAME_OBSTACK_CALLOC(NUMBER,TYPE) \
   ((TYPE *) frame_obstack_zalloc ((NUMBER) * sizeof (TYPE)))
 
+class readonly_detached_regcache;
 /* Create a regcache, and copy the frame's registers into it.  */
-struct regcache *frame_save_as_regcache (struct frame_info *this_frame);
+std::unique_ptr<readonly_detached_regcache> frame_save_as_regcache
+    (struct frame_info *this_frame);
 
 extern const struct block *get_frame_block (struct frame_info *,
 					    CORE_ADDR *addr_in_block);
@@ -770,18 +806,23 @@ extern void read_frame_arg (struct symbol *sym, struct frame_info *frame,
 extern void read_frame_local (struct symbol *sym, struct frame_info *frame,
 			      struct frame_arg *argp);
 
-extern void args_info (char *, int);
+extern void info_args_command (const char *, int);
 
-extern void locals_info (char *, int);
+extern void info_locals_command (const char *, int);
 
-extern void return_command (char *, int);
+extern void return_command (const char *, int);
 
 /* Set FRAME's unwinder temporarily, so that we can call a sniffer.
-   Return a cleanup which should be called if unwinding fails, and
-   discarded if it succeeds.  */
+   If sniffing fails, the caller should be sure to call
+   frame_cleanup_after_sniffer.  */
 
-struct cleanup *frame_prepare_for_sniffer (struct frame_info *frame,
-					   const struct frame_unwind *unwind);
+extern void frame_prepare_for_sniffer (struct frame_info *frame,
+				       const struct frame_unwind *unwind);
+
+/* Clean up after a failed (wrong unwinder) attempt to unwind past
+   FRAME.  */
+
+extern void frame_cleanup_after_sniffer (struct frame_info *frame);
 
 /* Notes (cagney/2002-11-27, drow/2003-09-06):
 

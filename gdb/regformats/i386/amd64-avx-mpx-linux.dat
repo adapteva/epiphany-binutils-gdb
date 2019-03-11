@@ -1,6 +1,7 @@
 # THIS FILE IS GENERATED.  -*- buffer-read-only: t -*- vi :set ro:
 # Generated from: i386/amd64-avx-mpx-linux.xml
 name:amd64_avx_mpx_linux
+feature:1
 xmltarget:amd64-avx-mpx-linux.xml
 expedite:rbp,rsp,rip
 64:rax
@@ -61,6 +62,8 @@ expedite:rbp,rsp,rip
 128:xmm15
 32:mxcsr
 64:orig_rax
+64:fs_base
+64:gs_base
 128:ymm0h
 128:ymm1h
 128:ymm2h

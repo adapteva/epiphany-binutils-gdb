@@ -1,5 +1,5 @@
 /* List lines of source files for GDB, the GNU debugger.
-   Copyright (C) 1999-2016 Free Software Foundation, Inc.
+   Copyright (C) 1999-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,6 +20,32 @@
 #define SOURCE_H
 
 struct symtab;
+
+/* See openp function definition for their description.  */
+
+enum openp_flag
+{
+  OPF_TRY_CWD_FIRST = 0x01,
+  OPF_SEARCH_IN_PATH = 0x02,
+  OPF_RETURN_REALPATH = 0x04,
+};
+
+DEF_ENUM_FLAGS_TYPE(openp_flag, openp_flags);
+
+extern int openp (const char *, openp_flags, const char *, int,
+		  gdb::unique_xmalloc_ptr<char> *);
+
+extern int source_full_path_of (const char *, gdb::unique_xmalloc_ptr<char> *);
+
+extern void mod_path (const char *, char **);
+
+extern void add_path (const char *, char **, int);
+
+extern void directory_switch (const char *, int);
+
+extern char *source_path;
+
+extern void init_source_path (void);
 
 /* This function is capable of finding the absolute path to a
    source file, and opening it, provided you give it a FILENAME.  Both the
@@ -42,13 +68,13 @@ struct symtab;
      FULLNAME is set to NULL.  */
 extern int find_and_open_source (const char *filename,
 				 const char *dirname,
-				 char **fullname);
+				 gdb::unique_xmalloc_ptr<char> *fullname);
 
 /* Open a source file given a symtab S.  Returns a file descriptor or
    negative number for error.  */
 extern int open_source_file (struct symtab *s);
 
-extern char *rewrite_source_path (const char *path);
+extern gdb::unique_xmalloc_ptr<char> rewrite_source_path (const char *path);
 
 extern const char *symtab_to_fullname (struct symtab *s);
 
@@ -91,7 +117,8 @@ extern void set_default_source_symtab_and_line (void);
    (the returned sal pc and end fields are not valid.)
    and set the current default to whatever is in SAL.
    NOTE: The returned sal pc and end fields are not valid.  */
-extern struct symtab_and_line set_current_source_symtab_and_line (const struct symtab_and_line *);
+extern symtab_and_line set_current_source_symtab_and_line
+  (const symtab_and_line &sal);
 
 /* Reset any information stored about a default file and line to print.  */
 extern void clear_current_source_symtab_and_line (void);

@@ -1,5 +1,5 @@
 /* Header file for GDB compile command and supporting functions.
-   Copyright (C) 2014-2016 Free Software Foundation, Inc.
+   Copyright (C) 2014-2018 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -95,11 +95,10 @@ struct compile_c_instance
 
 /* Call gdbarch_register_name (GDBARCH, REGNUM) and convert its result
    to a form suitable for the compiler source.  The register names
-   should not clash with inferior defined macros.  Returned pointer is
-   never NULL.  Returned pointer needs to be deallocated by xfree.  */
+   should not clash with inferior defined macros. */
 
-extern char *compile_register_name_mangled (struct gdbarch *gdbarch,
-					    int regnum);
+extern std::string compile_register_name_mangled (struct gdbarch *gdbarch,
+						  int regnum);
 
 /* Convert compiler source register name to register number of
    GDBARCH.  Returned value is always >= 0, function throws an error
@@ -135,7 +134,7 @@ extern struct compile_instance *new_compile_instance (struct gcc_c_context *fe);
 
 extern unsigned char *generate_c_for_variable_locations
      (struct compile_c_instance *compiler,
-      struct ui_file *stream,
+      string_file &stream,
       struct gdbarch *gdbarch,
       const struct block *block,
       CORE_ADDR pc);
@@ -144,12 +143,36 @@ extern unsigned char *generate_c_for_variable_locations
 
 extern const char *c_get_mode_for_size (int size);
 
-/* Given a dynamic property, return an xmallocd name that is used to
-   represent its size.  The result must be freed by the caller.  The
-   contents of the resulting string will be the same each time for
-   each call with the same argument.  */
+/* Given a dynamic property, return a name that is used to represent
+   its size.  The contents of the resulting string will be the same
+   each time for each call with the same argument.  */
 
 struct dynamic_prop;
-extern char *c_get_range_decl_name (const struct dynamic_prop *prop);
+extern std::string c_get_range_decl_name (const struct dynamic_prop *prop);
+
+/* Type used to hold and pass around the source and object file names
+   to use for compilation.  */
+class compile_file_names
+{
+public:
+  compile_file_names (std::string source_file, std::string object_file)
+    : m_source_file (source_file), m_object_file (object_file)
+  {}
+
+  /* Provide read-only views only.  Return 'const char *' instead of
+     std::string to avoid having to use c_str() everywhere in client
+     code.  */
+
+  const char *source_file () const
+  { return m_source_file.c_str (); }
+
+  const char *object_file () const
+  { return m_object_file.c_str (); }
+
+private:
+  /* Storage for the file names.  */
+  std::string m_source_file;
+  std::string m_object_file;
+};
 
 #endif /* GDB_COMPILE_INTERNAL_H */

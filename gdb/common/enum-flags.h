@@ -1,4 +1,4 @@
-/* Copyright (C) 2015-2016 Free Software Foundation, Inc.
+/* Copyright (C) 2015-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,7 +32,7 @@
        flag_val3 = 1 << 3,
        flag_val4 = 1 << 4,
     };
-    DEF_ENUM_FLAGS_TYPE(enum some_flag, some_flags)
+    DEF_ENUM_FLAGS_TYPE(enum some_flag, some_flags);
 
     some_flags f = flag_val1 | flag_val2;
     f |= flag_val3;
@@ -115,19 +115,10 @@ private:
   }
 
 public:
-  /* Allow default construction, just like raw enums.  */
+  /* Allow default construction.  */
   enum_flags ()
+    : m_enum_value ((enum_type) 0)
   {}
-
-  enum_flags (const enum_flags &other)
-    : m_enum_value (other.m_enum_value)
-  {}
-
-  enum_flags &operator= (const enum_flags &other)
-  {
-    m_enum_value = other.m_enum_value;
-    return *this;
-  }
 
   /* If you get an error saying these two overloads are ambiguous,
      then you tried to mix values of different enum types.  */

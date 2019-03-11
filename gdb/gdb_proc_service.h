@@ -1,5 +1,5 @@
 /* <proc_service.h> replacement for systems that don't have it.
-   Copyright (C) 2000-2016 Free Software Foundation, Inc.
+   Copyright (C) 2000-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,6 +22,8 @@
 #include <sys/types.h>
 
 #include "gregset.h"
+
+struct thread_info;
 
 #ifdef HAVE_PROC_SERVICE_H
 
@@ -179,7 +181,7 @@ typedef prfpregset_t gdb_prfpregset_t;
 struct ps_prochandle
 {
   /* The LWP we use for memory reads.  */
-  ptid_t ptid;
+  thread_info *thread;
 };
 
 #endif /* gdb_proc_service.h */

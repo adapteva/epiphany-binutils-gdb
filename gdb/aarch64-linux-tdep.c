@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux AArch64.
 
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -45,6 +45,8 @@
 
 #include "record-full.h"
 #include "linux-record.h"
+#include "auxv.h"
+#include "elf/common.h"
 
 /* Signal frame handling.
 
@@ -217,6 +219,179 @@ const struct regset aarch64_linux_fpregset =
     regcache_supply_regset, regcache_collect_regset
   };
 
+/* The fields in an SVE header at the start of a SVE regset.  */
+
+#define SVE_HEADER_SIZE_LENGTH		4
+#define SVE_HEADER_MAX_SIZE_LENGTH	4
+#define SVE_HEADER_VL_LENGTH		2
+#define SVE_HEADER_MAX_VL_LENGTH	2
+#define SVE_HEADER_FLAGS_LENGTH		2
+#define SVE_HEADER_RESERVED_LENGTH	2
+
+#define SVE_HEADER_SIZE_OFFSET		0
+#define SVE_HEADER_MAX_SIZE_OFFSET	\
+  (SVE_HEADER_SIZE_OFFSET + SVE_HEADER_SIZE_LENGTH)
+#define SVE_HEADER_VL_OFFSET		\
+  (SVE_HEADER_MAX_SIZE_OFFSET + SVE_HEADER_MAX_SIZE_LENGTH)
+#define SVE_HEADER_MAX_VL_OFFSET	\
+  (SVE_HEADER_VL_OFFSET + SVE_HEADER_VL_LENGTH)
+#define SVE_HEADER_FLAGS_OFFSET		\
+  (SVE_HEADER_MAX_VL_OFFSET + SVE_HEADER_MAX_VL_LENGTH)
+#define SVE_HEADER_RESERVED_OFFSET	\
+  (SVE_HEADER_FLAGS_OFFSET + SVE_HEADER_FLAGS_LENGTH)
+#define SVE_HEADER_SIZE			\
+  (SVE_HEADER_RESERVED_OFFSET + SVE_HEADER_RESERVED_LENGTH)
+
+#define SVE_HEADER_FLAG_SVE		1
+
+/* Get VQ value from SVE section in the core dump.  */
+
+static uint64_t
+aarch64_linux_core_read_vq (struct gdbarch *gdbarch, bfd *abfd)
+{
+  gdb_byte header[SVE_HEADER_SIZE];
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  asection *sve_section = bfd_get_section_by_name (abfd, ".reg-aarch-sve");
+
+  if (sve_section == nullptr)
+    {
+      /* No SVE state.  */
+      return 0;
+    }
+
+  size_t size = bfd_section_size (abfd, sve_section);
+
+  /* Check extended state size.  */
+  if (size < SVE_HEADER_SIZE)
+    {
+      warning (_("'.reg-aarch-sve' section in core file too small."));
+      return 0;
+    }
+
+  if (!bfd_get_section_contents (abfd, sve_section, header, 0, SVE_HEADER_SIZE))
+    {
+      warning (_("Couldn't read sve header from "
+		 "'.reg-aarch-sve' section in core file."));
+      return 0;
+    }
+
+  uint64_t vl = extract_unsigned_integer (header + SVE_HEADER_VL_OFFSET,
+					  SVE_HEADER_VL_LENGTH, byte_order);
+  uint64_t vq = sve_vq_from_vl (vl);
+
+  if (vq > AARCH64_MAX_SVE_VQ)
+    {
+      warning (_("SVE Vector length in core file not supported by this version"
+		 " of GDB.  (VQ=%ld)"), vq);
+      return 0;
+    }
+  else if (vq == 0)
+    {
+      warning (_("SVE Vector length in core file is invalid. (VQ=%ld"), vq);
+      return 0;
+    }
+
+  return vq;
+}
+
+/* Supply register REGNUM from BUF to REGCACHE, using the register map
+   in REGSET.  If REGNUM is -1, do this for all registers in REGSET.
+   If BUF is NULL, set the registers to "unavailable" status.  */
+
+static void
+aarch64_linux_supply_sve_regset (const struct regset *regset,
+				 struct regcache *regcache,
+				 int regnum, const void *buf, size_t size)
+{
+  gdb_byte *header = (gdb_byte *) buf;
+  struct gdbarch *gdbarch = regcache->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  if (buf == nullptr)
+    return regcache->supply_regset (regset, regnum, nullptr, size);
+  gdb_assert (size > SVE_HEADER_SIZE);
+
+  /* BUF contains an SVE header followed by a register dump of either the
+     passed in SVE regset or a NEON fpregset.  */
+
+  /* Extract required fields from the header.  */
+  uint64_t vl = extract_unsigned_integer (header + SVE_HEADER_VL_OFFSET,
+					  SVE_HEADER_VL_LENGTH, byte_order);
+  uint16_t flags = extract_unsigned_integer (header + SVE_HEADER_FLAGS_OFFSET,
+					     SVE_HEADER_FLAGS_LENGTH,
+					     byte_order);
+
+  if (regnum == -1 || regnum == AARCH64_SVE_VG_REGNUM)
+    {
+      gdb_byte vg_target[8];
+      store_integer ((gdb_byte *)&vg_target, sizeof (uint64_t), byte_order,
+		     sve_vg_from_vl (vl));
+      regcache->raw_supply (AARCH64_SVE_VG_REGNUM, &vg_target);
+    }
+
+  if (flags & SVE_HEADER_FLAG_SVE)
+    {
+      /* Register dump is a SVE structure.  */
+      regcache->supply_regset (regset, regnum,
+			       (gdb_byte *) buf + SVE_HEADER_SIZE,
+			       size - SVE_HEADER_SIZE);
+    }
+  else
+    {
+      /* Register dump is a fpsimd structure.  First clear the SVE
+	 registers.  */
+      for (int i = 0; i < AARCH64_SVE_Z_REGS_NUM; i++)
+	regcache->raw_supply_zeroed (AARCH64_SVE_Z0_REGNUM + i);
+      for (int i = 0; i < AARCH64_SVE_P_REGS_NUM; i++)
+	regcache->raw_supply_zeroed (AARCH64_SVE_P0_REGNUM + i);
+      regcache->raw_supply_zeroed (AARCH64_SVE_FFR_REGNUM);
+
+      /* Then supply the fpsimd registers.  */
+      regcache->supply_regset (&aarch64_linux_fpregset, regnum,
+			       (gdb_byte *) buf + SVE_HEADER_SIZE,
+			       size - SVE_HEADER_SIZE);
+    }
+}
+
+/* Collect register REGNUM from REGCACHE to BUF, using the register
+   map in REGSET.  If REGNUM is -1, do this for all registers in
+   REGSET.  */
+
+static void
+aarch64_linux_collect_sve_regset (const struct regset *regset,
+				  const struct regcache *regcache,
+				  int regnum, void *buf, size_t size)
+{
+  gdb_byte *header = (gdb_byte *) buf;
+  struct gdbarch *gdbarch = regcache->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  uint64_t vq = gdbarch_tdep (gdbarch)->vq;
+
+  gdb_assert (buf != NULL);
+  gdb_assert (size > SVE_HEADER_SIZE);
+
+  /* BUF starts with a SVE header prior to the register dump.  */
+
+  store_unsigned_integer (header + SVE_HEADER_SIZE_OFFSET,
+			  SVE_HEADER_SIZE_LENGTH, byte_order, size);
+  store_unsigned_integer (header + SVE_HEADER_MAX_SIZE_OFFSET,
+			  SVE_HEADER_MAX_SIZE_LENGTH, byte_order, size);
+  store_unsigned_integer (header + SVE_HEADER_VL_OFFSET, SVE_HEADER_VL_LENGTH,
+			  byte_order, sve_vl_from_vq (vq));
+  store_unsigned_integer (header + SVE_HEADER_MAX_VL_OFFSET,
+			  SVE_HEADER_MAX_VL_LENGTH, byte_order,
+			  sve_vl_from_vq (vq));
+  store_unsigned_integer (header + SVE_HEADER_FLAGS_OFFSET,
+			  SVE_HEADER_FLAGS_LENGTH, byte_order,
+			  SVE_HEADER_FLAG_SVE);
+  store_unsigned_integer (header + SVE_HEADER_RESERVED_OFFSET,
+			  SVE_HEADER_RESERVED_LENGTH, byte_order, 0);
+
+  /* The SVE register dump follows.  */
+  regcache->collect_regset (regset, regnum, (gdb_byte *) buf + SVE_HEADER_SIZE,
+			    size - SVE_HEADER_SIZE);
+}
+
 /* Implement the "regset_from_core_section" gdbarch method.  */
 
 static void
@@ -225,10 +400,53 @@ aarch64_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 					    void *cb_data,
 					    const struct regcache *regcache)
 {
-  cb (".reg", AARCH64_LINUX_SIZEOF_GREGSET, &aarch64_linux_gregset,
-      NULL, cb_data);
-  cb (".reg2", AARCH64_LINUX_SIZEOF_FPREGSET, &aarch64_linux_fpregset,
-      NULL, cb_data);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  cb (".reg", AARCH64_LINUX_SIZEOF_GREGSET, AARCH64_LINUX_SIZEOF_GREGSET,
+      &aarch64_linux_gregset, NULL, cb_data);
+
+  if (tdep->has_sve ())
+    {
+      /* Create this on the fly in order to handle vector register sizes.  */
+      const struct regcache_map_entry sve_regmap[] =
+	{
+	  { 32, AARCH64_SVE_Z0_REGNUM, tdep->vq * 16 },
+	  { 16, AARCH64_SVE_P0_REGNUM, tdep->vq * 16 / 8 },
+	  { 1, AARCH64_SVE_FFR_REGNUM, 4 },
+	  { 1, AARCH64_FPSR_REGNUM, 4 },
+	  { 1, AARCH64_FPCR_REGNUM, 4 },
+	  { 0 }
+	};
+
+      const struct regset aarch64_linux_sve_regset =
+	{
+	  sve_regmap,
+	  aarch64_linux_supply_sve_regset, aarch64_linux_collect_sve_regset,
+	  REGSET_VARIABLE_SIZE
+	};
+
+      cb (".reg-aarch-sve",
+	  SVE_HEADER_SIZE + regcache_map_entry_size (aarch64_linux_fpregmap),
+	  SVE_HEADER_SIZE + regcache_map_entry_size (sve_regmap),
+	  &aarch64_linux_sve_regset, "SVE registers", cb_data);
+    }
+  else
+    cb (".reg2", AARCH64_LINUX_SIZEOF_FPREGSET, AARCH64_LINUX_SIZEOF_FPREGSET,
+	&aarch64_linux_fpregset, NULL, cb_data);
+}
+
+/* Implement the "core_read_description" gdbarch method.  */
+
+static const struct target_desc *
+aarch64_linux_core_read_description (struct gdbarch *gdbarch,
+				     struct target_ops *target, bfd *abfd)
+{
+  CORE_ADDR aarch64_hwcap = 0;
+
+  if (target_auxv_search (target, AT_HWCAP, &aarch64_hwcap) != 1)
+    return NULL;
+
+  return aarch64_read_description (aarch64_linux_core_read_vq (gdbarch, abfd));
 }
 
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
@@ -289,7 +507,7 @@ aarch64_stap_parse_special_token (struct gdbarch *gdbarch,
 	       regname, p->saved_arg);
 
       ++tmp;
-      tmp = skip_spaces_const (tmp);
+      tmp = skip_spaces (tmp);
       /* Now we expect a number.  It can begin with '#' or simply
 	 a digit.  */
       if (*tmp == '#')
@@ -349,9 +567,9 @@ aarch64_stap_parse_special_token (struct gdbarch *gdbarch,
 
 static LONGEST
 aarch64_linux_get_syscall_number (struct gdbarch *gdbarch,
-				  ptid_t ptid)
+				  thread_info *thread)
 {
-  struct regcache *regs = get_thread_regcache (ptid);
+  struct regcache *regs = get_thread_regcache (thread);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   /* The content of register x8.  */
@@ -360,7 +578,7 @@ aarch64_linux_get_syscall_number (struct gdbarch *gdbarch,
   LONGEST ret;
 
   /* Getting the system call number from the register x8.  */
-  regcache_cooked_read (regs, AARCH64_DWARF_X0 + 8, buf);
+  regs->cooked_read (AARCH64_DWARF_X0 + 8, buf);
 
   ret = extract_signed_integer (buf, X_REGISTER_SIZE, byte_order);
 
@@ -985,6 +1203,15 @@ aarch64_linux_syscall_record (struct regcache *regcache,
   return 0;
 }
 
+/* Implement the "gcc_target_options" gdbarch method.  */
+
+static char *
+aarch64_linux_gcc_target_options (struct gdbarch *gdbarch)
+{
+  /* GCC doesn't know "-m64".  */
+  return NULL;
+}
+
 static void
 aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -1018,6 +1245,8 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_iterate_over_regset_sections
     (gdbarch, aarch64_linux_iterate_over_regset_sections);
+  set_gdbarch_core_read_description
+    (gdbarch, aarch64_linux_core_read_description);
 
   /* SystemTap related.  */
   set_gdbarch_stap_integer_prefixes (gdbarch, stap_integer_prefixes);
@@ -1034,6 +1263,11 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_process_record (gdbarch, aarch64_process_record);
   /* Syscall record.  */
   tdep->aarch64_syscall_record = aarch64_linux_syscall_record;
+
+  /* The top byte of a user space address known as the "tag",
+     is ignored by the kernel and can be regarded as additional
+     data associated with the address.  */
+  set_gdbarch_significant_addr_bit (gdbarch, 56);
 
   /* Initialize the aarch64_linux_record_tdep.  */
   /* These values are the size of the type that will be used in a system
@@ -1204,15 +1438,12 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_displaced_step_copy_insn (gdbarch,
 					aarch64_displaced_step_copy_insn);
   set_gdbarch_displaced_step_fixup (gdbarch, aarch64_displaced_step_fixup);
-  set_gdbarch_displaced_step_free_closure (gdbarch,
-					   simple_displaced_step_free_closure);
   set_gdbarch_displaced_step_location (gdbarch, linux_displaced_step_location);
   set_gdbarch_displaced_step_hw_singlestep (gdbarch,
 					    aarch64_displaced_step_hw_singlestep);
-}
 
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_aarch64_linux_tdep;
+  set_gdbarch_gcc_target_options (gdbarch, aarch64_linux_gcc_target_options);
+}
 
 void
 _initialize_aarch64_linux_tdep (void)

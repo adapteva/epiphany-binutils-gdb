@@ -1,5 +1,5 @@
 /* YACC parser for C expressions, for GDB.
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -42,13 +42,13 @@
 #include "parser-defs.h"
 #include "language.h"
 #include "c-lang.h"
+#include "c-support.h"
 #include "bfd.h" /* Required by objfiles.h.  */
 #include "symfile.h" /* Required by objfiles.h.  */
 #include "objfiles.h" /* For have_full_symbols and have_partial_symbols */
 #include "charset.h"
 #include "block.h"
 #include "cp-support.h"
-#include "dfp.h"
 #include "macroscope.h"
 #include "objc-lang.h"
 #include "typeprint.h"
@@ -70,7 +70,7 @@ int yyparse (void);
 
 static int yylex (void);
 
-void yyerror (char *);
+static void yyerror (const char *);
 
 static int type_aggregate_p (struct type *);
 
@@ -88,13 +88,9 @@ static int type_aggregate_p (struct type *);
       struct type *type;
     } typed_val_int;
     struct {
-      DOUBLEST dval;
-      struct type *type;
-    } typed_val_float;
-    struct {
       gdb_byte val[16];
       struct type *type;
-    } typed_val_decfloat;
+    } typed_val_float;
     struct type *tval;
     struct stoken sval;
     struct typed_stoken tsval;
@@ -127,7 +123,7 @@ static void c_print_token (FILE *file, int type, YYSTYPE value);
 #endif
 %}
 
-%type <voidval> exp exp1 type_exp start variable qualified_name lcurly
+%type <voidval> exp exp1 type_exp start variable qualified_name lcurly function_method
 %type <lval> rcurly
 %type <tval> type typebase
 %type <tvec> nonempty_typelist func_mod parameter_typelist
@@ -142,7 +138,6 @@ static void c_print_token (FILE *file, int type, YYSTYPE value);
 
 %token <typed_val_int> INT
 %token <typed_val_float> FLOAT
-%token <typed_val_decfloat> DECFLOAT
 
 /* Both NAME and TYPENAME tokens represent symbols in the input,
    and both convey their data as strings.
@@ -179,7 +174,7 @@ static void c_print_token (FILE *file, int type, YYSTYPE value);
 %token <ssym> NAME_OR_INT
 
 %token OPERATOR
-%token STRUCT CLASS UNION ENUM SIZEOF UNSIGNED COLONCOLON
+%token STRUCT CLASS UNION ENUM SIZEOF ALIGNOF UNSIGNED COLONCOLON
 %token TEMPLATE
 %token ERROR
 %token NEW DELETE
@@ -311,6 +306,10 @@ exp	:	TYPEID '(' type_exp ')' %prec UNARY
 
 exp	:	SIZEOF exp       %prec UNARY
 			{ write_exp_elt_opcode (pstate, UNOP_SIZEOF); }
+	;
+
+exp	:	ALIGNOF '(' type_exp ')'	%prec UNARY
+			{ write_exp_elt_opcode (pstate, UNOP_ALIGNOF); }
 	;
 
 exp	:	exp ARROW name
@@ -498,6 +497,18 @@ exp	:	exp '('
 			  write_exp_elt_opcode (pstate, OP_FUNCALL); }
 	;
 
+/* This is here to disambiguate with the production for
+   "func()::static_var" further below, which uses
+   function_method_void.  */
+exp	:	exp '(' ')' %prec ARROW
+			{ start_arglist ();
+			  write_exp_elt_opcode (pstate, OP_FUNCALL);
+			  write_exp_elt_longcst (pstate,
+						 (LONGEST) end_arglist ());
+			  write_exp_elt_opcode (pstate, OP_FUNCALL); }
+	;
+
+
 exp	:	UNKNOWN_CPP_NAME '('
 			{
 			  /* This could potentially be a an argument defined
@@ -539,13 +550,18 @@ arglist	:	arglist ',' exp   %prec ABOVE_COMMA
 			{ arglist_len++; }
 	;
 
-exp     :       exp '(' parameter_typelist ')' const_or_volatile
+function_method:       exp '(' parameter_typelist ')' const_or_volatile
 			{ int i;
 			  VEC (type_ptr) *type_list = $3;
 			  struct type *type_elt;
 			  LONGEST len = VEC_length (type_ptr, type_list);
 
 			  write_exp_elt_opcode (pstate, TYPE_INSTANCE);
+			  /* Save the const/volatile qualifiers as
+			     recorded by the const_or_volatile
+			     production's actions.  */
+			  write_exp_elt_longcst (pstate,
+						 follow_type_instance_flags ());
 			  write_exp_elt_longcst (pstate, len);
 			  for (i = 0;
 			       VEC_iterate (type_ptr, type_list, i, type_elt);
@@ -554,6 +570,36 @@ exp     :       exp '(' parameter_typelist ')' const_or_volatile
 			  write_exp_elt_longcst(pstate, len);
 			  write_exp_elt_opcode (pstate, TYPE_INSTANCE);
 			  VEC_free (type_ptr, type_list);
+			}
+	;
+
+function_method_void:	    exp '(' ')' const_or_volatile
+		       { write_exp_elt_opcode (pstate, TYPE_INSTANCE);
+			 /* See above.  */
+			 write_exp_elt_longcst (pstate,
+						follow_type_instance_flags ());
+			 write_exp_elt_longcst (pstate, 0);
+			 write_exp_elt_longcst (pstate, 0);
+			 write_exp_elt_opcode (pstate, TYPE_INSTANCE);
+		       }
+       ;
+
+exp     :       function_method
+	;
+
+/* Normally we must interpret "func()" as a function call, instead of
+   a type.  The user needs to write func(void) to disambiguate.
+   However, in the "func()::static_var" case, there's no
+   ambiguity.  */
+function_method_void_or_typelist: function_method
+	|               function_method_void
+	;
+
+exp     :       function_method_void_or_typelist COLONCOLON name
+			{
+			  write_exp_elt_opcode (pstate, OP_FUNC_STATIC_VAR);
+			  write_exp_string (pstate, $3);
+			  write_exp_elt_opcode (pstate, OP_FUNC_STATIC_VAR);
 			}
 	;
 
@@ -702,17 +748,10 @@ exp	:	NAME_OR_INT
 
 
 exp	:	FLOAT
-			{ write_exp_elt_opcode (pstate, OP_DOUBLE);
+			{ write_exp_elt_opcode (pstate, OP_FLOAT);
 			  write_exp_elt_type (pstate, $1.type);
-			  write_exp_elt_dblcst (pstate, $1.dval);
-			  write_exp_elt_opcode (pstate, OP_DOUBLE); }
-	;
-
-exp	:	DECFLOAT
-			{ write_exp_elt_opcode (pstate, OP_DECFLOAT);
-			  write_exp_elt_type (pstate, $1.type);
-			  write_exp_elt_decfloatcst (pstate, $1.val);
-			  write_exp_elt_opcode (pstate, OP_DECFLOAT); }
+			  write_exp_elt_floatcst (pstate, $1.val);
+			  write_exp_elt_opcode (pstate, OP_FLOAT); }
 	;
 
 exp	:	variable
@@ -744,7 +783,7 @@ exp	:	SIZEOF '(' type ')'	%prec UNARY
 			       says of sizeof:  "When applied to a reference
 			       or a reference type, the result is the size of
 			       the referenced type."  */
-			  if (TYPE_CODE (type) == TYPE_CODE_REF)
+			  if (TYPE_IS_REFERENCE (type))
 			    type = check_typedef (TYPE_TARGET_TYPE (type));
 			  write_exp_elt_longcst (pstate,
 						 (LONGEST) TYPE_LENGTH (type));
@@ -915,12 +954,8 @@ variable:	block COLONCOLON name
 			    error (_("No symbol \"%s\" in specified context."),
 				   copy_name ($3));
 			  if (symbol_read_needs_frame (sym.symbol))
-			    {
-			      if (innermost_block == 0
-				  || contained_in (sym.block,
-						   innermost_block))
-				innermost_block = sym.block;
-			    }
+
+			    innermost_block.update (sym);
 
 			  write_exp_elt_opcode (pstate, OP_VAR_VALUE);
 			  write_exp_elt_block (pstate, sym.block);
@@ -1009,27 +1044,31 @@ variable:	name_not_typename
 			  if (sym.symbol)
 			    {
 			      if (symbol_read_needs_frame (sym.symbol))
-				{
-				  if (innermost_block == 0
-				      || contained_in (sym.block,
-						       innermost_block))
-				    innermost_block = sym.block;
-				}
+				innermost_block.update (sym);
 
-			      write_exp_elt_opcode (pstate, OP_VAR_VALUE);
-			      write_exp_elt_block (pstate, sym.block);
-			      write_exp_elt_sym (pstate, sym.symbol);
-			      write_exp_elt_opcode (pstate, OP_VAR_VALUE);
+			      /* If we found a function, see if it's
+				 an ifunc resolver that has the same
+				 address as the ifunc symbol itself.
+				 If so, prefer the ifunc symbol.  */
+
+			      bound_minimal_symbol resolver
+				= find_gnu_ifunc (sym.symbol);
+			      if (resolver.minsym != NULL)
+				write_exp_msymbol (pstate, resolver);
+			      else
+				{
+				  write_exp_elt_opcode (pstate, OP_VAR_VALUE);
+				  write_exp_elt_block (pstate, sym.block);
+				  write_exp_elt_sym (pstate, sym.symbol);
+				  write_exp_elt_opcode (pstate, OP_VAR_VALUE);
+				}
 			    }
 			  else if ($1.is_a_field_of_this)
 			    {
 			      /* C++: it hangs off of `this'.  Must
 			         not inadvertently convert from a method call
 				 to data ref.  */
-			      if (innermost_block == 0
-				  || contained_in (sym.block,
-						   innermost_block))
-				innermost_block = sym.block;
+			      innermost_block.update (sym);
 			      write_exp_elt_opcode (pstate, OP_THIS);
 			      write_exp_elt_opcode (pstate, OP_THIS);
 			      write_exp_elt_opcode (pstate, STRUCTOP_PTR);
@@ -1038,18 +1077,41 @@ variable:	name_not_typename
 			    }
 			  else
 			    {
-			      struct bound_minimal_symbol msymbol;
 			      char *arg = copy_name ($1.stoken);
 
-			      msymbol =
-				lookup_bound_minimal_symbol (arg);
-			      if (msymbol.minsym != NULL)
-				write_exp_msymbol (pstate, msymbol);
-			      else if (!have_full_symbols () && !have_partial_symbols ())
-				error (_("No symbol table is loaded.  Use the \"file\" command."));
+			      bound_minimal_symbol msymbol
+				= lookup_bound_minimal_symbol (arg);
+			      if (msymbol.minsym == NULL)
+				{
+				  if (!have_full_symbols () && !have_partial_symbols ())
+				    error (_("No symbol table is loaded.  Use the \"file\" command."));
+				  else
+				    error (_("No symbol \"%s\" in current context."),
+					   copy_name ($1.stoken));
+				}
+
+			      /* This minsym might be an alias for
+				 another function.  See if we can find
+				 the debug symbol for the target, and
+				 if so, use it instead, since it has
+				 return type / prototype info.  This
+				 is important for example for "p
+				 *__errno_location()".  */
+			      symbol *alias_target
+				= ((msymbol.minsym->type != mst_text_gnu_ifunc
+				    && msymbol.minsym->type != mst_data_gnu_ifunc)
+				   ? find_function_alias_target (msymbol)
+				   : NULL);
+			      if (alias_target != NULL)
+				{
+				  write_exp_elt_opcode (pstate, OP_VAR_VALUE);
+				  write_exp_elt_block
+				    (pstate, SYMBOL_BLOCK_VALUE (alias_target));
+				  write_exp_elt_sym (pstate, alias_target);
+				  write_exp_elt_opcode (pstate, OP_VAR_VALUE);
+				}
 			      else
-				error (_("No symbol \"%s\" in current context."),
-				       copy_name ($1.stoken));
+				write_exp_msymbol (pstate, msymbol);
 			    }
 			}
 	;
@@ -1085,6 +1147,10 @@ ptr_operator:
 			{ insert_type (tp_reference); }
 	|	'&' ptr_operator
 			{ insert_type (tp_reference); }
+	|       ANDAND
+			{ insert_type (tp_rvalue_reference); }
+	|       ANDAND ptr_operator
+			{ insert_type (tp_rvalue_reference); }
 	;
 
 ptr_operator_ts: ptr_operator
@@ -1483,7 +1549,7 @@ oper:	OPERATOR NEW
 	|	OPERATOR '>'
 			{ $$ = operator_stoken (">"); }
 	|	OPERATOR ASSIGN_MODIFY
-			{ const char *op = "unknown";
+			{ const char *op = " unknown";
 			  switch ($2)
 			    {
 			    case BINOP_RSH:
@@ -1555,16 +1621,17 @@ oper:	OPERATOR NEW
 	|	OPERATOR OBJC_LBRAC ']'
 			{ $$ = operator_stoken ("[]"); }
 	|	OPERATOR conversion_type_id
-			{ char *name;
-			  long length;
-			  struct ui_file *buf = mem_fileopen ();
+			{ string_file buf;
 
-			  c_print_type ($2, NULL, buf, -1, 0,
+			  c_print_type ($2, NULL, &buf, -1, 0,
 					&type_print_raw_options);
-			  name = ui_file_xstrdup (buf, &length);
-			  ui_file_delete (buf);
-			  $$ = operator_stoken (name);
-			  free (name);
+
+			  /* This also needs canonicalization.  */
+			  std::string canon
+			    = cp_canonicalize_string (buf.c_str ());
+			  if (canon.empty ())
+			    canon = std::move (buf.string ());
+			  $$ = operator_stoken ((" " + canon).c_str ());
 			}
 	;
 
@@ -1626,13 +1693,12 @@ write_destructor_name (struct parser_state *par_state, struct stoken token)
 static struct stoken
 operator_stoken (const char *op)
 {
-  static const char *operator_string = "operator";
   struct stoken st = { NULL, 0 };
   char *buf;
 
-  st.length = strlen (operator_string) + strlen (op);
+  st.length = CP_OPERATOR_LEN + strlen (op);
   buf = (char *) malloc (st.length + 1);
-  strcpy (buf, operator_string);
+  strcpy (buf, CP_OPERATOR_STR);
   strcat (buf, op);
   st.ptr = buf;
 
@@ -1721,49 +1787,49 @@ parse_number (struct parser_state *par_state,
 
   if (parsed_float)
     {
-      /* If it ends at "df", "dd" or "dl", take it as type of decimal floating
-         point.  Return DECFLOAT.  */
-
+      /* Handle suffixes for decimal floating-point: "df", "dd" or "dl".  */
       if (len >= 2 && p[len - 2] == 'd' && p[len - 1] == 'f')
 	{
-	  p[len - 2] = '\0';
-	  putithere->typed_val_decfloat.type
+	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_decfloat;
-	  decimal_from_string (putithere->typed_val_decfloat.val, 4,
-			       gdbarch_byte_order (parse_gdbarch (par_state)),
-			       p);
-	  p[len - 2] = 'd';
-	  return DECFLOAT;
+	  len -= 2;
 	}
-
-      if (len >= 2 && p[len - 2] == 'd' && p[len - 1] == 'd')
+      else if (len >= 2 && p[len - 2] == 'd' && p[len - 1] == 'd')
 	{
-	  p[len - 2] = '\0';
-	  putithere->typed_val_decfloat.type
+	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_decdouble;
-	  decimal_from_string (putithere->typed_val_decfloat.val, 8,
-			       gdbarch_byte_order (parse_gdbarch (par_state)),
-			       p);
-	  p[len - 2] = 'd';
-	  return DECFLOAT;
+	  len -= 2;
 	}
-
-      if (len >= 2 && p[len - 2] == 'd' && p[len - 1] == 'l')
+      else if (len >= 2 && p[len - 2] == 'd' && p[len - 1] == 'l')
 	{
-	  p[len - 2] = '\0';
-	  putithere->typed_val_decfloat.type
+	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_declong;
-	  decimal_from_string (putithere->typed_val_decfloat.val, 16,
-			       gdbarch_byte_order (parse_gdbarch (par_state)),
-			       p);
-	  p[len - 2] = 'd';
-	  return DECFLOAT;
+	  len -= 2;
+	}
+      /* Handle suffixes: 'f' for float, 'l' for long double.  */
+      else if (len >= 1 && TOLOWER (p[len - 1]) == 'f')
+	{
+	  putithere->typed_val_float.type
+	    = parse_type (par_state)->builtin_float;
+	  len -= 1;
+	}
+      else if (len >= 1 && TOLOWER (p[len - 1]) == 'l')
+	{
+	  putithere->typed_val_float.type
+	    = parse_type (par_state)->builtin_long_double;
+	  len -= 1;
+	}
+      /* Default type for floating-point literals is double.  */
+      else
+	{
+	  putithere->typed_val_float.type
+	    = parse_type (par_state)->builtin_double;
 	}
 
-      if (! parse_c_float (parse_gdbarch (par_state), p, len,
-			   &putithere->typed_val_float.dval,
-			   &putithere->typed_val_float.type))
-	return ERROR;
+      if (!parse_float (p, len,
+			putithere->typed_val_float.type,
+			putithere->typed_val_float.val))
+        return ERROR;
       return FLOAT;
     }
 
@@ -1958,9 +2024,9 @@ c_parse_escape (const char **ptr, struct obstack *output)
       if (output)
 	obstack_grow_str (output, "\\x");
       ++tokptr;
-      if (!isxdigit (*tokptr))
+      if (!ISXDIGIT (*tokptr))
 	error (_("\\x escape without a following hex digit"));
-      while (isxdigit (*tokptr))
+      while (ISXDIGIT (*tokptr))
 	{
 	  if (output)
 	    obstack_1grow (output, *tokptr);
@@ -1983,7 +2049,7 @@ c_parse_escape (const char **ptr, struct obstack *output)
 	if (output)
 	  obstack_grow_str (output, "\\");
 	for (i = 0;
-	     i < 3 && isdigit (*tokptr) && *tokptr != '8' && *tokptr != '9';
+	     i < 3 && ISDIGIT (*tokptr) && *tokptr != '8' && *tokptr != '9';
 	     ++i)
 	  {
 	    if (output)
@@ -2008,9 +2074,9 @@ c_parse_escape (const char **ptr, struct obstack *output)
 	    obstack_1grow (output, *tokptr);
 	  }
 	++tokptr;
-	if (!isxdigit (*tokptr))
+	if (!ISXDIGIT (*tokptr))
 	  error (_("\\%c escape without a following hex digit"), c);
-	for (i = 0; i < len && isxdigit (*tokptr); ++i)
+	for (i = 0; i < len && ISXDIGIT (*tokptr); ++i)
 	  {
 	    if (output)
 	      obstack_1grow (output, *tokptr);
@@ -2218,7 +2284,7 @@ DEF_ENUM_FLAGS_TYPE (enum token_flag, token_flags);
 
 struct token
 {
-  char *oper;
+  const char *oper;
   int token;
   enum exp_opcode opcode;
   token_flags flags;
@@ -2268,6 +2334,8 @@ static const struct token ident_tokens[] =
     {"struct", STRUCT, OP_NULL, 0},
     {"signed", SIGNED_KEYWORD, OP_NULL, 0},
     {"sizeof", SIZEOF, OP_NULL, 0},
+    {"_Alignof", ALIGNOF, OP_NULL, 0},
+    {"alignof", ALIGNOF, OP_NULL, FLAG_CXX},
     {"double", DOUBLE_KEYWORD, OP_NULL, 0},
     {"false", FALSEKEYWORD, OP_NULL, FLAG_CXX},
     {"class", CLASS, OP_NULL, FLAG_CXX},
@@ -2401,24 +2469,23 @@ static struct macro_scope *expression_macro_scope;
 static int saw_name_at_eof;
 
 /* This is set if the previously-returned token was a structure
-   operator -- either '.' or ARROW.  This is used only when parsing to
-   do field name completion.  */
-static int last_was_structop;
+   operator -- either '.' or ARROW.  */
+static bool last_was_structop;
 
 /* Read one token, getting characters through lexptr.  */
 
 static int
-lex_one_token (struct parser_state *par_state, int *is_quoted_name)
+lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
 {
   int c;
   int namelen;
   unsigned int i;
   const char *tokstart;
-  int saw_structop = last_was_structop;
+  bool saw_structop = last_was_structop;
   char *copy;
 
-  last_was_structop = 0;
-  *is_quoted_name = 0;
+  last_was_structop = false;
+  *is_quoted_name = false;
 
  retry:
 
@@ -2459,7 +2526,7 @@ lex_one_token (struct parser_state *par_state, int *is_quoted_name)
 
 	lexptr += 2;
 	yylval.opcode = tokentab2[i].opcode;
-	if (parse_completion && tokentab2[i].token == ARROW)
+	if (tokentab2[i].token == ARROW)
 	  last_was_structop = 1;
 	return tokentab2[i].token;
       }
@@ -2483,7 +2550,7 @@ lex_one_token (struct parser_state *par_state, int *is_quoted_name)
 	  saw_name_at_eof = 0;
 	  return COMPLETE;
 	}
-      else if (saw_structop)
+      else if (parse_completion && saw_structop)
 	return COMPLETE;
       else
         return 0;
@@ -2523,11 +2590,10 @@ lex_one_token (struct parser_state *par_state, int *is_quoted_name)
       /* Might be a floating point number.  */
       if (lexptr[1] < '0' || lexptr[1] > '9')
 	{
-	  if (parse_completion)
-	    last_was_structop = 1;
+	  last_was_structop = true;
 	  goto symbol;		/* Nope, must be a symbol. */
 	}
-      /* FALL THRU into number case.  */
+      /* FALL THRU.  */
 
     case '0':
     case '1':
@@ -2603,7 +2669,7 @@ lex_one_token (struct parser_state *par_state, int *is_quoted_name)
 	    size_t len = strlen ("selector");
 
 	    if (strncmp (p, "selector", len) == 0
-		&& (p[len] == '\0' || isspace (p[len])))
+		&& (p[len] == '\0' || ISSPACE (p[len])))
 	      {
 		lexptr = p + len;
 		return SELECTOR;
@@ -2612,9 +2678,9 @@ lex_one_token (struct parser_state *par_state, int *is_quoted_name)
 	      goto parse_string;
 	  }
 
-	while (isspace (*p))
+	while (ISSPACE (*p))
 	  p++;
-	if (strncmp (p, "entry", len) == 0 && !isalnum (p[len])
+	if (strncmp (p, "entry", len) == 0 && !c_ident_is_alnum (p[len])
 	    && p[len] != '_')
 	  {
 	    lexptr = &p[len];
@@ -2665,7 +2731,7 @@ lex_one_token (struct parser_state *par_state, int *is_quoted_name)
 	      {
 		++tokstart;
 		namelen = lexptr - tokstart - 1;
-		*is_quoted_name = 1;
+		*is_quoted_name = true;
 
 		goto tryname;
 	      }
@@ -2676,16 +2742,14 @@ lex_one_token (struct parser_state *par_state, int *is_quoted_name)
       }
     }
 
-  if (!(c == '_' || c == '$'
-	|| (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')))
+  if (!(c == '_' || c == '$' || c_ident_is_alpha (c)))
     /* We must have come across a bad character (e.g. ';').  */
     error (_("Invalid character '%c' in expression."), c);
 
   /* It's a name.  See how long it is.  */
   namelen = 0;
   for (c = tokstart[namelen];
-       (c == '_' || c == '$' || (c >= '0' && c <= '9')
-	|| (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '<');)
+       (c == '_' || c == '$' || c_ident_is_alnum (c) || c == '<');)
     {
       /* Template parameter lists are part of the name.
 	 FIXME: This mishandles `print $a<4&&$a>3'.  */
@@ -2807,17 +2871,18 @@ static int popping;
 
 /* Temporary storage for c_lex; this holds symbol names as they are
    built up.  */
-static struct obstack name_obstack;
+auto_obstack name_obstack;
 
 /* Classify a NAME token.  The contents of the token are in `yylval'.
    Updates yylval and returns the new token type.  BLOCK is the block
    in which lookups start; this can be NULL to mean the global scope.
    IS_QUOTED_NAME is non-zero if the name token was originally quoted
-   in single quotes.  */
+   in single quotes.  IS_AFTER_STRUCTOP is true if this name follows
+   a structure operator -- either '.' or ARROW  */
 
 static int
 classify_name (struct parser_state *par_state, const struct block *block,
-	       int is_quoted_name)
+	       bool is_quoted_name, bool is_after_structop)
 {
   struct block_symbol bsym;
   char *copy;
@@ -2861,11 +2926,13 @@ classify_name (struct parser_state *par_state, const struct block *block,
 	    }
 	}
 
-      /* If we found a field, then we want to prefer it over a
+      /* If we found a field on the "this" object, or we are looking
+	 up a field on a struct, then we want to prefer it over a
 	 filename.  However, if the name was quoted, then it is better
 	 to check for a filename or a block, since this is the only
 	 way the user has of requiring the extension to be used.  */
-      if (is_a_field_of_this.type == NULL || is_quoted_name)
+      if ((is_a_field_of_this.type == NULL && !is_after_structop) 
+	  || is_quoted_name)
 	{
 	  /* See if it's a file name. */
 	  struct symtab *symtab;
@@ -2946,7 +3013,7 @@ classify_inner_name (struct parser_state *par_state,
   char *copy;
 
   if (context == NULL)
-    return classify_name (par_state, block, 0);
+    return classify_name (par_state, block, false, false);
 
   type = check_typedef (context);
   if (!type_aggregate_p (type))
@@ -3020,11 +3087,13 @@ yylex (void)
   struct type *context_type = NULL;
   int last_to_examine, next_to_examine, checkpoint;
   const struct block *search_block;
-  int is_quoted_name;
+  bool is_quoted_name, last_lex_was_structop;
 
   if (popping && !VEC_empty (token_and_value, token_fifo))
     goto do_pop;
   popping = 0;
+
+  last_lex_was_structop = last_was_structop;
 
   /* Read the first token and decide what to do.  Most of the
      subsequent code is C++-only; but also depends on seeing a "::" or
@@ -3032,7 +3101,7 @@ yylex (void)
   current.token = lex_one_token (pstate, &is_quoted_name);
   if (current.token == NAME)
     current.token = classify_name (pstate, expression_context_block,
-				   is_quoted_name);
+				   is_quoted_name, last_lex_was_structop);
   if (parse_language (pstate)->la_language != language_cplus
       || (current.token != TYPENAME && current.token != COLONCOLON
 	  && current.token != FILENAME))
@@ -3045,7 +3114,7 @@ yylex (void)
   last_was_coloncolon = current.token == COLONCOLON;
   while (1)
     {
-      int ignore;
+      bool ignore;
 
       /* We ignore quoted names other than the very first one.
 	 Subsequent ones do not have any special meaning.  */
@@ -3068,7 +3137,7 @@ yylex (void)
   current = *VEC_index (token_and_value, token_fifo, next_to_examine);
   ++next_to_examine;
 
-  obstack_free (&name_obstack, obstack_base (&name_obstack));
+  name_obstack.clear ();
   checkpoint = 0;
   if (current.token == FILENAME)
     search_block = current.value.bval;
@@ -3167,39 +3236,39 @@ c_parse (struct parser_state *par_state)
   struct cleanup *back_to;
 
   /* Setting up the parser state.  */
+  scoped_restore pstate_restore = make_scoped_restore (&pstate);
   gdb_assert (par_state != NULL);
   pstate = par_state;
 
-  back_to = make_cleanup (free_current_contents, &expression_macro_scope);
-  make_cleanup_clear_parser_state (&pstate);
-
-  /* Set up the scope for macro expansion.  */
-  expression_macro_scope = NULL;
+  gdb::unique_xmalloc_ptr<struct macro_scope> macro_scope;
 
   if (expression_context_block)
-    expression_macro_scope
-      = sal_macro_scope (find_pc_line (expression_context_pc, 0));
+    macro_scope = sal_macro_scope (find_pc_line (expression_context_pc, 0));
   else
-    expression_macro_scope = default_macro_scope ();
-  if (! expression_macro_scope)
-    expression_macro_scope = user_macro_scope ();
+    macro_scope = default_macro_scope ();
+  if (! macro_scope)
+    macro_scope = user_macro_scope ();
+
+  scoped_restore restore_macro_scope
+    = make_scoped_restore (&expression_macro_scope, macro_scope.get ());
 
   /* Initialize macro expansion code.  */
   obstack_init (&expansion_obstack);
   gdb_assert (! macro_original_text);
-  make_cleanup (scan_macro_cleanup, 0);
+  /* Note that parsing (within yyparse) freely installs cleanups
+     assuming they'll be run here (below).  */
+  back_to = make_cleanup (scan_macro_cleanup, 0);
 
-  make_cleanup_restore_integer (&yydebug);
-  yydebug = parser_debug;
+  scoped_restore restore_yydebug = make_scoped_restore (&yydebug,
+							parser_debug);
 
   /* Initialize some state used by the lexer.  */
-  last_was_structop = 0;
+  last_was_structop = false;
   saw_name_at_eof = 0;
 
   VEC_free (token_and_value, token_fifo);
   popping = 0;
-  obstack_init (&name_obstack);
-  make_cleanup_obstack_free (&name_obstack);
+  name_obstack.clear ();
 
   result = yyparse ();
   do_cleanups (back_to);
@@ -3218,9 +3287,9 @@ c_print_token (FILE *file, int type, YYSTYPE value)
   switch (type)
     {
     case INT:
-      fprintf (file, "typed_val_int<%s, %s>",
-	       TYPE_SAFE_NAME (value.typed_val_int.type),
-	       pulongest (value.typed_val_int.val));
+      parser_fprintf (file, "typed_val_int<%s, %s>",
+		      TYPE_SAFE_NAME (value.typed_val_int.type),
+		      pulongest (value.typed_val_int.val));
       break;
 
     case CHAR:
@@ -3231,45 +3300,45 @@ c_print_token (FILE *file, int type, YYSTYPE value)
 	memcpy (copy, value.tsval.ptr, value.tsval.length);
 	copy[value.tsval.length] = '\0';
 
-	fprintf (file, "tsval<type=%d, %s>", value.tsval.type, copy);
+	parser_fprintf (file, "tsval<type=%d, %s>", value.tsval.type, copy);
       }
       break;
 
     case NSSTRING:
     case VARIABLE:
-      fprintf (file, "sval<%s>", copy_name (value.sval));
+      parser_fprintf (file, "sval<%s>", copy_name (value.sval));
       break;
 
     case TYPENAME:
-      fprintf (file, "tsym<type=%s, name=%s>",
-	       TYPE_SAFE_NAME (value.tsym.type),
-	       copy_name (value.tsym.stoken));
+      parser_fprintf (file, "tsym<type=%s, name=%s>",
+		      TYPE_SAFE_NAME (value.tsym.type),
+		      copy_name (value.tsym.stoken));
       break;
 
     case NAME:
     case UNKNOWN_CPP_NAME:
     case NAME_OR_INT:
     case BLOCKNAME:
-      fprintf (file, "ssym<name=%s, sym=%s, field_of_this=%d>",
-	       copy_name (value.ssym.stoken),
-	       (value.ssym.sym.symbol == NULL
-		? "(null)" : SYMBOL_PRINT_NAME (value.ssym.sym.symbol)),
-	       value.ssym.is_a_field_of_this);
+      parser_fprintf (file, "ssym<name=%s, sym=%s, field_of_this=%d>",
+		       copy_name (value.ssym.stoken),
+		       (value.ssym.sym.symbol == NULL
+			? "(null)" : SYMBOL_PRINT_NAME (value.ssym.sym.symbol)),
+		       value.ssym.is_a_field_of_this);
       break;
 
     case FILENAME:
-      fprintf (file, "bval<%s>", host_address_to_string (value.bval));
+      parser_fprintf (file, "bval<%s>", host_address_to_string (value.bval));
       break;
     }
 }
 
 #endif
 
-void
-yyerror (char *msg)
+static void
+yyerror (const char *msg)
 {
   if (prev_lexptr)
     lexptr = prev_lexptr;
 
-  error (_("A %s in expression, near `%s'."), (msg ? msg : "error"), lexptr);
+  error (_("A %s in expression, near `%s'."), msg, lexptr);
 }

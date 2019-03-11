@@ -1,5 +1,5 @@
 /* Bison parser for Rust expressions, for GDB.
-   Copyright (C) 2016 Free Software Foundation, Inc.
+   Copyright (C) 2016-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -39,11 +39,8 @@
 
 #define RUSTSTYPE YYSTYPE
 
-extern initialize_file_ftype _initialize_rust_exp;
-
 struct rust_op;
-typedef const struct rust_op *rust_op_ptr;
-DEF_VEC_P (rust_op_ptr);
+typedef std::vector<const struct rust_op *> rust_op_vector;
 
 /* A typed integer constant.  */
 
@@ -57,7 +54,7 @@ struct typed_val_int
 
 struct typed_val_float
 {
-  DOUBLEST dval;
+  gdb_byte val[16];
   struct type *type;
 };
 
@@ -70,12 +67,10 @@ struct set_field
   const struct rust_op *init;
 };
 
-typedef struct set_field set_field;
-
-DEF_VEC_O (set_field);
-
+typedef std::vector<set_field> rust_set_vector;
 
 static int rustyylex (void);
+static void rustyyerror (const char *msg);
 static void rust_push_back (char c);
 static const char *rust_copy_name (const char *, int);
 static struct stoken rust_concat3 (const char *, const char *, const char *);
@@ -110,14 +105,15 @@ static const struct rust_op *ast_cast (const struct rust_op *expr,
 				       const struct rust_op *type);
 static const struct rust_op *ast_call_ish (enum exp_opcode opcode,
 					   const struct rust_op *expr,
-					   VEC (rust_op_ptr) **params);
+					   rust_op_vector *params);
 static const struct rust_op *ast_path (struct stoken name,
-				       VEC (rust_op_ptr) **params);
+				       rust_op_vector *params);
 static const struct rust_op *ast_string (struct stoken str);
 static const struct rust_op *ast_struct (const struct rust_op *name,
-					 VEC (set_field) **fields);
+					 rust_set_vector *fields);
 static const struct rust_op *ast_range (const struct rust_op *lhs,
-					const struct rust_op *rhs);
+					const struct rust_op *rhs,
+					bool inclusive);
 static const struct rust_op *ast_array_type (const struct rust_op *lhs,
 					     struct typed_val_int val);
 static const struct rust_op *ast_slice_type (const struct rust_op *type);
@@ -125,13 +121,13 @@ static const struct rust_op *ast_reference_type (const struct rust_op *type);
 static const struct rust_op *ast_pointer_type (const struct rust_op *type,
 					       int is_mut);
 static const struct rust_op *ast_function_type (const struct rust_op *result,
-						VEC (rust_op_ptr) **params);
-static const struct rust_op *ast_tuple_type (VEC (rust_op_ptr) **params);
+						rust_op_vector *params);
+static const struct rust_op *ast_tuple_type (rust_op_vector *params);
 
-/* The state of the parser, used internally when we are parsing the
-   expression.  */
+/* The current rust parser.  */
 
-static struct parser_state *pstate = NULL;
+struct rust_parser;
+static rust_parser *current_parser;
 
 /* A regular expression for matching Rust numbers.  This is split up
    since it is very long and this gives us a way to comment the
@@ -179,17 +175,76 @@ static const char *number_regex_text =
 
 static regex_t number_regex;
 
-/* True if we're running unit tests.  */
+/* Obstack for data temporarily allocated during parsing.  Points to
+   the obstack in the rust_parser, or to a temporary obstack during
+   unit testing.  */
 
-static int unit_testing;
+static auto_obstack *work_obstack;
 
-/* Obstack for data temporarily allocated during parsing.  */
+/* An instance of this is created before parsing, and destroyed when
+   parsing is finished.  */
 
-static struct obstack work_obstack;
+struct rust_parser
+{
+  rust_parser (struct parser_state *state)
+    : rust_ast (nullptr),
+      pstate (state)
+  {
+    gdb_assert (current_parser == nullptr);
+    current_parser = this;
+    work_obstack = &obstack;
+  }
 
-/* Result of parsing.  Points into work_obstack.  */
+  ~rust_parser ()
+  {
+    /* Clean up the globals we set.  */
+    current_parser = nullptr;
+    work_obstack = nullptr;
+  }
 
-static const struct rust_op *rust_ast;
+  /* Create a new rust_set_vector.  The storage for the new vector is
+     managed by this class.  */
+  rust_set_vector *new_set_vector ()
+  {
+    rust_set_vector *result = new rust_set_vector;
+    set_vectors.push_back (std::unique_ptr<rust_set_vector> (result));
+    return result;
+  }
+
+  /* Create a new rust_ops_vector.  The storage for the new vector is
+     managed by this class.  */
+  rust_op_vector *new_op_vector ()
+  {
+    rust_op_vector *result = new rust_op_vector;
+    op_vectors.push_back (std::unique_ptr<rust_op_vector> (result));
+    return result;
+  }
+
+  /* Return the parser's language.  */
+  const struct language_defn *language () const
+  {
+    return parse_language (pstate);
+  }
+
+  /* Return the parser's gdbarch.  */
+  struct gdbarch *arch () const
+  {
+    return parse_gdbarch (pstate);
+  }
+
+  /* A pointer to this is installed globally.  */
+  auto_obstack obstack;
+
+  /* Result of parsing.  Points into obstack.  */
+  const struct rust_op *rust_ast;
+
+  /* This keeps track of the various vectors we allocate.  */
+  std::vector<std::unique_ptr<rust_set_vector>> set_vectors;
+  std::vector<std::unique_ptr<rust_op_vector>> op_vectors;
+
+  /* The parser state gdb gave us.  */
+  struct parser_state *pstate;
+};
 
 %}
 
@@ -209,10 +264,10 @@ static const struct rust_op *rust_ast;
 
   /* A list of expressions; for example, the arguments to a function
      call.  */
-  VEC (rust_op_ptr) **params;
+  rust_op_vector *params;
 
   /* A list of field initializers.  */
-  VEC (set_field) **field_inits;
+  rust_set_vector *field_inits;
 
   /* A single field initializer.  */
   struct set_field one_field_init;
@@ -247,6 +302,9 @@ struct rust_op
      name occurred at the end of the expression and is eligible for
      completion.  */
   unsigned int completing : 1;
+  /* For OP_RANGE, indicates whether the range is inclusive or
+     exclusive.  */
+  unsigned int inclusive : 1;
   /* Operands of expression.  Which one is used and how depends on the
      particular opcode.  */
   RUSTSTYPE left;
@@ -276,9 +334,11 @@ struct rust_op
 %token <voidval> KW_EXTERN
 %token <voidval> KW_CONST
 %token <voidval> KW_FN
+%token <voidval> KW_SIZEOF
 
 /* Operator tokens.  */
 %token <voidval> DOTDOT
+%token <voidval> DOTDOTEQ
 %token <voidval> OROR
 %token <voidval> ANDAND
 %token <voidval> EQEQ
@@ -328,7 +388,7 @@ struct rust_op
 %type <one_field_init> struct_expr_tail
 
 /* Precedence.  */
-%nonassoc DOTDOT
+%nonassoc DOTDOT DOTDOTEQ
 %right '=' COMPOUND_ASSIGN
 %left OROR
 %left ANDAND
@@ -353,8 +413,8 @@ start:
 		{
 		  /* If we are completing and see a valid parse,
 		     rust_ast will already have been set.  */
-		  if (rust_ast == NULL)
-		    rust_ast = $1;
+		  if (current_parser->rust_ast == NULL)
+		    current_parser->rust_ast = $1;
 		}
 ;
 
@@ -371,7 +431,8 @@ expr:
 |	array_expr
 |	idx_expr
 |	range_expr
-|	unop_expr
+|	unop_expr /* Must precede call_expr because of ambiguity with
+		     sizeof.  */
 |	binop_expr
 |	paren_expr
 |	call_expr
@@ -380,7 +441,7 @@ expr:
 tuple_expr:
 	'(' expr ',' maybe_expr_list ')'
 		{
-		  VEC_safe_insert (rust_op_ptr, *$4, 0, $2);
+		  $4->push_back ($2);
 		  error (_("Tuple expressions not supported yet"));
 		}
 ;
@@ -391,9 +452,9 @@ unit_expr:
 		  struct typed_val_int val;
 
 		  val.type
-		    = language_lookup_primitive_type (parse_language (pstate),
-						      parse_gdbarch (pstate),
-						      "()");
+		    = (language_lookup_primitive_type
+		       (current_parser->language (), current_parser->arch (),
+			"()"));
 		  val.val = 0;
 		  $$ = ast_literal (val);
 		}
@@ -426,23 +487,25 @@ struct_expr_tail:
 		  sf.init = $3;
 		  $$ = sf;
 		}
+|	IDENT
+		{
+		  struct set_field sf;
+
+		  sf.name = $1;
+		  sf.init = ast_path ($1, NULL);
+		  $$ = sf;
+		}
 ;
 
 struct_expr_list:
 	/* %empty */
 		{
-		  VEC (set_field) **result
-		    = OBSTACK_ZALLOC (&work_obstack, VEC (set_field) *);
-		  $$ = result;
+		  $$ = current_parser->new_set_vector ();
 		}
 |	struct_expr_tail
 		{
-		  VEC (set_field) **result
-		    = OBSTACK_ZALLOC (&work_obstack, VEC (set_field) *);
-
-		  make_cleanup (VEC_cleanup (set_field), result);
-		  VEC_safe_push (set_field, *result, &$1);
-
+		  rust_set_vector *result = current_parser->new_set_vector ();
+		  result->push_back ($1);
 		  $$ = result;
 		}
 |	IDENT ':' expr ',' struct_expr_list
@@ -451,8 +514,17 @@ struct_expr_list:
 
 		  sf.name = $1;
 		  sf.init = $3;
-		  VEC_safe_push (set_field, *$5, &sf);
+		  $5->push_back (sf);
 		  $$ = $5;
+		}
+|	IDENT ',' struct_expr_list
+		{
+		  struct set_field sf;
+
+		  sf.name = $1;
+		  sf.init = ast_path ($1, NULL);
+		  $3->push_back (sf);
+		  $$ = $3;
 		}
 ;
 
@@ -469,13 +541,17 @@ array_expr:
 
 range_expr:
 	expr DOTDOT
-		{ $$ = ast_range ($1, NULL); }
+		{ $$ = ast_range ($1, NULL, false); }
 |	expr DOTDOT expr
-		{ $$ = ast_range ($1, $3); }
+		{ $$ = ast_range ($1, $3, false); }
+|	expr DOTDOTEQ expr
+		{ $$ = ast_range ($1, $3, true); }
 |	DOTDOT expr
-		{ $$ = ast_range (NULL, $2); }
+		{ $$ = ast_range (NULL, $2, false); }
+|	DOTDOTEQ expr
+		{ $$ = ast_range (NULL, $2, true); }
 |	DOTDOT
-		{ $$ = ast_range (NULL, NULL); }
+		{ $$ = ast_range (NULL, NULL, false); }
 ;
 
 literal:
@@ -488,19 +564,17 @@ literal:
 |	STRING
 		{
 		  const struct rust_op *str = ast_string ($1);
-		  VEC (set_field) **fields;
 		  struct set_field field;
 		  struct typed_val_int val;
 		  struct stoken token;
 
-		  fields = OBSTACK_ZALLOC (&work_obstack, VEC (set_field) *);
-		  make_cleanup (VEC_cleanup (set_field), fields);
+		  rust_set_vector *fields = current_parser->new_set_vector ();
 
 		  /* Wrap the raw string in the &str struct.  */
 		  field.name.ptr = "data_ptr";
 		  field.name.length = strlen (field.name.ptr);
 		  field.init = ast_unary (UNOP_ADDR, ast_string ($1));
-		  VEC_safe_push (set_field, *fields, &field);
+		  fields->push_back (field);
 
 		  val.type = rust_type ("usize");
 		  val.val = $1.length;
@@ -508,7 +582,7 @@ literal:
 		  field.name.ptr = "length";
 		  field.name.length = strlen (field.name.ptr);
 		  field.init = ast_literal (val);
-		  VEC_safe_push (set_field, *fields, &field);
+		  fields->push_back (field);
 
 		  token.ptr = "&str";
 		  token.length = strlen (token.ptr);
@@ -520,8 +594,8 @@ literal:
 		{
 		  struct typed_val_int val;
 
-		  val.type = language_bool_type (parse_language (pstate),
-						 parse_gdbarch (pstate));
+		  val.type = language_bool_type (current_parser->language (),
+						 current_parser->arch ());
 		  val.val = 1;
 		  $$ = ast_literal (val);
 		}
@@ -529,8 +603,8 @@ literal:
 		{
 		  struct typed_val_int val;
 
-		  val.type = language_bool_type (parse_language (pstate),
-						 parse_gdbarch (pstate));
+		  val.type = language_bool_type (current_parser->language (),
+						 current_parser->arch ());
 		  val.val = 0;
 		  $$ = ast_literal (val);
 		}
@@ -542,7 +616,7 @@ field_expr:
 |	expr '.' COMPLETE
 		{
 		  $$ = ast_structop ($1, $3.ptr, 1);
-		  rust_ast = $$;
+		  current_parser->rust_ast = $$;
 		}
 |	expr '.' DECIMAL_INTEGER
 		{ $$ = ast_structop_anonymous ($1, $3); }
@@ -577,7 +651,8 @@ unop_expr:
 
 |	'&' KW_MUT expr	%prec UNARY
 		{ $$ = ast_unary (UNOP_ADDR, $3); }
-
+|	KW_SIZEOF '(' expr ')' %prec UNARY
+		{ $$ = ast_unary (UNOP_SIZEOF, $3); }
 ;
 
 binop_expr:
@@ -670,13 +745,12 @@ paren_expr:
 expr_list:
 	expr
 		{
-		  $$ = OBSTACK_ZALLOC (&work_obstack, VEC (rust_op_ptr) *);
-		  make_cleanup (VEC_cleanup (rust_op_ptr), $$);
-		  VEC_safe_push (rust_op_ptr, *$$, $1);
+		  $$ = current_parser->new_op_vector ();
+		  $$->push_back ($1);
 		}
 |	expr_list ',' expr
 		{
-		  VEC_safe_push (rust_op_ptr, *$1, $3);
+		  $1->push_back ($3);
 		  $$ = $1;
 		}
 ;
@@ -685,17 +759,14 @@ maybe_expr_list:
 	/* %empty */
 		{
 		  /* The result can't be NULL.  */
-		  $$ = OBSTACK_ZALLOC (&work_obstack, VEC (rust_op_ptr) *);
-		  make_cleanup (VEC_cleanup (rust_op_ptr), $$);
+		  $$ = current_parser->new_op_vector ();
 		}
 |	expr_list
 		{ $$ = $1; }
 ;
 
 paren_expr_list:
-	'('
-	maybe_expr_list
-	')'
+	'(' maybe_expr_list ')'
 		{ $$ = $2; }
 ;
 
@@ -783,7 +854,7 @@ path_for_type:
 
 just_identifiers_for_type:
 	IDENT
-	  	{ $$ = ast_path ($1, NULL); }
+		{ $$ = ast_path ($1, NULL); }
 |	just_identifiers_for_type COLONCOLON IDENT
 		{
 		  $$ = ast_path (rust_concat3 ($1->left.sval.ptr, "::",
@@ -833,16 +904,13 @@ maybe_type_list:
 type_list:
 	type
 		{
-		  VEC (rust_op_ptr) **result
-		    = OBSTACK_ZALLOC (&work_obstack, VEC (rust_op_ptr) *);
-
-		  make_cleanup (VEC_cleanup (rust_op_ptr), result);
-		  VEC_safe_push (rust_op_ptr, *result, $1);
+		  rust_op_vector *result = current_parser->new_op_vector ();
+		  result->push_back ($1);
 		  $$ = result;
 		}
 |	type_list ',' type
 		{
-		  VEC_safe_push (rust_op_ptr, *$1, $3);
+		  $1->push_back ($3);
 		  $$ = $1;
 		}
 ;
@@ -872,6 +940,7 @@ static const struct token_info identifier_tokens[] =
   { "true", KW_TRUE, OP_NULL },
   { "extern", KW_EXTERN, OP_NULL },
   { "fn", KW_FN, OP_NULL },
+  { "sizeof", KW_SIZEOF, OP_NULL },
 };
 
 /* Operator tokens, sorted longest first.  */
@@ -897,6 +966,7 @@ static const struct token_info operator_tokens[] =
   { "&=", COMPOUND_ASSIGN, BINOP_BITWISE_AND },
   { "|=", COMPOUND_ASSIGN, BINOP_BITWISE_IOR },
   { "^=", COMPOUND_ASSIGN, BINOP_BITWISE_XOR },
+  { "..=", DOTDOTEQ, OP_NULL },
 
   { "::", COLONCOLON, OP_NULL },
   { "..", DOTDOT, OP_NULL },
@@ -908,7 +978,7 @@ static const struct token_info operator_tokens[] =
 static const char *
 rust_copy_name (const char *name, int len)
 {
-  return (const char *) obstack_copy0 (&work_obstack, name, len);
+  return (const char *) obstack_copy0 (work_obstack, name, len);
 }
 
 /* Helper function to make an stoken from a C string.  */
@@ -929,7 +999,7 @@ make_stoken (const char *p)
 static struct stoken
 rust_concat3 (const char *s1, const char *s2, const char *s3)
 {
-  return make_stoken (obconcat (&work_obstack, s1, s2, s3, (char *) NULL));
+  return make_stoken (obconcat (work_obstack, s1, s2, s3, (char *) NULL));
 }
 
 /* Return an AST node referring to NAME, but relative to the crate's
@@ -938,16 +1008,15 @@ rust_concat3 (const char *s1, const char *s2, const char *s3)
 static const struct rust_op *
 crate_name (const struct rust_op *name)
 {
-  char *crate = rust_crate_for_block (expression_context_block);
+  std::string crate = rust_crate_for_block (expression_context_block);
   struct stoken result;
 
   gdb_assert (name->opcode == OP_VAR_VALUE);
 
-  if (crate == NULL)
+  if (crate.empty ())
     error (_("Could not find crate for current location"));
-  result = make_stoken (obconcat (&work_obstack, "::", crate, "::",
+  result = make_stoken (obconcat (work_obstack, "::", crate.c_str (), "::",
 				  name->left.sval.ptr, (char *) NULL));
-  xfree (crate);
 
   return ast_path (result, name->right.params);
 }
@@ -969,17 +1038,14 @@ super_name (const struct rust_op *ident, unsigned int n_supers)
 
   if (n_supers > 0)
     {
-      int i;
       int len;
-      VEC (int) *offsets = NULL;
+      std::vector<int> offsets;
       unsigned int current_len;
-      struct cleanup *cleanup;
 
-      cleanup = make_cleanup (VEC_cleanup (int), &offsets);
       current_len = cp_find_first_component (scope);
       while (scope[current_len] != '\0')
 	{
-	  VEC_safe_push (int, offsets, current_len);
+	  offsets.push_back (current_len);
 	  gdb_assert (scope[current_len] == ':');
 	  /* The "::".  */
 	  current_len += 2;
@@ -987,35 +1053,31 @@ super_name (const struct rust_op *ident, unsigned int n_supers)
 						  + current_len);
 	}
 
-      len = VEC_length (int, offsets);
+      len = offsets.size ();
       if (n_supers >= len)
 	error (_("Too many super:: uses from '%s'"), scope);
 
-      offset = VEC_index (int, offsets, len - n_supers);
-
-      do_cleanups (cleanup);
+      offset = offsets[len - n_supers];
     }
   else
     offset = strlen (scope);
 
-  obstack_grow (&work_obstack, "::", 2);
-  obstack_grow (&work_obstack, scope, offset);
-  obstack_grow (&work_obstack, "::", 2);
-  obstack_grow0 (&work_obstack, ident->left.sval.ptr, ident->left.sval.length);
+  obstack_grow (work_obstack, "::", 2);
+  obstack_grow (work_obstack, scope, offset);
+  obstack_grow (work_obstack, "::", 2);
+  obstack_grow0 (work_obstack, ident->left.sval.ptr, ident->left.sval.length);
 
-  return ast_path (make_stoken ((const char *) obstack_finish (&work_obstack)),
+  return ast_path (make_stoken ((const char *) obstack_finish (work_obstack)),
 		   ident->right.params);
 }
 
-/* A helper that updates innermost_block as appropriate.  */
+/* A helper that updates the innermost block as appropriate.  */
 
 static void
 update_innermost_block (struct block_symbol sym)
 {
-  if (symbol_read_needs_frame (sym.symbol)
-      && (innermost_block == NULL
-	  || contained_in (sym.block, innermost_block)))
-    innermost_block = sym.block;
+  if (symbol_read_needs_frame (sym.symbol))
+    innermost_block.update (sym);
 }
 
 /* A helper to look up a Rust type, or fail.  This only works for
@@ -1026,13 +1088,8 @@ rust_type (const char *name)
 {
   struct type *type;
 
-  /* When unit testing, we don't bother checking the types, so avoid a
-     possibly-failing lookup here.  */
-  if (unit_testing)
-    return NULL;
-
-  type = language_lookup_primitive_type (parse_language (pstate),
-					 parse_gdbarch (pstate),
+  type = language_lookup_primitive_type (current_parser->language (),
+					 current_parser->arch (),
 					 name);
   if (type == NULL)
     error (_("Could not find Rust type %s"), name);
@@ -1199,7 +1256,7 @@ starts_raw_string (const char *str)
 /* Return true if STR looks like the end of a raw string that had N
    hashes at the start.  */
 
-static int
+static bool
 ends_raw_string (const char *str, int n)
 {
   int i;
@@ -1207,8 +1264,8 @@ ends_raw_string (const char *str, int n)
   gdb_assert (str[0] == '"');
   for (i = 0; i < n; ++i)
     if (str[i + 1] != '#')
-      return 0;
-  return 1;
+      return false;
+  return true;
 }
 
 /* Lex a string constant.  */
@@ -1218,7 +1275,6 @@ lex_string (void)
 {
   int is_byte = lexptr[0] == 'b';
   int raw_length;
-  int len_in_chars = 0;
 
   if (is_byte)
     ++lexptr;
@@ -1245,7 +1301,7 @@ lex_string (void)
 	  value = lexptr[0] & 0xff;
 	  if (is_byte && value > 127)
 	    error (_("Non-ASCII value in raw byte string"));
-	  obstack_1grow (&work_obstack, value);
+	  obstack_1grow (work_obstack, value);
 
 	  ++lexptr;
 	}
@@ -1260,11 +1316,11 @@ lex_string (void)
 	  value = lex_escape (is_byte);
 
 	  if (is_byte)
-	    obstack_1grow (&work_obstack, value);
+	    obstack_1grow (work_obstack, value);
 	  else
 	    convert_between_encodings ("UTF-32", "UTF-8", (gdb_byte *) &value,
 				       sizeof (value), sizeof (value),
-				       &work_obstack, translit_none);
+				       work_obstack, translit_none);
 	}
       else if (lexptr[0] == '\0')
 	error (_("Unexpected EOF in string"));
@@ -1273,19 +1329,19 @@ lex_string (void)
 	  value = lexptr[0] & 0xff;
 	  if (is_byte && value > 127)
 	    error (_("Non-ASCII value in byte string"));
-	  obstack_1grow (&work_obstack, value);
+	  obstack_1grow (work_obstack, value);
 	  ++lexptr;
 	}
     }
 
-  rustyylval.sval.length = obstack_object_size (&work_obstack);
-  rustyylval.sval.ptr = (const char *) obstack_finish (&work_obstack);
+  rustyylval.sval.length = obstack_object_size (work_obstack);
+  rustyylval.sval.ptr = (const char *) obstack_finish (work_obstack);
   return is_byte ? BYTESTRING : STRING;
 }
 
 /* Return true if STRING starts with whitespace followed by a digit.  */
 
-static int
+static bool
 space_then_number (const char *string)
 {
   const char *p = string;
@@ -1293,14 +1349,14 @@ space_then_number (const char *string)
   while (p[0] == ' ' || p[0] == '\t')
     ++p;
   if (p == string)
-    return 0;
+    return false;
 
   return *p >= '0' && *p <= '9';
 }
 
 /* Return true if C can start an identifier.  */
 
-static int
+static bool
 rust_identifier_start_p (char c)
 {
   return ((c >= 'a' && c <= 'z')
@@ -1421,13 +1477,11 @@ lex_number (void)
   int is_integer = 0;
   int could_be_decimal = 1;
   int implicit_i32 = 0;
-  char *type_name = NULL;
+  const char *type_name = NULL;
   struct type *type;
   int end_index;
   int type_index = -1;
-  int i, out;
-  char *number;
-  struct cleanup *cleanup = make_cleanup (null_cleanup, NULL);
+  int i;
 
   match = regexec (&number_regex, lexptr, ARRAY_SIZE (subexps), subexps, 0);
   /* Failure means the regexp is broken.  */
@@ -1475,7 +1529,7 @@ lex_number (void)
   gdb_assert (subexps[0].rm_eo > 0);
   if (lexptr[subexps[0].rm_eo - 1] == '.')
     {
-      const char *next = skip_spaces_const (&lexptr[subexps[0].rm_eo]);
+      const char *next = skip_spaces (&lexptr[subexps[0].rm_eo]);
 
       if (rust_identifier_start_p (*next) || *next == '.')
 	{
@@ -1489,29 +1543,28 @@ lex_number (void)
     }
 
   /* Compute the type name if we haven't already.  */
+  std::string type_name_holder;
   if (type_name == NULL)
     {
       gdb_assert (type_index != -1);
-      type_name = xstrndup (lexptr + subexps[type_index].rm_so,
-			   (subexps[type_index].rm_eo
-			    - subexps[type_index].rm_so));
-      make_cleanup (xfree, type_name);
+      type_name_holder = std::string (lexptr + subexps[type_index].rm_so,
+				      (subexps[type_index].rm_eo
+				       - subexps[type_index].rm_so));
+      type_name = type_name_holder.c_str ();
     }
 
   /* Look up the type.  */
   type = rust_type (type_name);
 
   /* Copy the text of the number and remove the "_"s.  */
-  number = xstrndup (lexptr, end_index);
-  make_cleanup (xfree, number);
-  for (i = out = 0; number[i]; ++i)
+  std::string number;
+  for (i = 0; i < end_index && lexptr[i]; ++i)
     {
-      if (number[i] == '_')
+      if (lexptr[i] == '_')
 	could_be_decimal = 0;
       else
-	number[out++] = number[i];
+	number.push_back (lexptr[i]);
     }
-  number[out] = '\0';
 
   /* Advance past the match.  */
   lexptr += subexps[0].rm_eo;
@@ -1521,6 +1574,8 @@ lex_number (void)
     {
       uint64_t value;
       int radix = 10;
+      int offset = 0;
+
       if (number[0] == '0')
 	{
 	  if (number[1] == 'x')
@@ -1531,12 +1586,12 @@ lex_number (void)
 	    radix = 2;
 	  if (radix != 10)
 	    {
-	      number += 2;
+	      offset = 2;
 	      could_be_decimal = 0;
 	    }
 	}
 
-      value = strtoul (number, NULL, radix);
+      value = strtoul (number.c_str () + offset, NULL, radix);
       if (implicit_i32 && value >= ((uint64_t) 1) << 31)
 	type = rust_type ("i64");
 
@@ -1545,11 +1600,13 @@ lex_number (void)
     }
   else
     {
-      rustyylval.typed_val_float.dval = strtod (number, NULL);
       rustyylval.typed_val_float.type = type;
+      bool parsed = parse_float (number.c_str (), number.length (),
+				 rustyylval.typed_val_float.type,
+				 rustyylval.typed_val_float.val);
+      gdb_assert (parsed);
     }
 
-  do_cleanups (cleanup);
   return is_integer ? (could_be_decimal ? DECIMAL_INTEGER : INTEGER) : FLOAT;
 }
 
@@ -1631,7 +1688,7 @@ static const struct rust_op *
 ast_operation (enum exp_opcode opcode, const struct rust_op *left,
 		const struct rust_op *right)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = opcode;
   result->left.op = left;
@@ -1646,7 +1703,7 @@ static const struct rust_op *
 ast_compound_assignment (enum exp_opcode opcode, const struct rust_op *left,
 			  const struct rust_op *right)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = opcode;
   result->compound_assignment = 1;
@@ -1661,7 +1718,7 @@ ast_compound_assignment (enum exp_opcode opcode, const struct rust_op *left,
 static const struct rust_op *
 ast_literal (struct typed_val_int val)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = OP_LONG;
   result->left.typed_val_int = val;
@@ -1674,9 +1731,9 @@ ast_literal (struct typed_val_int val)
 static const struct rust_op *
 ast_dliteral (struct typed_val_float val)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
-  result->opcode = OP_DOUBLE;
+  result->opcode = OP_FLOAT;
   result->left.typed_val_float = val;
 
   return result;
@@ -1695,7 +1752,7 @@ ast_unary (enum exp_opcode opcode, const struct rust_op *expr)
 static const struct rust_op *
 ast_cast (const struct rust_op *expr, const struct rust_op *type)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = UNOP_CAST;
   result->left.op = expr;
@@ -1710,9 +1767,9 @@ ast_cast (const struct rust_op *expr, const struct rust_op *type)
 
 static const struct rust_op *
 ast_call_ish (enum exp_opcode opcode, const struct rust_op *expr,
-	       VEC (rust_op_ptr) **params)
+	      rust_op_vector *params)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = opcode;
   result->left.op = expr;
@@ -1724,9 +1781,9 @@ ast_call_ish (enum exp_opcode opcode, const struct rust_op *expr,
 /* Make a structure creation operation.  */
 
 static const struct rust_op *
-ast_struct (const struct rust_op *name, VEC (set_field) **fields)
+ast_struct (const struct rust_op *name, rust_set_vector *fields)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = OP_AGGREGATE;
   result->left.op = name;
@@ -1738,9 +1795,9 @@ ast_struct (const struct rust_op *name, VEC (set_field) **fields)
 /* Make an identifier path.  */
 
 static const struct rust_op *
-ast_path (struct stoken path, VEC (rust_op_ptr) **params)
+ast_path (struct stoken path, rust_op_vector *params)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = OP_VAR_VALUE;
   result->left.sval = path;
@@ -1754,7 +1811,7 @@ ast_path (struct stoken path, VEC (rust_op_ptr) **params)
 static const struct rust_op *
 ast_string (struct stoken str)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = OP_STRING;
   result->left.sval = str;
@@ -1767,7 +1824,7 @@ ast_string (struct stoken str)
 static const struct rust_op *
 ast_structop (const struct rust_op *left, const char *name, int completing)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = STRUCTOP_STRUCT;
   result->completing = completing;
@@ -1783,7 +1840,7 @@ static const struct rust_op *
 ast_structop_anonymous (const struct rust_op *left,
 			 struct typed_val_int number)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = STRUCTOP_ANONYMOUS;
   result->left.op = left;
@@ -1795,11 +1852,13 @@ ast_structop_anonymous (const struct rust_op *left,
 /* Make a range operation.  */
 
 static const struct rust_op *
-ast_range (const struct rust_op *lhs, const struct rust_op *rhs)
+ast_range (const struct rust_op *lhs, const struct rust_op *rhs,
+	   bool inclusive)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = OP_RANGE;
+  result->inclusive = inclusive;
   result->left.op = lhs;
   result->right.op = rhs;
 
@@ -1811,7 +1870,7 @@ ast_range (const struct rust_op *lhs, const struct rust_op *rhs)
 static struct rust_op *
 ast_basic_type (enum type_code typecode)
 {
-  struct rust_op *result = OBSTACK_ZALLOC (&work_obstack, struct rust_op);
+  struct rust_op *result = OBSTACK_ZALLOC (work_obstack, struct rust_op);
 
   result->opcode = OP_TYPE;
   result->typecode = typecode;
@@ -1868,7 +1927,7 @@ ast_pointer_type (const struct rust_op *type, int is_mut)
 /* Create an AST node describing a function type.  */
 
 static const struct rust_op *
-ast_function_type (const struct rust_op *rtype, VEC (rust_op_ptr) **params)
+ast_function_type (const struct rust_op *rtype, rust_op_vector *params)
 {
   struct rust_op *result = ast_basic_type (TYPE_CODE_FUNC);
 
@@ -1880,7 +1939,7 @@ ast_function_type (const struct rust_op *rtype, VEC (rust_op_ptr) **params)
 /* Create an AST node describing a tuple type.  */
 
 static const struct rust_op *
-ast_tuple_type (VEC (rust_op_ptr) **params)
+ast_tuple_type (rust_op_vector *params)
 {
   struct rust_op *result = ast_basic_type (TYPE_CODE_STRUCT);
 
@@ -1937,14 +1996,14 @@ rust_lookup_type (const char *name, const struct block *block)
       return SYMBOL_TYPE (result.symbol);
     }
 
-  type = lookup_typename (parse_language (pstate), parse_gdbarch (pstate),
+  type = lookup_typename (current_parser->language (), current_parser->arch (),
 			  name, NULL, 1);
   if (type != NULL)
     return type;
 
   /* Last chance, try a built-in type.  */
-  return language_lookup_primitive_type (parse_language (pstate),
-					 parse_gdbarch (pstate),
+  return language_lookup_primitive_type (current_parser->language (),
+					 current_parser->arch (),
 					 name);
 }
 
@@ -1956,18 +2015,17 @@ static const char *convert_name (struct parser_state *state,
 /* Convert a vector of rust_ops representing types to a vector of
    types.  */
 
-static VEC (type_ptr) *
-convert_params_to_types (struct parser_state *state, VEC (rust_op_ptr) *params)
+static std::vector<struct type *>
+convert_params_to_types (struct parser_state *state, rust_op_vector *params)
 {
-  int i;
-  const struct rust_op *op;
-  VEC (type_ptr) *result = NULL;
-  struct cleanup *cleanup = make_cleanup (VEC_cleanup (type_ptr), &result);
+  std::vector<struct type *> result;
 
-  for (i = 0; VEC_iterate (rust_op_ptr, params, i, op); ++i)
-    VEC_safe_push (type_ptr, result, convert_ast_to_type (state, op));
+  if (params != nullptr)
+    {
+      for (const rust_op *op : *params)
+        result.push_back (convert_ast_to_type (state, op));
+    }
 
-  discard_cleanups (cleanup);
   return result;
 }
 
@@ -2019,58 +2077,46 @@ convert_ast_to_type (struct parser_state *state,
 
     case TYPE_CODE_FUNC:
       {
-	VEC (type_ptr) *args
-	  = convert_params_to_types (state, *operation->right.params);
-	struct cleanup *cleanup
-	  = make_cleanup (VEC_cleanup (type_ptr), &args);
+	std::vector<struct type *> args
+	  (convert_params_to_types (state, operation->right.params));
 	struct type **argtypes = NULL;
 
 	type = convert_ast_to_type (state, operation->left.op);
-	if (!VEC_empty (type_ptr, args))
-	  argtypes = VEC_address (type_ptr, args);
+	if (!args.empty ())
+	  argtypes = args.data ();
 
 	result
-	  = lookup_function_type_with_arguments (type,
-						 VEC_length (type_ptr, args),
+	  = lookup_function_type_with_arguments (type, args.size (),
 						 argtypes);
 	result = lookup_pointer_type (result);
-
-	do_cleanups (cleanup);
       }
       break;
 
     case TYPE_CODE_STRUCT:
       {
-	VEC (type_ptr) *args
-	  = convert_params_to_types (state, *operation->left.params);
-	struct cleanup *cleanup
-	  = make_cleanup (VEC_cleanup (type_ptr), &args);
+	std::vector<struct type *> args
+	  (convert_params_to_types (state, operation->left.params));
 	int i;
-	struct type *type;
 	const char *name;
 
-	obstack_1grow (&work_obstack, '(');
-	for (i = 0; VEC_iterate (type_ptr, args, i, type); ++i)
+	obstack_1grow (work_obstack, '(');
+	for (i = 0; i < args.size (); ++i)
 	  {
-	    char *type_name = type_to_string (type);
+	    std::string type_name = type_to_string (args[i]);
 
 	    if (i > 0)
-	      obstack_1grow (&work_obstack, ',');
-	    obstack_grow_str (&work_obstack, type_name);
-
-	    xfree (type_name);
+	      obstack_1grow (work_obstack, ',');
+	    obstack_grow_str (work_obstack, type_name.c_str ());
 	  }
 
-	obstack_grow_str0 (&work_obstack, ")");
-	name = (const char *) obstack_finish (&work_obstack);
+	obstack_grow_str0 (work_obstack, ")");
+	name = (const char *) obstack_finish (work_obstack);
 
 	/* We don't allow creating new tuple types (yet), but we do
 	   allow looking up existing tuple types.  */
 	result = rust_lookup_type (name, expression_context_block);
 	if (result == NULL)
 	  error (_("could not find tuple type '%s'"), name);
-
-	do_cleanups (cleanup);
       }
       break;
 
@@ -2089,54 +2135,46 @@ convert_ast_to_type (struct parser_state *state,
 static const char *
 convert_name (struct parser_state *state, const struct rust_op *operation)
 {
-  VEC (type_ptr) *types;
-  struct cleanup *cleanup;
   int i;
-  struct type *type;
 
   gdb_assert (operation->opcode == OP_VAR_VALUE);
 
   if (operation->right.params == NULL)
     return operation->left.sval.ptr;
 
-  types = convert_params_to_types (state, *operation->right.params);
-  cleanup = make_cleanup (VEC_cleanup (type_ptr), &types);
+  std::vector<struct type *> types
+    (convert_params_to_types (state, operation->right.params));
 
-  obstack_grow_str (&work_obstack, operation->left.sval.ptr);
-  obstack_1grow (&work_obstack, '<');
-  for (i = 0; VEC_iterate (type_ptr, types, i, type); ++i)
+  obstack_grow_str (work_obstack, operation->left.sval.ptr);
+  obstack_1grow (work_obstack, '<');
+  for (i = 0; i < types.size (); ++i)
     {
-      char *type_name = type_to_string (type);
+      std::string type_name = type_to_string (types[i]);
 
       if (i > 0)
-	obstack_1grow (&work_obstack, ',');
+	obstack_1grow (work_obstack, ',');
 
-      obstack_grow_str (&work_obstack, type_name);
-      xfree (type_name);
+      obstack_grow_str (work_obstack, type_name.c_str ());
     }
-  obstack_grow_str0 (&work_obstack, ">");
+  obstack_grow_str0 (work_obstack, ">");
 
-  do_cleanups (cleanup);
-
-  return (const char *) obstack_finish (&work_obstack);
+  return (const char *) obstack_finish (work_obstack);
 }
 
 static void convert_ast_to_expression (struct parser_state *state,
 				       const struct rust_op *operation,
-				       const struct rust_op *top);
+				       const struct rust_op *top,
+				       bool want_type = false);
 
 /* A helper function that converts a vec of rust_ops to a gdb
    expression.  */
 
 static void
 convert_params_to_expression (struct parser_state *state,
-			      VEC (rust_op_ptr) *params,
+			      rust_op_vector *params,
 			      const struct rust_op *top)
 {
-  int i;
-  rust_op_ptr elem;
-
-  for (i = 0; VEC_iterate (rust_op_ptr, params, i, elem); ++i)
+  for (const rust_op *elem : *params)
     convert_ast_to_expression (state, elem, top);
 }
 
@@ -2144,12 +2182,16 @@ convert_params_to_expression (struct parser_state *state,
    OPERATION is the operation to lower.  TOP is a pointer to the
    top-most operation; it is used to handle the special case where the
    top-most expression is an identifier and can be optionally lowered
-   to OP_TYPE.  */
+   to OP_TYPE.  WANT_TYPE is a flag indicating that, if the expression
+   is the name of a type, then emit an OP_TYPE for it (rather than
+   erroring).  If WANT_TYPE is set, then the similar TOP handling is
+   not done.  */
 
 static void
 convert_ast_to_expression (struct parser_state *state,
 			   const struct rust_op *operation,
-			   const struct rust_op *top)
+			   const struct rust_op *top,
+			   bool want_type)
 {
   switch (operation->opcode)
     {
@@ -2160,11 +2202,11 @@ convert_ast_to_expression (struct parser_state *state,
       write_exp_elt_opcode (state, OP_LONG);
       break;
 
-    case OP_DOUBLE:
-      write_exp_elt_opcode (state, OP_DOUBLE);
+    case OP_FLOAT:
+      write_exp_elt_opcode (state, OP_FLOAT);
       write_exp_elt_type (state, operation->left.typed_val_float.type);
-      write_exp_elt_dblcst (state, operation->left.typed_val_float.dval);
-      write_exp_elt_opcode (state, OP_DOUBLE);
+      write_exp_elt_floatcst (state, operation->left.typed_val_float.val);
+      write_exp_elt_opcode (state, OP_FLOAT);
       break;
 
     case STRUCTOP_STRUCT:
@@ -2187,6 +2229,11 @@ convert_ast_to_expression (struct parser_state *state,
 	write_exp_elt_longcst (state, operation->right.typed_val_int.val);
 	write_exp_elt_opcode (state, STRUCTOP_ANONYMOUS);
       }
+      break;
+
+    case UNOP_SIZEOF:
+      convert_ast_to_expression (state, operation->left.op, top, true);
+      write_exp_elt_opcode (state, UNOP_SIZEOF);
       break;
 
     case UNOP_PLUS:
@@ -2272,18 +2319,14 @@ convert_ast_to_expression (struct parser_state *state,
 	      {
 		/* This is actually a tuple struct expression, not a
 		   call expression.  */
-		rust_op_ptr elem;
-		int i;
-		VEC (rust_op_ptr) *params = *operation->right.params;
+		rust_op_vector *params = operation->right.params;
 
 		if (TYPE_CODE (type) != TYPE_CODE_NAMESPACE)
 		  {
 		    if (!rust_tuple_struct_type_p (type))
 		      error (_("Type %s is not a tuple struct"), varname);
 
-		    for (i = 0;
-			 VEC_iterate (rust_op_ptr, params, i, elem);
-			 ++i)
+		    for (int i = 0; i < params->size (); ++i)
 		      {
 			char *cell = get_print_cell ();
 
@@ -2292,35 +2335,31 @@ convert_ast_to_expression (struct parser_state *state,
 			write_exp_string (state, make_stoken (cell));
 			write_exp_elt_opcode (state, OP_NAME);
 
-			convert_ast_to_expression (state, elem, top);
+			convert_ast_to_expression (state, (*params)[i], top);
 		      }
 
 		    write_exp_elt_opcode (state, OP_AGGREGATE);
 		    write_exp_elt_type (state, type);
-		    write_exp_elt_longcst (state,
-					   2 * VEC_length (rust_op_ptr,
-							   params));
+		    write_exp_elt_longcst (state, 2 * params->size ());
 		    write_exp_elt_opcode (state, OP_AGGREGATE);
 		    break;
 		  }
 	      }
 	  }
 	convert_ast_to_expression (state, operation->left.op, top);
-	convert_params_to_expression (state, *operation->right.params, top);
+	convert_params_to_expression (state, operation->right.params, top);
 	write_exp_elt_opcode (state, OP_FUNCALL);
-	write_exp_elt_longcst (state, VEC_length (rust_op_ptr,
-						  *operation->right.params));
+	write_exp_elt_longcst (state, operation->right.params->size ());
 	write_exp_elt_longcst (state, OP_FUNCALL);
       }
       break;
 
     case OP_ARRAY:
       gdb_assert (operation->left.op == NULL);
-      convert_params_to_expression (state, *operation->right.params, top);
+      convert_params_to_expression (state, operation->right.params, top);
       write_exp_elt_opcode (state, OP_ARRAY);
       write_exp_elt_longcst (state, 0);
-      write_exp_elt_longcst (state, VEC_length (rust_op_ptr,
-						*operation->right.params) - 1);
+      write_exp_elt_longcst (state, operation->right.params->size () - 1);
       write_exp_elt_longcst (state, OP_ARRAY);
       break;
 
@@ -2338,7 +2377,7 @@ convert_ast_to_expression (struct parser_state *state,
 	varname = convert_name (state, operation);
 	sym = rust_lookup_symbol (varname, expression_context_block,
 				  VAR_DOMAIN);
-	if (sym.symbol != NULL)
+	if (sym.symbol != NULL && SYMBOL_CLASS (sym.symbol) != LOC_TYPEDEF)
 	  {
 	    write_exp_elt_opcode (state, OP_VAR_VALUE);
 	    write_exp_elt_block (state, sym.block);
@@ -2347,13 +2386,20 @@ convert_ast_to_expression (struct parser_state *state,
 	  }
 	else
 	  {
-	    struct type *type;
+	    struct type *type = NULL;
 
-	    type = rust_lookup_type (varname, expression_context_block);
+	    if (sym.symbol != NULL)
+	      {
+		gdb_assert (SYMBOL_CLASS (sym.symbol) == LOC_TYPEDEF);
+		type = SYMBOL_TYPE (sym.symbol);
+	      }
+	    if (type == NULL)
+	      type = rust_lookup_type (varname, expression_context_block);
 	    if (type == NULL)
 	      error (_("No symbol '%s' in current context"), varname);
 
-	    if (TYPE_CODE (type) == TYPE_CODE_STRUCT
+	    if (!want_type
+		&& TYPE_CODE (type) == TYPE_CODE_STRUCT
 		&& TYPE_NFIELDS (type) == 0)
 	      {
 		/* A unit-like struct.  */
@@ -2362,41 +2408,42 @@ convert_ast_to_expression (struct parser_state *state,
 		write_exp_elt_longcst (state, 0);
 		write_exp_elt_opcode (state, OP_AGGREGATE);
 	      }
-	    else if (operation == top)
+	    else if (want_type || operation == top)
 	      {
 		write_exp_elt_opcode (state, OP_TYPE);
 		write_exp_elt_type (state, type);
 		write_exp_elt_opcode (state, OP_TYPE);
-		break;
 	      }
+	    else
+	      error (_("Found type '%s', which can't be "
+		       "evaluated in this context"),
+		     varname);
 	  }
       }
       break;
 
     case OP_AGGREGATE:
       {
-	int i;
 	int length;
-	struct set_field *init;
-	VEC (set_field) *fields = *operation->right.field_inits;
+	rust_set_vector *fields = operation->right.field_inits;
 	struct type *type;
 	const char *name;
 
 	length = 0;
-	for (i = 0; VEC_iterate (set_field, fields, i, init); ++i)
+	for (const set_field &init : *fields)
 	  {
-	    if (init->name.ptr != NULL)
+	    if (init.name.ptr != NULL)
 	      {
 		write_exp_elt_opcode (state, OP_NAME);
-		write_exp_string (state, init->name);
+		write_exp_string (state, init.name);
 		write_exp_elt_opcode (state, OP_NAME);
 		++length;
 	      }
 
-	    convert_ast_to_expression (state, init->init, top);
+	    convert_ast_to_expression (state, init.init, top);
 	    ++length;
 
-	    if (init->name.ptr == NULL)
+	    if (init.name.ptr == NULL)
 	      {
 		/* This is handled differently from Ada in our
 		   evaluator.  */
@@ -2442,13 +2489,22 @@ convert_ast_to_expression (struct parser_state *state,
 	  {
 	    convert_ast_to_expression (state, operation->right.op, top);
 	    if (kind == BOTH_BOUND_DEFAULT)
-	      kind = LOW_BOUND_DEFAULT;
+	      kind = (operation->inclusive
+		      ? LOW_BOUND_DEFAULT : LOW_BOUND_DEFAULT_EXCLUSIVE);
 	    else
 	      {
 		gdb_assert (kind == HIGH_BOUND_DEFAULT);
-		kind = NONE_BOUND_DEFAULT;
+		kind = (operation->inclusive
+			? NONE_BOUND_DEFAULT : NONE_BOUND_DEFAULT_EXCLUSIVE);
 	      }
 	  }
+	else
+	  {
+	    /* Nothing should make an inclusive range without an upper
+	       bound.  */
+	    gdb_assert (!operation->inclusive);
+	  }
+
 	write_exp_elt_opcode (state, OP_RANGE);
 	write_exp_elt_longcst (state, kind);
 	write_exp_elt_opcode (state, OP_RANGE);
@@ -2468,35 +2524,26 @@ int
 rust_parse (struct parser_state *state)
 {
   int result;
-  struct cleanup *cleanup;
 
-  obstack_init (&work_obstack);
-  cleanup = make_cleanup_obstack_free (&work_obstack);
-  rust_ast = NULL;
+  /* This sets various globals and also clears them on
+     destruction.  */
+  rust_parser parser (state);
 
-  pstate = state;
   result = rustyyparse ();
 
-  if (!result || (parse_completion && rust_ast != NULL))
-    {
-      const struct rust_op *ast = rust_ast;
+  if (!result || (parse_completion && parser.rust_ast != NULL))
+    convert_ast_to_expression (state, parser.rust_ast, parser.rust_ast);
 
-      rust_ast = NULL;
-      gdb_assert (ast != NULL);
-      convert_ast_to_expression (state, ast, ast);
-    }
-
-  do_cleanups (cleanup);
   return result;
 }
 
 /* The parser error handler.  */
 
-void
-rustyyerror (char *msg)
+static void
+rustyyerror (const char *msg)
 {
   const char *where = prev_lexptr ? prev_lexptr : lexptr;
-  error (_("%s in expression, near `%s'."), (msg ? msg : "Error"), where);
+  error (_("%s in expression, near `%s'."), msg, where);
 }
 
 
@@ -2653,8 +2700,13 @@ rust_lex_tests (void)
 {
   int i;
 
-  obstack_init (&work_obstack);
-  unit_testing = 1;
+  auto_obstack test_obstack;
+  scoped_restore obstack_holder = make_scoped_restore (&work_obstack,
+						       &test_obstack);
+
+  // Set up dummy "parser", so that rust_type works.
+  struct parser_state ps (0, &rust_language_defn, target_gdbarch ());
+  rust_parser parser (&ps);
 
   rust_lex_test_one ("", 0);
   rust_lex_test_one ("    \t  \n \r  ", 0);
@@ -2743,9 +2795,6 @@ rust_lex_tests (void)
 
   rust_lex_test_completion ();
   rust_lex_test_push_back ();
-
-  obstack_free (&work_obstack, NULL);
-  unit_testing = 0;
 }
 
 #endif /* GDB_SELF_TEST */
@@ -2759,6 +2808,6 @@ _initialize_rust_exp (void)
   gdb_assert (code == 0);
 
 #if GDB_SELF_TEST
-  register_self_test (rust_lex_tests);
+  selftests::register_test ("rust-lex", rust_lex_tests);
 #endif
 }

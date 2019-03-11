@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Free Software Foundation, Inc.
+/* Copyright (C) 2012-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,6 +22,7 @@
 #include "gdbtypes.h"
 #include "infcall.h"
 #include "ppc-tdep.h"
+#include "target-float.h"
 #include "value.h"
 #include "xcoffread.h"
 
@@ -105,14 +106,13 @@ rs6000_lynx178_push_dummy_call (struct gdbarch *gdbarch,
 	     Always store the floating point value using the register's
 	     floating-point format.  */
 	  const int fp_regnum = tdep->ppc_fp0_regnum + 1 + f_argno;
-	  gdb_byte reg_val[MAX_REGISTER_SIZE];
+	  gdb_byte reg_val[PPC_MAX_REGISTER_SIZE];
 	  struct type *reg_type = register_type (gdbarch, fp_regnum);
 
 	  gdb_assert (len <= 8);
 
-	  convert_typed_floating (value_contents (arg), type,
-				  reg_val, reg_type);
-	  regcache_cooked_write (regcache, fp_regnum, reg_val);
+	  target_float_convert (value_contents (arg), type, reg_val, reg_type);
+	  regcache->cooked_write (fp_regnum, reg_val);
 	  ++f_argno;
 	}
 
@@ -122,15 +122,13 @@ rs6000_lynx178_push_dummy_call (struct gdbarch *gdbarch,
 	  /* Argument takes more than one register.  */
 	  while (argbytes < len)
 	    {
-	      gdb_byte word[MAX_REGISTER_SIZE];
+	      gdb_byte word[PPC_MAX_REGISTER_SIZE];
 	      memset (word, 0, reg_size);
 	      memcpy (word,
 		      ((char *) value_contents (arg)) + argbytes,
 		      (len - argbytes) > reg_size
 		        ? reg_size : len - argbytes);
-	      regcache_cooked_write (regcache,
-	                            tdep->ppc_gp0_regnum + 3 + ii,
-				    word);
+	      regcache->cooked_write (tdep->ppc_gp0_regnum + 3 + ii, word);
 	      ++ii, argbytes += reg_size;
 
 	      if (ii >= 8)
@@ -142,11 +140,11 @@ rs6000_lynx178_push_dummy_call (struct gdbarch *gdbarch,
       else
 	{
 	  /* Argument can fit in one register.  No problem.  */
-	  gdb_byte word[MAX_REGISTER_SIZE];
+	  gdb_byte word[PPC_MAX_REGISTER_SIZE];
 
 	  memset (word, 0, reg_size);
 	  memcpy (word, value_contents (arg), len);
-	  regcache_cooked_write (regcache, tdep->ppc_gp0_regnum + 3 +ii, word);
+	  regcache->cooked_write (tdep->ppc_gp0_regnum + 3 +ii, word);
 	}
       ++argno;
     }
@@ -229,9 +227,8 @@ ran_out_of_registers_for_arguments:
 
 	      gdb_assert (len <= 8);
 
-	      regcache_cooked_write (regcache,
-				     tdep->ppc_fp0_regnum + 1 + f_argno,
-				     value_contents (arg));
+	      regcache->cooked_write (tdep->ppc_fp0_regnum + 1 + f_argno,
+				      value_contents (arg));
 	      ++f_argno;
 	    }
 
@@ -281,9 +278,9 @@ rs6000_lynx178_return_value (struct gdbarch *gdbarch, struct value *function,
       && TYPE_LENGTH (valtype) == 16)
     {
       if (readbuf)
-	regcache_cooked_read (regcache, tdep->ppc_vr0_regnum + 2, readbuf);
+	regcache->cooked_read (tdep->ppc_vr0_regnum + 2, readbuf);
       if (writebuf)
-	regcache_cooked_write (regcache, tdep->ppc_vr0_regnum + 2, writebuf);
+	regcache->cooked_write (tdep->ppc_vr0_regnum + 2, writebuf);
 
       return RETURN_VALUE_REGISTER_CONVENTION;
     }
@@ -313,13 +310,13 @@ rs6000_lynx178_return_value (struct gdbarch *gdbarch, struct value *function,
 
       if (readbuf)
 	{
-	  regcache_cooked_read (regcache, tdep->ppc_fp0_regnum + 1, regval);
-	  convert_typed_floating (regval, regtype, readbuf, valtype);
+	  regcache->cooked_read (tdep->ppc_fp0_regnum + 1, regval);
+	  target_float_convert (regval, regtype, readbuf, valtype);
 	}
       if (writebuf)
 	{
-	  convert_typed_floating (writebuf, valtype, regval, regtype);
-	  regcache_cooked_write (regcache, tdep->ppc_fp0_regnum + 1, regval);
+	  target_float_convert (writebuf, valtype, regval, regtype);
+	  regcache->cooked_write (tdep->ppc_fp0_regnum + 1, regval);
 	}
 
       return RETURN_VALUE_REGISTER_CONVENTION;
@@ -365,16 +362,14 @@ rs6000_lynx178_return_value (struct gdbarch *gdbarch, struct value *function,
 	{
 	  gdb_byte regval[8];
 
-	  regcache_cooked_read (regcache, tdep->ppc_gp0_regnum + 3, regval);
-	  regcache_cooked_read (regcache, tdep->ppc_gp0_regnum + 4,
-				regval + 4);
+	  regcache->cooked_read (tdep->ppc_gp0_regnum + 3, regval);
+	  regcache->cooked_read (tdep->ppc_gp0_regnum + 4, regval + 4);
 	  memcpy (readbuf, regval, 8);
 	}
       if (writebuf)
 	{
-	  regcache_cooked_write (regcache, tdep->ppc_gp0_regnum + 3, writebuf);
-	  regcache_cooked_write (regcache, tdep->ppc_gp0_regnum + 4,
-				 writebuf + 4);
+	  regcache->cooked_write (tdep->ppc_gp0_regnum + 3, writebuf);
+	  regcache->cooked_write (tdep->ppc_gp0_regnum + 4, writebuf + 4);
 	}
 
       return RETURN_VALUE_REGISTER_CONVENTION;
@@ -410,9 +405,6 @@ rs6000_lynx178_init_osabi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_return_value (gdbarch, rs6000_lynx178_return_value);
   set_gdbarch_long_double_bit (gdbarch, 8 * TARGET_CHAR_BIT);
 }
-
-/* -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_rs6000_lynx178_tdep;
 
 void
 _initialize_rs6000_lynx178_tdep (void)

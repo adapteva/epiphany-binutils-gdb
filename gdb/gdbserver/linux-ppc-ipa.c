@@ -1,7 +1,7 @@
 /* GNU/Linux/PowerPC specific low level interface, for the in-process
    agent library for GDB.
 
-   Copyright (C) 2016 Free Software Foundation, Inc.
+   Copyright (C) 2016-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,7 +21,8 @@
 #include "server.h"
 #include <sys/mman.h>
 #include "tracepoint.h"
-#include "linux-ppc-tdesc.h"
+#include "arch/ppc-linux-tdesc.h"
+#include "linux-ppc-tdesc-init.h"
 #include <elf.h>
 #ifdef HAVE_GETAUXVAL
 #include <sys/auxv.h>

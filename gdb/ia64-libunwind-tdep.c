@@ -1,6 +1,6 @@
 /* Frame unwinder for ia64 frames using the libunwind library.
 
-   Copyright (C) 2003-2016 Free Software Foundation, Inc.
+   Copyright (C) 2003-2018 Free Software Foundation, Inc.
 
    Written by Jeff Johnston, contributed by Red Hat Inc.
 
@@ -36,6 +36,7 @@
 #include "ia64-libunwind-tdep.h"
 
 #include "complaints.h"
+#include "common/preprocessor.h"
 
 /* IA-64 is the only target that currently uses ia64-libunwind-tdep.
    Note how UNW_TARGET, UNW_OBJ, etc. are compile time constants below.
@@ -99,8 +100,6 @@ struct libunwind_frame_cache
 /* We need to qualify the function names with a platform-specific prefix
    to match the names used by the libunwind library.  The UNW_OBJ macro is
    provided by the libunwind.h header file.  */
-#define STRINGIFY2(name)	#name
-#define STRINGIFY(name)		STRINGIFY2(name)
 
 #ifndef LIBUNWIND_SO
 /* Use the stable ABI major version number.  `libunwind-ia64.so' is a link time
@@ -453,7 +452,7 @@ libunwind_sigtramp_frame_sniffer (const struct frame_unwind *self,
    are usually located at BOF, this is not always true and only the libunwind
    info can decipher where they actually are.  */
 int
-libunwind_get_reg_special (struct gdbarch *gdbarch, struct regcache *regcache,
+libunwind_get_reg_special (struct gdbarch *gdbarch, readable_regcache *regcache,
 			   int regnum, void *buf)
 {
   unw_cursor_t cursor;
@@ -592,9 +591,6 @@ libunwind_is_initialized (void)
 {
   return libunwind_initialized;
 }
-
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-void _initialize_libunwind_frame (void);
 
 void
 _initialize_libunwind_frame (void)

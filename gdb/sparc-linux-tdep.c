@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux SPARC.
 
-   Copyright (C) 2003-2016 Free Software Foundation, Inc.
+   Copyright (C) 2003-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -253,7 +253,7 @@ sparc32_linux_collect_core_fpregset (const struct regset *regset,
 static void
 sparc_linux_write_pc (struct regcache *regcache, CORE_ADDR pc)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_regcache_arch (regcache));
+  struct gdbarch_tdep *tdep = gdbarch_tdep (regcache->arch ());
   ULONGEST psr;
 
   regcache_cooked_write_unsigned (regcache, tdep->pc_regnum, pc);
@@ -274,9 +274,9 @@ sparc_linux_write_pc (struct regcache *regcache, CORE_ADDR pc)
 
 static LONGEST
 sparc32_linux_get_syscall_number (struct gdbarch *gdbarch,
-				  ptid_t ptid)
+				  thread_info *thread)
 {
-  struct regcache *regcache = get_thread_regcache (ptid);
+  struct regcache *regcache = get_thread_regcache (thread);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   /* The content of a register.  */
   gdb_byte buf[4];
@@ -286,7 +286,7 @@ sparc32_linux_get_syscall_number (struct gdbarch *gdbarch,
   /* Getting the system call number from the register.
      When dealing with the sparc architecture, this information
      is stored at the %g1 register.  */
-  regcache_cooked_read (regcache, SPARC_G1_REGNUM, buf);
+  regcache->cooked_read (SPARC_G1_REGNUM, buf);
 
   ret = extract_signed_integer (buf, 4, byte_order);
 
@@ -464,9 +464,6 @@ sparc32_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_gdb_signal_to_target (gdbarch,
 				    sparc32_linux_gdb_signal_to_target);
 }
-
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-extern void _initialize_sparc_linux_tdep (void);
 
 void
 _initialize_sparc_linux_tdep (void)

@@ -1,6 +1,6 @@
 /* Definitions for values of C expressions, for GDB.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,8 +20,9 @@
 #if !defined (VALUE_H)
 #define VALUE_H 1
 
-#include "doublest.h"
 #include "frame.h"		/* For struct frame_id.  */
+#include "extension.h"
+#include "common/gdb_ref_ptr.h"
 
 struct block;
 struct expression;
@@ -31,7 +32,6 @@ struct type;
 struct ui_file;
 struct language_defn;
 struct value_print_options;
-struct xmethod_worker;
 
 /* Values can be partially 'optimized out' and/or 'unavailable'.
    These are distinct states and have different string representations
@@ -87,6 +87,34 @@ struct xmethod_worker;
    variable).  */
 
 struct value;
+
+/* Increase VAL's reference count.  */
+
+extern void value_incref (struct value *val);
+
+/* Decrease VAL's reference count.  When the reference count drops to
+   0, VAL will be freed.  */
+
+extern void value_decref (struct value *val);
+
+/* A policy class to interface gdb::ref_ptr with struct value.  */
+
+struct value_ref_policy
+{
+  static void incref (struct value *ptr)
+  {
+    value_incref (ptr);
+  }
+
+  static void decref (struct value *ptr)
+  {
+    value_decref (ptr);
+  }
+};
+
+/* A gdb:;ref_ptr pointer to a struct value.  */
+
+typedef gdb::ref_ptr<struct value, value_ref_policy> value_ref_ptr;
 
 /* Values are stored in a chain, so that they can be deleted easily
    over calls to the inferior.  Values assigned to internal variables,
@@ -434,13 +462,21 @@ extern void set_value_address (struct value *, CORE_ADDR);
 extern struct internalvar **deprecated_value_internalvar_hack (struct value *);
 #define VALUE_INTERNALVAR(val) (*deprecated_value_internalvar_hack (val))
 
-/* Frame register value is relative to.  This will be described in the
-   lval enum above as "lval_register".  */
-extern struct frame_id *deprecated_value_frame_id_hack (struct value *);
-#define VALUE_FRAME_ID(val) (*deprecated_value_frame_id_hack (val))
+/* Frame ID of "next" frame to which a register value is relative.  A
+   register value is indicated by VALUE_LVAL being set to lval_register.
+   So, if the register value is found relative to frame F, then the
+   frame id of F->next will be stored in VALUE_NEXT_FRAME_ID.  */
+extern struct frame_id *deprecated_value_next_frame_id_hack (struct value *);
+#define VALUE_NEXT_FRAME_ID(val) (*deprecated_value_next_frame_id_hack (val))
+
+/* Frame ID of frame to which a register value is relative.  This is
+   similar to VALUE_NEXT_FRAME_ID, above, but may not be assigned to. 
+   Note that VALUE_FRAME_ID effectively undoes the "next" operation
+   that was performed during the assignment to VALUE_NEXT_FRAME_ID.  */
+#define VALUE_FRAME_ID(val) (get_prev_frame_id_by_id (VALUE_NEXT_FRAME_ID (val)))
 
 /* Register number if the value is from a register.  */
-extern short *deprecated_value_regnum_hack (struct value *);
+extern int *deprecated_value_regnum_hack (struct value *);
 #define VALUE_REGNUM(val) (*deprecated_value_regnum_hack (val))
 
 /* Return value after lval_funcs->coerce_ref (after check_typedef).  Return
@@ -542,12 +578,12 @@ extern void mark_value_bits_unavailable (struct value *value,
 
    then:
 
-     value_contents_eq(val, 0, val, 8, 6) => 1
-     value_contents_eq(val, 0, val, 4, 4) => 0
-     value_contents_eq(val, 0, val, 8, 8) => 0
-     value_contents_eq(val, 4, val, 12, 2) => 1
-     value_contents_eq(val, 4, val, 12, 4) => 0
-     value_contents_eq(val, 3, val, 4, 4) => 0
+     value_contents_eq(val, 0, val, 8, 6) => true
+     value_contents_eq(val, 0, val, 4, 4) => false
+     value_contents_eq(val, 0, val, 8, 8) => false
+     value_contents_eq(val, 4, val, 12, 2) => true
+     value_contents_eq(val, 4, val, 12, 4) => true
+     value_contents_eq(val, 3, val, 4, 4) => true
 
    If 'x's represent an unavailable byte, 'o' represents an optimized
    out byte, in a value with length 8:
@@ -557,9 +593,9 @@ extern void mark_value_bits_unavailable (struct value *value,
 
    then:
 
-     value_contents_eq(val, 0, val, 2, 2) => 1
-     value_contents_eq(val, 4, val, 6, 2) => 1
-     value_contents_eq(val, 0, val, 4, 4) => 0
+     value_contents_eq(val, 0, val, 2, 2) => true
+     value_contents_eq(val, 4, val, 6, 2) => true
+     value_contents_eq(val, 0, val, 4, 4) => true
 
    We only know whether a value chunk is unavailable or optimized out
    if we've tried to read it.  As this routine is used by printing
@@ -567,18 +603,17 @@ extern void mark_value_bits_unavailable (struct value *value,
    after the inferior is gone, it works with const values.  Therefore,
    this routine must not be called with lazy values.  */
 
-extern int value_contents_eq (const struct value *val1, LONGEST offset1,
-			      const struct value *val2, LONGEST offset2,
-			      LONGEST length);
+extern bool value_contents_eq (const struct value *val1, LONGEST offset1,
+			       const struct value *val2, LONGEST offset2,
+			       LONGEST length);
 
 /* Read LENGTH addressable memory units starting at MEMADDR into BUFFER,
    which is (or will be copied to) VAL's contents buffer offset by
-   EMBEDDED_OFFSET (that is, to &VAL->contents[EMBEDDED_OFFSET]).
-   Marks value contents ranges as unavailable if the corresponding
-   memory is likewise unavailable.  STACK indicates whether the memory
-   is known to be stack memory.  */
+   BIT_OFFSET bits.  Marks value contents ranges as unavailable if
+   the corresponding memory is likewise unavailable.  STACK indicates
+   whether the memory is known to be stack memory.  */
 
-extern void read_value_memory (struct value *val, LONGEST embedded_offset,
+extern void read_value_memory (struct value *val, LONGEST bit_offset,
 			       int stack, CORE_ADDR memaddr,
 			       gdb_byte *buffer, size_t length);
 
@@ -601,13 +636,14 @@ extern int print_address_demangle (const struct value_print_options *,
 				   struct gdbarch *, CORE_ADDR,
 				   struct ui_file *, int);
 
+/* Returns true if VAL is of floating-point type.  In addition,
+   throws an error if the value is an invalid floating-point value.  */
+extern bool is_floating_value (struct value *val);
+
 extern LONGEST value_as_long (struct value *val);
-extern DOUBLEST value_as_double (struct value *val);
 extern CORE_ADDR value_as_address (struct value *val);
 
 extern LONGEST unpack_long (struct type *type, const gdb_byte *valaddr);
-extern DOUBLEST unpack_double (struct type *type, const gdb_byte *valaddr,
-			       int *invp);
 extern CORE_ADDR unpack_pointer (struct type *type, const gdb_byte *valaddr);
 
 extern LONGEST unpack_field_as_long (struct type *type,
@@ -633,10 +669,9 @@ extern void pack_long (gdb_byte *buf, struct type *type, LONGEST num);
 extern struct value *value_from_longest (struct type *type, LONGEST num);
 extern struct value *value_from_ulongest (struct type *type, ULONGEST num);
 extern struct value *value_from_pointer (struct type *type, CORE_ADDR addr);
-extern struct value *value_from_double (struct type *type, DOUBLEST num);
-extern struct value *value_from_decfloat (struct type *type,
-					  const gdb_byte *decbytes);
 extern struct value *value_from_history_ref (const char *, const char **);
+extern struct value *value_from_component (struct value *, struct type *,
+					   LONGEST);
 
 extern struct value *value_at (struct type *type, CORE_ADDR addr);
 extern struct value *value_at_lazy (struct type *type, CORE_ADDR addr);
@@ -704,6 +739,42 @@ extern struct value *value_mark (void);
 
 extern void value_free_to_mark (const struct value *mark);
 
+/* A helper class that uses value_mark at construction time and calls
+   value_free_to_mark in the destructor.  This is used to clear out
+   temporary values created during the lifetime of this object.  */
+class scoped_value_mark
+{
+ public:
+
+  scoped_value_mark ()
+    : m_value (value_mark ())
+  {
+  }
+
+  ~scoped_value_mark ()
+  {
+    free_to_mark ();
+  }
+
+  scoped_value_mark (scoped_value_mark &&other) = default;
+
+  DISABLE_COPY_AND_ASSIGN (scoped_value_mark);
+
+  /* Free the values currently on the value stack.  */
+  void free_to_mark ()
+  {
+    if (m_value != NULL)
+      {
+	value_free_to_mark (m_value);
+	m_value = NULL;
+      }
+  }
+
+ private:
+
+  const struct value *m_value;
+};
+
 extern struct value *value_cstring (const char *ptr, ssize_t len,
 				    struct type *char_type);
 extern struct value *value_string (const char *ptr, ssize_t len,
@@ -733,7 +804,7 @@ extern struct value *value_ind (struct value *arg1);
 
 extern struct value *value_addr (struct value *arg1);
 
-extern struct value *value_ref (struct value *arg1);
+extern struct value *value_ref (struct value *arg1, enum type_code refcode);
 
 extern struct value *value_assign (struct value *toval,
 				   struct value *fromval);
@@ -833,12 +904,21 @@ extern struct value *evaluate_subexp (struct type *expect_type,
 extern struct value *evaluate_subexpression_type (struct expression *exp,
 						  int subexp);
 
+extern value *evaluate_var_value (enum noside noside, const block *blk,
+				  symbol *var);
+
+extern value *evaluate_var_msym_value (enum noside noside,
+				       struct objfile *objfile,
+				       minimal_symbol *msymbol);
+
+extern value *eval_skip_value (expression *exp);
+
 extern void fetch_subexp_value (struct expression *exp, int *pc,
 				struct value **valp, struct value **resultp,
-				struct value **val_chain,
+				std::vector<value_ref_ptr> *val_chain,
 				int preserve_errors);
 
-extern char *extract_field_op (struct expression *exp, int *subexp);
+extern const char *extract_field_op (struct expression *exp, int *subexp);
 
 extern struct value *evaluate_subexp_with_coercion (struct expression *,
 						    int *, enum noside);
@@ -886,7 +966,8 @@ extern struct internalvar *lookup_only_internalvar (const char *name);
 
 extern struct internalvar *create_internalvar (const char *name);
 
-extern VEC (char_ptr) *complete_internalvar (const char *name);
+extern void complete_internalvar (completion_tracker &tracker,
+				  const char *name);
 
 /* An internalvar can be dynamically computed by supplying a vector of
    function pointers to perform various operations.  */
@@ -972,17 +1053,7 @@ extern int unop_user_defined_p (enum exp_opcode op, struct value *arg1);
 
 extern int destructor_name_p (const char *name, struct type *type);
 
-extern void value_incref (struct value *val);
-
-extern void value_free (struct value *val);
-
-extern void free_all_values (void);
-
-extern void free_value_chain (struct value *v);
-
-extern void release_value (struct value *val);
-
-extern void release_value_or_incref (struct value *val);
+extern value_ref_ptr release_value (struct value *val);
 
 extern int record_latest_value (struct value *val);
 
@@ -992,7 +1063,7 @@ extern void modify_field (struct type *type, gdb_byte *addr,
 extern void type_print (struct type *type, const char *varstring,
 			struct ui_file *stream, int show);
 
-extern char *type_to_string (struct type *type);
+extern std::string type_to_string (struct type *type);
 
 extern gdb_byte *baseclass_addr (struct type *type, int index,
 				 gdb_byte *valaddr,
@@ -1004,9 +1075,6 @@ extern void print_longest (struct ui_file *stream, int format,
 extern void print_floating (const gdb_byte *valaddr, struct type *type,
 			    struct ui_file *stream);
 
-extern void print_decimal_floating (const gdb_byte *valaddr, struct type *type,
-				    struct ui_file *stream);
-
 extern void value_print (struct value *val, struct ui_file *stream,
 			 const struct value_print_options *options);
 
@@ -1014,12 +1082,19 @@ extern void value_print_array_elements (struct value *val,
 					struct ui_file *stream, int format,
 					enum val_prettyformat pretty);
 
-extern struct value *value_release_to_mark (const struct value *mark);
+/* Release values from the value chain and return them.  Values
+   created after MARK are released.  If MARK is nullptr, or if MARK is
+   not found on the value chain, then all values are released.  Values
+   are returned in reverse order of creation; that is, newest
+   first.  */
 
-extern void val_print (struct type *type, const gdb_byte *valaddr,
+extern std::vector<value_ref_ptr> value_release_to_mark
+    (const struct value *mark);
+
+extern void val_print (struct type *type,
 		       LONGEST embedded_offset, CORE_ADDR address,
 		       struct ui_file *stream, int recurse,
-		       const struct value *val,
+		       struct value *val,
 		       const struct value_print_options *options,
 		       const struct language_defn *language);
 
@@ -1094,12 +1169,23 @@ struct value *call_internal_function (struct gdbarch *gdbarch,
 
 char *value_internal_function_name (struct value *);
 
-extern struct value *value_of_xmethod (struct xmethod_worker *);
+/* Build a value wrapping and representing WORKER.  The value takes ownership
+   of the xmethod_worker object.  */
+
+extern struct value *value_from_xmethod (xmethod_worker_up &&worker);
 
 extern struct type *result_type_of_xmethod (struct value *method,
 					    int argc, struct value **argv);
 
 extern struct value *call_xmethod (struct value *method,
 				   int argc, struct value **argv);
+
+/* Given a discriminated union type and some corresponding value
+   contents, this will return the field index of the currently active
+   variant.  This will throw an exception if no active variant can be
+   found.  */
+
+extern int value_union_variant (struct type *union_type,
+				const gdb_byte *contents);
 
 #endif /* !defined (VALUE_H) */

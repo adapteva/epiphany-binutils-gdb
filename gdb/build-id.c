@@ -1,6 +1,6 @@
 /* build-id-related functions.
 
-   Copyright (C) 1991-2016 Free Software Foundation, Inc.
+   Copyright (C) 1991-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -67,80 +67,65 @@ build_id_verify (bfd *abfd, size_t check_len, const bfd_byte *check)
 
 /* See build-id.h.  */
 
-bfd *
+gdb_bfd_ref_ptr
 build_id_to_debug_bfd (size_t build_id_len, const bfd_byte *build_id)
 {
-  char *link, *debugdir;
-  VEC (char_ptr) *debugdir_vec;
-  struct cleanup *back_to;
-  int ix;
-  bfd *abfd = NULL;
-  int alloc_len;
-
-  /* DEBUG_FILE_DIRECTORY/.build-id/ab/cdef */
-  alloc_len = (strlen (debug_file_directory)
-	       + (sizeof "/.build-id/" - 1) + 1
-	       + 2 * build_id_len + (sizeof ".debug" - 1) + 1);
-  link = (char *) alloca (alloc_len);
+  gdb_bfd_ref_ptr abfd;
 
   /* Keep backward compatibility so that DEBUG_FILE_DIRECTORY being "" will
      cause "/.build-id/..." lookups.  */
 
-  debugdir_vec = dirnames_to_char_ptr_vec (debug_file_directory);
-  back_to = make_cleanup_free_char_ptr_vec (debugdir_vec);
+  std::vector<gdb::unique_xmalloc_ptr<char>> debugdir_vec
+    = dirnames_to_char_ptr_vec (debug_file_directory);
 
-  for (ix = 0; VEC_iterate (char_ptr, debugdir_vec, ix, debugdir); ++ix)
+  for (const gdb::unique_xmalloc_ptr<char> &debugdir : debugdir_vec)
     {
-      size_t debugdir_len = strlen (debugdir);
       const gdb_byte *data = build_id;
       size_t size = build_id_len;
-      char *s;
-      char *filename = NULL;
-      struct cleanup *inner;
 
-      memcpy (link, debugdir, debugdir_len);
-      s = &link[debugdir_len];
-      s += sprintf (s, "/.build-id/");
+      std::string link = debugdir.get ();
+      link += "/.build-id/";
+
       if (size > 0)
 	{
 	  size--;
-	  s += sprintf (s, "%02x", (unsigned) *data++);
+	  string_appendf (link, "%02x/", (unsigned) *data++);
 	}
-      if (size > 0)
-	*s++ = '/';
+
       while (size-- > 0)
-	s += sprintf (s, "%02x", (unsigned) *data++);
-      strcpy (s, ".debug");
+	string_appendf (link, "%02x", (unsigned) *data++);
+
+      link += ".debug";
+
+      if (separate_debug_file_debug)
+	printf_unfiltered (_("  Trying %s\n"), link.c_str ());
 
       /* lrealpath() is expensive even for the usually non-existent files.  */
-      if (access (link, F_OK) == 0)
-	filename = lrealpath (link);
+      gdb::unique_xmalloc_ptr<char> filename;
+      if (access (link.c_str (), F_OK) == 0)
+	filename.reset (lrealpath (link.c_str ()));
 
       if (filename == NULL)
 	continue;
 
       /* We expect to be silent on the non-existing files.  */
-      inner = make_cleanup (xfree, filename);
-      abfd = gdb_bfd_open (filename, gnutarget, -1);
-      do_cleanups (inner);
+      abfd = gdb_bfd_open (filename.get (), gnutarget, -1);
 
       if (abfd == NULL)
 	continue;
 
-      if (build_id_verify (abfd, build_id_len, build_id))
+      if (build_id_verify (abfd.get(), build_id_len, build_id))
 	break;
 
-      gdb_bfd_unref (abfd);
-      abfd = NULL;
+      abfd.release ();
     }
 
-  do_cleanups (back_to);
   return abfd;
 }
 
 /* See build-id.h.  */
 
-char *
+std::string
 find_separate_debug_file_by_buildid (struct objfile *objfile)
 {
   const struct bfd_build_id *build_id;
@@ -148,25 +133,21 @@ find_separate_debug_file_by_buildid (struct objfile *objfile)
   build_id = build_id_bfd_get (objfile->obfd);
   if (build_id != NULL)
     {
-      bfd *abfd;
+      if (separate_debug_file_debug)
+	printf_unfiltered (_("\nLooking for separate debug info (build-id) for "
+			     "%s\n"), objfile_name (objfile));
 
-      abfd = build_id_to_debug_bfd (build_id->size, build_id->data);
+      gdb_bfd_ref_ptr abfd (build_id_to_debug_bfd (build_id->size,
+						   build_id->data));
       /* Prevent looping on a stripped .debug file.  */
       if (abfd != NULL
-	  && filename_cmp (bfd_get_filename (abfd),
+	  && filename_cmp (bfd_get_filename (abfd.get ()),
 			   objfile_name (objfile)) == 0)
-        {
-	  warning (_("\"%s\": separate debug info file has no debug info"),
-		   bfd_get_filename (abfd));
-	  gdb_bfd_unref (abfd);
-	}
+	warning (_("\"%s\": separate debug info file has no debug info"),
+		 bfd_get_filename (abfd.get ()));
       else if (abfd != NULL)
-	{
-	  char *result = xstrdup (bfd_get_filename (abfd));
-
-	  gdb_bfd_unref (abfd);
-	  return result;
-	}
+	return std::string (bfd_get_filename (abfd.get ()));
     }
-  return NULL;
+
+  return std::string ();
 }

@@ -1,6 +1,6 @@
 /* Convert symbols from GDB to GCC
 
-   Copyright (C) 2014-2016 Free Software Foundation, Inc.
+   Copyright (C) 2014-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -107,7 +107,6 @@ error_symbol_once (struct compile_c_instance *context,
 {
   struct symbol_error search;
   struct symbol_error *err;
-  char *message;
 
   if (context->symbol_err_map == NULL)
     return;
@@ -117,10 +116,9 @@ error_symbol_once (struct compile_c_instance *context,
   if (err == NULL || err->message == NULL)
     return;
 
-  message = err->message;
+  gdb::unique_xmalloc_ptr<char> message (err->message);
   err->message = NULL;
-  make_cleanup (xfree, message);
-  error (_("%s"), message);
+  error (_("%s"), message.get ());
 }
 
 
@@ -128,10 +126,11 @@ error_symbol_once (struct compile_c_instance *context,
 /* Compute the name of the pointer representing a local symbol's
    address.  */
 
-static char *
+static gdb::unique_xmalloc_ptr<char>
 symbol_substitution_name (struct symbol *sym)
 {
-  return concat ("__", SYMBOL_NATURAL_NAME (sym), "_ptr", (char *) NULL);
+  return gdb::unique_xmalloc_ptr<char>
+    (concat ("__", SYMBOL_NATURAL_NAME (sym), "_ptr", (char *) NULL));
 }
 
 /* Convert a given symbol, SYM, to the compiler's representation.
@@ -170,7 +169,7 @@ convert_one_symbol (struct compile_c_instance *context,
       gcc_decl decl;
       enum gcc_c_symbol_kind kind;
       CORE_ADDR addr = 0;
-      char *symbol_name = NULL;
+      gdb::unique_xmalloc_ptr<char> symbol_name;
 
       switch (SYMBOL_CLASS (sym.symbol))
 	{
@@ -185,7 +184,7 @@ convert_one_symbol (struct compile_c_instance *context,
 
 	case LOC_BLOCK:
 	  kind = GCC_C_SYMBOL_FUNCTION;
-	  addr = BLOCK_START (SYMBOL_BLOCK_VALUE (sym.symbol));
+	  addr = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym.symbol));
 	  if (is_global && TYPE_GNU_IFUNC (SYMBOL_TYPE (sym.symbol)))
 	    addr = gnu_ifunc_resolve_addr (target_gdbarch (), addr);
 	  break;
@@ -290,13 +289,11 @@ convert_one_symbol (struct compile_c_instance *context,
 	     SYMBOL_NATURAL_NAME (sym.symbol),
 	     kind,
 	     sym_type,
-	     symbol_name, addr,
+	     symbol_name.get (), addr,
 	     filename, line);
 
 	  C_CTX (context)->c_ops->bind (C_CTX (context), decl, is_global);
 	}
-
-      xfree (symbol_name);
     }
 }
 
@@ -379,9 +376,7 @@ convert_symbol_bmsym (struct compile_c_instance *context,
       break;
 
     case mst_text_gnu_ifunc:
-      /* nodebug_text_gnu_ifunc_symbol would cause:
-	 function return type cannot be function  */
-      type = objfile_type (objfile)->nodebug_text_symbol;
+      type = objfile_type (objfile)->nodebug_text_gnu_ifunc_symbol;
       kind = GCC_C_SYMBOL_FUNCTION;
       addr = gnu_ifunc_resolve_addr (target_gdbarch (), addr);
       break;
@@ -502,7 +497,7 @@ gcc_symbol_address (void *datum, struct gcc_c_context *gcc_context,
 	    fprintf_unfiltered (gdb_stdlog,
 				"gcc_symbol_address \"%s\": full symbol\n",
 				identifier);
-	  result = BLOCK_START (SYMBOL_BLOCK_VALUE (sym));
+	  result = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym));
 	  if (TYPE_GNU_IFUNC (SYMBOL_TYPE (sym)))
 	    result = gnu_ifunc_resolve_addr (target_gdbarch (), result);
 	  found = 1;
@@ -584,7 +579,7 @@ symbol_seen (htab_t hashtab, struct symbol *sym)
 
 static void
 generate_vla_size (struct compile_c_instance *compiler,
-		   struct ui_file *stream,
+		   string_file &stream,
 		   struct gdbarch *gdbarch,
 		   unsigned char *registers_used,
 		   CORE_ADDR pc,
@@ -593,7 +588,7 @@ generate_vla_size (struct compile_c_instance *compiler,
 {
   type = check_typedef (type);
 
-  if (TYPE_CODE (type) == TYPE_CODE_REF)
+  if (TYPE_IS_REFERENCE (type))
     type = check_typedef (TYPE_TARGET_TYPE (type));
 
   switch (TYPE_CODE (type))
@@ -604,13 +599,11 @@ generate_vla_size (struct compile_c_instance *compiler,
 	    || TYPE_HIGH_BOUND_KIND (type) == PROP_LOCLIST)
 	  {
 	    const struct dynamic_prop *prop = &TYPE_RANGE_DATA (type)->high;
-	    char *name = c_get_range_decl_name (prop);
-	    struct cleanup *cleanup = make_cleanup (xfree, name);
+	    std::string name = c_get_range_decl_name (prop);
 
-	    dwarf2_compile_property_to_c (stream, name,
+	    dwarf2_compile_property_to_c (stream, name.c_str (),
 					  gdbarch, registers_used,
 					  prop, pc, sym);
-	    do_cleanups (cleanup);
 	  }
       }
       break;
@@ -640,7 +633,7 @@ generate_vla_size (struct compile_c_instance *compiler,
 
 static void
 generate_c_for_for_one_variable (struct compile_c_instance *compiler,
-				 struct ui_file *stream,
+				 string_file &stream,
 				 struct gdbarch *gdbarch,
 				 unsigned char *registers_used,
 				 CORE_ADDR pc,
@@ -651,32 +644,30 @@ generate_c_for_for_one_variable (struct compile_c_instance *compiler,
     {
       if (is_dynamic_type (SYMBOL_TYPE (sym)))
 	{
-	  struct ui_file *size_file = mem_fileopen ();
-	  struct cleanup *cleanup = make_cleanup_ui_file_delete (size_file);
+	  /* We need to emit to a temporary buffer in case an error
+	     occurs in the middle.  */
+	  string_file local_file;
 
-	  generate_vla_size (compiler, size_file, gdbarch, registers_used, pc,
+	  generate_vla_size (compiler, local_file, gdbarch, registers_used, pc,
 			     SYMBOL_TYPE (sym), sym);
-	  ui_file_put (size_file, ui_file_write_for_put, stream);
 
-	  do_cleanups (cleanup);
+	  stream.write (local_file.c_str (), local_file.size ());
 	}
 
       if (SYMBOL_COMPUTED_OPS (sym) != NULL)
 	{
-	  char *generated_name = symbol_substitution_name (sym);
-	  struct cleanup *cleanup = make_cleanup (xfree, generated_name);
+	  gdb::unique_xmalloc_ptr<char> generated_name
+	    = symbol_substitution_name (sym);
 	  /* We need to emit to a temporary buffer in case an error
 	     occurs in the middle.  */
-	  struct ui_file *local_file = mem_fileopen ();
+	  string_file local_file;
 
-	  make_cleanup_ui_file_delete (local_file);
 	  SYMBOL_COMPUTED_OPS (sym)->generate_c_location (sym, local_file,
 							  gdbarch,
 							  registers_used,
-							  pc, generated_name);
-	  ui_file_put (local_file, ui_file_write_for_put, stream);
-
-	  do_cleanups (cleanup);
+							  pc,
+							  generated_name.get ());
+	  stream.write (local_file.c_str (), local_file.size ());
 	}
       else
 	{
@@ -719,13 +710,12 @@ generate_c_for_for_one_variable (struct compile_c_instance *compiler,
 
 unsigned char *
 generate_c_for_variable_locations (struct compile_c_instance *compiler,
-				   struct ui_file *stream,
+				   string_file &stream,
 				   struct gdbarch *gdbarch,
 				   const struct block *block,
 				   CORE_ADDR pc)
 {
-  struct cleanup *cleanup, *outer;
-  htab_t symhash;
+  struct cleanup *outer;
   const struct block *static_block = block_static_block (block);
   unsigned char *registers_used;
 
@@ -739,9 +729,8 @@ generate_c_for_variable_locations (struct compile_c_instance *compiler,
 
   /* Ensure that a given name is only entered once.  This reflects the
      reality of shadowing.  */
-  symhash = htab_create_alloc (1, hash_symname, eq_symname, NULL,
-			       xcalloc, xfree);
-  cleanup = make_cleanup_htab_delete (symhash);
+  htab_up symhash (htab_create_alloc (1, hash_symname, eq_symname, NULL,
+				      xcalloc, xfree));
 
   while (1)
     {
@@ -754,7 +743,7 @@ generate_c_for_variable_locations (struct compile_c_instance *compiler,
 	   sym != NULL;
 	   sym = block_iterator_next (&iter))
 	{
-	  if (!symbol_seen (symhash, sym))
+	  if (!symbol_seen (symhash.get (), sym))
 	    generate_c_for_for_one_variable (compiler, stream, gdbarch,
 					     registers_used, pc, sym);
 	}
@@ -766,7 +755,6 @@ generate_c_for_variable_locations (struct compile_c_instance *compiler,
       block = BLOCK_SUPERBLOCK (block);
     }
 
-  do_cleanups (cleanup);
   discard_cleanups (outer);
   return registers_used;
 }

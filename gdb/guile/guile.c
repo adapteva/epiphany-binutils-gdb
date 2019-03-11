@@ -1,6 +1,6 @@
 /* General GDB/Guile code.
 
-   Copyright (C) 2014-2016 Free Software Foundation, Inc.
+   Copyright (C) 2014-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -77,7 +77,7 @@ extern const struct extension_language_ops guile_extension_ops;
 
 /* The main struct describing GDB's interface to the Guile
    extension language.  */
-EXPORTED_CONST struct extension_language_defn extension_language_guile =
+extern const struct extension_language_defn extension_language_guile =
 {
   EXT_LANG_GUILE,
   "guile",
@@ -161,12 +161,9 @@ const struct extension_language_ops guile_extension_ops =
 /* Implementation of the gdb "guile-repl" command.  */
 
 static void
-guile_repl_command (char *arg, int from_tty)
+guile_repl_command (const char *arg, int from_tty)
 {
-  struct cleanup *cleanup;
-
-  cleanup = make_cleanup_restore_integer (&current_ui->async);
-  current_ui->async = 0;
+  scoped_restore restore_async = make_scoped_restore (&current_ui->async, 0);
 
   arg = skip_spaces (arg);
 
@@ -183,8 +180,6 @@ guile_repl_command (char *arg, int from_tty)
       dont_repeat ();
       gdbscm_enter_repl ();
     }
-
-  do_cleanups (cleanup);
 }
 
 /* Implementation of the gdb "guile" command.
@@ -194,12 +189,9 @@ guile_repl_command (char *arg, int from_tty)
    TODO: Add the result to Guile's history?  */
 
 static void
-guile_command (char *arg, int from_tty)
+guile_command (const char *arg, int from_tty)
 {
-  struct cleanup *cleanup;
-
-  cleanup = make_cleanup_restore_integer (&current_ui->async);
-  current_ui->async = 0;
+  scoped_restore restore_async = make_scoped_restore (&current_ui->async, 0);
 
   arg = skip_spaces (arg);
 
@@ -209,19 +201,18 @@ guile_command (char *arg, int from_tty)
 
       if (msg != NULL)
 	{
+	  /* It is ok that this is a "dangling cleanup" because we
+	     throw immediately.  */
 	  make_cleanup (xfree, msg);
 	  error ("%s", msg);
 	}
     }
   else
     {
-      struct command_line *l = get_command_line (guile_control, "");
+      counted_command_line l = get_command_line (guile_control, "");
 
-      make_cleanup_free_command_lines (&l);
-      execute_control_command_untraced (l);
+      execute_control_command_untraced (l.get ());
     }
-
-  do_cleanups (cleanup);
 }
 
 /* Given a command_line, return a command string suitable for passing
@@ -265,12 +256,12 @@ gdbscm_eval_from_control_command
   char *script, *msg;
   struct cleanup *cleanup;
 
-  if (cmd->body_count != 1)
+  if (cmd->body_list_1 != nullptr)
     error (_("Invalid \"guile\" block structure."));
 
   cleanup = make_cleanup (null_cleanup, NULL);
 
-  script = compute_scheme_string (cmd->body_list[0]);
+  script = compute_scheme_string (cmd->body_list_0.get ());
   msg = gdbscm_safe_eval_string (script, 0);
   xfree (script);
   if (msg != NULL)
@@ -311,7 +302,6 @@ gdbscm_execute_gdb_command (SCM command_scm, SCM rest)
   int from_tty = 0, to_string = 0;
   const SCM keywords[] = { from_tty_keyword, to_string_keyword, SCM_BOOL_F };
   char *command;
-  char *result = NULL;
   struct cleanup *cleanups;
   struct gdb_exception except = exception_none;
 
@@ -324,26 +314,21 @@ gdbscm_execute_gdb_command (SCM command_scm, SCM rest)
      executed.  */
   cleanups = make_cleanup (xfree, command);
 
+  std::string to_string_res;
+
   TRY
     {
-      struct cleanup *inner_cleanups;
+      scoped_restore restore_async = make_scoped_restore (&current_ui->async,
+							  0);
 
-      inner_cleanups = make_cleanup_restore_integer (&current_ui->async);
-      current_ui->async = 0;
-
-      prevent_dont_repeat ();
+      scoped_restore preventer = prevent_dont_repeat ();
       if (to_string)
-	result = execute_command_to_string (command, from_tty);
+	to_string_res = execute_command_to_string (command, from_tty);
       else
-	{
-	  execute_command (command, from_tty);
-	  result = NULL;
-	}
+	execute_command (command, from_tty);
 
       /* Do any commands attached to breakpoint we stopped at.  */
       bpstat_do_actions ();
-
-      do_cleanups (inner_cleanups);
     }
   CATCH (ex, RETURN_MASK_ALL)
     {
@@ -354,12 +339,8 @@ gdbscm_execute_gdb_command (SCM command_scm, SCM rest)
   do_cleanups (cleanups);
   GDBSCM_HANDLE_GDB_EXCEPTION (except);
 
-  if (result)
-    {
-      SCM r = gdbscm_scm_from_c_string (result);
-      xfree (result);
-      return r;
-    }
+  if (to_string)
+    return gdbscm_scm_from_c_string (to_string_res.c_str ());
   return SCM_UNSPECIFIED;
 }
 
@@ -409,7 +390,7 @@ gdbscm_target_config (void)
    commands. */
 
 static void
-guile_repl_command (char *arg, int from_tty)
+guile_repl_command (const char *arg, int from_tty)
 {
   arg = skip_spaces (arg);
   if (arg && *arg)
@@ -418,7 +399,7 @@ guile_repl_command (char *arg, int from_tty)
 }
 
 static void
-guile_command (char *arg, int from_tty)
+guile_command (const char *arg, int from_tty)
 {
   arg = skip_spaces (arg);
   if (arg && *arg)
@@ -427,11 +408,9 @@ guile_command (char *arg, int from_tty)
     {
       /* Even if Guile isn't enabled, we still have to slurp the
 	 command list to the corresponding "end".  */
-      struct command_line *l = get_command_line (guile_control, "");
-      struct cleanup *cleanups = make_cleanup_free_command_lines (&l);
+      counted_command_line l = get_command_line (guile_control, "");
 
-      execute_control_command_untraced (l);
-      do_cleanups (cleanups);
+      execute_control_command_untraced (l.get ());
     }
 }
 
@@ -446,7 +425,7 @@ static struct cmd_list_element *info_guile_list;
 /* Function for use by 'set guile' prefix command.  */
 
 static void
-set_guile_command (char *args, int from_tty)
+set_guile_command (const char *args, int from_tty)
 {
   help_list (set_guile_list, "set guile ", all_commands, gdb_stdout);
 }
@@ -454,7 +433,7 @@ set_guile_command (char *args, int from_tty)
 /* Function for use by 'show guile' prefix command.  */
 
 static void
-show_guile_command (char *args, int from_tty)
+show_guile_command (const char *args, int from_tty)
 {
   cmd_show_list (show_guile_list, from_tty, "");
 }
@@ -464,7 +443,7 @@ show_guile_command (char *args, int from_tty)
    "info scheme" with no args.  */
 
 static void
-info_guile_command (char *args, int from_tty)
+info_guile_command (const char *args, int from_tty)
 {
   printf_unfiltered (_("\"info guile\" must be followed"
 		       " by the name of an info command.\n"));
@@ -626,7 +605,6 @@ static void
 initialize_scheme_side (void)
 {
   char *boot_scm_path;
-  char *msg;
 
   guile_datadir = concat (gdb_datadir, SLASH_STRING, "guile", (char *) NULL);
   boot_scm_path = concat (guile_datadir, SLASH_STRING, "gdb",
@@ -746,6 +724,9 @@ gdbscm_set_backtrace (int enable)
 
 #endif /* HAVE_GUILE */
 
+/* See guile.h.  */
+cmd_list_element *guile_cmd_element = nullptr;
+
 /* Install the various gdb commands used by Guile.  */
 
 static void
@@ -771,7 +752,7 @@ This command is only a placeholder.")
 
   /* Since "help guile" is easy to type, and intuitive, we add general help
      in using GDB+Guile to this command.  */
-  add_com ("guile", class_obscure, guile_command,
+  guile_cmd_element = add_com ("guile", class_obscure, guile_command,
 #ifdef HAVE_GUILE
 	   _("\
 Evaluate one or more Guile expressions.\n\
@@ -835,9 +816,6 @@ message == an error message without a stack will be printed."),
 			NULL, NULL,
 			&set_guile_list, &show_guile_list);
 }
-
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_guile;
 
 void
 _initialize_guile (void)

@@ -1,6 +1,6 @@
 /* Private partial symbol table definitions.
 
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,8 +21,7 @@
 #define PSYMPRIV_H
 
 #include "psymtab.h"
-
-struct psymbol_allocation_list;
+#include "objfiles.h"
 
 /* A partial_symbol records the name, domain, and address class of
    symbols whose types we have not parsed yet.  For functions, it also
@@ -201,12 +200,12 @@ struct partial_symtab
   void *read_symtab_private;
 };
 
-/* Add any kind of symbol to a psymbol_allocation_list.  */
+/* Add any kind of symbol to a partial_symbol vector.  */
 
 extern void add_psymbol_to_list (const char *, int,
 				 int, domain_enum,
 				 enum address_class,
-				 struct psymbol_allocation_list *,
+				 std::vector<partial_symbol *> *,
 				 CORE_ADDR,
 				 enum language, struct objfile *);
 
@@ -214,8 +213,8 @@ extern void init_psymbol_list (struct objfile *, int);
 
 extern struct partial_symtab *start_psymtab_common (struct objfile *,
 						    const char *, CORE_ADDR,
-						    struct partial_symbol **,
-						    struct partial_symbol **);
+						    std::vector<partial_symbol *> &,
+						    std::vector<partial_symbol *> &);
 
 extern void end_psymtab_common (struct objfile *, struct partial_symtab *);
 
@@ -225,7 +224,40 @@ extern struct partial_symtab *allocate_psymtab (const char *,
 
 extern void discard_psymtab (struct objfile *, struct partial_symtab *);
 
-extern struct cleanup *make_cleanup_discard_psymtabs (struct objfile *);
+/* Used when recording partial symbol tables.  On destruction,
+   discards any partial symbol tables that have been built.  However,
+   the tables can be kept by calling the "keep" method.  */
+class psymtab_discarder
+{
+ public:
+
+  psymtab_discarder (struct objfile *objfile)
+    : m_objfile (objfile),
+      m_psymtab (objfile->psymtabs)
+  {
+  }
+
+  ~psymtab_discarder ()
+  {
+    if (m_objfile != NULL)
+      while (m_objfile->psymtabs != m_psymtab)
+	discard_psymtab (m_objfile, m_objfile->psymtabs);
+  }
+
+  /* Keep any partial symbol tables that were built.  */
+  void keep ()
+  {
+    m_objfile = NULL;
+  }
+
+ private:
+
+  /* The objfile.  If NULL this serves as a sentinel to indicate that
+     the psymtabs should be kept.  */
+  struct objfile *m_objfile;
+  /* How far back to free.  */
+  struct partial_symtab *m_psymtab;
+};
 
 /* Traverse all psymtabs in one objfile.  */
 

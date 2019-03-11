@@ -1,5 +1,5 @@
 /* BFD support for the ARM processor
-   Copyright (C) 1994-2016 Free Software Foundation, Inc.
+   Copyright (C) 1994-2018 Free Software Foundation, Inc.
    Contributed by Richard Earnshaw (rwe@pegasus.esprit.ec.org)
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -129,20 +129,33 @@ scan (const struct bfd_arch_info *info, const char *string)
 
 static const bfd_arch_info_type arch_info_struct[] =
 {
-  N (bfd_mach_arm_2,       "armv2",   FALSE, & arch_info_struct[1]),
-  N (bfd_mach_arm_2a,      "armv2a",  FALSE, & arch_info_struct[2]),
-  N (bfd_mach_arm_3,       "armv3",   FALSE, & arch_info_struct[3]),
-  N (bfd_mach_arm_3M,      "armv3m",  FALSE, & arch_info_struct[4]),
-  N (bfd_mach_arm_4,       "armv4",   FALSE, & arch_info_struct[5]),
-  N (bfd_mach_arm_4T,      "armv4t",  FALSE, & arch_info_struct[6]),
-  N (bfd_mach_arm_5,       "armv5",   FALSE, & arch_info_struct[7]),
-  N (bfd_mach_arm_5T,      "armv5t",  FALSE, & arch_info_struct[8]),
-  N (bfd_mach_arm_5TE,     "armv5te", FALSE, & arch_info_struct[9]),
-  N (bfd_mach_arm_XScale,  "xscale",  FALSE, & arch_info_struct[10]),
-  N (bfd_mach_arm_ep9312,  "ep9312",  FALSE, & arch_info_struct[11]),
-  N (bfd_mach_arm_iWMMXt,  "iwmmxt",  FALSE, & arch_info_struct[12]),
-  N (bfd_mach_arm_iWMMXt2, "iwmmxt2", FALSE, & arch_info_struct[13]),
-  N (bfd_mach_arm_unknown, "arm_any", FALSE, NULL)
+  N (bfd_mach_arm_2,         "armv2",          FALSE, & arch_info_struct[1]),
+  N (bfd_mach_arm_2a,        "armv2a",         FALSE, & arch_info_struct[2]),
+  N (bfd_mach_arm_3,         "armv3",          FALSE, & arch_info_struct[3]),
+  N (bfd_mach_arm_3M,        "armv3m",         FALSE, & arch_info_struct[4]),
+  N (bfd_mach_arm_4,         "armv4",          FALSE, & arch_info_struct[5]),
+  N (bfd_mach_arm_4T,        "armv4t",         FALSE, & arch_info_struct[6]),
+  N (bfd_mach_arm_5,         "armv5",          FALSE, & arch_info_struct[7]),
+  N (bfd_mach_arm_5T,        "armv5t",         FALSE, & arch_info_struct[8]),
+  N (bfd_mach_arm_5TE,       "armv5te",        FALSE, & arch_info_struct[9]),
+  N (bfd_mach_arm_XScale,    "xscale",         FALSE, & arch_info_struct[10]),
+  N (bfd_mach_arm_ep9312,    "ep9312",         FALSE, & arch_info_struct[11]),
+  N (bfd_mach_arm_iWMMXt,    "iwmmxt",         FALSE, & arch_info_struct[12]),
+  N (bfd_mach_arm_iWMMXt2,   "iwmmxt2",        FALSE, & arch_info_struct[13]),
+  N (bfd_mach_arm_5TEJ,      "armv5tej",       FALSE, & arch_info_struct[14]),
+  N (bfd_mach_arm_6,         "armv6",          FALSE, & arch_info_struct[15]),
+  N (bfd_mach_arm_6KZ,       "armv6kz",        FALSE, & arch_info_struct[16]),
+  N (bfd_mach_arm_6T2,       "armv6t2",        FALSE, & arch_info_struct[17]),
+  N (bfd_mach_arm_6K,        "armv6k",         FALSE, & arch_info_struct[18]),
+  N (bfd_mach_arm_7,         "armv7",          FALSE, & arch_info_struct[19]),
+  N (bfd_mach_arm_6M,        "armv6-m",        FALSE, & arch_info_struct[20]),
+  N (bfd_mach_arm_6SM,       "armv6s-m",       FALSE, & arch_info_struct[21]),
+  N (bfd_mach_arm_7EM,       "armv7e-m",       FALSE, & arch_info_struct[22]),
+  N (bfd_mach_arm_8,         "armv8-a",        FALSE, & arch_info_struct[23]),
+  N (bfd_mach_arm_8R,        "armv8-r",        FALSE, & arch_info_struct[24]),
+  N (bfd_mach_arm_8M_BASE,   "armv8-m.base",   FALSE, & arch_info_struct[25]),
+  N (bfd_mach_arm_8M_MAIN,   "armv8-m.main",   FALSE, & arch_info_struct[26]),
+  N (bfd_mach_arm_unknown,   "arm_any",        FALSE, NULL)
 };
 
 const bfd_arch_info_type bfd_arm_arch =
@@ -188,8 +201,9 @@ bfd_arm_merge_machines (bfd *ibfd, bfd *obfd)
 	       || out == bfd_mach_arm_iWMMXt
 	       || out == bfd_mach_arm_iWMMXt2))
     {
+      /* xgettext: c-format */
       _bfd_error_handler (_("\
-error: %B is compiled for the EP9312, whereas %B is compiled for XScale"),
+error: %pB is compiled for the EP9312, whereas %pB is compiled for XScale"),
 			  ibfd, obfd);
       bfd_set_error (bfd_error_wrong_format);
       return FALSE;
@@ -199,8 +213,9 @@ error: %B is compiled for the EP9312, whereas %B is compiled for XScale"),
 	       || in == bfd_mach_arm_iWMMXt
 	       || in == bfd_mach_arm_iWMMXt2))
     {
+      /* xgettext: c-format */
       _bfd_error_handler (_("\
-error: %B is compiled for the EP9312, whereas %B is compiled for XScale"),
+error: %pB is compiled for the EP9312, whereas %pB is compiled for XScale"),
 			  obfd, ibfd);
       bfd_set_error (bfd_error_wrong_format);
       return FALSE;
@@ -231,7 +246,7 @@ arm_check_note (bfd *abfd,
   unsigned long namesz;
   unsigned long descsz;
   unsigned long type;
-  char *        descr;
+  char *	descr;
 
   if (buffer_size < offsetof (arm_Note, name))
     return FALSE;
@@ -272,16 +287,16 @@ arm_check_note (bfd *abfd,
   return TRUE;
 }
 
-#define NOTE_ARCH_STRING 	"arch: "
+#define NOTE_ARCH_STRING	"arch: "
 
 bfd_boolean
 bfd_arm_update_notes (bfd *abfd, const char *note_section)
 {
-  asection *     arm_arch_section;
-  bfd_size_type  buffer_size;
-  bfd_byte *     buffer;
-  char *         arch_string;
-  char *         expected;
+  asection *	 arm_arch_section;
+  bfd_size_type	 buffer_size;
+  bfd_byte *	 buffer;
+  char *	 arch_string;
+  char *	 expected;
 
   /* Look for a note section.  If one is present check the architecture
      string encoded in it, and set it to the current architecture if it is
@@ -331,9 +346,10 @@ bfd_arm_update_notes (bfd *abfd, const char *note_section)
       if (! bfd_set_section_contents (abfd, arm_arch_section, buffer,
 				      (file_ptr) 0, buffer_size))
 	{
-	  (*_bfd_error_handler)
-	    (_("warning: unable to update contents of %s section in %s"),
-	     note_section, bfd_get_filename (abfd));
+	  _bfd_error_handler
+	    /* xgettext: c-format */
+	    (_("warning: unable to update contents of %s section in %pB"),
+	     note_section, abfd);
 	  goto FAIL;
 	}
     }
@@ -375,11 +391,11 @@ architectures[] =
 unsigned int
 bfd_arm_get_mach_from_notes (bfd *abfd, const char *note_section)
 {
-  asection *     arm_arch_section;
-  bfd_size_type  buffer_size;
-  bfd_byte *     buffer;
-  char *         arch_string;
-  int            i;
+  asection *	 arm_arch_section;
+  bfd_size_type	 buffer_size;
+  bfd_byte *	 buffer;
+  char *	 arch_string;
+  int		 i;
 
   /* Look for a note section.  If one is present check the architecture
      string encoded in it, and set it to the current architecture if it is

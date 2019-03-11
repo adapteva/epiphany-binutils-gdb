@@ -1,5 +1,5 @@
 dnl Autoconf configure script for GDB, the GNU debugger.
-dnl Copyright (C) 1995-2016 Free Software Foundation, Inc.
+dnl Copyright (C) 1995-2018 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -35,26 +35,29 @@ if test "${ERROR_ON_WARNING}" = yes ; then
     WERROR_CFLAGS="-Werror"
 fi
 
-# These options work in either C or C++ modes.
+# The options we'll try to enable.
 build_warnings="-Wall -Wpointer-arith \
 -Wno-unused -Wunused-value -Wunused-function \
 -Wno-switch -Wno-char-subscripts \
--Wempty-body -Wunused-but-set-parameter -Wunused-but-set-variable"
+-Wempty-body -Wunused-but-set-parameter -Wunused-but-set-variable \
+-Wno-sign-compare -Wno-narrowing -Wno-error=maybe-uninitialized \
+-Wno-mismatched-tags \
+-Wno-error=deprecated-register \
+-Wsuggest-override \
+-Wimplicit-fallthrough=3 \
+-Wduplicated-cond"
 
-# Now add in C and C++ specific options, depending on mode.
-if test "$enable_build_with_cxx" = "yes"; then
-   build_warnings="$build_warnings -Wno-sign-compare -Wno-write-strings \
--Wno-narrowing"
-else
-   build_warnings="$build_warnings -Wpointer-sign -Wmissing-prototypes \
--Wdeclaration-after-statement -Wmissing-parameter-type \
--Wold-style-declaration -Wold-style-definition"
-fi
-
-# Enable -Wno-format by default when using gcc on mingw since many
-# GCC versions complain about %I64.
 case "${host}" in
-  *-*-mingw32*) build_warnings="$build_warnings -Wno-format" ;;
+  *-*-mingw32*)
+    # Enable -Wno-format by default when using gcc on mingw since many
+    # GCC versions complain about %I64.
+    build_warnings="$build_warnings -Wno-format" ;;
+  *-*-solaris*)
+    # Solaris 11.4 <python2.7/ceval.h> uses #pragma no_inline that GCC
+    # doesn't understand.
+    build_warnings="$build_warnings -Wno-unknown-pragmas"
+    # Solaris 11 <unistd.h> marks vfork deprecated.
+    build_warnings="$build_warnings -Wno-deprecated-declarations" ;;
   *) build_warnings="$build_warnings -Wformat-nonliteral" ;;
 esac
 
@@ -89,9 +92,7 @@ fi])dnl
 
 # The set of warnings supported by a C++ compiler is not the same as
 # of the C compiler.
-if test "$enable_build_with_cxx" = "yes"; then
-    AC_LANG_PUSH([C++])
-fi
+AC_LANG_PUSH([C++])
 
 WARN_CFLAGS=""
 if test "x${build_warnings}" != x -a "x$GCC" = xyes
@@ -114,9 +115,9 @@ then
 	*)
 	    # Check whether GCC accepts it.
 	    saved_CFLAGS="$CFLAGS"
-	    CFLAGS="$CFLAGS $wtest"
+	    CFLAGS="$CFLAGS -Werror $wtest"
 	    saved_CXXFLAGS="$CXXFLAGS"
-	    CXXFLAGS="$CXXFLAGS $wtest"
+	    CXXFLAGS="$CXXFLAGS -Werror $wtest"
 	    AC_TRY_COMPILE([],[],WARN_CFLAGS="${WARN_CFLAGS} $w",)
 	    CFLAGS="$saved_CFLAGS"
 	    CXXFLAGS="$saved_CXXFLAGS"
@@ -127,7 +128,5 @@ fi
 AC_SUBST(WARN_CFLAGS)
 AC_SUBST(WERROR_CFLAGS)
 
-if test "$enable_build_with_cxx" = "yes"; then
-   AC_LANG_POP([C++])
-fi
+AC_LANG_POP([C++])
 ])

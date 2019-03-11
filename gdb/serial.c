@@ -1,6 +1,6 @@
 /* Generic serial interface routines
 
-   Copyright (C) 1992-2016 Free Software Foundation, Inc.
+   Copyright (C) 1992-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,18 +23,13 @@
 #include "gdbcmd.h"
 #include "cli/cli-utils.h"
 
-extern void _initialize_serial (void);
-
 /* Is serial being debugged?  */
 
 static unsigned int global_serial_debug_p;
 
-typedef const struct serial_ops *serial_ops_p;
-DEF_VEC_P (serial_ops_p);
-
 /* Serial I/O handlers.  */
 
-VEC (serial_ops_p) *serial_ops_list = NULL;
+static std::vector<const struct serial_ops *> serial_ops_list;
 
 /* Pointer to list of scb's.  */
 
@@ -148,10 +143,7 @@ serial_log_command (struct target_ops *self, const char *cmd)
 static const struct serial_ops *
 serial_interface_lookup (const char *name)
 {
-  const struct serial_ops *ops;
-  int i;
-
-  for (i = 0; VEC_iterate (serial_ops_p, serial_ops_list, i, ops); ++i)
+  for (const serial_ops *ops : serial_ops_list)
     if (strcmp (name, ops->name) == 0)
       return ops;
 
@@ -161,7 +153,7 @@ serial_interface_lookup (const char *name)
 void
 serial_add_interface (const struct serial_ops *optable)
 {
-  VEC_safe_push (serial_ops_p, serial_ops_list, optable);
+  serial_ops_list.push_back (optable);
 }
 
 /* Return the open serial device for FD, if found, or NULL if FD is
@@ -205,20 +197,15 @@ static struct serial *serial_open_ops_1 (const struct serial_ops *ops,
 struct serial *
 serial_open (const char *name)
 {
-  struct serial *scb;
   const struct serial_ops *ops;
   const char *open_name = name;
 
-  if (strcmp (name, "pc") == 0)
-    ops = serial_interface_lookup ("pc");
-  else if (startswith (name, "lpt"))
-    ops = serial_interface_lookup ("parallel");
-  else if (startswith (name, "|"))
+  if (startswith (name, "|"))
     {
       ops = serial_interface_lookup ("pipe");
       /* Discard ``|'' and any space before the command itself.  */
       ++open_name;
-      open_name = skip_spaces_const (open_name);
+      open_name = skip_spaces (open_name);
     }
   /* Check for a colon, suggesting an IP address/port pair.
      Do this *after* checking for all the interesting prefixes.  We
@@ -255,9 +242,12 @@ serial_open_ops_1 (const struct serial_ops *ops, const char *open_name)
 
   if (serial_logfile != NULL)
     {
-      serial_logfp = gdb_fopen (serial_logfile, "w");
-      if (serial_logfp == NULL)
+      stdio_file_up file (new stdio_file ());
+
+      if (!file->open (serial_logfile, "w"))
 	perror_with_name (serial_logfile);
+
+      serial_logfp = file.release ();
     }
 
   return scb;
@@ -319,7 +309,7 @@ do_serial_close (struct serial *scb, int really_close)
       serial_current_type = 0;
 
       /* XXX - What if serial_logfp == gdb_stdout or gdb_stderr?  */
-      ui_file_delete (serial_logfp);
+      delete serial_logfp;
       serial_logfp = NULL;
     }
 
@@ -517,14 +507,6 @@ serial_print_tty_state (struct serial *scb,
 }
 
 int
-serial_noflush_set_tty_state (struct serial *scb,
-			      serial_ttystate new_ttystate,
-			      serial_ttystate old_ttystate)
-{
-  return scb->ops->noflush_set_tty_state (scb, new_ttystate, old_ttystate);
-}
-
-int
 serial_setbaudrate (struct serial *scb, int rate)
 {
   return scb->ops->setbaudrate (scb, rate);
@@ -630,7 +612,7 @@ static struct cmd_list_element *serial_set_cmdlist;
 static struct cmd_list_element *serial_show_cmdlist;
 
 static void
-serial_set_cmd (char *args, int from_tty)
+serial_set_cmd (const char *args, int from_tty)
 {
   printf_unfiltered ("\"set serial\" must be followed "
 		     "by the name of a command.\n");
@@ -638,7 +620,7 @@ serial_set_cmd (char *args, int from_tty)
 }
 
 static void
-serial_show_cmd (char *args, int from_tty)
+serial_show_cmd (const char *args, int from_tty)
 {
   cmd_show_list (serial_show_cmdlist, from_tty, "");
 }
@@ -672,7 +654,7 @@ static const char *parity = parity_none;
 /* Set serial_parity value.  */
 
 static void
-set_parity (char *ignore_args, int from_tty, struct cmd_list_element *c)
+set_parity (const char *ignore_args, int from_tty, struct cmd_list_element *c)
 {
   if (parity == parity_odd)
     serial_parity = GDBPARITY_ODD;

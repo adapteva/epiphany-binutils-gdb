@@ -1,6 +1,6 @@
 /* Support routines for manipulating internal types for GDB.
 
-   Copyright (C) 1992-2016 Free Software Foundation, Inc.
+   Copyright (C) 1992-2018 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support, using pieces from other GDB modules.
 
@@ -38,6 +38,7 @@
 #include "bcache.h"
 #include "dwarf2loc.h"
 #include "gdbcore.h"
+#include "floatformat.h"
 
 /* Initialize BADNESS constants.  */
 
@@ -51,6 +52,7 @@ const struct rank EXACT_MATCH_BADNESS = {0,0};
 const struct rank INTEGER_PROMOTION_BADNESS = {1,0};
 const struct rank FLOAT_PROMOTION_BADNESS = {1,0};
 const struct rank BASE_PTR_CONVERSION_BADNESS = {1,0};
+const struct rank CV_CONVERSION_BADNESS = {1, 0};
 const struct rank INTEGER_CONVERSION_BADNESS = {2,0};
 const struct rank FLOAT_CONVERSION_BADNESS = {2,0};
 const struct rank INT_FLOAT_CONVERSION_BADNESS = {2,0};
@@ -384,15 +386,21 @@ lookup_pointer_type (struct type *type)
 /* Lookup a C++ `reference' to a type TYPE.  TYPEPTR, if nonzero,
    points to a pointer to memory where the reference type should be
    stored.  If *TYPEPTR is zero, update it to point to the reference
-   type we return.  We allocate new memory if needed.  */
+   type we return.  We allocate new memory if needed. REFCODE denotes
+   the kind of reference type to lookup (lvalue or rvalue reference).  */
 
 struct type *
-make_reference_type (struct type *type, struct type **typeptr)
+make_reference_type (struct type *type, struct type **typeptr,
+                      enum type_code refcode)
 {
   struct type *ntype;	/* New type */
+  struct type **reftype;
   struct type *chain;
 
-  ntype = TYPE_REFERENCE_TYPE (type);
+  gdb_assert (refcode == TYPE_CODE_REF || refcode == TYPE_CODE_RVALUE_REF);
+
+  ntype = (refcode == TYPE_CODE_REF ? TYPE_REFERENCE_TYPE (type)
+           : TYPE_RVALUE_REFERENCE_TYPE (type));
 
   if (ntype)
     {
@@ -421,7 +429,10 @@ make_reference_type (struct type *type, struct type **typeptr)
     }
 
   TYPE_TARGET_TYPE (ntype) = type;
-  TYPE_REFERENCE_TYPE (type) = ntype;
+  reftype = (refcode == TYPE_CODE_REF ? &TYPE_REFERENCE_TYPE (type)
+             : &TYPE_RVALUE_REFERENCE_TYPE (type));
+
+  *reftype = ntype;
 
   /* FIXME!  Assume the machine has only one representation for
      references, and that it matches the (only) representation for
@@ -429,10 +440,9 @@ make_reference_type (struct type *type, struct type **typeptr)
 
   TYPE_LENGTH (ntype) =
     gdbarch_ptr_bit (get_type_arch (type)) / TARGET_CHAR_BIT;
-  TYPE_CODE (ntype) = TYPE_CODE_REF;
+  TYPE_CODE (ntype) = refcode;
 
-  if (!TYPE_REFERENCE_TYPE (type))	/* Remember it, if don't have one.  */
-    TYPE_REFERENCE_TYPE (type) = ntype;
+  *reftype = ntype;
 
   /* Update the length of all the other variants of this type.  */
   chain = TYPE_CHAIN (ntype);
@@ -449,9 +459,25 @@ make_reference_type (struct type *type, struct type **typeptr)
    details.  */
 
 struct type *
-lookup_reference_type (struct type *type)
+lookup_reference_type (struct type *type, enum type_code refcode)
 {
-  return make_reference_type (type, (struct type **) 0);
+  return make_reference_type (type, (struct type **) 0, refcode);
+}
+
+/* Lookup the lvalue reference type for the type TYPE.  */
+
+struct type *
+lookup_lvalue_reference_type (struct type *type)
+{
+  return lookup_reference_type (type, TYPE_CODE_REF);
+}
+
+/* Lookup the rvalue reference type for the type TYPE.  */
+
+struct type *
+lookup_rvalue_reference_type (struct type *type)
+{
+  return lookup_reference_type (type, TYPE_CODE_RVALUE_REF);
 }
 
 /* Lookup a function type that returns type TYPE.  TYPEPTR, if
@@ -522,6 +548,8 @@ lookup_function_type_with_arguments (struct type *type,
 	  gdb_assert (nparams == 0);
 	  TYPE_PROTOTYPED (fn) = 1;
 	}
+      else
+	TYPE_PROTOTYPED (fn) = 1;
     }
 
   TYPE_NFIELDS (fn) = nparams;
@@ -830,6 +858,44 @@ allocate_stub_method (struct type *type)
   return mtype;
 }
 
+/* See gdbtypes.h.  */
+
+bool
+operator== (const dynamic_prop &l, const dynamic_prop &r)
+{
+  if (l.kind != r.kind)
+    return false;
+
+  switch (l.kind)
+    {
+    case PROP_UNDEFINED:
+      return true;
+    case PROP_CONST:
+      return l.data.const_val == r.data.const_val;
+    case PROP_ADDR_OFFSET:
+    case PROP_LOCEXPR:
+    case PROP_LOCLIST:
+      return l.data.baton == r.data.baton;
+    }
+
+  gdb_assert_not_reached ("unhandled dynamic_prop kind");
+}
+
+/* See gdbtypes.h.  */
+
+bool
+operator== (const range_bounds &l, const range_bounds &r)
+{
+#define FIELD_EQ(FIELD) (l.FIELD == r.FIELD)
+
+  return (FIELD_EQ (low)
+	  && FIELD_EQ (high)
+	  && FIELD_EQ (flag_upper_bound_is_count)
+	  && FIELD_EQ (flag_bound_evaluated));
+
+#undef FIELD_EQ
+}
+
 /* Create a range type with a dynamic range from LOW_BOUND to
    HIGH_BOUND, inclusive.  See create_range_type for further details. */
 
@@ -958,7 +1024,7 @@ get_discrete_bounds (struct type *type, LONGEST *lowp, LONGEST *highp)
 	  *highp = -*lowp - 1;
 	  return 0;
 	}
-      /* ... fall through for unsigned ints ...  */
+      /* fall through */
     case TYPE_CODE_CHAR:
       *lowp = 0;
       /* This round-about calculation is to avoid shifting by
@@ -1062,6 +1128,14 @@ discrete_position (struct type *type, LONGEST val, LONGEST *pos)
    Elements will be of type ELEMENT_TYPE, the indices will be of type
    RANGE_TYPE.
 
+   BYTE_STRIDE_PROP, when not NULL, provides the array's byte stride.
+   This byte stride property is added to the resulting array type
+   as a DYN_PROP_BYTE_STRIDE.  As a consequence, the BYTE_STRIDE_PROP
+   argument can only be used to create types that are objfile-owned
+   (see add_dyn_prop), meaning that either this function must be called
+   with an objfile-owned RESULT_TYPE, or an objfile-owned RANGE_TYPE.
+
+   BIT_STRIDE is taken into account only when BYTE_STRIDE_PROP is NULL.
    If BIT_STRIDE is not zero, build a packed array type whose element
    size is BIT_STRIDE.  Otherwise, ignore this parameter.
 
@@ -1073,14 +1147,27 @@ struct type *
 create_array_type_with_stride (struct type *result_type,
 			       struct type *element_type,
 			       struct type *range_type,
+			       struct dynamic_prop *byte_stride_prop,
 			       unsigned int bit_stride)
 {
+  if (byte_stride_prop != NULL
+      && byte_stride_prop->kind == PROP_CONST)
+    {
+      /* The byte stride is actually not dynamic.  Pretend we were
+	 called with bit_stride set instead of byte_stride_prop.
+	 This will give us the same result type, while avoiding
+	 the need to handle this as a special case.  */
+      bit_stride = byte_stride_prop->data.const_val * 8;
+      byte_stride_prop = NULL;
+    }
+
   if (result_type == NULL)
     result_type = alloc_type_copy (range_type);
 
   TYPE_CODE (result_type) = TYPE_CODE_ARRAY;
   TYPE_TARGET_TYPE (result_type) = element_type;
-  if (has_static_range (TYPE_RANGE_DATA (range_type))
+  if (byte_stride_prop == NULL
+      && has_static_range (TYPE_RANGE_DATA (range_type))
       && (!type_not_associated (result_type)
 	  && !type_not_allocated (result_type)))
     {
@@ -1116,10 +1203,12 @@ create_array_type_with_stride (struct type *result_type,
   TYPE_FIELDS (result_type) =
     (struct field *) TYPE_ZALLOC (result_type, sizeof (struct field));
   TYPE_INDEX_TYPE (result_type) = range_type;
-  if (bit_stride > 0)
+  if (byte_stride_prop != NULL)
+    add_dyn_prop (DYN_PROP_BYTE_STRIDE, *byte_stride_prop, result_type);
+  else if (bit_stride > 0)
     TYPE_FIELD_BITSIZE (result_type, 0) = bit_stride;
 
-  /* TYPE_FLAG_TARGET_STUB will take care of zero length arrays.  */
+  /* TYPE_TARGET_STUB will take care of zero length arrays.  */
   if (TYPE_LENGTH (result_type) == 0)
     TYPE_TARGET_STUB (result_type) = 1;
 
@@ -1135,17 +1224,22 @@ create_array_type (struct type *result_type,
 		   struct type *range_type)
 {
   return create_array_type_with_stride (result_type, element_type,
-					range_type, 0);
+					range_type, NULL, 0);
 }
 
 struct type *
 lookup_array_range_type (struct type *element_type,
 			 LONGEST low_bound, LONGEST high_bound)
 {
-  struct gdbarch *gdbarch = get_type_arch (element_type);
-  struct type *index_type = builtin_type (gdbarch)->builtin_int;
-  struct type *range_type
-    = create_static_range_type (NULL, index_type, low_bound, high_bound);
+  struct type *index_type;
+  struct type *range_type;
+
+  if (TYPE_OBJFILE_OWNED (element_type))
+    index_type = objfile_type (TYPE_OWNER (element_type).objfile)->builtin_int;
+  else
+    index_type = builtin_type (get_type_arch (element_type))->builtin_int;
+  range_type = create_static_range_type (NULL, index_type,
+					 low_bound, high_bound);
 
   return create_array_type (NULL, element_type, range_type);
 }
@@ -1369,22 +1463,7 @@ smash_to_method_type (struct type *type, struct type *self_type,
   TYPE_LENGTH (type) = 1;	/* In practice, this is never needed.  */
 }
 
-/* Return a typename for a struct/union/enum type without "struct ",
-   "union ", or "enum ".  If the type has a NULL name, return NULL.  */
-
-const char *
-type_name_no_tag (const struct type *type)
-{
-  if (TYPE_TAG_NAME (type) != NULL)
-    return TYPE_TAG_NAME (type);
-
-  /* Is there code which expects this to return the name if there is
-     no tag name?  My guess is that this is mainly used for C++ in
-     cases where the two will always be the same.  */
-  return TYPE_NAME (type);
-}
-
-/* A wrapper of type_name_no_tag which calls error if the type is anonymous.
+/* A wrapper of TYPE_NAME which calls error if the type is anonymous.
    Since GCC PR debug/47510 DWARF provides associated information to detect the
    anonymous class linkage name from its typedef.
 
@@ -1392,7 +1471,7 @@ type_name_no_tag (const struct type *type)
    apply it itself.  */
 
 const char *
-type_name_no_tag_or_error (struct type *type)
+type_name_or_error (struct type *type)
 {
   struct type *saved_type = type;
   const char *name;
@@ -1400,11 +1479,11 @@ type_name_no_tag_or_error (struct type *type)
 
   type = check_typedef (type);
 
-  name = type_name_no_tag (type);
+  name = TYPE_NAME (type);
   if (name != NULL)
     return name;
 
-  name = type_name_no_tag (saved_type);
+  name = TYPE_NAME (saved_type);
   objfile = TYPE_OBJFILE (saved_type);
   error (_("Invalid anonymous type %s [in module %s], GCC PR debug/47510 bug?"),
 	 name ? name : "<anonymous>",
@@ -1572,7 +1651,6 @@ struct type *
 lookup_struct_elt_type (struct type *type, const char *name, int noerr)
 {
   int i;
-  char *type_name;
 
   for (;;)
     {
@@ -1586,9 +1664,9 @@ lookup_struct_elt_type (struct type *type, const char *name, int noerr)
   if (TYPE_CODE (type) != TYPE_CODE_STRUCT 
       && TYPE_CODE (type) != TYPE_CODE_UNION)
     {
-      type_name = type_to_string (type);
-      make_cleanup (xfree, type_name);
-      error (_("Type %s is not a structure or union type."), type_name);
+      std::string type_name = type_to_string (type);
+      error (_("Type %s is not a structure or union type."),
+	     type_name.c_str ());
     }
 
 #if 0
@@ -1599,7 +1677,7 @@ lookup_struct_elt_type (struct type *type, const char *name, int noerr)
   {
     char *type_name;
 
-    type_name = type_name_no_tag (type);
+    type_name = TYPE_NAME (type);
     if (type_name != NULL && strcmp (type_name, name) == 0)
       return type;
   }
@@ -1640,9 +1718,8 @@ lookup_struct_elt_type (struct type *type, const char *name, int noerr)
       return NULL;
     }
 
-  type_name = type_to_string (type);
-  make_cleanup (xfree, type_name);
-  error (_("Type %s has no component named %s."), type_name, name);
+  std::string type_name = type_to_string (type);
+  error (_("Type %s has no component named %s."), type_name.c_str (), name);
 }
 
 /* Store in *MAX the largest number representable by unsigned integer type
@@ -1795,7 +1872,18 @@ get_vptr_fieldno (struct type *type, struct type **basetypep)
 static void
 stub_noname_complaint (void)
 {
-  complaint (&symfile_complaints, _("stub type has NULL name"));
+  complaint (_("stub type has NULL name"));
+}
+
+/* Return nonzero if TYPE has a DYN_PROP_BYTE_STRIDE dynamic property
+   attached to it, and that property has a non-constant value.  */
+
+static int
+array_type_has_dynamic_stride (struct type *type)
+{
+  struct dynamic_prop *prop = get_dyn_prop (DYN_PROP_BYTE_STRIDE, type);
+
+  return (prop != NULL && prop->kind != PROP_CONST);
 }
 
 /* Worker for is_dynamic_type.  */
@@ -1843,11 +1931,16 @@ is_dynamic_type_internal (struct type *type, int top_level)
       {
 	gdb_assert (TYPE_NFIELDS (type) == 1);
 
-	/* The array is dynamic if either the bounds are dynamic,
-	   or the elements it contains have a dynamic contents.  */
+	/* The array is dynamic if either the bounds are dynamic...  */
 	if (is_dynamic_type_internal (TYPE_INDEX_TYPE (type), 0))
 	  return 1;
-	return is_dynamic_type_internal (TYPE_TARGET_TYPE (type), 0);
+	/* ... or the elements it contains have a dynamic contents...  */
+	if (is_dynamic_type_internal (TYPE_TARGET_TYPE (type), 0))
+	  return 1;
+	/* ... or if it has a dynamic stride...  */
+	if (array_type_has_dynamic_stride (type))
+	  return 1;
+	return 0;
       }
 
     case TYPE_CODE_STRUCT:
@@ -1943,6 +2036,7 @@ resolve_dynamic_array (struct type *type,
   struct type *range_type;
   struct type *ary_dim;
   struct dynamic_prop *prop;
+  unsigned int bit_stride = 0;
 
   gdb_assert (TYPE_CODE (type) == TYPE_CODE_ARRAY);
 
@@ -1974,8 +2068,31 @@ resolve_dynamic_array (struct type *type,
   else
     elt_type = TYPE_TARGET_TYPE (type);
 
-  return create_array_type_with_stride (type, elt_type, range_type,
-                                        TYPE_FIELD_BITSIZE (type, 0));
+  prop = get_dyn_prop (DYN_PROP_BYTE_STRIDE, type);
+  if (prop != NULL)
+    {
+      int prop_eval_ok
+	= dwarf2_evaluate_property (prop, NULL, addr_stack, &value);
+
+      if (prop_eval_ok)
+	{
+	  remove_dyn_prop (DYN_PROP_BYTE_STRIDE, type);
+	  bit_stride = (unsigned int) (value * 8);
+	}
+      else
+	{
+	  /* Could be a bug in our code, but it could also happen
+	     if the DWARF info is not correct.  Issue a warning,
+	     and assume no byte/bit stride (leave bit_stride = 0).  */
+	  warning (_("cannot determine array stride for type %s"),
+		   TYPE_NAME (type) ? TYPE_NAME (type) : "<no name>");
+	}
+    }
+  else
+    bit_stride = TYPE_FIELD_BITSIZE (type, 0);
+
+  return create_array_type_with_stride (type, elt_type, range_type, NULL,
+                                        bit_stride);
 }
 
 /* Resolve dynamic bounds of members of the union TYPE to static
@@ -2215,13 +2332,14 @@ get_dyn_prop (enum dynamic_prop_node_kind prop_kind, const struct type *type)
 
 void
 add_dyn_prop (enum dynamic_prop_node_kind prop_kind, struct dynamic_prop prop,
-              struct type *type, struct objfile *objfile)
+              struct type *type)
 {
   struct dynamic_prop_list *temp;
 
   gdb_assert (TYPE_OBJFILE_OWNED (type));
 
-  temp = XOBNEW (&objfile->objfile_obstack, struct dynamic_prop_list);
+  temp = XOBNEW (&TYPE_OBJFILE (type)->objfile_obstack,
+		 struct dynamic_prop_list);
   temp->prop_kind = prop_kind;
   temp->prop = prop;
   temp->next = TYPE_DYN_PROP_LIST (type);
@@ -2311,11 +2429,9 @@ check_typedef (struct type *type)
 	  if (currently_reading_symtab)
 	    return make_qualified_type (type, instance_flags, NULL);
 
-	  name = type_name_no_tag (type);
-	  /* FIXME: shouldn't we separately check the TYPE_NAME and
-	     the TYPE_TAG_NAME, and look in STRUCT_DOMAIN and/or
-	     VAR_DOMAIN as appropriate?  (this code was written before
-	     TYPE_NAME and TYPE_TAG_NAME were separate).  */
+	  name = TYPE_NAME (type);
+	  /* FIXME: shouldn't we look in STRUCT_DOMAIN and/or
+	     VAR_DOMAIN as appropriate?  */
 	  if (name == NULL)
 	    {
 	      stub_noname_complaint ();
@@ -2366,7 +2482,7 @@ check_typedef (struct type *type)
       && opaque_type_resolution 
       && !currently_reading_symtab)
     {
-      const char *name = type_name_no_tag (type);
+      const char *name = TYPE_NAME (type);
       struct type *newtype;
 
       if (name == NULL)
@@ -2400,11 +2516,9 @@ check_typedef (struct type *type)
      types.  */
   else if (TYPE_STUB (type) && !currently_reading_symtab)
     {
-      const char *name = type_name_no_tag (type);
-      /* FIXME: shouldn't we separately check the TYPE_NAME and the
-         TYPE_TAG_NAME, and look in STRUCT_DOMAIN and/or VAR_DOMAIN
-         as appropriate?  (this code was written before TYPE_NAME and
-         TYPE_TAG_NAME were separate).  */
+      const char *name = TYPE_NAME (type);
+      /* FIXME: shouldn't we look in STRUCT_DOMAIN and/or VAR_DOMAIN
+         as appropriate?  */
       struct symbol *sym;
 
       if (name == NULL)
@@ -2461,7 +2575,7 @@ safe_parse_type (struct gdbarch *gdbarch, char *p, int length)
 
   /* Suppress error messages.  */
   saved_gdb_stderr = gdb_stderr;
-  gdb_stderr = ui_file_new ();
+  gdb_stderr = &null_stream;
 
   /* Call parse_and_eval_type() without fear of longjmp()s.  */
   TRY
@@ -2475,7 +2589,6 @@ safe_parse_type (struct gdbarch *gdbarch, char *p, int length)
   END_CATCH
 
   /* Stop suppressing error messages.  */
-  ui_file_delete (gdb_stderr);
   gdb_stderr = saved_gdb_stderr;
 
   return type;
@@ -2681,54 +2794,13 @@ allocate_gnat_aux_type (struct type *type)
   *(TYPE_GNAT_SPECIFIC (type)) = gnat_aux_default;
 }
 
-/* Helper function to initialize the standard scalar types.
+/* Helper function to initialize a newly allocated type.  Set type code
+   to CODE and initialize the type-specific fields accordingly.  */
 
-   If NAME is non-NULL, then it is used to initialize the type name.
-   Note that NAME is not copied; it is required to have a lifetime at
-   least as long as OBJFILE.  */
-
-struct type *
-init_type (enum type_code code, int length, int flags,
-	   const char *name, struct objfile *objfile)
+static void
+set_type_code (struct type *type, enum type_code code)
 {
-  struct type *type;
-
-  type = alloc_type (objfile);
   TYPE_CODE (type) = code;
-  TYPE_LENGTH (type) = length;
-
-  gdb_assert (!(flags & (TYPE_FLAG_MIN - 1)));
-  if (flags & TYPE_FLAG_UNSIGNED)
-    TYPE_UNSIGNED (type) = 1;
-  if (flags & TYPE_FLAG_NOSIGN)
-    TYPE_NOSIGN (type) = 1;
-  if (flags & TYPE_FLAG_STUB)
-    TYPE_STUB (type) = 1;
-  if (flags & TYPE_FLAG_TARGET_STUB)
-    TYPE_TARGET_STUB (type) = 1;
-  if (flags & TYPE_FLAG_STATIC)
-    TYPE_STATIC (type) = 1;
-  if (flags & TYPE_FLAG_PROTOTYPED)
-    TYPE_PROTOTYPED (type) = 1;
-  if (flags & TYPE_FLAG_INCOMPLETE)
-    TYPE_INCOMPLETE (type) = 1;
-  if (flags & TYPE_FLAG_VARARGS)
-    TYPE_VARARGS (type) = 1;
-  if (flags & TYPE_FLAG_VECTOR)
-    TYPE_VECTOR (type) = 1;
-  if (flags & TYPE_FLAG_STUB_SUPPORTED)
-    TYPE_STUB_SUPPORTED (type) = 1;
-  if (flags & TYPE_FLAG_FIXED_INSTANCE)
-    TYPE_FIXED_INSTANCE (type) = 1;
-  if (flags & TYPE_FLAG_GNU_IFUNC)
-    TYPE_GNU_IFUNC (type) = 1;
-
-  TYPE_NAME (type) = name;
-
-  /* C++ fancies.  */
-
-  if (name && strcmp (name, "char") == 0)
-    TYPE_NOSIGN (type) = 1;
 
   switch (code)
     {
@@ -2744,8 +2816,306 @@ init_type (enum type_code code, int length, int flags,
 	INIT_FUNC_SPECIFIC (type);
         break;
     }
+}
+
+/* Helper function to verify floating-point format and size.
+   BIT is the type size in bits; if BIT equals -1, the size is
+   determined by the floatformat.  Returns size to be used.  */
+
+static int
+verify_floatformat (int bit, const struct floatformat *floatformat)
+{
+  gdb_assert (floatformat != NULL);
+
+  if (bit == -1)
+    bit = floatformat->totalsize;
+
+  gdb_assert (bit >= 0);
+  gdb_assert (bit >= floatformat->totalsize);
+
+  return bit;
+}
+
+/* Return the floating-point format for a floating-point variable of
+   type TYPE.  */
+
+const struct floatformat *
+floatformat_from_type (const struct type *type)
+{
+  gdb_assert (TYPE_CODE (type) == TYPE_CODE_FLT);
+  gdb_assert (TYPE_FLOATFORMAT (type));
+  return TYPE_FLOATFORMAT (type);
+}
+
+/* Helper function to initialize the standard scalar types.
+
+   If NAME is non-NULL, then it is used to initialize the type name.
+   Note that NAME is not copied; it is required to have a lifetime at
+   least as long as OBJFILE.  */
+
+struct type *
+init_type (struct objfile *objfile, enum type_code code, int bit,
+	   const char *name)
+{
+  struct type *type;
+
+  type = alloc_type (objfile);
+  set_type_code (type, code);
+  gdb_assert ((bit % TARGET_CHAR_BIT) == 0);
+  TYPE_LENGTH (type) = bit / TARGET_CHAR_BIT;
+  TYPE_NAME (type) = name;
+
   return type;
 }
+
+/* Allocate a TYPE_CODE_ERROR type structure associated with OBJFILE,
+   to use with variables that have no debug info.  NAME is the type
+   name.  */
+
+static struct type *
+init_nodebug_var_type (struct objfile *objfile, const char *name)
+{
+  return init_type (objfile, TYPE_CODE_ERROR, 0, name);
+}
+
+/* Allocate a TYPE_CODE_INT type structure associated with OBJFILE.
+   BIT is the type size in bits.  If UNSIGNED_P is non-zero, set
+   the type's TYPE_UNSIGNED flag.  NAME is the type name.  */
+
+struct type *
+init_integer_type (struct objfile *objfile,
+		   int bit, int unsigned_p, const char *name)
+{
+  struct type *t;
+
+  t = init_type (objfile, TYPE_CODE_INT, bit, name);
+  if (unsigned_p)
+    TYPE_UNSIGNED (t) = 1;
+
+  return t;
+}
+
+/* Allocate a TYPE_CODE_CHAR type structure associated with OBJFILE.
+   BIT is the type size in bits.  If UNSIGNED_P is non-zero, set
+   the type's TYPE_UNSIGNED flag.  NAME is the type name.  */
+
+struct type *
+init_character_type (struct objfile *objfile,
+		     int bit, int unsigned_p, const char *name)
+{
+  struct type *t;
+
+  t = init_type (objfile, TYPE_CODE_CHAR, bit, name);
+  if (unsigned_p)
+    TYPE_UNSIGNED (t) = 1;
+
+  return t;
+}
+
+/* Allocate a TYPE_CODE_BOOL type structure associated with OBJFILE.
+   BIT is the type size in bits.  If UNSIGNED_P is non-zero, set
+   the type's TYPE_UNSIGNED flag.  NAME is the type name.  */
+
+struct type *
+init_boolean_type (struct objfile *objfile,
+		   int bit, int unsigned_p, const char *name)
+{
+  struct type *t;
+
+  t = init_type (objfile, TYPE_CODE_BOOL, bit, name);
+  if (unsigned_p)
+    TYPE_UNSIGNED (t) = 1;
+
+  return t;
+}
+
+/* Allocate a TYPE_CODE_FLT type structure associated with OBJFILE.
+   BIT is the type size in bits; if BIT equals -1, the size is
+   determined by the floatformat.  NAME is the type name.  Set the
+   TYPE_FLOATFORMAT from FLOATFORMATS.  */
+
+struct type *
+init_float_type (struct objfile *objfile,
+		 int bit, const char *name,
+		 const struct floatformat **floatformats)
+{
+  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  const struct floatformat *fmt = floatformats[gdbarch_byte_order (gdbarch)];
+  struct type *t;
+
+  bit = verify_floatformat (bit, fmt);
+  t = init_type (objfile, TYPE_CODE_FLT, bit, name);
+  TYPE_FLOATFORMAT (t) = fmt;
+
+  return t;
+}
+
+/* Allocate a TYPE_CODE_DECFLOAT type structure associated with OBJFILE.
+   BIT is the type size in bits.  NAME is the type name.  */
+
+struct type *
+init_decfloat_type (struct objfile *objfile, int bit, const char *name)
+{
+  struct type *t;
+
+  t = init_type (objfile, TYPE_CODE_DECFLOAT, bit, name);
+  return t;
+}
+
+/* Allocate a TYPE_CODE_COMPLEX type structure associated with OBJFILE.
+   NAME is the type name.  TARGET_TYPE is the component float type.  */
+
+struct type *
+init_complex_type (struct objfile *objfile,
+		   const char *name, struct type *target_type)
+{
+  struct type *t;
+
+  t = init_type (objfile, TYPE_CODE_COMPLEX,
+		 2 * TYPE_LENGTH (target_type) * TARGET_CHAR_BIT, name);
+  TYPE_TARGET_TYPE (t) = target_type;
+  return t;
+}
+
+/* Allocate a TYPE_CODE_PTR type structure associated with OBJFILE.
+   BIT is the pointer type size in bits.  NAME is the type name.
+   TARGET_TYPE is the pointer target type.  Always sets the pointer type's
+   TYPE_UNSIGNED flag.  */
+
+struct type *
+init_pointer_type (struct objfile *objfile,
+		   int bit, const char *name, struct type *target_type)
+{
+  struct type *t;
+
+  t = init_type (objfile, TYPE_CODE_PTR, bit, name);
+  TYPE_TARGET_TYPE (t) = target_type;
+  TYPE_UNSIGNED (t) = 1;
+  return t;
+}
+
+/* See gdbtypes.h.  */
+
+unsigned
+type_raw_align (struct type *type)
+{
+  if (type->align_log2 != 0)
+    return 1 << (type->align_log2 - 1);
+  return 0;
+}
+
+/* See gdbtypes.h.  */
+
+unsigned
+type_align (struct type *type)
+{
+  unsigned raw_align = type_raw_align (type);
+  if (raw_align != 0)
+    return raw_align;
+
+  ULONGEST align = 0;
+  switch (TYPE_CODE (type))
+    {
+    case TYPE_CODE_PTR:
+    case TYPE_CODE_FUNC:
+    case TYPE_CODE_FLAGS:
+    case TYPE_CODE_INT:
+    case TYPE_CODE_FLT:
+    case TYPE_CODE_ENUM:
+    case TYPE_CODE_REF:
+    case TYPE_CODE_RVALUE_REF:
+    case TYPE_CODE_CHAR:
+    case TYPE_CODE_BOOL:
+    case TYPE_CODE_DECFLOAT:
+      {
+	struct gdbarch *arch = get_type_arch (type);
+	align = gdbarch_type_align (arch, type);
+      }
+      break;
+
+    case TYPE_CODE_ARRAY:
+    case TYPE_CODE_COMPLEX:
+    case TYPE_CODE_TYPEDEF:
+      align = type_align (TYPE_TARGET_TYPE (type));
+      break;
+
+    case TYPE_CODE_STRUCT:
+    case TYPE_CODE_UNION:
+      {
+	if (TYPE_NFIELDS (type) == 0)
+	  {
+	    /* An empty struct has alignment 1.  */
+	    align = 1;
+	    break;
+	  }
+	for (unsigned i = 0; i < TYPE_NFIELDS (type); ++i)
+	  {
+	    ULONGEST f_align = type_align (TYPE_FIELD_TYPE (type, i));
+	    if (f_align == 0)
+	      {
+		/* Don't pretend we know something we don't.  */
+		align = 0;
+		break;
+	      }
+	    if (f_align > align)
+	      align = f_align;
+	  }
+      }
+      break;
+
+    case TYPE_CODE_SET:
+    case TYPE_CODE_RANGE:
+    case TYPE_CODE_STRING:
+      /* Not sure what to do here, and these can't appear in C or C++
+	 anyway.  */
+      break;
+
+    case TYPE_CODE_METHODPTR:
+    case TYPE_CODE_MEMBERPTR:
+      align = type_length_units (type);
+      break;
+
+    case TYPE_CODE_VOID:
+      align = 1;
+      break;
+
+    case TYPE_CODE_ERROR:
+    case TYPE_CODE_METHOD:
+    default:
+      break;
+    }
+
+  if ((align & (align - 1)) != 0)
+    {
+      /* Not a power of 2, so pass.  */
+      align = 0;
+    }
+
+  return align;
+}
+
+/* See gdbtypes.h.  */
+
+bool
+set_type_align (struct type *type, ULONGEST align)
+{
+  /* Must be a power of 2.  Zero is ok.  */
+  gdb_assert ((align & (align - 1)) == 0);
+
+  unsigned result = 0;
+  while (align != 0)
+    {
+      ++result;
+      align >>= 1;
+    }
+
+  if (result >= (1 << TYPE_ALIGN_BITS))
+    return false;
+
+  type->align_log2 = result;
+  return true;
+}
+
 
 /* Queries on types.  */
 
@@ -2773,6 +3143,16 @@ is_integral_type (struct type *t)
 	 || (TYPE_CODE (t) == TYPE_CODE_CHAR)
 	 || (TYPE_CODE (t) == TYPE_CODE_RANGE)
 	 || (TYPE_CODE (t) == TYPE_CODE_BOOL)));
+}
+
+int
+is_floating_type (struct type *t)
+{
+  t = check_typedef (t);
+  return
+    ((t != NULL)
+     && ((TYPE_CODE (t) == TYPE_CODE_FLT)
+	 || (TYPE_CODE (t) == TYPE_CODE_DECFLOAT)));
 }
 
 /* Return true if TYPE is scalar.  */
@@ -3152,10 +3532,10 @@ integer_types_same_name_p (const char *first, const char *second)
   return 1;
 }
 
-/* Compares type A to type B returns 1 if the represent the same type
-   0 otherwise.  */
+/* Compares type A to type B.  Returns true if they represent the same
+   type, false otherwise.  */
 
-int
+bool
 types_equal (struct type *a, struct type *b)
 {
   /* Identical type pointers.  */
@@ -3163,7 +3543,7 @@ types_equal (struct type *a, struct type *b)
      and a.  The reason is that builtin types are different from
      the same ones constructed from the object.  */
   if (a == b)
-    return 1;
+    return true;
 
   /* Resolve typedefs */
   if (TYPE_CODE (a) == TYPE_CODE_TYPEDEF)
@@ -3174,7 +3554,7 @@ types_equal (struct type *a, struct type *b)
   /* If after resolving typedefs a and b are not of the same type
      code then they are not equal.  */
   if (TYPE_CODE (a) != TYPE_CODE (b))
-    return 0;
+    return false;
 
   /* If a and b are both pointers types or both reference types then
      they are equal of the same type iff the objects they refer to are
@@ -3191,11 +3571,11 @@ types_equal (struct type *a, struct type *b)
 
   if (TYPE_NAME (a) && TYPE_NAME (b)
       && strcmp (TYPE_NAME (a), TYPE_NAME (b)) == 0)
-    return 1;
+    return true;
 
   /* Check if identical after resolving typedefs.  */
   if (a == b)
-    return 1;
+    return true;
 
   /* Two function types are equal if their argument and return types
      are equal.  */
@@ -3204,60 +3584,60 @@ types_equal (struct type *a, struct type *b)
       int i;
 
       if (TYPE_NFIELDS (a) != TYPE_NFIELDS (b))
-	return 0;
+	return false;
       
       if (!types_equal (TYPE_TARGET_TYPE (a), TYPE_TARGET_TYPE (b)))
-	return 0;
+	return false;
 
       for (i = 0; i < TYPE_NFIELDS (a); ++i)
 	if (!types_equal (TYPE_FIELD_TYPE (a, i), TYPE_FIELD_TYPE (b, i)))
-	  return 0;
+	  return false;
 
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Deep comparison of types.  */
 
 /* An entry in the type-equality bcache.  */
 
-typedef struct type_equality_entry
+struct type_equality_entry
 {
+  type_equality_entry (struct type *t1, struct type *t2)
+    : type1 (t1),
+      type2 (t2)
+  {
+  }
+
   struct type *type1, *type2;
-} type_equality_entry_d;
+};
 
-DEF_VEC_O (type_equality_entry_d);
+/* A helper function to compare two strings.  Returns true if they are
+   the same, false otherwise.  Handles NULLs properly.  */
 
-/* A helper function to compare two strings.  Returns 1 if they are
-   the same, 0 otherwise.  Handles NULLs properly.  */
-
-static int
+static bool
 compare_maybe_null_strings (const char *s, const char *t)
 {
-  if (s == NULL && t != NULL)
-    return 0;
-  else if (s != NULL && t == NULL)
-    return 0;
-  else if (s == NULL && t== NULL)
-    return 1;
+  if (s == NULL || t == NULL)
+    return s == t;
   return strcmp (s, t) == 0;
 }
 
 /* A helper function for check_types_worklist that checks two types for
-   "deep" equality.  Returns non-zero if the types are considered the
-   same, zero otherwise.  */
+   "deep" equality.  Returns true if the types are considered the
+   same, false otherwise.  */
 
-static int
+static bool
 check_types_equal (struct type *type1, struct type *type2,
-		   VEC (type_equality_entry_d) **worklist)
+		   std::vector<type_equality_entry> *worklist)
 {
   type1 = check_typedef (type1);
   type2 = check_typedef (type2);
 
   if (type1 == type2)
-    return 1;
+    return true;
 
   if (TYPE_CODE (type1) != TYPE_CODE (type2)
       || TYPE_LENGTH (type1) != TYPE_LENGTH (type2)
@@ -3268,19 +3648,17 @@ check_types_equal (struct type *type1, struct type *type2,
       || TYPE_NOTTEXT (type1) != TYPE_NOTTEXT (type2)
       || TYPE_INSTANCE_FLAGS (type1) != TYPE_INSTANCE_FLAGS (type2)
       || TYPE_NFIELDS (type1) != TYPE_NFIELDS (type2))
-    return 0;
+    return false;
 
-  if (!compare_maybe_null_strings (TYPE_TAG_NAME (type1),
-				   TYPE_TAG_NAME (type2)))
-    return 0;
   if (!compare_maybe_null_strings (TYPE_NAME (type1), TYPE_NAME (type2)))
-    return 0;
+    return false;
+  if (!compare_maybe_null_strings (TYPE_NAME (type1), TYPE_NAME (type2)))
+    return false;
 
   if (TYPE_CODE (type1) == TYPE_CODE_RANGE)
     {
-      if (memcmp (TYPE_RANGE_DATA (type1), TYPE_RANGE_DATA (type2),
-		  sizeof (*TYPE_RANGE_DATA (type1))) != 0)
-	return 0;
+      if (*TYPE_RANGE_DATA (type1) != *TYPE_RANGE_DATA (type2))
+	return false;
     }
   else
     {
@@ -3290,34 +3668,33 @@ check_types_equal (struct type *type1, struct type *type2,
 	{
 	  const struct field *field1 = &TYPE_FIELD (type1, i);
 	  const struct field *field2 = &TYPE_FIELD (type2, i);
-	  struct type_equality_entry entry;
 
 	  if (FIELD_ARTIFICIAL (*field1) != FIELD_ARTIFICIAL (*field2)
 	      || FIELD_BITSIZE (*field1) != FIELD_BITSIZE (*field2)
 	      || FIELD_LOC_KIND (*field1) != FIELD_LOC_KIND (*field2))
-	    return 0;
+	    return false;
 	  if (!compare_maybe_null_strings (FIELD_NAME (*field1),
 					   FIELD_NAME (*field2)))
-	    return 0;
+	    return false;
 	  switch (FIELD_LOC_KIND (*field1))
 	    {
 	    case FIELD_LOC_KIND_BITPOS:
 	      if (FIELD_BITPOS (*field1) != FIELD_BITPOS (*field2))
-		return 0;
+		return false;
 	      break;
 	    case FIELD_LOC_KIND_ENUMVAL:
 	      if (FIELD_ENUMVAL (*field1) != FIELD_ENUMVAL (*field2))
-		return 0;
+		return false;
 	      break;
 	    case FIELD_LOC_KIND_PHYSADDR:
 	      if (FIELD_STATIC_PHYSADDR (*field1)
 		  != FIELD_STATIC_PHYSADDR (*field2))
-		return 0;
+		return false;
 	      break;
 	    case FIELD_LOC_KIND_PHYSNAME:
 	      if (!compare_maybe_null_strings (FIELD_STATIC_PHYSNAME (*field1),
 					       FIELD_STATIC_PHYSNAME (*field2)))
-		return 0;
+		return false;
 	      break;
 	    case FIELD_LOC_KIND_DWARF_BLOCK:
 	      {
@@ -3328,7 +3705,7 @@ check_types_equal (struct type *type1, struct type *type2,
 		if (block1->per_cu != block2->per_cu
 		    || block1->size != block2->size
 		    || memcmp (block1->data, block2->data, block1->size) != 0)
-		  return 0;
+		  return false;
 	      }
 	      break;
 	    default:
@@ -3337,43 +3714,37 @@ check_types_equal (struct type *type1, struct type *type2,
 			      FIELD_LOC_KIND (*field1));
 	    }
 
-	  entry.type1 = FIELD_TYPE (*field1);
-	  entry.type2 = FIELD_TYPE (*field2);
-	  VEC_safe_push (type_equality_entry_d, *worklist, &entry);
+	  worklist->emplace_back (FIELD_TYPE (*field1), FIELD_TYPE (*field2));
 	}
     }
 
   if (TYPE_TARGET_TYPE (type1) != NULL)
     {
-      struct type_equality_entry entry;
-
       if (TYPE_TARGET_TYPE (type2) == NULL)
-	return 0;
+	return false;
 
-      entry.type1 = TYPE_TARGET_TYPE (type1);
-      entry.type2 = TYPE_TARGET_TYPE (type2);
-      VEC_safe_push (type_equality_entry_d, *worklist, &entry);
+      worklist->emplace_back (TYPE_TARGET_TYPE (type1),
+			      TYPE_TARGET_TYPE (type2));
     }
   else if (TYPE_TARGET_TYPE (type2) != NULL)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
-/* Check types on a worklist for equality.  Returns zero if any pair
-   is not equal, non-zero if they are all considered equal.  */
+/* Check types on a worklist for equality.  Returns false if any pair
+   is not equal, true if they are all considered equal.  */
 
-static int
-check_types_worklist (VEC (type_equality_entry_d) **worklist,
+static bool
+check_types_worklist (std::vector<type_equality_entry> *worklist,
 		      struct bcache *cache)
 {
-  while (!VEC_empty (type_equality_entry_d, *worklist))
+  while (!worklist->empty ())
     {
-      struct type_equality_entry entry;
       int added;
 
-      entry = *VEC_last (type_equality_entry_d, *worklist);
-      VEC_pop (type_equality_entry_d, *worklist);
+      struct type_equality_entry entry = std::move (worklist->back ());
+      worklist->pop_back ();
 
       /* If the type pair has already been visited, we know it is
 	 ok.  */
@@ -3381,36 +3752,33 @@ check_types_worklist (VEC (type_equality_entry_d) **worklist,
       if (!added)
 	continue;
 
-      if (check_types_equal (entry.type1, entry.type2, worklist) == 0)
-	return 0;
+      if (!check_types_equal (entry.type1, entry.type2, worklist))
+	return false;
     }
 
-  return 1;
+  return true;
 }
 
-/* Return non-zero if types TYPE1 and TYPE2 are equal, as determined by a
-   "deep comparison".  Otherwise return zero.  */
+/* Return true if types TYPE1 and TYPE2 are equal, as determined by a
+   "deep comparison".  Otherwise return false.  */
 
-int
+bool
 types_deeply_equal (struct type *type1, struct type *type2)
 {
   struct gdb_exception except = exception_none;
-  int result = 0;
+  bool result = false;
   struct bcache *cache;
-  VEC (type_equality_entry_d) *worklist = NULL;
-  struct type_equality_entry entry;
+  std::vector<type_equality_entry> worklist;
 
   gdb_assert (type1 != NULL && type2 != NULL);
 
   /* Early exit for the simple case.  */
   if (type1 == type2)
-    return 1;
+    return true;
 
   cache = bcache_xmalloc (NULL, NULL);
 
-  entry.type1 = type1;
-  entry.type2 = type2;
-  VEC_safe_push (type_equality_entry_d, worklist, &entry);
+  worklist.emplace_back (type1, type2);
 
   /* check_types_worklist calls several nested helper functions, some
      of which can raise a GDB exception, so we just check and rethrow
@@ -3427,7 +3795,6 @@ types_deeply_equal (struct type *type1, struct type *type2)
   END_CATCH
 
   bcache_xfree (cache);
-  VEC_free (type_equality_entry_d, worklist);
 
   /* Rethrow if there was a problem.  */
   if (except.reason < 0)
@@ -3476,21 +3843,66 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
 {
   struct rank rank = {0,0};
 
-  if (types_equal (parm, arg))
-    return EXACT_MATCH_BADNESS;
-
   /* Resolve typedefs */
   if (TYPE_CODE (parm) == TYPE_CODE_TYPEDEF)
     parm = check_typedef (parm);
   if (TYPE_CODE (arg) == TYPE_CODE_TYPEDEF)
     arg = check_typedef (arg);
 
+  if (TYPE_IS_REFERENCE (parm) && value != NULL)
+    {
+      if (VALUE_LVAL (value) == not_lval)
+	{
+	  /* Rvalues should preferably bind to rvalue references or const
+	     lvalue references.  */
+	  if (TYPE_CODE (parm) == TYPE_CODE_RVALUE_REF)
+	    rank.subrank = REFERENCE_CONVERSION_RVALUE;
+	  else if (TYPE_CONST (TYPE_TARGET_TYPE (parm)))
+	    rank.subrank = REFERENCE_CONVERSION_CONST_LVALUE;
+	  else
+	    return INCOMPATIBLE_TYPE_BADNESS;
+	  return sum_ranks (rank, REFERENCE_CONVERSION_BADNESS);
+	}
+      else
+	{
+	  /* Lvalues should prefer lvalue overloads.  */
+	  if (TYPE_CODE (parm) == TYPE_CODE_RVALUE_REF)
+	    {
+	      rank.subrank = REFERENCE_CONVERSION_RVALUE;
+	      return sum_ranks (rank, REFERENCE_CONVERSION_BADNESS);
+	    }
+	}
+    }
+
+  if (types_equal (parm, arg))
+    {
+      struct type *t1 = parm;
+      struct type *t2 = arg;
+
+      /* For pointers and references, compare target type.  */
+      if (TYPE_CODE (parm) == TYPE_CODE_PTR || TYPE_IS_REFERENCE (parm))
+	{
+	  t1 = TYPE_TARGET_TYPE (parm);
+	  t2 = TYPE_TARGET_TYPE (arg);
+	}
+
+      /* Make sure they are CV equal, too.  */
+      if (TYPE_CONST (t1) != TYPE_CONST (t2))
+	rank.subrank |= CV_CONVERSION_CONST;
+      if (TYPE_VOLATILE (t1) != TYPE_VOLATILE (t2))
+	rank.subrank |= CV_CONVERSION_VOLATILE;
+      if (rank.subrank != 0)
+	return sum_ranks (CV_CONVERSION_BADNESS, rank);
+      return EXACT_MATCH_BADNESS;
+    }
+
   /* See through references, since we can almost make non-references
      references.  */
-  if (TYPE_CODE (arg) == TYPE_CODE_REF)
+
+  if (TYPE_IS_REFERENCE (arg))
     return (sum_ranks (rank_one_type (parm, TYPE_TARGET_TYPE (arg), NULL),
                        REFERENCE_CONVERSION_BADNESS));
-  if (TYPE_CODE (parm) == TYPE_CODE_REF)
+  if (TYPE_IS_REFERENCE (parm))
     return (sum_ranks (rank_one_type (TYPE_TARGET_TYPE (parm), arg, NULL),
                        REFERENCE_CONVERSION_BADNESS));
   if (overload_debug)
@@ -3523,10 +3935,23 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
 
 	  return INCOMPATIBLE_TYPE_BADNESS;
 	case TYPE_CODE_ARRAY:
-	  if (types_equal (TYPE_TARGET_TYPE (parm),
-	                   TYPE_TARGET_TYPE (arg)))
-	    return EXACT_MATCH_BADNESS;
-	  return INCOMPATIBLE_TYPE_BADNESS;
+	  {
+	    struct type *t1 = TYPE_TARGET_TYPE (parm);
+	    struct type *t2 = TYPE_TARGET_TYPE (arg);
+
+	    if (types_equal (t1, t2))
+	      {
+		/* Make sure they are CV equal.  */
+		if (TYPE_CONST (t1) != TYPE_CONST (t2))
+		  rank.subrank |= CV_CONVERSION_CONST;
+		if (TYPE_VOLATILE (t1) != TYPE_VOLATILE (t2))
+		  rank.subrank |= CV_CONVERSION_VOLATILE;
+		if (rank.subrank != 0)
+		  return sum_ranks (CV_CONVERSION_BADNESS, rank);
+		return EXACT_MATCH_BADNESS;
+	      }
+	    return INCOMPATIBLE_TYPE_BADNESS;
+	  }
 	case TYPE_CODE_FUNC:
 	  return rank_one_type (TYPE_TARGET_TYPE (parm), arg, NULL);
 	case TYPE_CODE_INT:
@@ -3689,7 +4114,7 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
 	    return INTEGER_CONVERSION_BADNESS;
 	  else if (TYPE_LENGTH (arg) < TYPE_LENGTH (parm))
 	    return INTEGER_PROMOTION_BADNESS;
-	  /* >>> !! else fall through !! <<< */
+	  /* fall through */
 	case TYPE_CODE_CHAR:
 	  /* Deal with signed, unsigned, and plain chars for C++ and
 	     with int cases falling through from previous case.  */
@@ -3795,7 +4220,7 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
 	  rank.subrank = distance_to_ancestor (parm, arg, 0);
 	  if (rank.subrank >= 0)
 	    return sum_ranks (BASE_CONVERSION_BADNESS, rank);
-	  /* else fall through */
+	  /* fall through */
 	default:
 	  return INCOMPATIBLE_TYPE_BADNESS;
 	}
@@ -4085,10 +4510,6 @@ recursive_dump_type (struct type *type, int spaces)
 		    TYPE_NAME (type) ? TYPE_NAME (type) : "<NULL>");
   gdb_print_host_address (TYPE_NAME (type), gdb_stdout);
   printf_filtered (")\n");
-  printfi_filtered (spaces, "tagname '%s' (",
-		    TYPE_TAG_NAME (type) ? TYPE_TAG_NAME (type) : "<NULL>");
-  gdb_print_host_address (TYPE_TAG_NAME (type), gdb_stdout);
-  printf_filtered (")\n");
   printfi_filtered (spaces, "code 0x%x ", TYPE_CODE (type));
   switch (TYPE_CODE (type))
     {
@@ -4201,77 +4622,73 @@ recursive_dump_type (struct type *type, int spaces)
 		    TYPE_INSTANCE_FLAGS (type));
   if (TYPE_CONST (type))
     {
-      puts_filtered (" TYPE_FLAG_CONST");
+      puts_filtered (" TYPE_CONST");
     }
   if (TYPE_VOLATILE (type))
     {
-      puts_filtered (" TYPE_FLAG_VOLATILE");
+      puts_filtered (" TYPE_VOLATILE");
     }
   if (TYPE_CODE_SPACE (type))
     {
-      puts_filtered (" TYPE_FLAG_CODE_SPACE");
+      puts_filtered (" TYPE_CODE_SPACE");
     }
   if (TYPE_DATA_SPACE (type))
     {
-      puts_filtered (" TYPE_FLAG_DATA_SPACE");
+      puts_filtered (" TYPE_DATA_SPACE");
     }
   if (TYPE_ADDRESS_CLASS_1 (type))
     {
-      puts_filtered (" TYPE_FLAG_ADDRESS_CLASS_1");
+      puts_filtered (" TYPE_ADDRESS_CLASS_1");
     }
   if (TYPE_ADDRESS_CLASS_2 (type))
     {
-      puts_filtered (" TYPE_FLAG_ADDRESS_CLASS_2");
+      puts_filtered (" TYPE_ADDRESS_CLASS_2");
     }
   if (TYPE_RESTRICT (type))
     {
-      puts_filtered (" TYPE_FLAG_RESTRICT");
+      puts_filtered (" TYPE_RESTRICT");
     }
   if (TYPE_ATOMIC (type))
     {
-      puts_filtered (" TYPE_FLAG_ATOMIC");
+      puts_filtered (" TYPE_ATOMIC");
     }
   puts_filtered ("\n");
 
   printfi_filtered (spaces, "flags");
   if (TYPE_UNSIGNED (type))
     {
-      puts_filtered (" TYPE_FLAG_UNSIGNED");
+      puts_filtered (" TYPE_UNSIGNED");
     }
   if (TYPE_NOSIGN (type))
     {
-      puts_filtered (" TYPE_FLAG_NOSIGN");
+      puts_filtered (" TYPE_NOSIGN");
     }
   if (TYPE_STUB (type))
     {
-      puts_filtered (" TYPE_FLAG_STUB");
+      puts_filtered (" TYPE_STUB");
     }
   if (TYPE_TARGET_STUB (type))
     {
-      puts_filtered (" TYPE_FLAG_TARGET_STUB");
-    }
-  if (TYPE_STATIC (type))
-    {
-      puts_filtered (" TYPE_FLAG_STATIC");
+      puts_filtered (" TYPE_TARGET_STUB");
     }
   if (TYPE_PROTOTYPED (type))
     {
-      puts_filtered (" TYPE_FLAG_PROTOTYPED");
+      puts_filtered (" TYPE_PROTOTYPED");
     }
   if (TYPE_INCOMPLETE (type))
     {
-      puts_filtered (" TYPE_FLAG_INCOMPLETE");
+      puts_filtered (" TYPE_INCOMPLETE");
     }
   if (TYPE_VARARGS (type))
     {
-      puts_filtered (" TYPE_FLAG_VARARGS");
+      puts_filtered (" TYPE_VARARGS");
     }
   /* This is used for things like AltiVec registers on ppc.  Gcc emits
      an attribute for the array type, which tells whether or not we
      have a vector, instead of a regular array.  */
   if (TYPE_VECTOR (type))
     {
-      puts_filtered (" TYPE_FLAG_VECTOR");
+      puts_filtered (" TYPE_VECTOR");
     }
   if (TYPE_FIXED_INSTANCE (type))
     {
@@ -4341,26 +4758,11 @@ recursive_dump_type (struct type *type, int spaces)
 
       case TYPE_SPECIFIC_FLOATFORMAT:
 	printfi_filtered (spaces, "floatformat ");
-	if (TYPE_FLOATFORMAT (type) == NULL)
+	if (TYPE_FLOATFORMAT (type) == NULL
+	    || TYPE_FLOATFORMAT (type)->name == NULL)
 	  puts_filtered ("(null)");
 	else
-	  {
-	    puts_filtered ("{ ");
-	    if (TYPE_FLOATFORMAT (type)[0] == NULL
-		|| TYPE_FLOATFORMAT (type)[0]->name == NULL)
-	      puts_filtered ("(null)");
-	    else
-	      puts_filtered (TYPE_FLOATFORMAT (type)[0]->name);
-
-	    puts_filtered (", ");
-	    if (TYPE_FLOATFORMAT (type)[1] == NULL
-		|| TYPE_FLOATFORMAT (type)[1]->name == NULL)
-	      puts_filtered ("(null)");
-	    else
-	      puts_filtered (TYPE_FLOATFORMAT (type)[1]->name);
-
-	    puts_filtered (" }");
-	  }
+	  puts_filtered (TYPE_FLOATFORMAT (type)->name);
 	puts_filtered ("\n");
 	break;
 
@@ -4384,9 +4786,13 @@ recursive_dump_type (struct type *type, int spaces)
 /* Trivial helpers for the libiberty hash table, for mapping one
    type to another.  */
 
-struct type_pair
+struct type_pair : public allocate_on_obstack
 {
-  struct type *old, *newobj;
+  type_pair (struct type *old_, struct type *newobj_)
+    : old (old_), newobj (newobj_)
+  {}
+
+  struct type * const old, * const newobj;
 };
 
 static hashval_t
@@ -4454,7 +4860,6 @@ copy_type_recursive (struct objfile *objfile,
 		     struct type *type,
 		     htab_t copied_types)
 {
-  struct type_pair *stored, pair;
   void **slot;
   struct type *new_type;
 
@@ -4465,7 +4870,8 @@ copy_type_recursive (struct objfile *objfile,
      if it did, the type might disappear unexpectedly.  */
   gdb_assert (TYPE_OBJFILE (type) == objfile);
 
-  pair.old = type;
+  struct type_pair pair (type, nullptr);
+
   slot = htab_find_slot (copied_types, &pair, INSERT);
   if (*slot != NULL)
     return ((struct type_pair *) *slot)->newobj;
@@ -4474,9 +4880,9 @@ copy_type_recursive (struct objfile *objfile,
 
   /* We must add the new type to the hash table immediately, in case
      we encounter this type again during a recursive call below.  */
-  stored = XOBNEW (&objfile->objfile_obstack, struct type_pair);
-  stored->old = type;
-  stored->newobj = new_type;
+  struct type_pair *stored
+    = new (&objfile->objfile_obstack) struct type_pair (type, new_type);
+
   *slot = stored;
 
   /* Copy the common fields of types.  For the main type, we simply
@@ -4487,8 +4893,6 @@ copy_type_recursive (struct objfile *objfile,
 
   if (TYPE_NAME (type))
     TYPE_NAME (new_type) = xstrdup (TYPE_NAME (type));
-  if (TYPE_TAG_NAME (type))
-    TYPE_TAG_NAME (new_type) = xstrdup (TYPE_TAG_NAME (type));
 
   TYPE_INSTANCE_FLAGS (new_type) = TYPE_INSTANCE_FLAGS (type);
   TYPE_LENGTH (new_type) = TYPE_LENGTH (type);
@@ -4629,13 +5033,14 @@ copy_type (const struct type *type)
 
 struct type *
 arch_type (struct gdbarch *gdbarch,
-	   enum type_code code, int length, const char *name)
+	   enum type_code code, int bit, const char *name)
 {
   struct type *type;
 
   type = alloc_type_arch (gdbarch);
-  TYPE_CODE (type) = code;
-  TYPE_LENGTH (type) = length;
+  set_type_code (type, code);
+  gdb_assert ((bit % TARGET_CHAR_BIT) == 0);
+  TYPE_LENGTH (type) = bit / TARGET_CHAR_BIT;
 
   if (name)
     TYPE_NAME (type) = gdbarch_obstack_strdup (gdbarch, name);
@@ -4653,11 +5058,9 @@ arch_integer_type (struct gdbarch *gdbarch,
 {
   struct type *t;
 
-  t = arch_type (gdbarch, TYPE_CODE_INT, bit / TARGET_CHAR_BIT, name);
+  t = arch_type (gdbarch, TYPE_CODE_INT, bit, name);
   if (unsigned_p)
     TYPE_UNSIGNED (t) = 1;
-  if (name && strcmp (name, "char") == 0)
-    TYPE_NOSIGN (t) = 1;
 
   return t;
 }
@@ -4672,7 +5075,7 @@ arch_character_type (struct gdbarch *gdbarch,
 {
   struct type *t;
 
-  t = arch_type (gdbarch, TYPE_CODE_CHAR, bit / TARGET_CHAR_BIT, name);
+  t = arch_type (gdbarch, TYPE_CODE_CHAR, bit, name);
   if (unsigned_p)
     TYPE_UNSIGNED (t) = 1;
 
@@ -4689,7 +5092,7 @@ arch_boolean_type (struct gdbarch *gdbarch,
 {
   struct type *t;
 
-  t = arch_type (gdbarch, TYPE_CODE_BOOL, bit / TARGET_CHAR_BIT, name);
+  t = arch_type (gdbarch, TYPE_CODE_BOOL, bit, name);
   if (unsigned_p)
     TYPE_UNSIGNED (t) = 1;
 
@@ -4706,27 +5109,25 @@ arch_float_type (struct gdbarch *gdbarch,
 		 int bit, const char *name,
 		 const struct floatformat **floatformats)
 {
+  const struct floatformat *fmt = floatformats[gdbarch_byte_order (gdbarch)];
   struct type *t;
 
-  if (bit == -1)
-    {
-      gdb_assert (floatformats != NULL);
-      gdb_assert (floatformats[0] != NULL && floatformats[1] != NULL);
-      bit = floatformats[0]->totalsize;
-    }
-  gdb_assert (bit >= 0);
+  bit = verify_floatformat (bit, fmt);
+  t = arch_type (gdbarch, TYPE_CODE_FLT, bit, name);
+  TYPE_FLOATFORMAT (t) = fmt;
 
-  t = arch_type (gdbarch, TYPE_CODE_FLT, bit / TARGET_CHAR_BIT, name);
-  TYPE_FLOATFORMAT (t) = floatformats;
+  return t;
+}
 
-  if (floatformats != NULL)
-    {
-      size_t len = TYPE_LENGTH (t);
+/* Allocate a TYPE_CODE_DECFLOAT type structure associated with GDBARCH.
+   BIT is the type size in bits.  NAME is the type name.  */
 
-      gdb_assert (len >= floatformat_totalsize_bytes (floatformats[0]));
-      gdb_assert (len >= floatformat_totalsize_bytes (floatformats[1]));
-    }
+struct type *
+arch_decfloat_type (struct gdbarch *gdbarch, int bit, const char *name)
+{
+  struct type *t;
 
+  t = arch_type (gdbarch, TYPE_CODE_DECFLOAT, bit, name);
   return t;
 }
 
@@ -4740,26 +5141,42 @@ arch_complex_type (struct gdbarch *gdbarch,
   struct type *t;
 
   t = arch_type (gdbarch, TYPE_CODE_COMPLEX,
-		 2 * TYPE_LENGTH (target_type), name);
+		 2 * TYPE_LENGTH (target_type) * TARGET_CHAR_BIT, name);
   TYPE_TARGET_TYPE (t) = target_type;
   return t;
 }
 
-/* Allocate a TYPE_CODE_FLAGS type structure associated with GDBARCH.
-   NAME is the type name.  LENGTH is the size of the flag word in bytes.  */
+/* Allocate a TYPE_CODE_PTR type structure associated with GDBARCH.
+   BIT is the pointer type size in bits.  NAME is the type name.
+   TARGET_TYPE is the pointer target type.  Always sets the pointer type's
+   TYPE_UNSIGNED flag.  */
 
 struct type *
-arch_flags_type (struct gdbarch *gdbarch, const char *name, int length)
+arch_pointer_type (struct gdbarch *gdbarch,
+		   int bit, const char *name, struct type *target_type)
 {
-  int max_nfields = length * TARGET_CHAR_BIT;
+  struct type *t;
+
+  t = arch_type (gdbarch, TYPE_CODE_PTR, bit, name);
+  TYPE_TARGET_TYPE (t) = target_type;
+  TYPE_UNSIGNED (t) = 1;
+  return t;
+}
+
+/* Allocate a TYPE_CODE_FLAGS type structure associated with GDBARCH.
+   NAME is the type name.  BIT is the size of the flag word in bits.  */
+
+struct type *
+arch_flags_type (struct gdbarch *gdbarch, const char *name, int bit)
+{
   struct type *type;
 
-  type = arch_type (gdbarch, TYPE_CODE_FLAGS, length, name);
+  type = arch_type (gdbarch, TYPE_CODE_FLAGS, bit, name);
   TYPE_UNSIGNED (type) = 1;
   TYPE_NFIELDS (type) = 0;
   /* Pre-allocate enough space assuming every field is one bit.  */
   TYPE_FIELDS (type)
-    = (struct field *) TYPE_ZALLOC (type, max_nfields * sizeof (struct field));
+    = (struct field *) TYPE_ZALLOC (type, bit * sizeof (struct field));
 
   return type;
 }
@@ -4813,7 +5230,7 @@ arch_composite_type (struct gdbarch *gdbarch, const char *name,
 
   gdb_assert (code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION);
   t = arch_type (gdbarch, code, 0, NULL);
-  TYPE_TAG_NAME (t) = name;
+  TYPE_NAME (t) = name;
   INIT_CPLUS_SPECIFIC (t);
   return t;
 }
@@ -4904,10 +5321,11 @@ gdbtypes_post_init (struct gdbarch *gdbarch)
 
   /* Basic types.  */
   builtin_type->builtin_void
-    = arch_type (gdbarch, TYPE_CODE_VOID, 1, "void");
+    = arch_type (gdbarch, TYPE_CODE_VOID, TARGET_CHAR_BIT, "void");
   builtin_type->builtin_char
     = arch_integer_type (gdbarch, TARGET_CHAR_BIT,
 			 !gdbarch_char_signed (gdbarch), "char");
+  TYPE_NOSIGN (builtin_type->builtin_char) = 1;
   builtin_type->builtin_signed_char
     = arch_integer_type (gdbarch, TARGET_CHAR_BIT,
 			 0, "signed char");
@@ -4954,18 +5372,18 @@ gdbtypes_post_init (struct gdbarch *gdbarch)
     = arch_complex_type (gdbarch, "double complex",
 			 builtin_type->builtin_double);
   builtin_type->builtin_string
-    = arch_type (gdbarch, TYPE_CODE_STRING, 1, "string");
+    = arch_type (gdbarch, TYPE_CODE_STRING, TARGET_CHAR_BIT, "string");
   builtin_type->builtin_bool
-    = arch_type (gdbarch, TYPE_CODE_BOOL, 1, "bool");
+    = arch_type (gdbarch, TYPE_CODE_BOOL, TARGET_CHAR_BIT, "bool");
 
   /* The following three are about decimal floating point types, which
      are 32-bits, 64-bits and 128-bits respectively.  */
   builtin_type->builtin_decfloat
-    = arch_type (gdbarch, TYPE_CODE_DECFLOAT, 32 / 8, "_Decimal32");
+    = arch_decfloat_type (gdbarch, 32, "_Decimal32");
   builtin_type->builtin_decdouble
-    = arch_type (gdbarch, TYPE_CODE_DECFLOAT, 64 / 8, "_Decimal64");
+    = arch_decfloat_type (gdbarch, 64, "_Decimal64");
   builtin_type->builtin_declong
-    = arch_type (gdbarch, TYPE_CODE_DECFLOAT, 128 / 8, "_Decimal128");
+    = arch_decfloat_type (gdbarch, 128, "_Decimal128");
 
   /* "True" character types.  */
   builtin_type->builtin_true_char
@@ -5003,10 +5421,12 @@ gdbtypes_post_init (struct gdbarch *gdbarch)
 
   /* Wide character types.  */
   builtin_type->builtin_char16
-    = arch_integer_type (gdbarch, 16, 0, "char16_t");
+    = arch_integer_type (gdbarch, 16, 1, "char16_t");
   builtin_type->builtin_char32
-    = arch_integer_type (gdbarch, 32, 0, "char32_t");
-	
+    = arch_integer_type (gdbarch, 32, 1, "char32_t");
+  builtin_type->builtin_wchar
+    = arch_integer_type (gdbarch, gdbarch_wchar_bit (gdbarch),
+			 !gdbarch_wchar_signed (gdbarch), "wchar_t");
 
   /* Default data/code pointer types.  */
   builtin_type->builtin_data_ptr
@@ -5051,109 +5471,74 @@ objfile_type (struct objfile *objfile)
 
   /* Basic types.  */
   objfile_type->builtin_void
-    = init_type (TYPE_CODE_VOID, 1,
-		 0,
-		 "void", objfile);
-
+    = init_type (objfile, TYPE_CODE_VOID, TARGET_CHAR_BIT, "void");
   objfile_type->builtin_char
-    = init_type (TYPE_CODE_INT, TARGET_CHAR_BIT / TARGET_CHAR_BIT,
-		 (TYPE_FLAG_NOSIGN
-		  | (gdbarch_char_signed (gdbarch) ? 0 : TYPE_FLAG_UNSIGNED)),
-		 "char", objfile);
+    = init_integer_type (objfile, TARGET_CHAR_BIT,
+			 !gdbarch_char_signed (gdbarch), "char");
+  TYPE_NOSIGN (objfile_type->builtin_char) = 1;
   objfile_type->builtin_signed_char
-    = init_type (TYPE_CODE_INT, TARGET_CHAR_BIT / TARGET_CHAR_BIT,
-		 0,
-		 "signed char", objfile);
+    = init_integer_type (objfile, TARGET_CHAR_BIT,
+			 0, "signed char");
   objfile_type->builtin_unsigned_char
-    = init_type (TYPE_CODE_INT, TARGET_CHAR_BIT / TARGET_CHAR_BIT,
-		 TYPE_FLAG_UNSIGNED,
-		 "unsigned char", objfile);
+    = init_integer_type (objfile, TARGET_CHAR_BIT,
+			 1, "unsigned char");
   objfile_type->builtin_short
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_short_bit (gdbarch) / TARGET_CHAR_BIT,
-		 0, "short", objfile);
+    = init_integer_type (objfile, gdbarch_short_bit (gdbarch),
+			 0, "short");
   objfile_type->builtin_unsigned_short
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_short_bit (gdbarch) / TARGET_CHAR_BIT,
-		 TYPE_FLAG_UNSIGNED, "unsigned short", objfile);
+    = init_integer_type (objfile, gdbarch_short_bit (gdbarch),
+			 1, "unsigned short");
   objfile_type->builtin_int
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT,
-		 0, "int", objfile);
+    = init_integer_type (objfile, gdbarch_int_bit (gdbarch),
+			 0, "int");
   objfile_type->builtin_unsigned_int
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT,
-		 TYPE_FLAG_UNSIGNED, "unsigned int", objfile);
+    = init_integer_type (objfile, gdbarch_int_bit (gdbarch),
+			 1, "unsigned int");
   objfile_type->builtin_long
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_long_bit (gdbarch) / TARGET_CHAR_BIT,
-		 0, "long", objfile);
+    = init_integer_type (objfile, gdbarch_long_bit (gdbarch),
+			 0, "long");
   objfile_type->builtin_unsigned_long
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_long_bit (gdbarch) / TARGET_CHAR_BIT,
-		 TYPE_FLAG_UNSIGNED, "unsigned long", objfile);
+    = init_integer_type (objfile, gdbarch_long_bit (gdbarch),
+			 1, "unsigned long");
   objfile_type->builtin_long_long
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_long_long_bit (gdbarch) / TARGET_CHAR_BIT,
-		 0, "long long", objfile);
+    = init_integer_type (objfile, gdbarch_long_long_bit (gdbarch),
+			 0, "long long");
   objfile_type->builtin_unsigned_long_long
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_long_long_bit (gdbarch) / TARGET_CHAR_BIT,
-		 TYPE_FLAG_UNSIGNED, "unsigned long long", objfile);
-
+    = init_integer_type (objfile, gdbarch_long_long_bit (gdbarch),
+			 1, "unsigned long long");
   objfile_type->builtin_float
-    = init_type (TYPE_CODE_FLT,
-		 gdbarch_float_bit (gdbarch) / TARGET_CHAR_BIT,
-		 0, "float", objfile);
-  TYPE_FLOATFORMAT (objfile_type->builtin_float)
-    = gdbarch_float_format (gdbarch);
+    = init_float_type (objfile, gdbarch_float_bit (gdbarch),
+		       "float", gdbarch_float_format (gdbarch));
   objfile_type->builtin_double
-    = init_type (TYPE_CODE_FLT,
-		 gdbarch_double_bit (gdbarch) / TARGET_CHAR_BIT,
-		 0, "double", objfile);
-  TYPE_FLOATFORMAT (objfile_type->builtin_double)
-    = gdbarch_double_format (gdbarch);
+    = init_float_type (objfile, gdbarch_double_bit (gdbarch),
+		       "double", gdbarch_double_format (gdbarch));
   objfile_type->builtin_long_double
-    = init_type (TYPE_CODE_FLT,
-		 gdbarch_long_double_bit (gdbarch) / TARGET_CHAR_BIT,
-		 0, "long double", objfile);
-  TYPE_FLOATFORMAT (objfile_type->builtin_long_double)
-    = gdbarch_long_double_format (gdbarch);
+    = init_float_type (objfile, gdbarch_long_double_bit (gdbarch),
+		       "long double", gdbarch_long_double_format (gdbarch));
 
   /* This type represents a type that was unrecognized in symbol read-in.  */
   objfile_type->builtin_error
-    = init_type (TYPE_CODE_ERROR, 0, 0, "<unknown type>", objfile);
+    = init_type (objfile, TYPE_CODE_ERROR, 0, "<unknown type>");
 
   /* The following set of types is used for symbols with no
      debug information.  */
   objfile_type->nodebug_text_symbol
-    = init_type (TYPE_CODE_FUNC, 1, 0,
-		 "<text variable, no debug info>", objfile);
-  TYPE_TARGET_TYPE (objfile_type->nodebug_text_symbol)
-    = objfile_type->builtin_int;
+    = init_type (objfile, TYPE_CODE_FUNC, TARGET_CHAR_BIT,
+		 "<text variable, no debug info>");
   objfile_type->nodebug_text_gnu_ifunc_symbol
-    = init_type (TYPE_CODE_FUNC, 1, TYPE_FLAG_GNU_IFUNC,
-		 "<text gnu-indirect-function variable, no debug info>",
-		 objfile);
-  TYPE_TARGET_TYPE (objfile_type->nodebug_text_gnu_ifunc_symbol)
-    = objfile_type->nodebug_text_symbol;
+    = init_type (objfile, TYPE_CODE_FUNC, TARGET_CHAR_BIT,
+		 "<text gnu-indirect-function variable, no debug info>");
+  TYPE_GNU_IFUNC (objfile_type->nodebug_text_gnu_ifunc_symbol) = 1;
   objfile_type->nodebug_got_plt_symbol
-    = init_type (TYPE_CODE_PTR, gdbarch_addr_bit (gdbarch) / 8, 0,
-		 "<text from jump slot in .got.plt, no debug info>",
-		 objfile);
-  TYPE_TARGET_TYPE (objfile_type->nodebug_got_plt_symbol)
-    = objfile_type->nodebug_text_symbol;
+    = init_pointer_type (objfile, gdbarch_addr_bit (gdbarch),
+			 "<text from jump slot in .got.plt, no debug info>",
+			 objfile_type->nodebug_text_symbol);
   objfile_type->nodebug_data_symbol
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_int_bit (gdbarch) / HOST_CHAR_BIT, 0,
-		 "<data variable, no debug info>", objfile);
+    = init_nodebug_var_type (objfile, "<data variable, no debug info>");
   objfile_type->nodebug_unknown_symbol
-    = init_type (TYPE_CODE_INT, 1, 0,
-		 "<variable (not text or data), no debug info>", objfile);
+    = init_nodebug_var_type (objfile, "<variable (not text or data), no debug info>");
   objfile_type->nodebug_tls_symbol
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_int_bit (gdbarch) / HOST_CHAR_BIT, 0,
-		 "<thread local variable, no debug info>", objfile);
+    = init_nodebug_var_type (objfile, "<thread local variable, no debug info>");
 
   /* NOTE: on some targets, addresses and pointers are not necessarily
      the same.
@@ -5175,15 +5560,12 @@ objfile_type (struct objfile *objfile)
      are indeed in the unified virtual address space.  */
 
   objfile_type->builtin_core_addr
-    = init_type (TYPE_CODE_INT,
-		 gdbarch_addr_bit (gdbarch) / 8,
-		 TYPE_FLAG_UNSIGNED, "__CORE_ADDR", objfile);
+    = init_integer_type (objfile, gdbarch_addr_bit (gdbarch), 1,
+			 "__CORE_ADDR");
 
   set_objfile_data (objfile, objfile_type_data, objfile_type);
   return objfile_type;
 }
-
-extern initialize_file_ftype _initialize_gdbtypes;
 
 void
 _initialize_gdbtypes (void)

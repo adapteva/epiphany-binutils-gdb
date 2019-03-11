@@ -1,6 +1,6 @@
 /* TUI display source/assembly window.
 
-   Copyright (C) 1998-2016 Free Software Foundation, Inc.
+   Copyright (C) 1998-2018 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -109,14 +109,13 @@ tui_update_source_window_as_is (struct tui_win_info *win_info,
       tui_update_exec_info (win_info);
       if (win_info->generic.type == SRC_WIN)
 	{
-	  struct symtab_and_line sal;
-	  
-	  init_sal (&sal);
+	  symtab_and_line sal;
+
 	  sal.line = line_or_addr.u.line_no +
 	    (win_info->generic.content_size - 2);
 	  sal.symtab = s;
 	  sal.pspace = SYMTAB_PSPACE (s);
-	  set_current_source_symtab_and_line (&sal);
+	  set_current_source_symtab_and_line (sal);
 	  /* If the focus was in the asm win, put it in the src win if
 	     we don't have a split layout.  */
 	  if (tui_win_with_focus () == TUI_DISASM_WIN
@@ -241,7 +240,7 @@ tui_erase_source_content (struct tui_win_info *win_info,
       tui_check_and_display_highlight_if_needed (win_info);
       if (display_prompt == EMPTY_SOURCE_PROMPT)
 	{
-	  char *no_src_str;
+	  const char *no_src_str;
 
 	  if (win_info->generic.type == SRC_WIN)
 	    no_src_str = NO_SRC_STRING;
@@ -254,7 +253,7 @@ tui_erase_source_content (struct tui_win_info *win_info,
 	  mvwaddstr (win_info->generic.handle,
 		     (win_info->generic.height / 2),
 		     x_pos,
-		     no_src_str);
+		     (char *) no_src_str);
 
 	  /* elz: Added this function call to set the real contents of
 	     the window to what is on the screen, so that later calls
@@ -280,7 +279,7 @@ tui_show_source_line (struct tui_win_info *win_info, int lineno)
     wattron (win_info->generic.handle, A_STANDOUT);
 
   mvwaddstr (win_info->generic.handle, lineno, 1,
-             line->which_element.source.line);
+             (char *) line->which_element.source.line);
   if (line->which_element.source.is_exec_point)
     wattroff (win_info->generic.handle, A_STANDOUT);
 
@@ -565,7 +564,8 @@ tui_show_exec_info_content (struct tui_win_info *win_info)
     mvwaddstr (exec_info->handle,
 	       cur_line,
 	       0,
-	       exec_info->content[cur_line - 1]->which_element.simple_string);
+	       (char *) exec_info->content[cur_line - 1]
+			  ->which_element.simple_string);
   tui_refresh_win (exec_info);
   exec_info->content_in_use = TRUE;
 }
@@ -604,8 +604,11 @@ tui_alloc_source_buffer (struct tui_win_info *win_info)
   char *src_line_buf;
   int i, line_width, max_lines;
 
-  max_lines = win_info->generic.height;	/* Less the highlight box.  */
-  line_width = win_info->generic.width - 1;
+  /* The window width/height includes the highlight box.  Determine actual
+     content dimensions, including string null-terminators.  */
+  max_lines = win_info->generic.height - 2;
+  line_width = win_info->generic.width - 2 + 1;
+
   /*
    * Allocate the buffer for the source lines.  Do this only once
    * since they will be re-used for all source displays.  The only
@@ -615,23 +618,8 @@ tui_alloc_source_buffer (struct tui_win_info *win_info)
     {
       src_line_buf = (char *) 
 	xmalloc ((max_lines * line_width) * sizeof (char));
-      if (src_line_buf == (char *) NULL)
-	{
-	  fputs_unfiltered ("Unable to Allocate Memory for "
-			    "Source or Disassembly Display.\n",
-			    gdb_stderr);
-	  return TUI_FAILURE;
-	}
       /* Allocate the content list.  */
       win_info->generic.content = tui_alloc_content (max_lines, SRC_WIN);
-      if (win_info->generic.content == NULL)
-	{
-	  xfree (src_line_buf);
-	  fputs_unfiltered ("Unable to Allocate Memory for "
-			    "Source or Disassembly Display.\n",
-			    gdb_stderr);
-	  return TUI_FAILURE;
-	}
       for (i = 0; i < max_lines; i++)
 	win_info->generic.content[i]->which_element.source.line
 	  = src_line_buf + (line_width * i);

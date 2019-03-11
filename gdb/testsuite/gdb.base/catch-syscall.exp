@@ -1,4 +1,4 @@
-#   Copyright 1997-2016 Free Software Foundation, Inc.
+#   Copyright 1997-2018 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,15 +21,14 @@
 
 standard_testfile
 
-if  { [prepare_for_testing ${testfile}.exp $testfile ${testfile}.c] } {
-     untested catch-syscall.exp
+if  { [prepare_for_testing "failed to prepare" $testfile ${testfile}.c] } {
      return -1
 }
 
 # Check target supports catch syscall or not.
 clean_restart $binfile
 if ![runto_main] then {
-    fail "Can't run to main"
+    fail "can't run to main"
     return
 }
 
@@ -180,7 +179,7 @@ proc check_for_program_end {} {
     # Deleting the catchpoints
     delete_breakpoints
 
-    gdb_continue_to_end
+    gdb_continue_to_end "" continue 1
 }
 
 proc test_catch_syscall_without_args {} {
@@ -251,7 +250,7 @@ proc test_catch_syscall_with_wrong_args {} {
 	# If it doesn't, everything is right (since we don't have
 	# a syscall named "mlock" in it).  Otherwise, this is a failure.
 	set thistest "catch syscall with unused syscall ($syscall_name)"
-	gdb_continue_to_end $thistest
+	gdb_continue_to_end $thistest continue 1
     }
 }
 

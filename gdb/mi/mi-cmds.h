@@ -1,6 +1,6 @@
 /* MI Command Set for GDB, the GNU debugger.
 
-   Copyright (C) 2000-2016 Free Software Foundation, Inc.
+   Copyright (C) 2000-2018 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -28,7 +28,7 @@ enum print_values {
    PRINT_SIMPLE_VALUES
 };
 
-typedef void (mi_cmd_argv_ftype) (char *command, char **argv, int argc);
+typedef void (mi_cmd_argv_ftype) (const char *command, char **argv, int argc);
 
 /* Declarations of the functions implementing each command.  */
 
@@ -41,6 +41,7 @@ extern mi_cmd_argv_ftype mi_cmd_break_passcount;
 extern mi_cmd_argv_ftype mi_cmd_break_watch;
 extern mi_cmd_argv_ftype mi_cmd_catch_assert;
 extern mi_cmd_argv_ftype mi_cmd_catch_exception;
+extern mi_cmd_argv_ftype mi_cmd_catch_handlers;
 extern mi_cmd_argv_ftype mi_cmd_catch_load;
 extern mi_cmd_argv_ftype mi_cmd_catch_unload;
 extern mi_cmd_argv_ftype mi_cmd_disassemble;
@@ -70,6 +71,7 @@ extern mi_cmd_argv_ftype mi_cmd_exec_step;
 extern mi_cmd_argv_ftype mi_cmd_exec_step_instruction;
 extern mi_cmd_argv_ftype mi_cmd_file_list_exec_source_file;
 extern mi_cmd_argv_ftype mi_cmd_file_list_exec_source_files;
+extern mi_cmd_argv_ftype mi_cmd_file_list_shared_libraries;
 extern mi_cmd_argv_ftype mi_cmd_gdb_exit;
 extern mi_cmd_argv_ftype mi_cmd_inferior_tty_set;
 extern mi_cmd_argv_ftype mi_cmd_inferior_tty_show;
@@ -93,6 +95,7 @@ extern mi_cmd_argv_ftype mi_cmd_target_detach;
 extern mi_cmd_argv_ftype mi_cmd_target_file_get;
 extern mi_cmd_argv_ftype mi_cmd_target_file_put;
 extern mi_cmd_argv_ftype mi_cmd_target_file_delete;
+extern mi_cmd_argv_ftype mi_cmd_target_flash_erase;
 extern mi_cmd_argv_ftype mi_cmd_thread_info;
 extern mi_cmd_argv_ftype mi_cmd_thread_list_ids;
 extern mi_cmd_argv_ftype mi_cmd_thread_select;

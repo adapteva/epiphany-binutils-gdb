@@ -1,6 +1,6 @@
 /* The ptid_t type and common functions operating on it.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2018 Free Software Foundation, Inc.
    
    This file is part of GDB.
 
@@ -22,110 +22,5 @@
 
 /* See ptid.h for these.  */
 
-ptid_t null_ptid = { 0, 0, 0 };
-ptid_t minus_one_ptid = { -1, 0, 0 };
-
-/* See ptid.h.  */
-
-ptid_t
-ptid_build (int pid, long lwp, long tid)
-{
-  ptid_t ptid;
-
-  ptid.pid = pid;
-  ptid.lwp = lwp;
-  ptid.tid = tid;
-  return ptid;
-}
-
-/* See ptid.h.  */
-
-ptid_t
-pid_to_ptid (int pid)
-{
-  return ptid_build (pid, 0, 0);
-}
-
-/* See ptid.h.  */
-
-int
-ptid_get_pid (ptid_t ptid)
-{
-  return ptid.pid;
-}
-
-/* See ptid.h.  */
-
-long
-ptid_get_lwp (ptid_t ptid)
-{
-  return ptid.lwp;
-}
-
-/* See ptid.h.  */
-
-long
-ptid_get_tid (ptid_t ptid)
-{
-  return ptid.tid;
-}
-
-/* See ptid.h.  */
-
-int
-ptid_equal (ptid_t ptid1, ptid_t ptid2)
-{
-  return (ptid1.pid == ptid2.pid
-	  && ptid1.lwp == ptid2.lwp
-	  && ptid1.tid == ptid2.tid);
-}
-
-/* See ptid.h.  */
-
-int
-ptid_is_pid (ptid_t ptid)
-{
-  if (ptid_equal (minus_one_ptid, ptid)
-      || ptid_equal (null_ptid, ptid))
-    return 0;
-
-  return (ptid_get_lwp (ptid) == 0 && ptid_get_tid (ptid) == 0);
-}
-
-/* See ptid.h.  */
-
-int
-ptid_lwp_p (ptid_t ptid)
-{
-  if (ptid_equal (minus_one_ptid, ptid)
-      || ptid_equal (null_ptid, ptid))
-    return 0;
-
-  return (ptid_get_lwp (ptid) != 0);
-}
-
-/* See ptid.h.  */
-
-int
-ptid_tid_p (ptid_t ptid)
-{
-  if (ptid_equal (minus_one_ptid, ptid)
-      || ptid_equal (null_ptid, ptid))
-    return 0;
-
-  return (ptid_get_tid (ptid) != 0);
-}
-
-int
-ptid_match (ptid_t ptid, ptid_t filter)
-{
-  if (ptid_equal (filter, minus_one_ptid))
-    return 1;
-  if (ptid_is_pid (filter)
-      && ptid_get_pid (ptid) == ptid_get_pid (filter))
-    return 1;
-  else if (ptid_equal (ptid, filter))
-    return 1;
-
-  return 0;
-}
+ptid_t null_ptid = ptid_t::make_null ();
+ptid_t minus_one_ptid = ptid_t::make_minus_one ();

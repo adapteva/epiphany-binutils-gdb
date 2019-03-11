@@ -1,6 +1,6 @@
 /* Scheme interface to values.
 
-   Copyright (C) 2008-2016 Free Software Foundation, Inc.
+   Copyright (C) 2008-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -24,6 +24,7 @@
 #include "arch-utils.h"
 #include "charset.h"
 #include "cp-abi.h"
+#include "target-float.h"
 #include "infcall.h"
 #include "symtab.h" /* Needed by language.h.  */
 #include "language.h"
@@ -130,7 +131,7 @@ vlscm_free_value_smob (SCM self)
   value_smob *v_smob = (value_smob *) SCM_SMOB_DATA (self);
 
   vlscm_forget_value_smob (v_smob);
-  value_free (v_smob->value);
+  value_decref (v_smob->value);
 
   return 0;
 }
@@ -141,7 +142,6 @@ static int
 vlscm_print_value_smob (SCM self, SCM port, scm_print_state *pstate)
 {
   value_smob *v_smob = (value_smob *) SCM_SMOB_DATA (self);
-  char *s = NULL;
   struct value_print_options opts;
 
   if (pstate->writingp)
@@ -158,25 +158,16 @@ vlscm_print_value_smob (SCM self, SCM port, scm_print_state *pstate)
 
   TRY
     {
-      struct ui_file *stb = mem_fileopen ();
-      struct cleanup *old_chain = make_cleanup_ui_file_delete (stb);
+      string_file stb;
 
-      common_val_print (v_smob->value, stb, 0, &opts, current_language);
-      s = ui_file_xstrdup (stb, NULL);
-
-      do_cleanups (old_chain);
+      common_val_print (v_smob->value, &stb, 0, &opts, current_language);
+      scm_puts (stb.c_str (), port);
     }
   CATCH (except, RETURN_MASK_ALL)
     {
       GDBSCM_HANDLE_GDB_EXCEPTION (except);
     }
   END_CATCH
-
-  if (s != NULL)
-    {
-      scm_puts (s, port);
-      xfree (s);
-    }
 
   if (pstate->writingp)
     scm_puts (">", port);
@@ -262,8 +253,7 @@ vlscm_scm_from_value (struct value *value)
   SCM v_scm = vlscm_make_value_smob ();
   value_smob *v_smob = (value_smob *) SCM_SMOB_DATA (v_scm);
 
-  v_smob->value = value;
-  release_value_or_incref (value);
+  v_smob->value = release_value (value).release ();
   vlscm_remember_scheme_value (v_smob);
 
   return v_scm;
@@ -431,23 +421,18 @@ gdbscm_value_address (SCM self)
 
   if (SCM_UNBNDP (v_smob->address))
     {
-      struct value *res_val = NULL;
       struct cleanup *cleanup
 	= make_cleanup_value_free_to_mark (value_mark ());
-      SCM address;
+      SCM address = SCM_BOOL_F;
 
       TRY
 	{
-	  res_val = value_addr (value);
+	  address = vlscm_scm_from_value (value_addr (value));
 	}
       CATCH (except, RETURN_MASK_ALL)
 	{
-	  address = SCM_BOOL_F;
 	}
       END_CATCH
-
-      if (res_val != NULL)
-	address = vlscm_scm_from_value (res_val);
 
       do_cleanups (cleanup);
 
@@ -601,7 +586,7 @@ gdbscm_value_dynamic_type (SCM self)
 	      if (was_pointer)
 		type = lookup_pointer_type (type);
 	      else
-		type = lookup_reference_type (type);
+		type = lookup_lvalue_reference_type (type);
 	    }
 	}
       else if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
@@ -726,7 +711,8 @@ gdbscm_value_field (SCM self, SCM field_scm)
     {
       struct value *tmp = value;
 
-      res_val = value_struct_elt (&tmp, NULL, field, NULL, NULL);
+      res_val = value_struct_elt (&tmp, NULL, field, NULL,
+				  "struct/class/union");
     }
   CATCH (except, RETURN_MASK_ALL)
     {
@@ -873,7 +859,7 @@ gdbscm_value_call (SCM self, SCM args)
       struct cleanup *cleanup = make_cleanup_value_free_to_mark (mark);
       struct value *return_value;
 
-      return_value = call_function_by_hand (function, args_count, vargs);
+      return_value = call_function_by_hand (function, NULL, args_count, vargs);
       result = vlscm_scm_from_value (return_value);
       do_cleanups (cleanup);
     }
@@ -1033,7 +1019,8 @@ gdbscm_value_to_real (SCM self)
     = vlscm_get_value_smob_arg_unsafe (self, SCM_ARG1, FUNC_NAME);
   struct value *value = v_smob->value;
   struct type *type;
-  DOUBLEST d = 0;
+  double d = 0;
+  struct value *check = nullptr;
 
   type = value_type (value);
 
@@ -1052,7 +1039,22 @@ gdbscm_value_to_real (SCM self)
 
   TRY
     {
-      d = value_as_double (value);
+      if (is_floating_value (value))
+	{
+	  d = target_float_to_host_double (value_contents (value), type);
+	  check = allocate_value (type);
+	  target_float_from_host_double (value_contents_raw (check), type, d);
+	}
+      else if (TYPE_UNSIGNED (type))
+	{
+	  d = (ULONGEST) value_as_long (value);
+	  check = value_from_ulongest (type, (ULONGEST) d);
+	}
+      else
+	{
+	  d = value_as_long (value);
+	  check = value_from_longest (type, (LONGEST) d);
+	}
     }
   CATCH (except, RETURN_MASK_ALL)
     {
@@ -1061,7 +1063,7 @@ gdbscm_value_to_real (SCM self)
   END_CATCH
 
   /* TODO: Is there a better way to check if the value fits?  */
-  if (d != (double) d)
+  if (!value_equal (value, check))
     gdbscm_out_of_range_error (FUNC_NAME, SCM_ARG1, self,
 			       _("number can't be converted to a double"));
 
@@ -1104,7 +1106,7 @@ gdbscm_value_to_string (SCM self, SCM rest)
   char *encoding = NULL;
   SCM errors = SCM_BOOL_F;
   int length = -1;
-  gdb_byte *buffer = NULL;
+  gdb::unique_xmalloc_ptr<gdb_byte> buffer;
   const char *la_encoding = NULL;
   struct type *char_type = NULL;
   SCM result;
@@ -1161,9 +1163,10 @@ gdbscm_value_to_string (SCM self, SCM rest)
   scm_dynwind_begin ((scm_t_dynwind_flags) 0);
 
   gdbscm_dynwind_xfree (encoding);
-  gdbscm_dynwind_xfree (buffer);
+  gdb_byte *buffer_contents = buffer.release ();
+  gdbscm_dynwind_xfree (buffer_contents);
 
-  result = scm_from_stringn ((const char *) buffer,
+  result = scm_from_stringn ((const char *) buffer_contents,
 			     length * TYPE_LENGTH (char_type),
 			     (encoding != NULL && *encoding != '\0'
 			      ? encoding
@@ -1182,8 +1185,10 @@ gdbscm_value_to_string (SCM self, SCM rest)
    Return a Scheme object representing a lazy_string_object type.
    A lazy string is a pointer to a string with an optional encoding and length.
    If ENCODING is not given, the target's charset is used.
-   If LENGTH is provided then the length parameter is set to LENGTH, otherwise
-   length will be set to -1 (first null of appropriate with).
+   If LENGTH is provided then the length parameter is set to LENGTH.
+   Otherwise if the value is an array of known length then the array's length
+   is used.  Otherwise the length will be set to -1 (meaning first null of
+   appropriate with).
    LENGTH must be a Scheme integer, it can't be a <gdb:value> integer.  */
 
 static SCM
@@ -1207,18 +1212,69 @@ gdbscm_value_to_lazy_string (SCM self, SCM rest)
 			      &encoding_arg_pos, &encoding,
 			      &length_arg_pos, &length);
 
+  if (length < -1)
+    {
+      gdbscm_out_of_range_error (FUNC_NAME, length_arg_pos,
+				 scm_from_int (length),
+				 _("invalid length"));
+    }
+
   cleanups = make_cleanup (xfree, encoding);
 
   TRY
     {
       struct cleanup *inner_cleanup
 	= make_cleanup_value_free_to_mark (value_mark ());
+      struct type *type, *realtype;
+      CORE_ADDR addr;
 
-      if (TYPE_CODE (value_type (value)) == TYPE_CODE_PTR)
-	value = value_ind (value);
+      type = value_type (value);
+      realtype = check_typedef (type);
 
-      result = lsscm_make_lazy_string (value_address (value), length,
-				       encoding, value_type (value));
+      switch (TYPE_CODE (realtype))
+	{
+	case TYPE_CODE_ARRAY:
+	  {
+	    LONGEST array_length = -1;
+	    LONGEST low_bound, high_bound;
+
+	    /* PR 20786: There's no way to specify an array of length zero.
+	       Record a length of [0,-1] which is how Ada does it.  Anything
+	       we do is broken, but this one possible solution.  */
+	    if (get_array_bounds (realtype, &low_bound, &high_bound))
+	      array_length = high_bound - low_bound + 1;
+	    if (length == -1)
+	      length = array_length;
+	    else if (array_length == -1)
+	      {
+		type = lookup_array_range_type (TYPE_TARGET_TYPE (realtype),
+						0, length - 1);
+	      }
+	    else if (length != array_length)
+	      {
+		/* We need to create a new array type with the
+		   specified length.  */
+		if (length > array_length)
+		  error (_("length is larger than array size"));
+		type = lookup_array_range_type (TYPE_TARGET_TYPE (type),
+						low_bound,
+						low_bound + length - 1);
+	      }
+	    addr = value_address (value);
+	    break;
+	  }
+	case TYPE_CODE_PTR:
+	  /* If a length is specified we defer creating an array of the
+	     specified width until we need to.  */
+	  addr = value_as_address (value);
+	  break;
+	default:
+	  /* Should flag an error here.  PR 20769.  */
+	  addr = value_address (value);
+	  break;
+	}
+
+      result = lsscm_make_lazy_string (addr, length, encoding, type);
 
       do_cleanups (inner_cleanup);
     }
@@ -1281,21 +1337,15 @@ gdbscm_value_print (SCM self)
     = vlscm_get_value_smob_arg_unsafe (self, SCM_ARG1, FUNC_NAME);
   struct value *value = v_smob->value;
   struct value_print_options opts;
-  char *s = NULL;
-  SCM result;
 
   get_user_print_options (&opts);
   opts.deref_ref = 0;
 
+  string_file stb;
+
   TRY
     {
-      struct ui_file *stb = mem_fileopen ();
-      struct cleanup *old_chain = make_cleanup_ui_file_delete (stb);
-
-      common_val_print (value, stb, 0, &opts, current_language);
-      s = ui_file_xstrdup (stb, NULL);
-
-      do_cleanups (old_chain);
+      common_val_print (value, &stb, 0, &opts, current_language);
     }
   CATCH (except, RETURN_MASK_ALL)
     {
@@ -1308,11 +1358,8 @@ gdbscm_value_print (SCM self)
      IWBN to use scm_take_locale_string here, but we'd have to temporarily
      override the default port conversion handler because contrary to
      documentation it doesn't necessarily free the input string.  */
-  result = scm_from_stringn (s, strlen (s), host_charset (),
-			     SCM_FAILED_CONVERSION_QUESTION_MARK);
-  xfree (s);
-
-  return result;
+  return scm_from_stringn (stb.c_str (), stb.size (), host_charset (),
+			   SCM_FAILED_CONVERSION_QUESTION_MARK);
 }
 
 /* (parse-and-eval string) -> <gdb:value>

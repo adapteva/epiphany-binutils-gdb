@@ -1,6 +1,6 @@
 /* PPC GNU/Linux native support.
 
-   Copyright (C) 1988-2016 Free Software Foundation, Inc.
+   Copyright (C) 1988-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,12 +18,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include "observer.h"
+#include "observable.h"
 #include "frame.h"
 #include "inferior.h"
 #include "gdbthread.h"
 #include "gdbcore.h"
 #include "regcache.h"
+#include "regset.h"
 #include "target.h"
 #include "linux-nat.h"
 #include <sys/types.h>
@@ -34,6 +35,7 @@
 #include <fcntl.h>
 #include <sys/procfs.h>
 #include "nat/gdb_ptrace.h"
+#include "inf-ptrace.h"
 
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
@@ -44,6 +46,8 @@
 #include "elf/common.h"
 #include "auxv.h"
 
+#include "arch/ppc-linux-common.h"
+#include "arch/ppc-linux-tdesc.h"
 #include "nat/ppc-linux.h"
 
 /* Similarly for the hardware watchpoint support.  These requests are used
@@ -157,23 +161,22 @@ struct ppc_hw_breakpoint
    Even though this vrsave register is not included in the regset
    typedef, it is handled by the ptrace requests.
 
-   Note that GNU/Linux doesn't support little endian PPC hardware,
-   therefore the offset at which the real value of the VSCR register
-   is located will be always 12 bytes.
-
    The layout is like this (where x is the actual value of the vscr reg): */
 
 /* *INDENT-OFF* */
 /*
+Big-Endian:
    |.|.|.|.|.....|.|.|.|.||.|.|.|x||.|
+   <------->     <-------><-------><->
+     VR0           VR31     VSCR    VRSAVE
+Little-Endian:
+   |.|.|.|.|.....|.|.|.|.||X|.|.|.||.|
    <------->     <-------><-------><->
      VR0           VR31     VSCR    VRSAVE
 */
 /* *INDENT-ON* */
 
-#define SIZEOF_VRREGS 33*16+4
-
-typedef char gdb_vrregset_t[SIZEOF_VRREGS];
+typedef char gdb_vrregset_t[PPC_LINUX_SIZEOF_VRREGSET];
 
 /* This is the layout of the POWER7 VSX registers and the way they overlap
    with the existing FPR and VMX registers.
@@ -207,9 +210,7 @@ typedef char gdb_vrregset_t[SIZEOF_VRREGS];
    the FP registers (doubleword 0) and hence extend them with additional
    64 bits (doubleword 1).  The other 32 regs overlap with the VMX
    registers.  */
-#define SIZEOF_VSXREGS 32*8
-
-typedef char gdb_vsxregset_t[SIZEOF_VSXREGS];
+typedef char gdb_vsxregset_t[PPC_LINUX_SIZEOF_VSXREGSET];
 
 /* On PPC processors that support the Signal Processing Extension
    (SPE) APU, the general-purpose registers are 64 bits long.
@@ -265,6 +266,60 @@ int have_ptrace_getsetregs = 1;
    floating-pointers registers.  Zero if we've tried one of
    them and gotten an error.  */
 int have_ptrace_getsetfpregs = 1;
+
+struct ppc_linux_nat_target final : public linux_nat_target
+{
+  /* Add our register access methods.  */
+  void fetch_registers (struct regcache *, int) override;
+  void store_registers (struct regcache *, int) override;
+
+  /* Add our breakpoint/watchpoint methods.  */
+  int can_use_hw_breakpoint (enum bptype, int, int) override;
+
+  int insert_hw_breakpoint (struct gdbarch *, struct bp_target_info *)
+    override;
+
+  int remove_hw_breakpoint (struct gdbarch *, struct bp_target_info *)
+    override;
+
+  int region_ok_for_hw_watchpoint (CORE_ADDR, int) override;
+
+  int insert_watchpoint (CORE_ADDR, int, enum target_hw_bp_type,
+			 struct expression *) override;
+
+  int remove_watchpoint (CORE_ADDR, int, enum target_hw_bp_type,
+			 struct expression *) override;
+
+  int insert_mask_watchpoint (CORE_ADDR, CORE_ADDR, enum target_hw_bp_type)
+    override;
+
+  int remove_mask_watchpoint (CORE_ADDR, CORE_ADDR, enum target_hw_bp_type)
+    override;
+
+  bool stopped_by_watchpoint () override;
+
+  bool stopped_data_address (CORE_ADDR *) override;
+
+  bool watchpoint_addr_within_range (CORE_ADDR, CORE_ADDR, int) override;
+
+  bool can_accel_watchpoint_condition (CORE_ADDR, int, int, struct expression *)
+    override;
+
+  int masked_watch_num_registers (CORE_ADDR, CORE_ADDR) override;
+
+  int ranged_break_num_registers () override;
+
+  const struct target_desc *read_description ()  override;
+
+  int auxv_parse (gdb_byte **readptr,
+		  gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
+    override;
+
+  /* Override linux_nat_target low methods.  */
+  void low_new_thread (struct lwp_info *lp) override;
+};
+
+static ppc_linux_nat_target the_ppc_linux_nat_target;
 
 /* *INDENT-OFF* */
 /* registers layout, as presented by the ptrace interface:
@@ -354,13 +409,11 @@ ppc_register_u_addr (struct gdbarch *gdbarch, int regno)
    registers set mechanism, as opposed to the interface for all the
    other registers, that stores/fetches each register individually.  */
 static void
-fetch_vsx_register (struct regcache *regcache, int tid, int regno)
+fetch_vsx_registers (struct regcache *regcache, int tid, int regno)
 {
   int ret;
   gdb_vsxregset_t regs;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int vsxregsize = register_size (gdbarch, tdep->ppc_vsr0_upper_regnum);
+  const struct regset *vsxregset = ppc_linux_vsxregset ();
 
   ret = ptrace (PTRACE_GETVSXREGS, tid, 0, &regs);
   if (ret < 0)
@@ -370,26 +423,24 @@ fetch_vsx_register (struct regcache *regcache, int tid, int regno)
 	  have_ptrace_getsetvsxregs = 0;
 	  return;
 	}
-      perror_with_name (_("Unable to fetch VSX register"));
+      perror_with_name (_("Unable to fetch VSX registers"));
     }
 
-  regcache_raw_supply (regcache, regno,
-		       regs + (regno - tdep->ppc_vsr0_upper_regnum)
-		       * vsxregsize);
+  vsxregset->supply_regset (vsxregset, regcache, regno, &regs,
+			    PPC_LINUX_SIZEOF_VSXREGSET);
 }
 
 /* The Linux kernel ptrace interface for AltiVec registers uses the
    registers set mechanism, as opposed to the interface for all the
    other registers, that stores/fetches each register individually.  */
 static void
-fetch_altivec_register (struct regcache *regcache, int tid, int regno)
+fetch_altivec_registers (struct regcache *regcache, int tid,
+			 int regno)
 {
   int ret;
-  int offset = 0;
   gdb_vrregset_t regs;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int vrregsize = register_size (gdbarch, tdep->ppc_vr0_regnum);
+  struct gdbarch *gdbarch = regcache->arch ();
+  const struct regset *vrregset = ppc_linux_vrregset (gdbarch);
 
   ret = ptrace (PTRACE_GETVRREGS, tid, 0, &regs);
   if (ret < 0)
@@ -399,19 +450,11 @@ fetch_altivec_register (struct regcache *regcache, int tid, int regno)
           have_ptrace_getvrregs = 0;
           return;
         }
-      perror_with_name (_("Unable to fetch AltiVec register"));
+      perror_with_name (_("Unable to fetch AltiVec registers"));
     }
- 
-  /* VSCR is fetched as a 16 bytes quantity, but it is really 4 bytes
-     long on the hardware.  We deal only with the lower 4 bytes of the
-     vector.  VRSAVE is at the end of the array in a 4 bytes slot, so
-     there is no need to define an offset for it.  */
-  if (regno == (tdep->ppc_vrsave_regnum - 1))
-    offset = vrregsize - register_size (gdbarch, tdep->ppc_vrsave_regnum);
-  
-  regcache_raw_supply (regcache, regno,
-		       regs + (regno
-			       - tdep->ppc_vr0_regnum) * vrregsize + offset);
+
+  vrregset->supply_regset (vrregset, regcache, regno, &regs,
+			   PPC_LINUX_SIZEOF_VRREGSET);
 }
 
 /* Fetch the top 32 bits of TID's general-purpose registers and the
@@ -451,7 +494,7 @@ get_spe_registers (int tid, struct gdb_evrregset_t *evrregset)
 static void
 fetch_spe_register (struct regcache *regcache, int tid, int regno)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   struct gdb_evrregset_t evrregs;
 
@@ -469,34 +512,32 @@ fetch_spe_register (struct regcache *regcache, int tid, int regno)
       int i;
 
       for (i = 0; i < ppc_num_gprs; i++)
-        regcache_raw_supply (regcache, tdep->ppc_ev0_upper_regnum + i,
-                             &evrregs.evr[i]);
+        regcache->raw_supply (tdep->ppc_ev0_upper_regnum + i, &evrregs.evr[i]);
     }
   else if (tdep->ppc_ev0_upper_regnum <= regno
            && regno < tdep->ppc_ev0_upper_regnum + ppc_num_gprs)
-    regcache_raw_supply (regcache, regno,
-                         &evrregs.evr[regno - tdep->ppc_ev0_upper_regnum]);
+    regcache->raw_supply (regno,
+			  &evrregs.evr[regno - tdep->ppc_ev0_upper_regnum]);
 
   if (regno == -1
       || regno == tdep->ppc_acc_regnum)
-    regcache_raw_supply (regcache, tdep->ppc_acc_regnum, &evrregs.acc);
+    regcache->raw_supply (tdep->ppc_acc_regnum, &evrregs.acc);
 
   if (regno == -1
       || regno == tdep->ppc_spefscr_regnum)
-    regcache_raw_supply (regcache, tdep->ppc_spefscr_regnum,
-                         &evrregs.spefscr);
+    regcache->raw_supply (tdep->ppc_spefscr_regnum, &evrregs.spefscr);
 }
 
 static void
 fetch_register (struct regcache *regcache, int tid, int regno)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   /* This isn't really an address.  But ptrace thinks of it as one.  */
   CORE_ADDR regaddr = ppc_register_u_addr (gdbarch, regno);
   int bytes_transferred;
   unsigned int offset;         /* Offset of registers within the u area.  */
-  gdb_byte buf[MAX_REGISTER_SIZE];
+  gdb_byte buf[PPC_MAX_REGISTER_SIZE];
 
   if (altivec_register_p (gdbarch, regno))
     {
@@ -506,7 +547,7 @@ fetch_register (struct regcache *regcache, int tid, int regno)
          register.  */
       if (have_ptrace_getvrregs)
        {
-         fetch_altivec_register (regcache, tid, regno);
+         fetch_altivec_registers (regcache, tid, regno);
          return;
        }
      /* If we have discovered that there is no ptrace support for
@@ -517,7 +558,7 @@ fetch_register (struct regcache *regcache, int tid, int regno)
     {
       if (have_ptrace_getsetvsxregs)
 	{
-	  fetch_vsx_register (regcache, tid, regno);
+	  fetch_vsx_registers (regcache, tid, regno);
 	  return;
 	}
     }
@@ -530,7 +571,7 @@ fetch_register (struct regcache *regcache, int tid, int regno)
   if (regaddr == -1)
     {
       memset (buf, '\0', register_size (gdbarch, regno));   /* Supply zeroes */
-      regcache_raw_supply (regcache, regno, buf);
+      regcache->raw_supply (regno, buf);
       return;
     }
 
@@ -563,97 +604,19 @@ fetch_register (struct regcache *regcache, int tid, int regno)
     {
       /* Little-endian values are always found at the left end of the
          bytes transferred.  */
-      regcache_raw_supply (regcache, regno, buf);
+      regcache->raw_supply (regno, buf);
     }
   else if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
     {
       /* Big-endian values are found at the right end of the bytes
          transferred.  */
       size_t padding = (bytes_transferred - register_size (gdbarch, regno));
-      regcache_raw_supply (regcache, regno, buf + padding);
+      regcache->raw_supply (regno, buf + padding);
     }
   else 
     internal_error (__FILE__, __LINE__,
                     _("fetch_register: unexpected byte order: %d"),
                     gdbarch_byte_order (gdbarch));
-}
-
-static void
-supply_vsxregset (struct regcache *regcache, gdb_vsxregset_t *vsxregsetp)
-{
-  int i;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int vsxregsize = register_size (gdbarch, tdep->ppc_vsr0_upper_regnum);
-
-  for (i = 0; i < ppc_num_vshrs; i++)
-    {
-	regcache_raw_supply (regcache, tdep->ppc_vsr0_upper_regnum + i,
-			     *vsxregsetp + i * vsxregsize);
-    }
-}
-
-static void
-supply_vrregset (struct regcache *regcache, gdb_vrregset_t *vrregsetp)
-{
-  int i;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int num_of_vrregs = tdep->ppc_vrsave_regnum - tdep->ppc_vr0_regnum + 1;
-  int vrregsize = register_size (gdbarch, tdep->ppc_vr0_regnum);
-  int offset = vrregsize - register_size (gdbarch, tdep->ppc_vrsave_regnum);
-
-  for (i = 0; i < num_of_vrregs; i++)
-    {
-      /* The last 2 registers of this set are only 32 bit long, not
-         128.  However an offset is necessary only for VSCR because it
-         occupies a whole vector, while VRSAVE occupies a full 4 bytes
-         slot.  */
-      if (i == (num_of_vrregs - 2))
-        regcache_raw_supply (regcache, tdep->ppc_vr0_regnum + i,
-			     *vrregsetp + i * vrregsize + offset);
-      else
-        regcache_raw_supply (regcache, tdep->ppc_vr0_regnum + i,
-			     *vrregsetp + i * vrregsize);
-    }
-}
-
-static void
-fetch_vsx_registers (struct regcache *regcache, int tid)
-{
-  int ret;
-  gdb_vsxregset_t regs;
-
-  ret = ptrace (PTRACE_GETVSXREGS, tid, 0, &regs);
-  if (ret < 0)
-    {
-      if (errno == EIO)
-	{
-	  have_ptrace_getsetvsxregs = 0;
-	  return;
-	}
-      perror_with_name (_("Unable to fetch VSX registers"));
-    }
-  supply_vsxregset (regcache, &regs);
-}
-
-static void
-fetch_altivec_registers (struct regcache *regcache, int tid)
-{
-  int ret;
-  gdb_vrregset_t regs;
-  
-  ret = ptrace (PTRACE_GETVRREGS, tid, 0, &regs);
-  if (ret < 0)
-    {
-      if (errno == EIO)
-	{
-          have_ptrace_getvrregs = 0;
-	  return;
-	}
-      perror_with_name (_("Unable to fetch AltiVec registers"));
-    }
-  supply_vrregset (regcache, &regs);
 }
 
 /* This function actually issues the request to ptrace, telling
@@ -667,7 +630,7 @@ fetch_altivec_registers (struct regcache *regcache, int tid)
 static int
 fetch_all_gp_regs (struct regcache *regcache, int tid)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   gdb_gregset_t gregset;
 
@@ -695,7 +658,7 @@ fetch_all_gp_regs (struct regcache *regcache, int tid)
 static void
 fetch_gp_regs (struct regcache *regcache, int tid)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int i;
 
@@ -747,7 +710,7 @@ fetch_all_fp_regs (struct regcache *regcache, int tid)
 static void
 fetch_fp_regs (struct regcache *regcache, int tid)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int i;
 
@@ -766,7 +729,7 @@ static void
 fetch_ppc_registers (struct regcache *regcache, int tid)
 {
   int i;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
   fetch_gp_regs (regcache, tid);
@@ -794,10 +757,10 @@ fetch_ppc_registers (struct regcache *regcache, int tid)
     fetch_register (regcache, tid, tdep->ppc_fpscr_regnum);
   if (have_ptrace_getvrregs)
     if (tdep->ppc_vr0_regnum != -1 && tdep->ppc_vrsave_regnum != -1)
-      fetch_altivec_registers (regcache, tid);
+      fetch_altivec_registers (regcache, tid, -1);
   if (have_ptrace_getsetvsxregs)
     if (tdep->ppc_vsr0_upper_regnum != -1)
-      fetch_vsx_registers (regcache, tid);
+      fetch_vsx_registers (regcache, tid, -1);
   if (tdep->ppc_ev0_upper_regnum >= 0)
     fetch_spe_register (regcache, tid, -1);
 }
@@ -805,16 +768,10 @@ fetch_ppc_registers (struct regcache *regcache, int tid)
 /* Fetch registers from the child process.  Fetch all registers if
    regno == -1, otherwise fetch all general registers or all floating
    point registers depending upon the value of regno.  */
-static void
-ppc_linux_fetch_inferior_registers (struct target_ops *ops,
-				    struct regcache *regcache, int regno)
+void
+ppc_linux_nat_target::fetch_registers (struct regcache *regcache, int regno)
 {
-  /* Overload thread id onto process id.  */
-  int tid = ptid_get_lwp (inferior_ptid);
-
-  /* No thread id, just use process id.  */
-  if (tid == 0)
-    tid = ptid_get_pid (inferior_ptid);
+  pid_t tid = get_ptrace_pid (regcache->ptid ());
 
   if (regno == -1)
     fetch_ppc_registers (regcache, tid);
@@ -822,15 +779,12 @@ ppc_linux_fetch_inferior_registers (struct target_ops *ops,
     fetch_register (regcache, tid, regno);
 }
 
-/* Store one VSX register.  */
 static void
-store_vsx_register (const struct regcache *regcache, int tid, int regno)
+store_vsx_registers (const struct regcache *regcache, int tid, int regno)
 {
   int ret;
   gdb_vsxregset_t regs;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int vsxregsize = register_size (gdbarch, tdep->ppc_vsr0_upper_regnum);
+  const struct regset *vsxregset = ppc_linux_vsxregset ();
 
   ret = ptrace (PTRACE_GETVSXREGS, tid, 0, &regs);
   if (ret < 0)
@@ -840,27 +794,25 @@ store_vsx_register (const struct regcache *regcache, int tid, int regno)
 	  have_ptrace_getsetvsxregs = 0;
 	  return;
 	}
-      perror_with_name (_("Unable to fetch VSX register"));
+      perror_with_name (_("Unable to fetch VSX registers"));
     }
 
-  regcache_raw_collect (regcache, regno, regs +
-			(regno - tdep->ppc_vsr0_upper_regnum) * vsxregsize);
+  vsxregset->collect_regset (vsxregset, regcache, regno, &regs,
+			     PPC_LINUX_SIZEOF_VSXREGSET);
 
   ret = ptrace (PTRACE_SETVSXREGS, tid, 0, &regs);
   if (ret < 0)
-    perror_with_name (_("Unable to store VSX register"));
+    perror_with_name (_("Unable to store VSX registers"));
 }
 
-/* Store one register.  */
 static void
-store_altivec_register (const struct regcache *regcache, int tid, int regno)
+store_altivec_registers (const struct regcache *regcache, int tid,
+			 int regno)
 {
   int ret;
-  int offset = 0;
   gdb_vrregset_t regs;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int vrregsize = register_size (gdbarch, tdep->ppc_vr0_regnum);
+  struct gdbarch *gdbarch = regcache->arch ();
+  const struct regset *vrregset = ppc_linux_vrregset (gdbarch);
 
   ret = ptrace (PTRACE_GETVRREGS, tid, 0, &regs);
   if (ret < 0)
@@ -870,21 +822,15 @@ store_altivec_register (const struct regcache *regcache, int tid, int regno)
           have_ptrace_getvrregs = 0;
           return;
         }
-      perror_with_name (_("Unable to fetch AltiVec register"));
+      perror_with_name (_("Unable to fetch AltiVec registers"));
     }
 
-  /* VSCR is fetched as a 16 bytes quantity, but it is really 4 bytes
-     long on the hardware.  */
-  if (regno == (tdep->ppc_vrsave_regnum - 1))
-    offset = vrregsize - register_size (gdbarch, tdep->ppc_vrsave_regnum);
-
-  regcache_raw_collect (regcache, regno,
-			regs + (regno
-				- tdep->ppc_vr0_regnum) * vrregsize + offset);
+  vrregset->collect_regset (vrregset, regcache, regno, &regs,
+			    PPC_LINUX_SIZEOF_VRREGSET);
 
   ret = ptrace (PTRACE_SETVRREGS, tid, 0, &regs);
   if (ret < 0)
-    perror_with_name (_("Unable to store AltiVec register"));
+    perror_with_name (_("Unable to store AltiVec registers"));
 }
 
 /* Assuming TID referrs to an SPE process, set the top halves of TID's
@@ -922,7 +868,7 @@ set_spe_registers (int tid, struct gdb_evrregset_t *evrregset)
 static void
 store_spe_register (const struct regcache *regcache, int tid, int regno)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   struct gdb_evrregset_t evrregs;
 
@@ -949,26 +895,23 @@ store_spe_register (const struct regcache *regcache, int tid, int regno)
       int i;
 
       for (i = 0; i < ppc_num_gprs; i++)
-        regcache_raw_collect (regcache,
-                              tdep->ppc_ev0_upper_regnum + i,
-                              &evrregs.evr[i]);
+	regcache->raw_collect (tdep->ppc_ev0_upper_regnum + i,
+			       &evrregs.evr[i]);
     }
   else if (tdep->ppc_ev0_upper_regnum <= regno
            && regno < tdep->ppc_ev0_upper_regnum + ppc_num_gprs)
-    regcache_raw_collect (regcache, regno,
-                          &evrregs.evr[regno - tdep->ppc_ev0_upper_regnum]);
+    regcache->raw_collect (regno,
+			   &evrregs.evr[regno - tdep->ppc_ev0_upper_regnum]);
 
   if (regno == -1
       || regno == tdep->ppc_acc_regnum)
-    regcache_raw_collect (regcache,
-                          tdep->ppc_acc_regnum,
-                          &evrregs.acc);
+    regcache->raw_collect (tdep->ppc_acc_regnum,
+			   &evrregs.acc);
 
   if (regno == -1
       || regno == tdep->ppc_spefscr_regnum)
-    regcache_raw_collect (regcache,
-                          tdep->ppc_spefscr_regnum,
-                          &evrregs.spefscr);
+    regcache->raw_collect (tdep->ppc_spefscr_regnum,
+			   &evrregs.spefscr);
 
   /* Write back the modified register set.  */
   set_spe_registers (tid, &evrregs);
@@ -977,22 +920,22 @@ store_spe_register (const struct regcache *regcache, int tid, int regno)
 static void
 store_register (const struct regcache *regcache, int tid, int regno)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   /* This isn't really an address.  But ptrace thinks of it as one.  */
   CORE_ADDR regaddr = ppc_register_u_addr (gdbarch, regno);
   int i;
   size_t bytes_to_transfer;
-  gdb_byte buf[MAX_REGISTER_SIZE];
+  gdb_byte buf[PPC_MAX_REGISTER_SIZE];
 
   if (altivec_register_p (gdbarch, regno))
     {
-      store_altivec_register (regcache, tid, regno);
+      store_altivec_registers (regcache, tid, regno);
       return;
     }
   if (vsx_register_p (gdbarch, regno))
     {
-      store_vsx_register (regcache, tid, regno);
+      store_vsx_registers (regcache, tid, regno);
       return;
     }
   else if (spe_register_p (gdbarch, regno))
@@ -1012,13 +955,13 @@ store_register (const struct regcache *regcache, int tid, int regno)
   if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_LITTLE)
     {
       /* Little-endian values always sit at the left end of the buffer.  */
-      regcache_raw_collect (regcache, regno, buf);
+      regcache->raw_collect (regno, buf);
     }
   else if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
     {
       /* Big-endian values sit at the right end of the buffer.  */
       size_t padding = (bytes_to_transfer - register_size (gdbarch, regno));
-      regcache_raw_collect (regcache, regno, buf + padding);
+      regcache->raw_collect (regno, buf + padding);
     }
 
   for (i = 0; i < bytes_to_transfer; i += sizeof (long))
@@ -1050,88 +993,6 @@ store_register (const struct regcache *regcache, int tid, int regno)
     }
 }
 
-static void
-fill_vsxregset (const struct regcache *regcache, gdb_vsxregset_t *vsxregsetp)
-{
-  int i;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int vsxregsize = register_size (gdbarch, tdep->ppc_vsr0_upper_regnum);
-
-  for (i = 0; i < ppc_num_vshrs; i++)
-    regcache_raw_collect (regcache, tdep->ppc_vsr0_upper_regnum + i,
-			  *vsxregsetp + i * vsxregsize);
-}
-
-static void
-fill_vrregset (const struct regcache *regcache, gdb_vrregset_t *vrregsetp)
-{
-  int i;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  int num_of_vrregs = tdep->ppc_vrsave_regnum - tdep->ppc_vr0_regnum + 1;
-  int vrregsize = register_size (gdbarch, tdep->ppc_vr0_regnum);
-  int offset = vrregsize - register_size (gdbarch, tdep->ppc_vrsave_regnum);
-
-  for (i = 0; i < num_of_vrregs; i++)
-    {
-      /* The last 2 registers of this set are only 32 bit long, not
-         128, but only VSCR is fetched as a 16 bytes quantity.  */
-      if (i == (num_of_vrregs - 2))
-        regcache_raw_collect (regcache, tdep->ppc_vr0_regnum + i,
-			      *vrregsetp + i * vrregsize + offset);
-      else
-        regcache_raw_collect (regcache, tdep->ppc_vr0_regnum + i,
-			      *vrregsetp + i * vrregsize);
-    }
-}
-
-static void
-store_vsx_registers (const struct regcache *regcache, int tid)
-{
-  int ret;
-  gdb_vsxregset_t regs;
-
-  ret = ptrace (PTRACE_GETVSXREGS, tid, 0, &regs);
-  if (ret < 0)
-    {
-      if (errno == EIO)
-	{
-	  have_ptrace_getsetvsxregs = 0;
-	  return;
-	}
-      perror_with_name (_("Couldn't get VSX registers"));
-    }
-
-  fill_vsxregset (regcache, &regs);
-
-  if (ptrace (PTRACE_SETVSXREGS, tid, 0, &regs) < 0)
-    perror_with_name (_("Couldn't write VSX registers"));
-}
-
-static void
-store_altivec_registers (const struct regcache *regcache, int tid)
-{
-  int ret;
-  gdb_vrregset_t regs;
-
-  ret = ptrace (PTRACE_GETVRREGS, tid, 0, &regs);
-  if (ret < 0)
-    {
-      if (errno == EIO)
-        {
-          have_ptrace_getvrregs = 0;
-          return;
-        }
-      perror_with_name (_("Couldn't get AltiVec registers"));
-    }
-
-  fill_vrregset (regcache, &regs);
-  
-  if (ptrace (PTRACE_SETVRREGS, tid, 0, &regs) < 0)
-    perror_with_name (_("Couldn't write AltiVec registers"));
-}
-
 /* This function actually issues the request to ptrace, telling
    it to store all general-purpose registers present in the specified
    regset.
@@ -1143,7 +1004,7 @@ store_altivec_registers (const struct regcache *regcache, int tid)
 static int
 store_all_gp_regs (const struct regcache *regcache, int tid, int regno)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   gdb_gregset_t gregset;
 
@@ -1181,7 +1042,7 @@ store_all_gp_regs (const struct regcache *regcache, int tid, int regno)
 static void
 store_gp_regs (const struct regcache *regcache, int tid, int regno)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int i;
 
@@ -1243,7 +1104,7 @@ store_all_fp_regs (const struct regcache *regcache, int tid, int regno)
 static void
 store_fp_regs (const struct regcache *regcache, int tid, int regno)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int i;
 
@@ -1262,7 +1123,7 @@ static void
 store_ppc_registers (const struct regcache *regcache, int tid)
 {
   int i;
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
  
   store_gp_regs (regcache, tid, -1);
@@ -1290,24 +1151,24 @@ store_ppc_registers (const struct regcache *regcache, int tid)
     }
   if (have_ptrace_getvrregs)
     if (tdep->ppc_vr0_regnum != -1 && tdep->ppc_vrsave_regnum != -1)
-      store_altivec_registers (regcache, tid);
+      store_altivec_registers (regcache, tid, -1);
   if (have_ptrace_getsetvsxregs)
     if (tdep->ppc_vsr0_upper_regnum != -1)
-      store_vsx_registers (regcache, tid);
+      store_vsx_registers (regcache, tid, -1);
   if (tdep->ppc_ev0_upper_regnum >= 0)
     store_spe_register (regcache, tid, -1);
 }
 
 /* Fetch the AT_HWCAP entry from the aux vector.  */
-static unsigned long
+static CORE_ADDR
 ppc_linux_get_hwcap (void)
 {
   CORE_ADDR field;
 
-  if (target_auxv_search (&current_target, AT_HWCAP, &field))
-    return (unsigned long) field;
+  if (target_auxv_search (current_top_target (), AT_HWCAP, &field) != 1)
+    return 0;
 
-  return 0;
+  return field;
 }
 
 /* The cached DABR value, to install in new threads.
@@ -1363,9 +1224,9 @@ have_ptrace_hwdebug_interface (void)
     {
       int tid;
 
-      tid = ptid_get_lwp (inferior_ptid);
+      tid = inferior_ptid.lwp ();
       if (tid == 0)
-	tid = ptid_get_pid (inferior_ptid);
+	tid = inferior_ptid.pid ();
 
       /* Check for kernel support for PowerPC HWDEBUG ptrace interface.  */
       if (ptrace (PPC_PTRACE_GETHWDBGINFO, tid, 0, &hwdebug_info) >= 0)
@@ -1389,9 +1250,8 @@ have_ptrace_hwdebug_interface (void)
   return have_ptrace_hwdebug_interface;
 }
 
-static int
-ppc_linux_can_use_hw_breakpoint (struct target_ops *self,
-				 enum bptype type, int cnt, int ot)
+int
+ppc_linux_nat_target::can_use_hw_breakpoint (enum bptype type, int cnt, int ot)
 {
   int total_hw_wp, total_hw_bp;
 
@@ -1436,9 +1296,9 @@ ppc_linux_can_use_hw_breakpoint (struct target_ops *self,
       /* We need to know whether ptrace supports PTRACE_SET_DEBUGREG
 	 and whether the target has DABR.  If either answer is no, the
 	 ptrace call will return -1.  Fail in that case.  */
-      tid = ptid_get_lwp (ptid);
+      tid = ptid.lwp ();
       if (tid == 0)
-	tid = ptid_get_pid (ptid);
+	tid = ptid.pid ();
 
       if (ptrace (PTRACE_SET_DEBUGREG, tid, 0, 0) == -1)
 	return 0;
@@ -1447,9 +1307,8 @@ ppc_linux_can_use_hw_breakpoint (struct target_ops *self,
   return 1;
 }
 
-static int
-ppc_linux_region_ok_for_hw_watchpoint (struct target_ops *self,
-				       CORE_ADDR addr, int len)
+int
+ppc_linux_nat_target::region_ok_for_hw_watchpoint (CORE_ADDR addr, int len)
 {
   /* Handle sub-8-byte quantities.  */
   if (len <= 0)
@@ -1545,16 +1404,13 @@ hwdebug_insert_point (struct ppc_hw_breakpoint *b, int tid)
 {
   int i;
   long slot;
-  struct ppc_hw_breakpoint *p = XNEW (struct ppc_hw_breakpoint);
+  gdb::unique_xmalloc_ptr<ppc_hw_breakpoint> p (XDUP (ppc_hw_breakpoint, b));
   struct hw_break_tuple *hw_breaks;
-  struct cleanup *c = make_cleanup (xfree, p);
   struct thread_points *t;
   struct hw_break_tuple *tuple;
 
-  memcpy (p, b, sizeof (struct ppc_hw_breakpoint));
-
   errno = 0;
-  slot = ptrace (PPC_PTRACE_SETHWDEBUG, tid, 0, p);
+  slot = ptrace (PPC_PTRACE_SETHWDEBUG, tid, 0, p.get ());
   if (slot < 0)
     perror_with_name (_("Unexpected error setting breakpoint or watchpoint"));
 
@@ -1568,13 +1424,11 @@ hwdebug_insert_point (struct ppc_hw_breakpoint *b, int tid)
     if (hw_breaks[i].hw_break == NULL)
       {
 	hw_breaks[i].slot = slot;
-	hw_breaks[i].hw_break = p;
+	hw_breaks[i].hw_break = p.release ();
 	break;
       }
 
   gdb_assert (i != max_slots_number);
-
-  discard_cleanups (c);
 }
 
 /* This function is a generic wrapper that is responsible for removing a
@@ -1612,8 +1466,8 @@ hwdebug_remove_point (struct ppc_hw_breakpoint *b, int tid)
 
 /* Return the number of registers needed for a ranged breakpoint.  */
 
-static int
-ppc_linux_ranged_break_num_registers (struct target_ops *target)
+int
+ppc_linux_nat_target::ranged_break_num_registers ()
 {
   return ((have_ptrace_hwdebug_interface ()
 	   && hwdebug_info.features & PPC_DEBUG_FEATURE_INSN_BP_RANGE)?
@@ -1623,10 +1477,9 @@ ppc_linux_ranged_break_num_registers (struct target_ops *target)
 /* Insert the hardware breakpoint described by BP_TGT.  Returns 0 for
    success, 1 if hardware breakpoints are not supported or -1 for failure.  */
 
-static int
-ppc_linux_insert_hw_breakpoint (struct target_ops *self,
-				struct gdbarch *gdbarch,
-				  struct bp_target_info *bp_tgt)
+int
+ppc_linux_nat_target::insert_hw_breakpoint (struct gdbarch *gdbarch,
+					    struct bp_target_info *bp_tgt)
 {
   struct lwp_info *lp;
   struct ppc_hw_breakpoint p;
@@ -1655,15 +1508,14 @@ ppc_linux_insert_hw_breakpoint (struct target_ops *self,
     }
 
   ALL_LWPS (lp)
-    hwdebug_insert_point (&p, ptid_get_lwp (lp->ptid));
+    hwdebug_insert_point (&p, lp->ptid.lwp ());
 
   return 0;
 }
 
-static int
-ppc_linux_remove_hw_breakpoint (struct target_ops *self,
-				struct gdbarch *gdbarch,
-				  struct bp_target_info *bp_tgt)
+int
+ppc_linux_nat_target::remove_hw_breakpoint (struct gdbarch *gdbarch,
+					    struct bp_target_info *bp_tgt)
 {
   struct lwp_info *lp;
   struct ppc_hw_breakpoint p;
@@ -1692,7 +1544,7 @@ ppc_linux_remove_hw_breakpoint (struct target_ops *self,
     }
 
   ALL_LWPS (lp)
-    hwdebug_remove_point (&p, ptid_get_lwp (lp->ptid));
+    hwdebug_remove_point (&p, lp->ptid.lwp ());
 
   return 0;
 }
@@ -1717,9 +1569,9 @@ get_trigger_type (enum target_hw_bp_type type)
    or hw_access for an access watchpoint.  Returns 0 on success and throws
    an error on failure.  */
 
-static int
-ppc_linux_insert_mask_watchpoint (struct target_ops *ops, CORE_ADDR addr,
-				  CORE_ADDR mask, enum target_hw_bp_type rw)
+int
+ppc_linux_nat_target::insert_mask_watchpoint (CORE_ADDR addr,  CORE_ADDR mask,
+					      target_hw_bp_type rw)
 {
   struct lwp_info *lp;
   struct ppc_hw_breakpoint p;
@@ -1735,7 +1587,7 @@ ppc_linux_insert_mask_watchpoint (struct target_ops *ops, CORE_ADDR addr,
   p.condition_value = 0;
 
   ALL_LWPS (lp)
-    hwdebug_insert_point (&p, ptid_get_lwp (lp->ptid));
+    hwdebug_insert_point (&p, lp->ptid.lwp ());
 
   return 0;
 }
@@ -1745,9 +1597,9 @@ ppc_linux_insert_mask_watchpoint (struct target_ops *ops, CORE_ADDR addr,
    or hw_access for an access watchpoint.  Returns 0 on success and throws
    an error on failure.  */
 
-static int
-ppc_linux_remove_mask_watchpoint (struct target_ops *ops, CORE_ADDR addr,
-				  CORE_ADDR mask, enum target_hw_bp_type rw)
+int
+ppc_linux_nat_target::remove_mask_watchpoint (CORE_ADDR addr, CORE_ADDR mask,
+					      target_hw_bp_type rw)
 {
   struct lwp_info *lp;
   struct ppc_hw_breakpoint p;
@@ -1763,7 +1615,7 @@ ppc_linux_remove_mask_watchpoint (struct target_ops *ops, CORE_ADDR addr,
   p.condition_value = 0;
 
   ALL_LWPS (lp)
-    hwdebug_remove_point (&p, ptid_get_lwp (lp->ptid));
+    hwdebug_remove_point (&p, lp->ptid.lwp ());
 
   return 0;
 }
@@ -1773,7 +1625,7 @@ static int
 can_use_watchpoint_cond_accel (void)
 {
   struct thread_points *p;
-  int tid = ptid_get_lwp (inferior_ptid);
+  int tid = inferior_ptid.lwp ();
   int cnt = hwdebug_info.num_condition_regs, i;
   CORE_ADDR tmp_value;
 
@@ -1849,10 +1701,9 @@ calculate_dvc (CORE_ADDR addr, int len, CORE_ADDR data_value,
    other kinds of values which are not acceptable in a condition
    expression (e.g., lval_computed or lval_internalvar).  */
 static int
-num_memory_accesses (struct value *v)
+num_memory_accesses (const std::vector<value_ref_ptr> &chain)
 {
   int found_memory_cnt = 0;
-  struct value *head = v;
 
   /* The idea here is that evaluating an expression generates a series
      of values, one holding the value of every subexpression.  (The
@@ -1869,8 +1720,10 @@ num_memory_accesses (struct value *v)
      notice that an expression contains an inferior function call.
      FIXME.  */
 
-  for (; v; v = value_next (v))
+  for (const value_ref_ptr &iter : chain)
     {
+      struct value *v = iter.get ();
+
       /* Constants and values from the history are fine.  */
       if (VALUE_LVAL (v) == not_lval || deprecated_value_modifiable (v) == 0)
 	continue;
@@ -1901,7 +1754,8 @@ check_condition (CORE_ADDR watch_addr, struct expression *cond,
 		 CORE_ADDR *data_value, int *len)
 {
   int pc = 1, num_accesses_left, num_accesses_right;
-  struct value *left_val, *right_val, *left_chain, *right_chain;
+  struct value *left_val, *right_val;
+  std::vector<value_ref_ptr> left_chain, right_chain;
 
   if (cond->elts[0].opcode != BINOP_EQUAL)
     return 0;
@@ -1910,22 +1764,13 @@ check_condition (CORE_ADDR watch_addr, struct expression *cond,
   num_accesses_left = num_memory_accesses (left_chain);
 
   if (left_val == NULL || num_accesses_left < 0)
-    {
-      free_value_chain (left_chain);
-
-      return 0;
-    }
+    return 0;
 
   fetch_subexp_value (cond, &pc, &right_val, NULL, &right_chain, 0);
   num_accesses_right = num_memory_accesses (right_chain);
 
   if (right_val == NULL || num_accesses_right < 0)
-    {
-      free_value_chain (left_chain);
-      free_value_chain (right_chain);
-
-      return 0;
-    }
+    return 0;
 
   if (num_accesses_left == 1 && num_accesses_right == 0
       && VALUE_LVAL (left_val) == lval_memory
@@ -1948,15 +1793,7 @@ check_condition (CORE_ADDR watch_addr, struct expression *cond,
       *len = TYPE_LENGTH (check_typedef (value_type (right_val)));
     }
   else
-    {
-      free_value_chain (left_chain);
-      free_value_chain (right_chain);
-
-      return 0;
-    }
-
-  free_value_chain (left_chain);
-  free_value_chain (right_chain);
+    return 0;
 
   return 1;
 }
@@ -1964,10 +1801,10 @@ check_condition (CORE_ADDR watch_addr, struct expression *cond,
 /* Return non-zero if the target is capable of using hardware to evaluate
    the condition expression, thus only triggering the watchpoint when it is
    true.  */
-static int
-ppc_linux_can_accel_watchpoint_condition (struct target_ops *self,
-					  CORE_ADDR addr, int len, int rw,
-					  struct expression *cond)
+bool
+ppc_linux_nat_target::can_accel_watchpoint_condition (CORE_ADDR addr, int len,
+						      int rw,
+						      struct expression *cond)
 {
   CORE_ADDR data_value;
 
@@ -2027,10 +1864,10 @@ create_watchpoint_request (struct ppc_hw_breakpoint *p, CORE_ADDR addr,
   p->addr = (uint64_t) addr;
 }
 
-static int
-ppc_linux_insert_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
-			     enum target_hw_bp_type type,
-			     struct expression *cond)
+int
+ppc_linux_nat_target::insert_watchpoint (CORE_ADDR addr, int len,
+					 enum target_hw_bp_type type,
+					 struct expression *cond)
 {
   struct lwp_info *lp;
   int ret = -1;
@@ -2042,7 +1879,7 @@ ppc_linux_insert_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
       create_watchpoint_request (&p, addr, len, type, cond, 1);
 
       ALL_LWPS (lp)
-	hwdebug_insert_point (&p, ptid_get_lwp (lp->ptid));
+	hwdebug_insert_point (&p, lp->ptid.lwp ());
 
       ret = 0;
     }
@@ -2086,7 +1923,7 @@ ppc_linux_insert_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
       saved_dabr_value = dabr_value;
 
       ALL_LWPS (lp)
-	if (ptrace (PTRACE_SET_DEBUGREG, ptid_get_lwp (lp->ptid), 0,
+	if (ptrace (PTRACE_SET_DEBUGREG, lp->ptid.lwp (), 0,
 		    saved_dabr_value) < 0)
 	  return -1;
 
@@ -2096,10 +1933,10 @@ ppc_linux_insert_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
   return ret;
 }
 
-static int
-ppc_linux_remove_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
-			     enum target_hw_bp_type type,
-			     struct expression *cond)
+int
+ppc_linux_nat_target::remove_watchpoint (CORE_ADDR addr, int len,
+					 enum target_hw_bp_type type,
+					 struct expression *cond)
 {
   struct lwp_info *lp;
   int ret = -1;
@@ -2111,7 +1948,7 @@ ppc_linux_remove_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
       create_watchpoint_request (&p, addr, len, type, cond, 0);
 
       ALL_LWPS (lp)
-	hwdebug_remove_point (&p, ptid_get_lwp (lp->ptid));
+	hwdebug_remove_point (&p, lp->ptid.lwp ());
 
       ret = 0;
     }
@@ -2119,7 +1956,7 @@ ppc_linux_remove_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
     {
       saved_dabr_value = 0;
       ALL_LWPS (lp)
-	if (ptrace (PTRACE_SET_DEBUGREG, ptid_get_lwp (lp->ptid), 0,
+	if (ptrace (PTRACE_SET_DEBUGREG, lp->ptid.lwp (), 0,
 		    saved_dabr_value) < 0)
 	  return -1;
 
@@ -2129,10 +1966,10 @@ ppc_linux_remove_watchpoint (struct target_ops *self, CORE_ADDR addr, int len,
   return ret;
 }
 
-static void
-ppc_linux_new_thread (struct lwp_info *lp)
+void
+ppc_linux_nat_target::low_new_thread (struct lwp_info *lp)
 {
-  int tid = ptid_get_lwp (lp->ptid);
+  int tid = lp->ptid.lwp ();
 
   if (have_ptrace_hwdebug_interface ())
     {
@@ -2171,7 +2008,7 @@ static void
 ppc_linux_thread_exit (struct thread_info *tp, int silent)
 {
   int i;
-  int tid = ptid_get_lwp (tp->ptid);
+  int tid = tp->ptid.lwp ();
   struct hw_break_tuple *hw_breaks;
   struct thread_points *t = NULL, *p;
 
@@ -2200,17 +2037,17 @@ ppc_linux_thread_exit (struct thread_info *tp, int silent)
   xfree (t);
 }
 
-static int
-ppc_linux_stopped_data_address (struct target_ops *target, CORE_ADDR *addr_p)
+bool
+ppc_linux_nat_target::stopped_data_address (CORE_ADDR *addr_p)
 {
   siginfo_t siginfo;
 
   if (!linux_nat_get_siginfo (inferior_ptid, &siginfo))
-    return 0;
+    return false;
 
   if (siginfo.si_signo != SIGTRAP
       || (siginfo.si_code & 0xffff) != 0x0004 /* TRAP_HWBKPT */)
-    return 0;
+    return false;
 
   if (have_ptrace_hwdebug_interface ())
     {
@@ -2220,7 +2057,7 @@ ppc_linux_stopped_data_address (struct target_ops *target, CORE_ADDR *addr_p)
       /* The index (or slot) of the *point is passed in the si_errno field.  */
       int slot = siginfo.si_errno;
 
-      t = hwdebug_find_thread_points_by_tid (ptid_get_lwp (inferior_ptid), 0);
+      t = hwdebug_find_thread_points_by_tid (inferior_ptid.lwp (), 0);
 
       /* Find out if this *point is a hardware breakpoint.
 	 If so, we should return 0.  */
@@ -2231,25 +2068,25 @@ ppc_linux_stopped_data_address (struct target_ops *target, CORE_ADDR *addr_p)
 	   if (hw_breaks[i].hw_break && hw_breaks[i].slot == slot
 	       && hw_breaks[i].hw_break->trigger_type
 		    == PPC_BREAKPOINT_TRIGGER_EXECUTE)
-	     return 0;
+	     return false;
 	}
     }
 
   *addr_p = (CORE_ADDR) (uintptr_t) siginfo.si_addr;
-  return 1;
+  return true;
 }
 
-static int
-ppc_linux_stopped_by_watchpoint (struct target_ops *ops)
+bool
+ppc_linux_nat_target::stopped_by_watchpoint ()
 {
   CORE_ADDR addr;
-  return ppc_linux_stopped_data_address (ops, &addr);
+  return stopped_data_address (&addr);
 }
 
-static int
-ppc_linux_watchpoint_addr_within_range (struct target_ops *target,
-					CORE_ADDR addr,
-					CORE_ADDR start, int length)
+bool
+ppc_linux_nat_target::watchpoint_addr_within_range (CORE_ADDR addr,
+						    CORE_ADDR start,
+						    int length)
 {
   int mask;
 
@@ -2269,9 +2106,8 @@ ppc_linux_watchpoint_addr_within_range (struct target_ops *target,
 
 /* Return the number of registers needed for a masked hardware watchpoint.  */
 
-static int
-ppc_linux_masked_watch_num_registers (struct target_ops *target,
-				      CORE_ADDR addr, CORE_ADDR mask)
+int
+ppc_linux_nat_target::masked_watch_num_registers (CORE_ADDR addr, CORE_ADDR mask)
 {
   if (!have_ptrace_hwdebug_interface ()
 	   || (hwdebug_info.features & PPC_DEBUG_FEATURE_DATA_BP_MASK) == 0)
@@ -2287,16 +2123,10 @@ ppc_linux_masked_watch_num_registers (struct target_ops *target,
     return 2;
 }
 
-static void
-ppc_linux_store_inferior_registers (struct target_ops *ops,
-				    struct regcache *regcache, int regno)
+void
+ppc_linux_nat_target::store_registers (struct regcache *regcache, int regno)
 {
-  /* Overload thread id onto process id.  */
-  int tid = ptid_get_lwp (inferior_ptid);
-
-  /* No thread id, just use process id.  */
-  if (tid == 0)
-    tid = ptid_get_pid (inferior_ptid);
+  pid_t tid = get_ptrace_pid (regcache->ptid ());
 
   if (regno >= 0)
     store_register (regcache, tid, regno);
@@ -2348,34 +2178,17 @@ fill_fpregset (const struct regcache *regcache,
 			fpregsetp, sizeof (*fpregsetp));
 }
 
-static int
-ppc_linux_target_wordsize (void)
+int
+ppc_linux_nat_target::auxv_parse (gdb_byte **readptr,
+				  gdb_byte *endptr, CORE_ADDR *typep,
+				  CORE_ADDR *valp)
 {
-  int wordsize = 4;
-
-  /* Check for 64-bit inferior process.  This is the case when the host is
-     64-bit, and in addition the top bit of the MSR register is set.  */
-#ifdef __powerpc64__
-  long msr;
-
-  int tid = ptid_get_lwp (inferior_ptid);
+  int tid = inferior_ptid.lwp ();
   if (tid == 0)
-    tid = ptid_get_pid (inferior_ptid);
+    tid = inferior_ptid.pid ();
 
-  errno = 0;
-  msr = (long) ptrace (PTRACE_PEEKUSER, tid, PT_MSR * 8, 0);
-  if (errno == 0 && ppc64_64bit_inferior_p (msr))
-    wordsize = 8;
-#endif
+  int sizeof_auxv_field = ppc_linux_target_wordsize (tid);
 
-  return wordsize;
-}
-
-static int
-ppc_linux_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
-                      gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
-{
-  int sizeof_auxv_field = ppc_linux_target_wordsize ();
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
   gdb_byte *ptr = *readptr;
 
@@ -2394,17 +2207,12 @@ ppc_linux_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
   return 1;
 }
 
-static const struct target_desc *
-ppc_linux_read_description (struct target_ops *ops)
+const struct target_desc *
+ppc_linux_nat_target::read_description ()
 {
-  int altivec = 0;
-  int vsx = 0;
-  int isa205 = 0;
-  int cell = 0;
-
-  int tid = ptid_get_lwp (inferior_ptid);
+  int tid = inferior_ptid.lwp ();
   if (tid == 0)
-    tid = ptid_get_pid (inferior_ptid);
+    tid = inferior_ptid.pid ();
 
   if (have_ptrace_getsetevrregs)
     {
@@ -2419,13 +2227,19 @@ ppc_linux_read_description (struct target_ops *ops)
 	perror_with_name (_("Unable to fetch SPE registers"));
     }
 
+  struct ppc_linux_features features = ppc_linux_no_features;
+
+  features.wordsize = ppc_linux_target_wordsize (tid);
+
+  CORE_ADDR hwcap = ppc_linux_get_hwcap ();
+
   if (have_ptrace_getsetvsxregs
-      && (ppc_linux_get_hwcap () & PPC_FEATURE_HAS_VSX))
+      && (hwcap & PPC_FEATURE_HAS_VSX))
     {
       gdb_vsxregset_t vsxregset;
 
       if (ptrace (PTRACE_GETVSXREGS, tid, 0, &vsxregset) >= 0)
-	vsx = 1;
+	features.vsx = true;
 
       /* EIO means that the PTRACE_GETVSXREGS request isn't supported.
 	 Anything else needs to be reported.  */
@@ -2434,12 +2248,12 @@ ppc_linux_read_description (struct target_ops *ops)
     }
 
   if (have_ptrace_getvrregs
-      && (ppc_linux_get_hwcap () & PPC_FEATURE_HAS_ALTIVEC))
+      && (hwcap & PPC_FEATURE_HAS_ALTIVEC))
     {
       gdb_vrregset_t vrregset;
 
       if (ptrace (PTRACE_GETVRREGS, tid, 0, &vrregset) >= 0)
-        altivec = 1;
+        features.altivec = true;
 
       /* EIO means that the PTRACE_GETVRREGS request isn't supported.
 	 Anything else needs to be reported.  */
@@ -2447,78 +2261,21 @@ ppc_linux_read_description (struct target_ops *ops)
 	perror_with_name (_("Unable to fetch AltiVec registers"));
     }
 
-  /* Power ISA 2.05 (implemented by Power 6 and newer processors) increases
-     the FPSCR from 32 bits to 64 bits.  Even though Power 7 supports this
-     ISA version, it doesn't have PPC_FEATURE_ARCH_2_05 set, only
-     PPC_FEATURE_ARCH_2_06.  Since for now the only bits used in the higher
-     half of the register are for Decimal Floating Point, we check if that
-     feature is available to decide the size of the FPSCR.  */
-  if (ppc_linux_get_hwcap () & PPC_FEATURE_HAS_DFP)
-    isa205 = 1;
+  if (hwcap & PPC_FEATURE_CELL)
+    features.cell = true;
 
-  if (ppc_linux_get_hwcap () & PPC_FEATURE_CELL)
-    cell = 1;
+  features.isa205 = ppc_linux_has_isa205 (hwcap);
 
-  if (ppc_linux_target_wordsize () == 8)
-    {
-      if (cell)
-	return tdesc_powerpc_cell64l;
-      else if (vsx)
-	return isa205? tdesc_powerpc_isa205_vsx64l : tdesc_powerpc_vsx64l;
-      else if (altivec)
-	return isa205
-	  ? tdesc_powerpc_isa205_altivec64l : tdesc_powerpc_altivec64l;
-
-      return isa205? tdesc_powerpc_isa205_64l : tdesc_powerpc_64l;
-    }
-
-  if (cell)
-    return tdesc_powerpc_cell32l;
-  else if (vsx)
-    return isa205? tdesc_powerpc_isa205_vsx32l : tdesc_powerpc_vsx32l;
-  else if (altivec)
-    return isa205? tdesc_powerpc_isa205_altivec32l : tdesc_powerpc_altivec32l;
-
-  return isa205? tdesc_powerpc_isa205_32l : tdesc_powerpc_32l;
+  return ppc_linux_match_description (features);
 }
-
-void _initialize_ppc_linux_nat (void);
 
 void
 _initialize_ppc_linux_nat (void)
 {
-  struct target_ops *t;
+  linux_target = &the_ppc_linux_nat_target;
 
-  /* Fill in the generic GNU/Linux methods.  */
-  t = linux_target ();
-
-  /* Add our register access methods.  */
-  t->to_fetch_registers = ppc_linux_fetch_inferior_registers;
-  t->to_store_registers = ppc_linux_store_inferior_registers;
-
-  /* Add our breakpoint/watchpoint methods.  */
-  t->to_can_use_hw_breakpoint = ppc_linux_can_use_hw_breakpoint;
-  t->to_insert_hw_breakpoint = ppc_linux_insert_hw_breakpoint;
-  t->to_remove_hw_breakpoint = ppc_linux_remove_hw_breakpoint;
-  t->to_region_ok_for_hw_watchpoint = ppc_linux_region_ok_for_hw_watchpoint;
-  t->to_insert_watchpoint = ppc_linux_insert_watchpoint;
-  t->to_remove_watchpoint = ppc_linux_remove_watchpoint;
-  t->to_insert_mask_watchpoint = ppc_linux_insert_mask_watchpoint;
-  t->to_remove_mask_watchpoint = ppc_linux_remove_mask_watchpoint;
-  t->to_stopped_by_watchpoint = ppc_linux_stopped_by_watchpoint;
-  t->to_stopped_data_address = ppc_linux_stopped_data_address;
-  t->to_watchpoint_addr_within_range = ppc_linux_watchpoint_addr_within_range;
-  t->to_can_accel_watchpoint_condition
-    = ppc_linux_can_accel_watchpoint_condition;
-  t->to_masked_watch_num_registers = ppc_linux_masked_watch_num_registers;
-  t->to_ranged_break_num_registers = ppc_linux_ranged_break_num_registers;
-
-  t->to_read_description = ppc_linux_read_description;
-  t->to_auxv_parse = ppc_linux_auxv_parse;
-
-  observer_attach_thread_exit (ppc_linux_thread_exit);
+  gdb::observers::thread_exit.attach (ppc_linux_thread_exit);
 
   /* Register the target.  */
-  linux_nat_add_target (t);
-  linux_nat_set_new_thread (t, ppc_linux_new_thread);
+  add_inf_child_target (linux_target);
 }

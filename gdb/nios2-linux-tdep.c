@@ -1,5 +1,5 @@
 /* Target-dependent code for GNU/Linux on Nios II.
-   Copyright (C) 2012-2016 Free Software Foundation, Inc.
+   Copyright (C) 2012-2018 Free Software Foundation, Inc.
    Contributed by Mentor Graphics, Inc.
 
    This file is part of GDB.
@@ -29,8 +29,6 @@
 #include "linux-tdep.h"
 #include "glibc-tdep.h"
 #include "nios2-tdep.h"
-
-#include "features/nios2-linux.c"
 
 /* Core file and register set support.  */
 
@@ -69,10 +67,9 @@ nios2_supply_gregset (const struct regset *regset,
     if (regnum == -1 || regnum == regno)
       {
 	if (reg_offsets[regno] != -1)
-	  regcache_raw_supply (regcache, regno,
-			       gregs + 4 * reg_offsets[regno]);
+	  regcache->raw_supply (regno, gregs + 4 * reg_offsets[regno]);
 	else
-	  regcache_raw_supply (regcache, regno, zero_buf);
+	  regcache->raw_supply (regno, zero_buf);
       }
 }
 
@@ -90,8 +87,7 @@ nios2_collect_gregset (const struct regset *regset,
     if (regnum == -1 || regnum == regno)
       {
 	if (reg_offsets[regno] != -1)
-	  regcache_raw_collect (regcache, regno,
-				gregs + 4 * reg_offsets[regno]);
+	  regcache->raw_collect (regno, gregs + 4 * reg_offsets[regno]);
       }
 }
 
@@ -110,7 +106,8 @@ nios2_iterate_over_regset_sections (struct gdbarch *gdbarch,
 				    void *cb_data,
 				    const struct regcache *regcache)
 {
-  cb (".reg", NIOS2_GREGS_SIZE, &nios2_core_regset, NULL, cb_data);
+  cb (".reg", NIOS2_GREGS_SIZE, NIOS2_GREGS_SIZE, &nios2_core_regset, NULL,
+      cb_data);
 }
 
 /* Initialize a trad-frame cache corresponding to the tramp-frame.
@@ -238,10 +235,6 @@ nios2_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->jb_pc = 10;
 }
 
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-
-extern initialize_file_ftype _initialize_nios2_linux_tdep;
-
 void
 _initialize_nios2_linux_tdep (void)
 {
@@ -253,6 +246,4 @@ _initialize_nios2_linux_tdep (void)
        arch_info = arch_info->next)
     gdbarch_register_osabi (bfd_arch_nios2, arch_info->mach,
 			    GDB_OSABI_LINUX, nios2_linux_init_abi);
-
-  initialize_tdesc_nios2_linux ();
 }

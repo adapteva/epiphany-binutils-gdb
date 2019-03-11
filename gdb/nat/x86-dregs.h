@@ -1,6 +1,6 @@
 /* Debug register code for x86 (i386 and x86-64).
 
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -127,5 +127,9 @@ extern int x86_dr_stopped_data_address (struct x86_debug_reg_state *state,
 /* Return true if the inferior has some watchpoint that triggered.
    Otherwise return false.  */
 extern int x86_dr_stopped_by_watchpoint (struct x86_debug_reg_state *state);
+
+/* Return true if the inferior has some hardware breakpoint that
+   triggered.  Otherwise return false.  */
+extern int x86_dr_stopped_by_hw_breakpoint (struct x86_debug_reg_state *state);
 
 #endif /* X86_DREGS_H */

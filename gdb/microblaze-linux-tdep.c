@@ -1,6 +1,6 @@
 /* Target-dependent code for Xilinx MicroBlaze.
 
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -49,8 +49,6 @@ microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch,
 
   /* Determine appropriate breakpoint contents and size for this address.  */
   bp = gdbarch_breakpoint_from_pc (gdbarch, &addr, &bplen);
-  if (bp == NULL)
-    error (_("Software breakpoints not implemented for this target."));
 
   val = target_read_memory (addr, old_contents, bplen);
 
@@ -121,8 +119,6 @@ static void
 microblaze_linux_init_abi (struct gdbarch_info info,
 			   struct gdbarch *gdbarch)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-
   linux_init_abi (info, gdbarch);
 
   set_gdbarch_memory_remove_breakpoint (gdbarch,
@@ -136,9 +132,6 @@ microblaze_linux_init_abi (struct gdbarch_info info,
   tramp_frame_prepend_unwinder (gdbarch,
 				&microblaze_linux_sighandler_tramp_frame);
 }
-
-/* -Wmissing-prototypes */
-extern initialize_file_ftype _initialize_microblaze_linux_tdep;
 
 void
 _initialize_microblaze_linux_tdep (void)

@@ -1,5 +1,5 @@
 /* Memory breakpoint interfaces for the remote server for GDB.
-   Copyright (C) 2002-2016 Free Software Foundation, Inc.
+   Copyright (C) 2002-2018 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -101,9 +101,9 @@ int software_breakpoint_inserted_here (CORE_ADDR addr);
 
 int hardware_breakpoint_inserted_here (CORE_ADDR addr);
 
-/* Returns TRUE if there's any reinsert breakpoint at ADDR.  */
+/* Returns TRUE if there's any single-step breakpoint at ADDR.  */
 
-int reinsert_breakpoint_inserted_here (CORE_ADDR addr);
+int single_step_breakpoint_inserted_here (CORE_ADDR addr);
 
 /* Clear all breakpoint conditions and commands associated with a
    breakpoint.  */
@@ -114,17 +114,19 @@ void clear_breakpoint_conditions_and_commands (struct gdb_breakpoint *bp);
    Returns false on failure.  On success, advances CONDITION pointer
    past the condition and returns true.  */
 
-int add_breakpoint_condition (struct gdb_breakpoint *bp, char **condition);
+int add_breakpoint_condition (struct gdb_breakpoint *bp,
+			      const char **condition);
 
 /* Set target-side commands COMMANDS to the breakpoint at ADDR.
    Returns false on failure.  On success, advances COMMANDS past the
    commands and returns true.  If PERSIST, the commands should run
    even while GDB is disconnected.  */
 
-int add_breakpoint_commands (struct gdb_breakpoint *bp, char **commands,
+int add_breakpoint_commands (struct gdb_breakpoint *bp, const char **commands,
 			     int persist);
 
-int any_persistent_commands (void);
+/* Return true if PROC has any persistent command.  */
+bool any_persistent_commands (process_info *proc);
 
 /* Evaluation condition (if any) at breakpoint BP.  Return 1 if
    true and 0 otherwise.  */
@@ -152,32 +154,32 @@ struct breakpoint *set_breakpoint_at (CORE_ADDR where,
 
 int delete_breakpoint (struct breakpoint *bkpt);
 
-/* Set a reinsert breakpoint at STOP_AT for thread represented by
+/* Set a single-step breakpoint at STOP_AT for thread represented by
    PTID.  */
 
-void set_reinsert_breakpoint (CORE_ADDR stop_at, ptid_t ptid);
+void set_single_step_breakpoint (CORE_ADDR stop_at, ptid_t ptid);
 
-/* Delete all reinsert breakpoints of THREAD.  */
+/* Delete all single-step breakpoints of THREAD.  */
 
-void delete_reinsert_breakpoints (struct thread_info *thread);
+void delete_single_step_breakpoints (struct thread_info *thread);
 
-/* Reinsert all reinsert breakpoints of THREAD.  */
+/* Reinsert all single-step breakpoints of THREAD.  */
 
-void reinsert_reinsert_breakpoints (struct thread_info *thread);
+void reinsert_single_step_breakpoints (struct thread_info *thread);
 
-/* Uninsert all reinsert breakpoints of THREAD.  This still leaves
-   the reinsert breakpoints in the table.  */
+/* Uninsert all single-step breakpoints of THREAD.  This still leaves
+   the single-step breakpoints in the table.  */
 
-void uninsert_reinsert_breakpoints (struct thread_info *thread);
+void uninsert_single_step_breakpoints (struct thread_info *thread);
 
 /* Reinsert breakpoints at WHERE (and change their status to
    inserted).  */
 
 void reinsert_breakpoints_at (CORE_ADDR where);
 
-/* The THREAD has reinsert breakpoints or not.  */
+/* The THREAD has single-step breakpoints or not.  */
 
-int has_reinsert_breakpoints (struct thread_info *thread);
+int has_single_step_breakpoints (struct thread_info *thread);
 
 /* Uninsert breakpoints at WHERE (and change their status to
    uninserted).  This still leaves the breakpoints in the table.  */

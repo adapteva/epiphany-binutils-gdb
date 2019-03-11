@@ -1,6 +1,6 @@
 /* C language support for compilation.
 
-   Copyright (C) 2014-2016 Free Software Foundation, Inc.
+   Copyright (C) 2014-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,6 +25,8 @@
 #include "macrotab.h"
 #include "macroscope.h"
 #include "regcache.h"
+#include "common/function-view.h"
+#include "common/preprocessor.h"
 
 /* See compile-internal.h.  */
 
@@ -56,16 +58,13 @@ c_get_mode_for_size (int size)
 
 /* See compile-internal.h.  */
 
-char *
+std::string
 c_get_range_decl_name (const struct dynamic_prop *prop)
 {
-  return xstrprintf ("__gdb_prop_%s", host_address_to_string (prop));
+  return string_printf ("__gdb_prop_%s", host_address_to_string (prop));
 }
 
 
-
-#define STR(x) #x
-#define STRINGIFY(x) STR(x)
 
 /* Helper function for c_get_compile_context.  Open the GCC front-end
    shared library and return the symbol specified by the current
@@ -74,12 +73,11 @@ c_get_range_decl_name (const struct dynamic_prop *prop)
 static gcc_c_fe_context_function *
 load_libcc (void)
 {
-  void *handle;
   gcc_c_fe_context_function *func;
 
    /* gdb_dlopen will call error () on an error, so no need to check
       value.  */
-  handle = gdb_dlopen (STRINGIFY (GCC_C_FE_LIBCC));
+  gdb_dlhandle_up handle = gdb_dlopen (STRINGIFY (GCC_C_FE_LIBCC));
   func = (gcc_c_fe_context_function *) gdb_dlsym (handle,
 						  STRINGIFY (GCC_C_FE_CONTEXT));
 
@@ -87,6 +85,9 @@ load_libcc (void)
     error (_("could not find symbol %s in library %s"),
 	   STRINGIFY (GCC_C_FE_CONTEXT),
 	   STRINGIFY (GCC_C_FE_LIBCC));
+
+  /* Leave the library open.  */
+  handle.release ();
   return func;
 }
 
@@ -122,10 +123,8 @@ c_get_compile_context (void)
 static void
 print_one_macro (const char *name, const struct macro_definition *macro,
 		 struct macro_source_file *source, int line,
-		 void *user_data)
+		 ui_file *file)
 {
-  struct ui_file *file = (struct ui_file *) user_data;
-
   /* Don't print command-line defines.  They will be supplied another
      way.  */
   if (line == 0)
@@ -158,7 +157,7 @@ static void
 write_macro_definitions (const struct block *block, CORE_ADDR pc,
 			 struct ui_file *file)
 {
-  struct macro_scope *scope;
+  gdb::unique_xmalloc_ptr<struct macro_scope> scope;
 
   if (block != NULL)
     scope = sal_macro_scope (find_pc_line (pc, 0));
@@ -168,7 +167,16 @@ write_macro_definitions (const struct block *block, CORE_ADDR pc,
     scope = user_macro_scope ();
 
   if (scope != NULL && scope->file != NULL && scope->file->table != NULL)
-    macro_for_each_in_scope (scope->file, scope->line, print_one_macro, file);
+    {
+      macro_for_each_in_scope (scope->file, scope->line,
+			       [&] (const char *name,
+				    const macro_definition *macro,
+				    macro_source_file *source,
+				    int line)
+	{
+	  print_one_macro (name, macro, source, line, file);
+	});
+    }
 }
 
 /* Helper function to construct a header scope for a block of code.
@@ -255,8 +263,7 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
 	if (registers_used[i])
 	  {
 	    struct type *regtype = check_typedef (register_type (gdbarch, i));
-	    char *regname = compile_register_name_mangled (gdbarch, i);
-	    struct cleanup *cleanups = make_cleanup (xfree, regname);
+	    std::string regname = compile_register_name_mangled (gdbarch, i);
 
 	    seen = 1;
 
@@ -274,7 +281,8 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
 	    switch (TYPE_CODE (regtype))
 	      {
 	      case TYPE_CODE_PTR:
-		fprintf_filtered (stream, "__gdb_uintptr %s", regname);
+		fprintf_filtered (stream, "__gdb_uintptr %s",
+				  regname.c_str ());
 		break;
 
 	      case TYPE_CODE_INT:
@@ -289,7 +297,7 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
 		      fprintf_unfiltered (stream,
 					  "int %s"
 					  " __attribute__ ((__mode__(__%s__)))",
-					  regname,
+					  regname.c_str (),
 					  mode);
 		      break;
 		    }
@@ -302,12 +310,10 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
 				    "  unsigned char %s[%d]"
 				    " __attribute__((__aligned__("
 				    "__BIGGEST_ALIGNMENT__)))",
-				    regname,
+				    regname.c_str (),
 				    TYPE_LENGTH (regtype));
 	      }
 	    fputs_unfiltered (";\n", stream);
-
-	    do_cleanups (cleanups);
 	  }
       }
 
@@ -326,22 +332,19 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
    to the inferior when the expression was created, and EXPR_PC
    indicates the value of $PC.  */
 
-char *
+std::string
 c_compute_program (struct compile_instance *inst,
 		   const char *input,
 		   struct gdbarch *gdbarch,
 		   const struct block *expr_block,
 		   CORE_ADDR expr_pc)
 {
-  struct ui_file *buf, *var_stream = NULL;
-  char *code;
-  struct cleanup *cleanup;
   struct compile_c_instance *context = (struct compile_c_instance *) inst;
 
-  buf = mem_fileopen ();
-  cleanup = make_cleanup_ui_file_delete (buf);
+  string_file buf;
+  string_file var_stream;
 
-  write_macro_definitions (expr_block, expr_pc, buf);
+  write_macro_definitions (expr_block, expr_pc, &buf);
 
   /* Do not generate local variable information for "raw"
      compilations.  In this case we aren't emitting our own function
@@ -355,21 +358,17 @@ c_compute_program (struct compile_instance *inst,
 	 before generating the function header, so we can define the
 	 register struct before the function body.  This requires a
 	 temporary stream.  */
-      var_stream = mem_fileopen ();
-      make_cleanup_ui_file_delete (var_stream);
       registers_used = generate_c_for_variable_locations (context,
 							  var_stream, gdbarch,
 							  expr_block, expr_pc);
       make_cleanup (xfree, registers_used);
 
-      fputs_unfiltered ("typedef unsigned int"
-			" __attribute__ ((__mode__(__pointer__)))"
-			" __gdb_uintptr;\n",
-			buf);
-      fputs_unfiltered ("typedef int"
-			" __attribute__ ((__mode__(__pointer__)))"
-			" __gdb_intptr;\n",
-			buf);
+      buf.puts ("typedef unsigned int"
+		" __attribute__ ((__mode__(__pointer__)))"
+		" __gdb_uintptr;\n");
+      buf.puts ("typedef int"
+		" __attribute__ ((__mode__(__pointer__)))"
+		" __gdb_intptr;\n");
 
       /* Iterate all log2 sizes in bytes supported by c_get_mode_for_size.  */
       for (i = 0; i < 4; ++i)
@@ -377,24 +376,23 @@ c_compute_program (struct compile_instance *inst,
 	  const char *mode = c_get_mode_for_size (1 << i);
 
 	  gdb_assert (mode != NULL);
-	  fprintf_unfiltered (buf,
-			      "typedef int"
-			      " __attribute__ ((__mode__(__%s__)))"
-			      " __gdb_int_%s;\n",
-			      mode, mode);
+	  buf.printf ("typedef int"
+		      " __attribute__ ((__mode__(__%s__)))"
+		      " __gdb_int_%s;\n",
+		      mode, mode);
 	}
 
-      generate_register_struct (buf, gdbarch, registers_used);
+      generate_register_struct (&buf, gdbarch, registers_used);
     }
 
-  add_code_header (inst->scope, buf);
+  add_code_header (inst->scope, &buf);
 
   if (inst->scope == COMPILE_I_SIMPLE_SCOPE
       || inst->scope == COMPILE_I_PRINT_ADDRESS_SCOPE
       || inst->scope == COMPILE_I_PRINT_VALUE_SCOPE)
     {
-      ui_file_put (var_stream, ui_file_write_for_put, buf);
-      fputs_unfiltered ("#pragma GCC user_expression\n", buf);
+      buf.write (var_stream.c_str (), var_stream.size ());
+      buf.puts ("#pragma GCC user_expression\n");
     }
 
   /* The user expression has to be in its own scope, so that "extern"
@@ -402,15 +400,15 @@ c_compute_program (struct compile_instance *inst,
      declaration is in the same scope as the declaration provided by
      gdb.  */
   if (inst->scope != COMPILE_I_RAW_SCOPE)
-    fputs_unfiltered ("{\n", buf);
+    buf.puts ("{\n");
 
-  fputs_unfiltered ("#line 1 \"gdb command line\"\n", buf);
+  buf.puts ("#line 1 \"gdb command line\"\n");
 
   switch (inst->scope)
     {
     case COMPILE_I_PRINT_ADDRESS_SCOPE:
     case COMPILE_I_PRINT_VALUE_SCOPE:
-      fprintf_unfiltered (buf,
+      buf.printf (
 "__auto_type " COMPILE_I_EXPR_VAL " = %s;\n"
 "typeof (%s) *" COMPILE_I_EXPR_PTR_TYPE ";\n"
 "memcpy (" COMPILE_I_PRINT_OUT_ARG ", %s" COMPILE_I_EXPR_VAL ",\n"
@@ -420,22 +418,20 @@ c_compute_program (struct compile_instance *inst,
 			   ? "&" : ""));
       break;
     default:
-      fputs_unfiltered (input, buf);
+      buf.puts (input);
       break;
     }
 
-  fputs_unfiltered ("\n", buf);
+  buf.puts ("\n");
 
   /* For larger user expressions the automatic semicolons may be
      confusing.  */
   if (strchr (input, '\n') == NULL)
-    fputs_unfiltered (";\n", buf);
+    buf.puts (";\n");
 
   if (inst->scope != COMPILE_I_RAW_SCOPE)
-    fputs_unfiltered ("}\n", buf);
+    buf.puts ("}\n");
 
-  add_code_footer (inst->scope, buf);
-  code = ui_file_xstrdup (buf, NULL);
-  do_cleanups (cleanup);
-  return code;
+  add_code_footer (inst->scope, &buf);
+  return std::move (buf.string ());
 }

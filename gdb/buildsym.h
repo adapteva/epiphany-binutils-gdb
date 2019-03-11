@@ -1,5 +1,5 @@
 /* Build symbol tables in GDB's internal format.
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,6 +23,7 @@ struct objfile;
 struct symbol;
 struct addrmap;
 struct compunit_symtab;
+enum language;
 
 /* This module provides definitions used for creating and adding to
    the symbol table.  These routines are called from various symbol-
@@ -194,7 +195,7 @@ typedef void (record_line_ftype) (struct subfile *subfile, int line,
 
 /* Function to invoke get the next symbol.  Return the symbol name.  */
 
-EXTERN char *(*next_symbol_text_func) (struct objfile *);
+EXTERN const char *(*next_symbol_text_func) (struct objfile *);
 
 extern void add_symbol_to_list (struct symbol *symbol,
 				struct pending **listhead);
@@ -212,11 +213,19 @@ extern struct block *finish_block (struct symbol *symbol,
 extern void record_block_range (struct block *,
                                 CORE_ADDR start, CORE_ADDR end_inclusive);
 
-extern void really_free_pendings (void *dummy);
+class scoped_free_pendings
+{
+public:
+
+  scoped_free_pendings () = default;
+  ~scoped_free_pendings ();
+
+  DISABLE_COPY_AND_ASSIGN (scoped_free_pendings);
+};
 
 extern void start_subfile (const char *name);
 
-extern void patch_subfile_names (struct subfile *subfile, char *name);
+extern void patch_subfile_names (struct subfile *subfile, const char *name);
 
 extern void push_subfile (void);
 
@@ -254,7 +263,8 @@ extern record_line_ftype record_line;
 extern struct compunit_symtab *start_symtab (struct objfile *objfile,
 					     const char *name,
 					     const char *comp_dir,
-					     CORE_ADDR start_addr);
+					     CORE_ADDR start_addr,
+					     enum language language);
 
 extern void restart_symtab (struct compunit_symtab *cust,
 			    const char *name, CORE_ADDR start_addr);

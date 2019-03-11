@@ -1,5 +1,5 @@
 /* ARM ELF support for BFD.
-   Copyright (C) 1998-2016 Free Software Foundation, Inc.
+   Copyright (C) 1998-2018 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -106,6 +106,7 @@
 #define TAG_CPU_ARCH_V6S_M	12
 #define TAG_CPU_ARCH_V7E_M	13
 #define TAG_CPU_ARCH_V8		14
+#define TAG_CPU_ARCH_V8R	15
 #define TAG_CPU_ARCH_V8M_BASE	16
 #define TAG_CPU_ARCH_V8M_MAIN	17
 #define MAX_TAG_CPU_ARCH	TAG_CPU_ARCH_V8M_MAIN
@@ -239,6 +240,13 @@ START_RELOC_NUMBERS (elf_arm_reloc_type)
   RELOC_NUMBER (R_ARM_THM_ALU_ABS_G3_NC,135)
 
   RELOC_NUMBER (R_ARM_IRELATIVE,      	160)
+  RELOC_NUMBER (R_ARM_GOTFUNCDESC,    	161)
+  RELOC_NUMBER (R_ARM_GOTOFFFUNCDESC, 	162)
+  RELOC_NUMBER (R_ARM_FUNCDESC,       	163)
+  RELOC_NUMBER (R_ARM_FUNCDESC_VALUE, 	164)
+  RELOC_NUMBER (R_ARM_TLS_GD32_FDPIC,   165)
+  RELOC_NUMBER (R_ARM_TLS_LDM32_FDPIC,  166)
+  RELOC_NUMBER (R_ARM_TLS_IE32_FDPIC,   167)
 
   /* Extensions?  R=read-only?  */
   RELOC_NUMBER (R_ARM_RXPC25,         	249)
@@ -383,5 +391,12 @@ enum arm_st_branch_type {
   (STI) = (((STI) & ~ENUM_ARM_ST_BRANCH_TYPE_BITMASK)		\
 	   | ((TYPE) & ENUM_ARM_ST_BRANCH_TYPE_BITMASK))
 #endif
+
+/* Get or set whether a symbol is a special symbol of an entry function of CMSE
+   secure code.  */
+#define ARM_GET_SYM_CMSE_SPCL(SYM_TARGET_INTERNAL) \
+  (((SYM_TARGET_INTERNAL) >> 2) & 1)
+#define ARM_SET_SYM_CMSE_SPCL(SYM_TARGET_INTERNAL) \
+  (SYM_TARGET_INTERNAL) |= 4
 
 #endif /* _ELF_ARM_H */

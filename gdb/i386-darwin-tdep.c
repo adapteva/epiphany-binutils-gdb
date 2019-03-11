@@ -1,5 +1,5 @@
 /* Darwin support for GDB, the GNU debugger.
-   Copyright (C) 1997-2016 Free Software Foundation, Inc.
+   Copyright (C) 1997-2018 Free Software Foundation, Inc.
 
    Contributed by Apple Computer, Inc.
 
@@ -23,7 +23,6 @@
 #include "inferior.h"
 #include "gdbcore.h"
 #include "target.h"
-#include "floatformat.h"
 #include "symtab.h"
 #include "regcache.h"
 #include "objfiles.h"
@@ -36,6 +35,7 @@
 #include "solib.h"
 #include "solib-darwin.h"
 #include "dwarf2-frame.h"
+#include <algorithm>
 
 /* Offsets into the struct i386_thread_state where we'll find the saved regs.
    From <mach/i386/thread_status.h> and i386-tdep.h.  */
@@ -137,8 +137,12 @@ i386_darwin_arg_type_alignment (struct type *type)
       int i;
       int res = 4;
       for (i = 0; i < TYPE_NFIELDS (type); i++)
-        res = max (res,
-                   i386_darwin_arg_type_alignment (TYPE_FIELD_TYPE (type, i)));
+	{
+	  int align
+	    = i386_darwin_arg_type_alignment (TYPE_FIELD_TYPE (type, i));
+
+	  res = std::max (res, align);
+	}
       return res;
     }
   /* 2.  The caller aligns nonvector arguments to 4-byte boundaries.  */
@@ -185,8 +189,7 @@ i386_darwin_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
               if (write_pass)
                 {
                   const gdb_byte *val = value_contents_all (args[i]);
-                  regcache_raw_write
-                    (regcache, I387_MM0_REGNUM(tdep) + num_m128, val);
+                  regcache->raw_write (I387_MM0_REGNUM(tdep) + num_m128, val);
                 }
               num_m128++;
             }
@@ -224,10 +227,10 @@ i386_darwin_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* Finally, update the stack pointer...  */
   store_unsigned_integer (buf, 4, byte_order, sp);
-  regcache_cooked_write (regcache, I386_ESP_REGNUM, buf);
+  regcache->cooked_write (I386_ESP_REGNUM, buf);
 
   /* ...and fake a frame pointer.  */
-  regcache_cooked_write (regcache, I386_EBP_REGNUM, buf);
+  regcache->cooked_write (I386_EBP_REGNUM, buf);
 
   /* MarkK wrote: This "+ 8" is all over the place:
      (i386_frame_this_id, i386_sigtramp_frame_this_id,
@@ -281,9 +284,6 @@ i386_mach_o_osabi_sniffer (bfd *abfd)
 
   return GDB_OSABI_UNKNOWN;
 }
-
-/* -Wmissing-prototypes */
-extern initialize_file_ftype _initialize_i386_darwin_tdep;
 
 void
 _initialize_i386_darwin_tdep (void)

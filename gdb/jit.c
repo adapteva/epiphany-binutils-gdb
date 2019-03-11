@@ -1,6 +1,6 @@
 /* Handle JIT code generation in the inferior for GDB, the GNU Debugger.
 
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,7 +30,7 @@
 #include "gdbcmd.h"
 #include "gdbcore.h"
 #include "inferior.h"
-#include "observer.h"
+#include "observable.h"
 #include "objfiles.h"
 #include "regcache.h"
 #include "symfile.h"
@@ -136,7 +136,7 @@ mem_bfd_iovec_stat (struct bfd *abfd, void *stream, struct stat *sb)
 
 /* Open a BFD from the target's memory.  */
 
-static struct bfd *
+static gdb_bfd_ref_ptr
 bfd_open_from_target_memory (CORE_ADDR addr, ULONGEST size, char *target)
 {
   struct target_buffer *buffer = XNEW (struct target_buffer);
@@ -151,14 +151,28 @@ bfd_open_from_target_memory (CORE_ADDR addr, ULONGEST size, char *target)
 			      mem_bfd_iovec_stat);
 }
 
+struct jit_reader
+{
+  jit_reader (struct gdb_reader_funcs *f, gdb_dlhandle_up &&h)
+    : functions (f), handle (std::move (h))
+  {
+  }
+
+  ~jit_reader ()
+  {
+    functions->destroy (functions);
+  }
+
+  DISABLE_COPY_AND_ASSIGN (jit_reader);
+
+  struct gdb_reader_funcs *functions;
+  gdb_dlhandle_up handle;
+};
+
 /* One reader that has been loaded successfully, and can potentially be used to
    parse debug info.  */
 
-static struct jit_reader
-{
-  struct gdb_reader_funcs *functions;
-  void *handle;
-} *loaded_jit_reader = NULL;
+static struct jit_reader *loaded_jit_reader = NULL;
 
 typedef struct gdb_reader_funcs * (reader_init_fn_type) (void);
 static const char *reader_init_fn_sym = "gdb_init_reader";
@@ -168,17 +182,13 @@ static const char *reader_init_fn_sym = "gdb_init_reader";
 static struct jit_reader *
 jit_reader_load (const char *file_name)
 {
-  void *so;
   reader_init_fn_type *init_fn;
-  struct jit_reader *new_reader = NULL;
   struct gdb_reader_funcs *funcs = NULL;
-  struct cleanup *old_cleanups;
 
   if (jit_debug)
     fprintf_unfiltered (gdb_stdlog, _("Opening shared object %s.\n"),
                         file_name);
-  so = gdb_dlopen (file_name);
-  old_cleanups = make_cleanup_dlclose (so);
+  gdb_dlhandle_up so = gdb_dlopen (file_name);
 
   init_fn = (reader_init_fn_type *) gdb_dlsym (so, reader_init_fn_sym);
   if (!init_fn)
@@ -192,58 +202,42 @@ jit_reader_load (const char *file_name)
   if (funcs->reader_version != GDB_READER_INTERFACE_VERSION)
     error (_("Reader version does not match GDB version."));
 
-  new_reader = XCNEW (struct jit_reader);
-  new_reader->functions = funcs;
-  new_reader->handle = so;
-
-  discard_cleanups (old_cleanups);
-  return new_reader;
+  return new jit_reader (funcs, std::move (so));
 }
 
 /* Provides the jit-reader-load command.  */
 
 static void
-jit_reader_load_command (char *args, int from_tty)
+jit_reader_load_command (const char *args, int from_tty)
 {
-  char *so_name;
-  struct cleanup *prev_cleanup;
-
   if (args == NULL)
     error (_("No reader name provided."));
-  args = tilde_expand (args);
-  prev_cleanup = make_cleanup (xfree, args);
+  gdb::unique_xmalloc_ptr<char> file (tilde_expand (args));
 
   if (loaded_jit_reader != NULL)
     error (_("JIT reader already loaded.  Run jit-reader-unload first."));
 
-  if (IS_ABSOLUTE_PATH (args))
-    so_name = args;
-  else
-    {
-      so_name = xstrprintf ("%s%s%s", jit_reader_dir, SLASH_STRING, args);
-      make_cleanup (xfree, so_name);
-    }
+  if (!IS_ABSOLUTE_PATH (file.get ()))
+    file.reset (xstrprintf ("%s%s%s", jit_reader_dir, SLASH_STRING,
+			    file.get ()));
 
-  loaded_jit_reader = jit_reader_load (so_name);
+  loaded_jit_reader = jit_reader_load (file.get ());
   reinit_frame_cache ();
   jit_inferior_created_hook ();
-  do_cleanups (prev_cleanup);
 }
 
 /* Provides the jit-reader-unload command.  */
 
 static void
-jit_reader_unload_command (char *args, int from_tty)
+jit_reader_unload_command (const char *args, int from_tty)
 {
   if (!loaded_jit_reader)
     error (_("No JIT reader loaded."));
 
   reinit_frame_cache ();
   jit_inferior_exit_hook (current_inferior ());
-  loaded_jit_reader->functions->destroy (loaded_jit_reader->functions);
 
-  gdb_dlclose (loaded_jit_reader->handle);
-  xfree (loaded_jit_reader);
+  delete loaded_jit_reader;
   loaded_jit_reader = NULL;
 }
 
@@ -419,8 +413,8 @@ jit_read_code_entry (struct gdbarch *gdbarch,
   ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
   ptr_size = TYPE_LENGTH (ptr_type);
 
-  /* Figure out where the longlong value will be.  */
-  align_bytes = gdbarch_long_long_align_bit (gdbarch) / 8;
+  /* Figure out where the uint64_t value will be.  */
+  align_bytes = type_align (builtin_type (gdbarch)->builtin_uint64);
   off = 3 * ptr_size;
   off = (off + (align_bytes - 1)) & ~(align_bytes - 1);
 
@@ -657,12 +651,14 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
   size_t blockvector_size;
   CORE_ADDR begin, end;
   struct blockvector *bv;
+  enum language language;
 
   actual_nblocks = FIRST_LOCAL_BLOCK + stab->nblocks;
 
   cust = allocate_compunit_symtab (objfile, stab->file_name);
   allocate_symtab (cust, stab->file_name);
   add_compunit_symtab_to_objfile (cust);
+  language = compunit_language (cust);
 
   /* JIT compilers compile in memory.  */
   COMPUNIT_DIRNAME (cust) = NULL;
@@ -703,11 +699,11 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       struct symbol *block_name = allocate_symbol (objfile);
       struct type *block_type = arch_type (get_objfile_arch (objfile),
 					   TYPE_CODE_VOID,
-					   1,
+					   TARGET_CHAR_BIT,
 					   "void");
 
       BLOCK_DICT (new_block) = dict_create_linear (&objfile->objfile_obstack,
-                                                   NULL);
+						   language, NULL);
       /* The address range.  */
       BLOCK_START (new_block) = (CORE_ADDR) gdb_block_iter->begin;
       BLOCK_END (new_block) = (CORE_ADDR) gdb_block_iter->end;
@@ -745,7 +741,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 		   ? allocate_global_block (&objfile->objfile_obstack)
 		   : allocate_block (&objfile->objfile_obstack));
       BLOCK_DICT (new_block) = dict_create_linear (&objfile->objfile_obstack,
-                                                   NULL);
+						   language, NULL);
       BLOCK_SUPERBLOCK (new_block) = block_iter;
       block_iter = new_block;
 
@@ -807,8 +803,8 @@ jit_object_close_impl (struct gdb_symbol_callbacks *cb,
 
   priv_data = (jit_dbg_reader_data *) cb->priv_data;
 
-  objfile = allocate_objfile (NULL, "<< JIT compiled code >>",
-			      OBJF_NOT_FILENAME);
+  objfile = new struct objfile (NULL, "<< JIT compiled code >>",
+				OBJF_NOT_FILENAME);
   objfile->per_bfd->gdbarch = target_gdbarch ();
 
   terminate_minimal_symbol_table (objfile);
@@ -892,12 +888,8 @@ jit_bfd_try_read_symtab (struct jit_code_entry *code_entry,
                          CORE_ADDR entry_addr,
                          struct gdbarch *gdbarch)
 {
-  bfd *nbfd;
-  struct section_addr_info *sai;
   struct bfd_section *sec;
   struct objfile *objfile;
-  struct cleanup *old_cleanups;
-  int i;
   const struct bfd_arch_info *b;
 
   if (jit_debug)
@@ -907,8 +899,9 @@ jit_bfd_try_read_symtab (struct jit_code_entry *code_entry,
 			paddress (gdbarch, code_entry->symfile_addr),
 			pulongest (code_entry->symfile_size));
 
-  nbfd = bfd_open_from_target_memory (code_entry->symfile_addr,
-                                      code_entry->symfile_size, gnutarget);
+  gdb_bfd_ref_ptr nbfd (bfd_open_from_target_memory (code_entry->symfile_addr,
+						     code_entry->symfile_size,
+						     gnutarget));
   if (nbfd == NULL)
     {
       puts_unfiltered (_("Error opening JITed symbol file, ignoring it.\n"));
@@ -917,45 +910,41 @@ jit_bfd_try_read_symtab (struct jit_code_entry *code_entry,
 
   /* Check the format.  NOTE: This initializes important data that GDB uses!
      We would segfault later without this line.  */
-  if (!bfd_check_format (nbfd, bfd_object))
+  if (!bfd_check_format (nbfd.get (), bfd_object))
     {
       printf_unfiltered (_("\
 JITed symbol file is not an object file, ignoring it.\n"));
-      gdb_bfd_unref (nbfd);
       return;
     }
 
   /* Check bfd arch.  */
   b = gdbarch_bfd_arch_info (gdbarch);
-  if (b->compatible (b, bfd_get_arch_info (nbfd)) != b)
+  if (b->compatible (b, bfd_get_arch_info (nbfd.get ())) != b)
     warning (_("JITed object file architecture %s is not compatible "
-               "with target architecture %s."), bfd_get_arch_info
-             (nbfd)->printable_name, b->printable_name);
+               "with target architecture %s."),
+	     bfd_get_arch_info (nbfd.get ())->printable_name,
+	     b->printable_name);
 
   /* Read the section address information out of the symbol file.  Since the
      file is generated by the JIT at runtime, it should all of the absolute
      addresses that we care about.  */
-  sai = alloc_section_addr_info (bfd_count_sections (nbfd));
-  old_cleanups = make_cleanup_free_section_addr_info (sai);
-  i = 0;
+  section_addr_info sai;
   for (sec = nbfd->sections; sec != NULL; sec = sec->next)
-    if ((bfd_get_section_flags (nbfd, sec) & (SEC_ALLOC|SEC_LOAD)) != 0)
+    if ((bfd_get_section_flags (nbfd.get (), sec) & (SEC_ALLOC|SEC_LOAD)) != 0)
       {
         /* We assume that these virtual addresses are absolute, and do not
            treat them as offsets.  */
-        sai->other[i].addr = bfd_get_section_vma (nbfd, sec);
-        sai->other[i].name = xstrdup (bfd_get_section_name (nbfd, sec));
-        sai->other[i].sectindex = sec->index;
-        ++i;
+	sai.emplace_back (bfd_get_section_vma (nbfd.get (), sec),
+			  bfd_get_section_name (nbfd.get (), sec),
+			  sec->index);
       }
-  sai->num_sections = i;
 
   /* This call does not take ownership of SAI.  */
-  make_cleanup_bfd_unref (nbfd);
-  objfile = symbol_file_add_from_bfd (nbfd, bfd_get_filename (nbfd), 0, sai,
+  objfile = symbol_file_add_from_bfd (nbfd.get (),
+				      bfd_get_filename (nbfd.get ()), 0,
+				      &sai,
 				      OBJF_SHARED | OBJF_NOT_FILENAME, NULL);
 
-  do_cleanups (old_cleanups);
   add_objfile_entry (objfile, entry_addr);
 }
 
@@ -989,7 +978,7 @@ jit_register_code (struct gdbarch *gdbarch,
 static void
 jit_unregister_code (struct objfile *objfile)
 {
-  free_objfile (objfile);
+  delete objfile;
 }
 
 /* Look up the objfile with this code entry address.  */
@@ -1052,7 +1041,7 @@ jit_breakpoint_re_set_internal (struct gdbarch *gdbarch,
     {
       /* Lookup the registration symbol.  If it is missing, then we
 	 assume we are not attached to a JIT.  */
-      reg_symbol = lookup_minimal_symbol_and_objfile (jit_break_name);
+      reg_symbol = lookup_bound_minimal_symbol (jit_break_name);
       if (reg_symbol.minsym == NULL
 	  || BMSYMBOL_VALUE_ADDRESS (reg_symbol) == 0)
 	return 1;
@@ -1101,7 +1090,7 @@ struct jit_unwind_private
 {
   /* Cached register values.  See jit_frame_sniffer to see how this
      works.  */
-  struct regcache *regcache;
+  detached_regcache *regcache;
 
   /* The frame being unwound.  */
   struct frame_info *this_frame;
@@ -1130,7 +1119,7 @@ jit_unwind_reg_set_impl (struct gdb_unwind_callbacks *cb, int dwarf_regnum,
       return;
     }
 
-  regcache_raw_set_cached_value (priv->regcache, gdb_reg, value->value);
+  priv->regcache->raw_supply (gdb_reg, value->value);
   value->free (value);
 }
 
@@ -1173,7 +1162,7 @@ jit_dealloc_cache (struct frame_info *this_frame, void *cache)
   struct jit_unwind_private *priv_data = (struct jit_unwind_private *) cache;
 
   gdb_assert (priv_data->regcache != NULL);
-  regcache_xfree (priv_data->regcache);
+  delete priv_data->regcache;
   xfree (priv_data);
 }
 
@@ -1192,8 +1181,6 @@ jit_frame_sniffer (const struct frame_unwind *self,
   struct jit_unwind_private *priv_data;
   struct gdb_unwind_callbacks callbacks;
   struct gdb_reader_funcs *funcs;
-  struct address_space *aspace;
-  struct gdbarch *gdbarch;
 
   callbacks.reg_get = jit_unwind_reg_get_impl;
   callbacks.reg_set = jit_unwind_reg_set_impl;
@@ -1206,12 +1193,11 @@ jit_frame_sniffer (const struct frame_unwind *self,
 
   gdb_assert (!*cache);
 
-  aspace = get_frame_address_space (this_frame);
-  gdbarch = get_frame_arch (this_frame);
-
   *cache = XCNEW (struct jit_unwind_private);
   priv_data = (struct jit_unwind_private *) *cache;
-  priv_data->regcache = regcache_xmalloc (gdbarch, aspace);
+  /* Take a snapshot of current regcache.  */
+  priv_data->regcache = new detached_regcache (get_frame_arch (this_frame),
+					       true);
   priv_data->this_frame = this_frame;
 
   callbacks.priv_data = priv_data;
@@ -1276,20 +1262,14 @@ jit_frame_prev_register (struct frame_info *this_frame, void **cache, int reg)
   if (priv == NULL)
     return frame_unwind_got_optimized (this_frame, reg);
 
-  gdbarch = get_regcache_arch (priv->regcache);
-  if (reg < gdbarch_num_regs (gdbarch))
-    {
-      gdb_byte *buf = (gdb_byte *) alloca (register_size (gdbarch, reg));
-      enum register_status status;
+  gdbarch = priv->regcache->arch ();
+  gdb_byte *buf = (gdb_byte *) alloca (register_size (gdbarch, reg));
+  enum register_status status = priv->regcache->cooked_read (reg, buf);
 
-      status = regcache_raw_read (priv->regcache, reg, buf);
-      if (status == REG_VALID)
-	return frame_unwind_got_bytes (this_frame, reg, buf);
-      else
-	return frame_unwind_got_optimized (this_frame, reg);
-    }
+  if (status == REG_VALID)
+    return frame_unwind_got_bytes (this_frame, reg, buf);
   else
-    return gdbarch_pseudo_register_read_value (gdbarch, priv->regcache, reg);
+    return frame_unwind_got_optimized (this_frame, reg);
 }
 
 /* Relay everything back to the unwinder registered by the JIT debug
@@ -1506,10 +1486,6 @@ jit_gdbarch_data_init (struct obstack *obstack)
   return data;
 }
 
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-
-extern void _initialize_jit (void);
-
 void
 _initialize_jit (void)
 {
@@ -1523,9 +1499,9 @@ _initialize_jit (void)
 			     show_jit_debug,
 			     &setdebuglist, &showdebuglist);
 
-  observer_attach_inferior_created (jit_inferior_created);
-  observer_attach_inferior_exit (jit_inferior_exit_hook);
-  observer_attach_breakpoint_deleted (jit_breakpoint_deleted);
+  gdb::observers::inferior_created.attach (jit_inferior_created);
+  gdb::observers::inferior_exit.attach (jit_inferior_exit_hook);
+  gdb::observers::breakpoint_deleted.attach (jit_breakpoint_deleted);
 
   jit_objfile_data =
     register_objfile_data_with_cleanup (NULL, free_objfile_data);

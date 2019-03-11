@@ -1,5 +1,5 @@
 /* tc-epiphany.c -- Assembler for the Adapteva EPIPHANY
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
    Contributed by Embecosm on behalf of Adapteva, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -288,7 +288,7 @@ epiphany_apply_fix (fixS *fixP, valueT *valP, segT seg)
 
 	case BFD_RELOC_EPIPHANY_HIGH:
 	  value >>= 16;
-	  /* fall thru */
+	  /* fallthru */
 	case BFD_RELOC_EPIPHANY_LOW:
 	  value = (((value & 0xff) << 5) | insn[0])
 	    | (insn[1] << 8)
@@ -400,7 +400,7 @@ epiphany_cons_fix_new (fragS *frag,
 }
 
 /* Read a comma separated incrementing list of register names
-   and form a bit mask of upto 15 registers 0..14.  */
+   and form a bit mask of up to 15 registers 0..14.  */
 
 static const char *
 parse_reglist (const char * s, int * mask)
@@ -489,7 +489,7 @@ epiphany_assemble (const char *str)
 #define DISPMOD _("destination register modified by displacement-post-modified address")
 #define LDSTODD _("ldrd/strd requires even:odd register pair")
 
-  /* Helper macros for spliting apart instruction fields.  */
+  /* Helper macros for splitting apart instruction fields.  */
 #define ADDR_POST_MODIFIED(i) (((i) >> 25) & 0x1)
 #define ADDR_SIZE(i)          (((i) >>  5) &   3)
 #define ADDR_LOADSTORE(i)     (((i) >>  4) & 0x1)
@@ -562,7 +562,7 @@ epiphany_assemble (const char *str)
 	    return;
 	  }
       }
-      /* fall-thru.  */
+      /* fallthru */
 
     case OP4_LDSTRX:
       {
@@ -1054,7 +1054,7 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
 	return fixP->fx_cgen.opinfo;
       else
 	as_bad ("unknown imm16 operand");
-      /* fall-thru */
+      /* fallthru */
 
     default:
       break;
@@ -1117,7 +1117,7 @@ epiphany_fix_adjustable (fixS *fixP)
     return FALSE;
 
   /* Since we don't use partial_inplace, we must not reduce symbols in
-     mergable sections to their section symbol.  */
+     mergeable sections to their section symbol.  */
   if ((S_GET_SEGMENT (fixP->fx_addsy)->flags & SEC_MERGE) != 0)
     return FALSE;
 

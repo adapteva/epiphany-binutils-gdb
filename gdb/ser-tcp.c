@@ -1,6 +1,6 @@
 /* Serial interface for raw TCP connections on Un*x like systems.
 
-   Copyright (C) 1992-2016 Free Software Foundation, Inc.
+   Copyright (C) 1992-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -42,6 +42,10 @@
 #ifndef ETIMEDOUT
 #define ETIMEDOUT WSAETIMEDOUT
 #endif
+/* Gnulib defines close too, but gnulib's replacement
+   doesn't call closesocket unless we import the
+   socketlib module.  */
+#undef close
 #define close(fd) closesocket (fd)
 #define ioctl ioctlsocket
 #else
@@ -54,12 +58,11 @@
 
 #include <signal.h>
 #include "gdb_select.h"
+#include <algorithm>
 
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif
-
-void _initialize_ser_tcp (void);
 
 /* For "set tcp" and "show tcp".  */
 
@@ -183,7 +186,7 @@ net_open (struct serial *scb, const char *name)
     error (_("net_open: No colon in host name!"));  /* Shouldn't ever
 						       happen.  */
 
-  tmp = min (port_str - name, (int) sizeof hostname - 1);
+  tmp = std::min (port_str - name, (ptrdiff_t) sizeof hostname - 1);
   strncpy (hostname, name, tmp);	/* Don't want colon.  */
   hostname[tmp] = '\000';	/* Tie off host name.  */
   port = atoi (port_str + 1);
@@ -365,13 +368,13 @@ ser_tcp_send_break (struct serial *scb)
 /* Support for "set tcp" and "show tcp" commands.  */
 
 static void
-set_tcp_cmd (char *args, int from_tty)
+set_tcp_cmd (const char *args, int from_tty)
 {
   help_list (tcp_set_cmdlist, "set tcp ", all_commands, gdb_stdout);
 }
 
 static void
-show_tcp_cmd (char *args, int from_tty)
+show_tcp_cmd (const char *args, int from_tty)
 {
   help_list (tcp_show_cmdlist, "show tcp ", all_commands, gdb_stdout);
 }
@@ -396,7 +399,6 @@ static const struct serial_ops tcp_ops =
   ser_base_copy_tty_state,
   ser_base_set_tty_state,
   ser_base_print_tty_state,
-  ser_base_noflush_set_tty_state,
   ser_base_setbaudrate,
   ser_base_setstopbits,
   ser_base_setparity,

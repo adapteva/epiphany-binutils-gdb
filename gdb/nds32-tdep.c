@@ -1,6 +1,6 @@
 /* Target-dependent code for the NDS32 architecture, for GDB.
 
-   Copyright (C) 2013-2016 Free Software Foundation, Inc.
+   Copyright (C) 2013-2018 Free Software Foundation, Inc.
    Contributed by Andes Technology Corporation.
 
    This file is part of GDB.
@@ -41,6 +41,8 @@
 #include "nds32-tdep.h"
 #include "elf/nds32.h"
 #include "opcode/nds32.h"
+#include <algorithm>
+
 #include "features/nds32.c"
 
 /* Simple macros for instruction analysis.  */
@@ -52,8 +54,6 @@
 	N32_TYPE4 (LSMW, 0, 0, 0, 0, (N32_LSMW_BIM << 2) | N32_LSMW_LSMW)
 #define N32_FLDI_SP \
 	N32_TYPE2 (LDC, 0, REG_SP, 0)
-
-extern void _initialize_nds32_tdep (void);
 
 /* Use an invalid address value as 'not available' marker.  */
 enum { REG_UNAVAIL = (CORE_ADDR) -1 };
@@ -279,24 +279,10 @@ nds32_frame_align (struct gdbarch *gdbarch, CORE_ADDR sp)
   return align_down (sp, 8);
 }
 
-/* Implement the "breakpoint_from_pc" gdbarch method.
+/* The same insn machine code is used for little-endian and big-endian.  */
+constexpr gdb_byte nds32_break_insn[] = { 0xEA, 0x00 };
 
-   Use the program counter to determine the contents and size of a
-   breakpoint instruction.  Return a pointer to a string of bytes that
-   encode a breakpoint instruction, store the length of the string in
-   *LENPTR and optionally adjust *PCPTR to point to the correct memory
-   location for inserting the breakpoint.  */
-
-static const gdb_byte *
-nds32_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr,
-			  int *lenptr)
-{
-  /* The same insn machine code is used for little-endian and big-endian.  */
-  static const gdb_byte break_insn[] = { 0xEA, 0x00 };
-
-  *lenptr = sizeof (break_insn);
-  return break_insn;
-}
+typedef BP_MANIPULATION (nds32_break_insn) nds32_breakpoint;
 
 /* Implement the "dwarf2_reg_to_regnum" gdbarch method.  */
 
@@ -451,17 +437,18 @@ nds32_pseudo_register_name (struct gdbarch *gdbarch, int regnum)
 
 static enum register_status
 nds32_pseudo_register_read (struct gdbarch *gdbarch,
-			    struct regcache *regcache, int regnum,
+			    readable_regcache *regcache, int regnum,
 			    gdb_byte *buf)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   gdb_byte reg_buf[8];
   int offset, fdr_regnum;
-  enum register_status status = REG_UNKNOWN;
+  enum register_status status;
 
-  /* Sanity check.  */
-  if (tdep->fpu_freg == -1 || tdep->use_pseudo_fsrs == 0)
-    return status;
+  /* This function is registered in nds32_gdbarch_init only after these are
+     set.  */
+  gdb_assert (tdep->fpu_freg != -1);
+  gdb_assert (tdep->use_pseudo_fsrs != 0);
 
   regnum -= gdbarch_num_regs (gdbarch);
 
@@ -475,12 +462,14 @@ nds32_pseudo_register_read (struct gdbarch *gdbarch,
 	offset = (regnum & 1) ? 0 : 4;
 
       fdr_regnum = NDS32_FD0_REGNUM + (regnum >> 1);
-      status = regcache_raw_read (regcache, fdr_regnum, reg_buf);
+      status = regcache->raw_read (fdr_regnum, reg_buf);
       if (status == REG_VALID)
 	memcpy (buf, reg_buf + offset, 4);
+
+      return status;
     }
 
-  return status;
+  gdb_assert_not_reached ("invalid pseudo register number");
 }
 
 /* Implement the "pseudo_register_write" gdbarch method.  */
@@ -494,9 +483,10 @@ nds32_pseudo_register_write (struct gdbarch *gdbarch,
   gdb_byte reg_buf[8];
   int offset, fdr_regnum;
 
-  /* Sanity check.  */
-  if (tdep->fpu_freg == -1 || tdep->use_pseudo_fsrs == 0)
-    return;
+  /* This function is registered in nds32_gdbarch_init only after these are
+     set.  */
+  gdb_assert (tdep->fpu_freg != -1);
+  gdb_assert (tdep->use_pseudo_fsrs != 0);
 
   regnum -= gdbarch_num_regs (gdbarch);
 
@@ -510,10 +500,13 @@ nds32_pseudo_register_write (struct gdbarch *gdbarch,
 	offset = (regnum & 1) ? 0 : 4;
 
       fdr_regnum = NDS32_FD0_REGNUM + (regnum >> 1);
-      regcache_raw_read (regcache, fdr_regnum, reg_buf);
+      regcache->raw_read (fdr_regnum, reg_buf);
       memcpy (reg_buf + offset, buf, 4);
-      regcache_raw_write (regcache, fdr_regnum, reg_buf);
+      regcache->raw_write (fdr_regnum, reg_buf);
+      return;
     }
+
+  gdb_assert_not_reached ("invalid pseudo register number");
 }
 
 /* Helper function for NDS32 ABI.  Return true if FPRs can be used
@@ -894,7 +887,7 @@ nds32_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
       CORE_ADDR post_prologue_pc
 	= skip_prologue_using_sal (gdbarch, func_addr);
       if (post_prologue_pc != 0)
-	return max (pc, post_prologue_pc);
+	return std::max (pc, post_prologue_pc);
     }
 
   /* Can't determine prologue from the symbol table, need to examine
@@ -1594,13 +1587,11 @@ nds32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      switch (len)
 		{
 		case 4:
-		  regcache_cooked_write (regcache,
-					 tdep->fs0_regnum + foff, val);
+		  regcache->cooked_write (tdep->fs0_regnum + foff, val);
 		  foff++;
 		  break;
 		case 8:
-		  regcache_cooked_write (regcache,
-					 NDS32_FD0_REGNUM + (foff >> 1), val);
+		  regcache->cooked_write (NDS32_FD0_REGNUM + (foff >> 1), val);
 		  foff += 2;
 		  break;
 		default:
@@ -1747,9 +1738,9 @@ nds32_extract_return_value (struct gdbarch *gdbarch, struct type *type,
   if (abi_use_fpr && calling_use_fpr)
     {
       if (len == 4)
-	regcache_cooked_read (regcache, tdep->fs0_regnum, valbuf);
+	regcache->cooked_read (tdep->fs0_regnum, valbuf);
       else if (len == 8)
-	regcache_cooked_read (regcache, NDS32_FD0_REGNUM, valbuf);
+	regcache->cooked_read (NDS32_FD0_REGNUM, valbuf);
       else
 	internal_error (__FILE__, __LINE__,
 			_("Cannot extract return value of %d bytes "
@@ -1795,7 +1786,7 @@ nds32_extract_return_value (struct gdbarch *gdbarch, struct type *type,
 	}
       else if (len == 4)
 	{
-	  regcache_cooked_read (regcache, NDS32_R0_REGNUM, valbuf);
+	  regcache->cooked_read (NDS32_R0_REGNUM, valbuf);
 	}
       else if (len < 8)
 	{
@@ -1812,8 +1803,8 @@ nds32_extract_return_value (struct gdbarch *gdbarch, struct type *type,
 	}
       else
 	{
-	  regcache_cooked_read (regcache, NDS32_R0_REGNUM, valbuf);
-	  regcache_cooked_read (regcache, NDS32_R0_REGNUM + 1, valbuf + 4);
+	  regcache->cooked_read (NDS32_R0_REGNUM, valbuf);
+	  regcache->cooked_read (NDS32_R0_REGNUM + 1, valbuf + 4);
 	}
     }
 }
@@ -1837,9 +1828,9 @@ nds32_store_return_value (struct gdbarch *gdbarch, struct type *type,
   if (abi_use_fpr && calling_use_fpr)
     {
       if (len == 4)
-	regcache_cooked_write (regcache, tdep->fs0_regnum, valbuf);
+	regcache->cooked_write (tdep->fs0_regnum, valbuf);
       else if (len == 8)
-	regcache_cooked_write (regcache, NDS32_FD0_REGNUM, valbuf);
+	regcache->cooked_write (NDS32_FD0_REGNUM, valbuf);
       else
 	internal_error (__FILE__, __LINE__,
 			_("Cannot store return value of %d bytes "
@@ -1856,7 +1847,7 @@ nds32_store_return_value (struct gdbarch *gdbarch, struct type *type,
 	}
       else if (len == 4)
 	{
-	  regcache_cooked_write (regcache, NDS32_R0_REGNUM, valbuf);
+	  regcache->cooked_write (NDS32_R0_REGNUM, valbuf);
 	}
       else if (len < 8)
 	{
@@ -1874,8 +1865,8 @@ nds32_store_return_value (struct gdbarch *gdbarch, struct type *type,
 	}
       else
 	{
-	  regcache_cooked_write (regcache, NDS32_R0_REGNUM, valbuf);
-	  regcache_cooked_write (regcache, NDS32_R0_REGNUM + 1, valbuf + 4);
+	  regcache->cooked_write (NDS32_R0_REGNUM, valbuf);
+	  regcache->cooked_write (NDS32_R0_REGNUM + 1, valbuf + 4);
 	}
     }
 }
@@ -2081,6 +2072,9 @@ nds32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   gdbarch = gdbarch_alloc (&info, tdep);
 
+  set_gdbarch_wchar_bit (gdbarch, 16);
+  set_gdbarch_wchar_signed (gdbarch, 0);
+
   if (fpu_freg == -1)
     num_regs = NDS32_NUM_REGS;
   else if (use_pseudo_fsrs == 1)
@@ -2136,7 +2130,7 @@ nds32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   nds32_add_reggroups (gdbarch);
 
   /* Hook in ABI-specific overrides, if they have been registered.  */
-  info.tdep_info = (void *) tdesc_data;
+  info.tdesc_data = tdesc_data;
   gdbarch_init_osabi (info, gdbarch);
 
   /* Override tdesc_register callbacks for system registers.  */
@@ -2155,12 +2149,13 @@ nds32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_skip_prologue (gdbarch, nds32_skip_prologue);
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan);
-  set_gdbarch_breakpoint_from_pc (gdbarch, nds32_breakpoint_from_pc);
+  set_gdbarch_breakpoint_kind_from_pc (gdbarch,
+				       nds32_breakpoint::kind_from_pc);
+  set_gdbarch_sw_breakpoint_from_kind (gdbarch,
+				       nds32_breakpoint::bp_from_kind);
 
   set_gdbarch_frame_align (gdbarch, nds32_frame_align);
   frame_base_set_default (gdbarch, &nds32_frame_base);
-
-  set_gdbarch_print_insn (gdbarch, print_insn_nds32);
 
   /* Handle longjmp.  */
   set_gdbarch_get_longjmp_target (gdbarch, nds32_get_longjmp_target);

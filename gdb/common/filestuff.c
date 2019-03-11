@@ -1,5 +1,5 @@
 /* Low-level file-handling.
-   Copyright (C) 2012-2016 Free Software Foundation, Inc.
+   Copyright (C) 2012-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <algorithm>
 
 #ifdef USE_WIN32API
 #include <winsock2.h>
@@ -146,11 +147,10 @@ fdwalk (int (*func) (void *, int), void *arg)
 
 
 
-/* A VEC holding all the fds open when notice_open_fds was called.  We
-   don't use a hashtab because libiberty isn't linked into gdbserver;
-   and anyway we don't expect there to be many open fds.  */
+/* A vector holding all the fds open when notice_open_fds was called.  We
+   don't use a hashtab because we don't expect there to be many open fds.  */
 
-static VEC (int) *open_fds;
+static std::vector<int> open_fds;
 
 /* An fdwalk callback function used by notice_open_fds.  It puts the
    given file descriptor into the vec.  */
@@ -158,7 +158,7 @@ static VEC (int) *open_fds;
 static int
 do_mark_open_fd (void *ignore, int fd)
 {
-  VEC_safe_push (int, open_fds, fd);
+  open_fds.push_back (fd);
   return 0;
 }
 
@@ -183,18 +183,12 @@ mark_fd_no_cloexec (int fd)
 void
 unmark_fd_no_cloexec (int fd)
 {
-  int i, val;
+  auto it = std::remove (open_fds.begin (), open_fds.end (), fd);
 
-  for (i = 0; VEC_iterate (int, open_fds, i, val); ++i)
-    {
-      if (fd == val)
-	{
-	  VEC_unordered_remove (int, open_fds, i);
-	  return;
-	}
-    }
-
-  gdb_assert_not_reached (_("fd not found in open_fds"));
+  if (it != open_fds.end ())
+    open_fds.erase (it);
+  else
+    gdb_assert_not_reached (_("fd not found in open_fds"));
 }
 
 /* Helper function for close_most_fds that closes the file descriptor
@@ -203,9 +197,7 @@ unmark_fd_no_cloexec (int fd)
 static int
 do_close (void *ignore, int fd)
 {
-  int i, val;
-
-  for (i = 0; VEC_iterate (int, open_fds, i, val); ++i)
+  for (int val : open_fds)
     {
       if (fd == val)
 	{
@@ -300,7 +292,7 @@ gdb_open_cloexec (const char *filename, int flags, unsigned long mode)
 
 /* See filestuff.h.  */
 
-FILE *
+gdb_file_up
 gdb_fopen_cloexec (const char *filename, const char *opentype)
 {
   FILE *result;
@@ -336,7 +328,7 @@ gdb_fopen_cloexec (const char *filename, const char *opentype)
   if (result != NULL)
     maybe_mark_cloexec (fileno (result));
 
-  return result;
+  return gdb_file_up (result);
 }
 
 #ifdef HAVE_SOCKETS
@@ -424,4 +416,35 @@ make_cleanup_close (int fd)
 
   *saved_fd = fd;
   return make_cleanup_dtor (do_close_cleanup, saved_fd, xfree);
+}
+
+/* See common/filestuff.h.  */
+
+bool
+is_regular_file (const char *name, int *errno_ptr)
+{
+  struct stat st;
+  const int status = stat (name, &st);
+
+  /* Stat should never fail except when the file does not exist.
+     If stat fails, analyze the source of error and return true
+     unless the file does not exist, to avoid returning false results
+     on obscure systems where stat does not work as expected.  */
+
+  if (status != 0)
+    {
+      if (errno != ENOENT)
+	return true;
+      *errno_ptr = ENOENT;
+      return false;
+    }
+
+  if (S_ISREG (st.st_mode))
+    return true;
+
+  if (S_ISDIR (st.st_mode))
+    *errno_ptr = EISDIR;
+  else
+    *errno_ptr = EINVAL;
+  return false;
 }

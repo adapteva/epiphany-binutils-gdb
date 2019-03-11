@@ -1,6 +1,6 @@
 /* Target-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 2000-2016 Free Software Foundation, Inc.
+   Copyright (C) 2000-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -76,7 +76,8 @@ int ppc_altivec_support_p (struct gdbarch *gdbarch);
 /* Return non-zero if the architecture described by GDBARCH has
    VSX registers (vsr0 --- vsr63).  */
 int vsx_support_p (struct gdbarch *gdbarch);
-int ppc_deal_with_atomic_sequence (struct frame_info *frame);
+std::vector<CORE_ADDR> ppc_deal_with_atomic_sequence
+  (struct regcache *regcache);
 
 
 /* Register set description.  */
@@ -99,11 +100,6 @@ struct ppc_reg_offsets
   int f0_offset;
   int fpscr_offset;
   int fpscr_size;
-
-  /* AltiVec registers.  */
-  int vr0_offset;
-  int vscr_offset;
-  int vrsave_offset;
 };
 
 extern void ppc_supply_reg (struct regcache *regcache, int regnum,
@@ -201,12 +197,24 @@ enum powerpc_vector_abi
   POWERPC_VEC_LAST
 };
 
+/* long double ABI version used by the inferior.  */
+enum powerpc_long_double_abi
+{
+  POWERPC_LONG_DOUBLE_AUTO,
+  POWERPC_LONG_DOUBLE_IBM128,
+  POWERPC_LONG_DOUBLE_IEEE128,
+  POWERPC_LONG_DOUBLE_LAST
+};
+
 struct gdbarch_tdep
   {
     int wordsize;		/* Size in bytes of fixed-point word.  */
     int soft_float;		/* Avoid FP registers for arguments?  */
 
     enum powerpc_elf_abi elf_abi;	/* ELF ABI version.  */
+
+    /* Format to use for the "long double" data type.  */
+    enum powerpc_long_double_abi long_double_abi;
 
     /* How to pass vector arguments.  Never set to AUTO or LAST.  */
     enum powerpc_vector_abi vector_abi;
@@ -304,6 +312,9 @@ enum {
   PPC_NUM_REGS
 };
 
+/* Big enough to hold the size of the largest register in bytes.  */
+#define PPC_MAX_REGISTER_SIZE	64
+
 /* An instruction to match.  */
 
 struct ppc_insn_pattern
@@ -314,7 +325,7 @@ struct ppc_insn_pattern
 };
 
 extern int ppc_insns_match_pattern (struct frame_info *frame, CORE_ADDR pc,
-				    struct ppc_insn_pattern *pattern,
+				    const struct ppc_insn_pattern *pattern,
 				    unsigned int *insns);
 extern CORE_ADDR ppc_insn_d_field (unsigned int insn);
 

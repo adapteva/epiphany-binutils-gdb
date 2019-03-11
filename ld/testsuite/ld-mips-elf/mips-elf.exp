@@ -1,5 +1,5 @@
 # Expect script for MIPS ELF linker tests
-#   Copyright (C) 2002-2016 Free Software Foundation, Inc.
+#   Copyright (C) 2002-2018 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -57,6 +57,7 @@ set has_newabi [expr [istarget *-*-irix6*] \
 		     || [istarget mips*-sde-elf*] \
 		     || [istarget mips*-mti-elf*] \
 		     || [istarget mips*-img-elf*]]
+set has_elf32 [expr ![istarget *-*-openbsd*]]
 set linux_gnu [expr [istarget mips*-*-linux*]]
 set embedded_elf [expr [istarget mips*-*-elf]]
 
@@ -154,21 +155,58 @@ if $has_newabi {
 					[list [list ld $abi_ldflags(n64)]]
 }
 
+run_dump_test "mips16-pcrel-0" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16-pcrel-1" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16e2-pcrel-0" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16e2-pcrel-1" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16-pcrel-addend-2" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16-pcrel-addend-6" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16e2-pcrel-addend-2" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16e2-pcrel-addend-6" [list [list ld $abi_ldflags(o32)]]
+if $has_newabi {
+    run_dump_test "mips16-pcrel-n32-0" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "mips16-pcrel-n32-1" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "mips16-pcrel-n64-sym32-0" [list [list ld $abi_ldflags(n64)]]
+    run_dump_test "mips16-pcrel-n64-sym32-1" [list [list ld $abi_ldflags(n64)]]
+    run_dump_test "mips16e2-pcrel-n32-0" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "mips16e2-pcrel-n32-1" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "mips16e2-pcrel-n64-sym32-0" \
+					[list [list ld $abi_ldflags(n64)]]
+    run_dump_test "mips16e2-pcrel-n64-sym32-1" \
+					[list [list ld $abi_ldflags(n64)]]
+}
+
 run_dump_test "mips16-branch-2" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "mips16-branch-3" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "mips16-branch-addend-2" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "mips16-branch-addend-3" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "mips16-branch-absolute" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16-branch-absolute-1" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16-branch-absolute-2" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "mips16-branch-absolute-addend" \
+					[list [list ld $abi_ldflags(o32)]]
+run_dump_test "mips16-branch-absolute-addend-1" \
 					[list [list ld $abi_ldflags(o32)]]
 if $has_newabi {
     run_dump_test "mips16-branch-absolute-n32" \
 					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "mips16-branch-absolute-n32-1" \
+					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "mips16-branch-absolute-n32-2" \
+					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "mips16-branch-absolute-addend-n32" \
+					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "mips16-branch-absolute-addend-n32-1" \
 					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "mips16-branch-absolute-n64" \
 					[list [list ld $abi_ldflags(n64)]]
+    run_dump_test "mips16-branch-absolute-n64-1" \
+					[list [list ld $abi_ldflags(n64)]]
+    run_dump_test "mips16-branch-absolute-n64-2" \
+					[list [list ld $abi_ldflags(n64)]]
     run_dump_test "mips16-branch-absolute-addend-n64" \
+					[list [list ld $abi_ldflags(n64)]]
+    run_dump_test "mips16-branch-absolute-addend-n64-1" \
 					[list [list ld $abi_ldflags(n64)]]
 }
 
@@ -214,19 +252,43 @@ if { $linux_gnu } {
 run_dump_test "jalx-addend" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "jalx-local" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "bal-jalx-addend" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "bal-jalx-addend-micromips" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "bal-jalx-local" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "bal-jalx-local-micromips" [list [list ld $abi_ldflags(o32)]]
 run_dump_test "bal-jalx-pic" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "bal-jalx-pic-micromips" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "bal-jalx-pic-ignore" [list [list ld $abi_ldflags(o32)]]
+run_dump_test "bal-jalx-pic-ignore-micromips" \
+					[list [list ld $abi_ldflags(o32)]]
 if $has_newabi {
     run_dump_test "jalx-addend-n32" [list [list ld $abi_ldflags(n32)]]
     run_dump_test "jalx-local-n32" [list [list ld $abi_ldflags(n32)]]
     run_dump_test "bal-jalx-addend-n32" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "bal-jalx-addend-micromips-n32" \
+					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "bal-jalx-local-n32" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "bal-jalx-local-micromips-n32" \
+					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "bal-jalx-pic-n32" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "bal-jalx-pic-micromips-n32" \
+					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "bal-jalx-pic-ignore-n32" [list [list ld $abi_ldflags(n32)]]
+    run_dump_test "bal-jalx-pic-ignore-micromips-n32" \
+					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "jalx-addend-n64" [list [list ld $abi_ldflags(n64)]]
     run_dump_test "jalx-local-n64" [list [list ld $abi_ldflags(n64)]]
     run_dump_test "bal-jalx-addend-n64" [list [list ld $abi_ldflags(n64)]]
+    run_dump_test "bal-jalx-addend-micromips-n64" \
+					[list [list ld $abi_ldflags(n64)]]
     run_dump_test "bal-jalx-local-n64" [list [list ld $abi_ldflags(n64)]]
+    run_dump_test "bal-jalx-local-micromips-n64" \
+					[list [list ld $abi_ldflags(n64)]]
     run_dump_test "bal-jalx-pic-n64" [list [list ld $abi_ldflags(n64)]]
+    run_dump_test "bal-jalx-pic-micromips-n64" \
+					[list [list ld $abi_ldflags(n64)]]
+    run_dump_test "bal-jalx-pic-ignore-n64" [list [list ld $abi_ldflags(n64)]]
+    run_dump_test "bal-jalx-pic-ignore-micromips-n64" \
+					[list [list ld $abi_ldflags(n64)]]
 }
 
 run_dump_test "unaligned-jalx-0" [list [list ld $abi_ldflags(o32)]]
@@ -262,13 +324,21 @@ run_dump_test "unaligned-branch" [list [list ld $abi_ldflags(o32)]]
 if $has_newabi {
     run_dump_test "unaligned-branch-2" \
 					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "unaligned-branch-ignore-2" \
+					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "unaligned-branch-r6-1" \
+					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "unaligned-branch-ignore-r6-1" \
 					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "unaligned-branch-r6-2" \
 					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "unaligned-branch-mips16" \
 					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "unaligned-branch-ignore-mips16" \
+					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "unaligned-branch-micromips" \
+					[list [list ld $abi_ldflags(n32)]]
+    run_dump_test "unaligned-branch-ignore-micromips" \
 					[list [list ld $abi_ldflags(n32)]]
     run_dump_test "unaligned-jump" \
 					[list [list ld $abi_ldflags(n32)]]
@@ -357,6 +427,8 @@ if { $linux_gnu } {
     #
     # The third test checks that we do the same when linking the
     # result of the first link (with no other source files).
+    #
+    # We then repeat the same three tests for microMIPS stubs.
     run_ld_link_tests {
 	{"PIC and non-PIC test 1 (relocatable)" "-r -melf32btsmip" ""
 	 "-32 -EB -mips2" {pic-and-nonpic-1a.s pic-and-nonpic-1b.s}
@@ -375,6 +447,42 @@ if { $linux_gnu } {
 	 {{objdump -dr pic-and-nonpic-1.dd}
 	  {readelf --symbols pic-and-nonpic-1.nd}}
 	 "pic-and-nonpic-1-static2.o"}
+	{"PIC and non-PIC test 1, microMIPS (relocatable)"
+	 "-r -melf32btsmip" ""
+	 "-32 -EB -mips2"
+	 {pic-and-nonpic-1a-micromips.s pic-and-nonpic-1b-micromips.s}
+	 {{objdump -dr pic-and-nonpic-1-micromips-rel.dd}
+	  {readelf --symbols pic-and-nonpic-1-micromips-rel.nd}}
+	 "pic-and-nonpic-1-micromips-rel.o"}
+	{"PIC and non-PIC test 1, microMIPS (static 1)"
+	 "-melf32btsmip -Tpic-and-nonpic-1.ld" ""
+	 "-32 -EB -mips2"
+	 {pic-and-nonpic-1a-micromips.s pic-and-nonpic-1b-micromips.s}
+	 {{objdump -dr pic-and-nonpic-1-micromips.dd}
+	  {readelf --symbols pic-and-nonpic-1-micromips.nd}}
+	 "pic-and-nonpic-1-micromips-static1.o"}
+    }
+    # The final executable produced with the following test is supposed
+    # to be the same as one produced with the preceding test, however
+    # as noted in PR ld/20453 it is not.  Consequently output from
+    # `objdump -dr' is not the same either.  Expect:
+    #
+    #	regexp_diff match failure
+    #	regexp "^   4103c:	f001 0415 	jalx	41054 <f3>$"
+    #	line   "   4103c:	f001 0400 	jalx	41000 <.pic.f3>"
+    #
+    # from the test below due to this problem.
+    setup_kfail "mips*-*-*" "ld/20453"
+    # The final check below should be folded into the `run_ld_link_tests'
+    # call above once `setup_kfail' has been removed.
+    run_ld_link_tests {
+	{"PIC and non-PIC test 1, microMIPS (static 2)"
+	 "-melf32btsmip -Tpic-and-nonpic-1.ld \
+	  tmpdir/pic-and-nonpic-1-micromips-rel.o" ""
+	 "" {}
+	 {{objdump -dr pic-and-nonpic-1-micromips.dd}
+	  {readelf --symbols pic-and-nonpic-1-micromips.nd}}
+	 "pic-and-nonpic-1-micromips-static2.o"}
     }
     run_dump_test "pic-and-nonpic-2"
     run_ld_link_tests {
@@ -535,6 +643,13 @@ if { $has_newabi } {
 }
 
 run_dump_test "reloc-local-overflow" [list [list ld $abi_ldflags(o32)]]
+run_ld_link_tests [list \
+    [list \
+	"MIPS link ELF o32 PIC comdat GOT16/LO16 relocation pairing" \
+	"$abi_ldflags(o32) -e bar" "" "$abi_asflags(o32) -mno-pdr" \
+	"../../../gas/testsuite/gas/mips/comdat-reloc.s" \
+	{} \
+	"comdat-reloc"]]
 
 if {$has_newabi && $linux_gnu} {
     run_dump_test "eh-frame1-n32"
@@ -667,28 +782,33 @@ run_dump_test "hash1b"
 run_dump_test "hash1c"
 
 if {[istarget mips*-*-linux*]} {
-     # The number of symbols that are always included in the symbol table
-     # for these tests.  The 4 are:
-     #
-     #     the null symbol entry
-     #     the .MIPS.stubs section symbol
-     set base_syms 2
-     foreach dynsym { 7fff 8000 fff0 10000 2fe80 } {
-	 run_ld_link_tests \
-	     [list [list \
-			"Stub for dynsym 0x$dynsym" \
-			"-shared -melf32btsmip -T stub-dynsym-1.ld" "" \
-			[concat \
-			     "-EB -march=mips1 -32 -KPIC" \
-			     "--defsym base_syms=$base_syms" \
-			     "--defsym dynsym=0x$dynsym"] \
-			[list "stub-dynsym-1.s"] \
-			[list [list \
-				   "objdump" "-dz" \
-				   "stub-dynsym-1-$dynsym.d"]] \
-			"stub-dynsym-1-$dynsym"]]
-     }
- }
+    # The number of symbols that are always included in the symbol table
+    # for these tests.
+    #     the null symbol entry
+    set base_syms 1
+    foreach { isa aflag lflag suffix } \
+	{ MIPS -march=mips1 "" "" \
+	  microMIPS -mmicromips "" -micromips \
+	  "microMIPS insn32" "-mmicromips -minsn32" --insn32 \
+	      -micromips-insn32 } {
+	foreach dynsym { 7fff 8000 fff0 10000 2fe80 } {
+	    run_ld_link_tests \
+		[list [list \
+			   "Stub for dynsym 0x$dynsym ($isa)" \
+			   "-shared -melf32btsmip -T stub-dynsym-1.ld $lflag" \
+			   "" \
+			   [concat \
+				"-EB $aflag -32 -KPIC" \
+				"--defsym base_syms=$base_syms" \
+				"--defsym dynsym=0x$dynsym"] \
+			   [list "stub-dynsym-1.s"] \
+			   [list [list \
+				      "objdump" "-dz" \
+				      "stub-dynsym$suffix-1-$dynsym.d"]] \
+			   "stub-dynsym$suffix-1-$dynsym"]]
+	}
+    }
+}
 
 # For tests which may involve multiple files, use run_ld_link_tests.
 
@@ -880,6 +1000,7 @@ if { $linux_gnu } {
 }
 
 run_dump_test "undefined"
+run_dump_test "undefined-warn"
 
 # Test the conversion from jr to b
 if { $linux_gnu } {
@@ -922,11 +1043,7 @@ foreach { abi } $abis {
             "$abi_asflags($abi)" \
             [list ehdr_start-${suff}.s] \
             [list "readelf -s ehdr_start-1.nd"] \
-            "ehdr_start-1-${abi}"]]
-    if [regexp "(?:n32|n64)" "$abi"] {
-	setup_kfail "mips*-*-*" "ld/15428"
-    }
-    run_ld_link_tests [list \
+            "ehdr_start-1-${abi}"] \
         [list \
             "MIPS magic __ehdr_start symbol test 2 ($abi)" \
             "$abi_ldflags($abi) -T ehdr_start-2.ld" "" \
@@ -946,7 +1063,25 @@ foreach { abi } $abis {
 	    "$abi_asflags($abi)" \
 	    [list ../../../gas/testsuite/gas/mips/jalr3.s] \
 	    [list "objdump -d jalr3.dd"] \
-	    "jalr3-${abi}"]]
+	    "jalr3-${abi}"] \
+	[list \
+	    "MIPS JALR reloc unaligned/cross-mode link test ($abi)" \
+	    "$abi_ldflags($abi) -T jalr3.ld" "" \
+	    "$abi_asflags($abi)" \
+	    [list ../../../gas/testsuite/gas/mips/jalr4.s] \
+	    [list "objdump {-d --prefix-addresses --show-raw-insn} jalr4.dd"] \
+	    "jalr4-${abi}"] \
+	[list \
+	    "MIPSr6 JALR reloc unaligned/cross-mode link test ($abi)" \
+	    "$abi_ldflags($abi) -T jalr3.ld" "" \
+	    [string map \
+		[list -32 "-mips32r6 -32" \
+		    -n32 "-mips64r6 -n32" \
+		    -64 "-mips64r6 -64"] \
+		[regsub -- -march=from-abi $abi_asflags($abi) ""]] \
+	    {../../../gas/testsuite/gas/mips/jalr4.s} \
+	    {{objdump {-d --prefix-addresses --show-raw-insn} jalr4-r6.dd}} \
+	    "jalr4-${abi}"]]
 }
 
 proc build_mips_plt_lib { abi } {
@@ -1032,6 +1167,50 @@ if { $linux_gnu } {
     }
 }
 
+# Verify graceful handling of n64 PLT 32-bit range overflows.  Given
+# that the alignment of `.got.plt' is 8 the highest usable positive
+# address is 0x7fff7ff8 and the lowest usable negative address is
+# 0xffffffff7fff8000.
+if { $linux_gnu } {
+    run_ld_link_tests [list \
+	[list "Shared library for MIPS n64 PLT 32-bit range tests" \
+	      "-shared $abi_ldflags(n64)" "" \
+	      "$abi_asflags(n64)" \
+	      { n64-plt-lib.s } \
+	      {} \
+	      "n64-plt-lib.so"] \
+	[list "MIPS n64 PLT 32-bit range test 1" \
+	      "$abi_ldflags(n64) -T n64-plt-1.ld -e foo" \
+	      "tmpdir/n64-plt-lib.so" \
+	      "$abi_asflags(n64)" \
+	      { n64-plt.s } \
+	      { { objdump -d n64-plt-1.dd } \
+		{ readelf -A n64-plt-1.gd } } \
+	      "n64-plt-1"] \
+	[list "MIPS n64 PLT 32-bit range test 2" \
+	      "$abi_ldflags(n64) -T n64-plt-2.ld -e foo" \
+	      "tmpdir/n64-plt-lib.so" \
+	      "$abi_asflags(n64)" \
+	      { n64-plt.s } \
+	      { { ld n64-plt-2.ed } } \
+	      "n64-plt-2"] \
+	[list "MIPS n64 PLT 32-bit range test 3" \
+	      "$abi_ldflags(n64) -T n64-plt-3.ld -e foo" \
+	      "tmpdir/n64-plt-lib.so" \
+	      "$abi_asflags(n64)" \
+	      { n64-plt.s } \
+	      { { ld n64-plt-3.ed } } \
+	      "n64-plt-3"] \
+	[list "MIPS n64 PLT 32-bit range test 4" \
+	      "$abi_ldflags(n64) -T n64-plt-4.ld -e foo" \
+	      "tmpdir/n64-plt-lib.so" \
+	      "$abi_asflags(n64)" \
+	      { n64-plt.s } \
+	      { { objdump -d n64-plt-4.dd } \
+		{ readelf -A n64-plt-4.gd } } \
+	      "n64-plt-4"]]
+}
+
 # PR ld/19908 export class tests.
 if { $linux_gnu } {
     run_ld_link_tests [list \
@@ -1059,3 +1238,73 @@ if { $linux_gnu } {
 		  "export-$class-ref"]]
     }
 }
+
+# PR ld/21334 GOT relocation in static binary test.
+run_ld_link_tests [list \
+    [list \
+	"PR ld/21334 MIPS GOT16 relocation in static binary" \
+	"$abi_ldflags(o32) -e foo -T pr21334.ld" "" "$abi_asflags(o32)" \
+	{pr21334.s} \
+	{{objdump {-d --prefix-addresses} pr21334.dd} \
+	 {readelf -A pr21334.gd}} \
+	"pr21334"]]
+
+# Check that the ISA level is consistently II for the LSI 4010.
+run_dump_test "lsi-4010-isa" [list [list ld $abi_ldflags(o32)]]
+
+# PIC branch relaxation with offset tests.  We need to use our version
+# of `prune_warnings' to get rid of GAS branch relaxation noise.
+rename prune_warnings mips_old_prune_warnings
+proc prune_warnings { msg } {
+    set msg1 "Assembler messages:"
+    set msg2 "Warning: relaxed out-of-range branch into a jump"
+    set msgx "(?:$msg1|$msg2)"
+    regsub -all "(^|\[\n\r\]*)\[^\n\r\]*: $msgx\[\n\r\]*" $msg "\\1" msg
+    return [mips_old_prune_warnings $msg]
+}
+run_ld_link_tests [list \
+    [list \
+	"MIPS link PIC branch relaxation with offset" \
+	"$abi_ldflags(o32) -shared -T relax-offset.ld" "" \
+	"$abi_asflags(o32) -relax-branch -mips2" \
+	{../../../gas/testsuite/gas/mips/relax-offset.s} \
+	{{objdump \
+	  {-d --prefix-addresses --show-raw-insn} \
+	  relax-offset.dd} \
+	 {readelf -A relax-offset.gd}} \
+	"relax-offset"] \
+    [list \
+	"microMIPS link PIC branch relaxation with offset" \
+	"$abi_ldflags(o32) -shared -T relax-offset.ld" "" \
+	"$abi_asflags(o32) -relax-branch -mmicromips" \
+	{../../../gas/testsuite/gas/mips/relax-offset.s} \
+	{{objdump \
+	  {-d --prefix-addresses --show-raw-insn} \
+	  relax-offset-umips.dd} \
+	 {readelf -A relax-offset-umips.gd}} \
+	"relax-offset-umips"]]
+rename prune_warnings ""
+rename mips_old_prune_warnings prune_warnings
+
+# Verify that we can link ELF input into the `binary' output format.
+run_dump_test "binary"
+
+# Verify special section processing.
+if $has_elf32 {
+    run_dump_test "reginfo-0"
+    run_dump_test "reginfo-0r"
+    run_dump_test "reginfo-1"
+    run_dump_test "reginfo-1r"
+    run_dump_test "reginfo-2"
+    run_dump_test "reginfo-2r"
+}
+run_dump_test "mips-abiflags-0"
+run_dump_test "mips-abiflags-0r"
+run_dump_test "mips-abiflags-1"
+run_dump_test "mips-abiflags-1r"
+run_dump_test "mips-abiflags-2"
+run_dump_test "mips-abiflags-2r"
+
+# Test that _gp_disp symbol is not present in symbol tables.
+run_dump_test "gp-disp-sym" [list [list as $abi_asflags(o32)] \
+				  [list ld $abi_ldflags(o32)]]

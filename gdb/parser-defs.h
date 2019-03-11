@@ -1,6 +1,6 @@
 /* Parser definitions for GDB.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2018 Free Software Foundation, Inc.
 
    Modified from expread.y by the Department of Computer Science at the
    State University of New York at Buffalo.
@@ -23,7 +23,6 @@
 #if !defined (PARSER_DEFS_H)
 #define PARSER_DEFS_H 1
 
-#include "doublest.h"
 #include "vec.h"
 #include "expression.h"
 
@@ -38,13 +37,26 @@ extern int parser_debug;
 
 struct parser_state
 {
-  /* The expression related to this parser state.  */
+  /* Constructor.  INITIAL_SIZE is the initial size of the expout
+     array.  LANG is the language used to parse the expression.  And
+     GDBARCH is the gdbarch to use during parsing.  */
 
-  struct expression *expout;
+  parser_state (size_t initial_size, const struct language_defn *lang,
+		struct gdbarch *gdbarch);
+
+  DISABLE_COPY_AND_ASSIGN (parser_state);
+
+  /* Resize the allocated expression to the correct size, and return
+     it as an expression_up -- passing ownership to the caller.  */
+  expression_up release ();
 
   /* The size of the expression above.  */
 
   size_t expout_size;
+
+  /* The expression related to this parser state.  */
+
+  expression_up expout;
 
   /* The number of elements already in the expression.  This is used
      to know where to put new elements.  */
@@ -63,9 +75,80 @@ extern const struct block *expression_context_block;
    then look up the macro definitions active at that point.  */
 extern CORE_ADDR expression_context_pc;
 
+/* While parsing expressions we need to track the innermost lexical block
+   that we encounter.  In some situations we need to track the innermost
+   block just for symbols, and in other situations we want to track the
+   innermost block for symbols and registers.  These flags are used by the
+   innermost block tracker to control which blocks we consider for the
+   innermost block.  These flags can be combined together as needed.  */
+
+enum innermost_block_tracker_type
+{
+  /* Track the innermost block for symbols within an expression.  */
+  INNERMOST_BLOCK_FOR_SYMBOLS = (1 << 0),
+
+  /* Track the innermost block for registers within an expression.  */
+  INNERMOST_BLOCK_FOR_REGISTERS = (1 << 1)
+};
+DEF_ENUM_FLAGS_TYPE (enum innermost_block_tracker_type,
+		     innermost_block_tracker_types);
+
+/* When parsing expressions we track the innermost block that was
+   referenced.  */
+
+class innermost_block_tracker
+{
+public:
+  innermost_block_tracker ()
+    : m_types (INNERMOST_BLOCK_FOR_SYMBOLS),
+      m_innermost_block (NULL)
+  { /* Nothing.  */ }
+
+  /* Reset the currently stored innermost block.  Usually called before
+     parsing a new expression.  As the most common case is that we only
+     want to gather the innermost block for symbols in an expression, this
+     becomes the default block tracker type.  */
+  void reset (innermost_block_tracker_types t = INNERMOST_BLOCK_FOR_SYMBOLS)
+  {
+    m_types = t;
+    m_innermost_block = NULL;
+  }
+
+  /* Update the stored innermost block if the new block B is more inner
+     than the currently stored block, or if no block is stored yet.  The
+     type T tells us whether the block B was for a symbol or for a
+     register.  The stored innermost block is only updated if the type T is
+     a type we are interested in, the types we are interested in are held
+     in M_TYPES and set during RESET.  */
+  void update (const struct block *b, innermost_block_tracker_types t);
+
+  /* Overload of main UPDATE method which extracts the block from BS.  */
+  void update (const struct block_symbol &bs)
+  {
+    update (bs.block, INNERMOST_BLOCK_FOR_SYMBOLS);
+  }
+
+  /* Return the stored innermost block.  Can be nullptr if no symbols or
+     registers were found during an expression parse, and so no innermost
+     block was defined.  */
+  const struct block *block () const
+  {
+    return m_innermost_block;
+  }
+
+private:
+  /* The type of innermost block being looked for.  */
+  innermost_block_tracker_types m_types;
+
+  /* The currently stored innermost block found while parsing an
+     expression.  */
+  const struct block *m_innermost_block;
+};
+
 /* The innermost context required by the stack and register variables
-   we've encountered so far.  */
-extern const struct block *innermost_block;
+   we've encountered so far.  This should be cleared before parsing an
+   expression, and queried once the parse is complete.  */
+extern innermost_block_tracker innermost_block;
 
 /* Number of arguments seen so far in innermost function call.  */
 extern int arglist_len;
@@ -127,6 +210,7 @@ enum type_pieces
     tp_end = -1, 
     tp_pointer, 
     tp_reference, 
+    tp_rvalue_reference,
     tp_array, 
     tp_function,
     tp_function_with_arguments,
@@ -156,23 +240,6 @@ struct type_stack
   int size;
 };
 
-/* Helper function to initialize the expout, expout_size, expout_ptr
-   trio inside PS before it is used to store expression elements created
-   during the parsing of an expression.  INITIAL_SIZE is the initial size of
-   the expout array.  LANG is the language used to parse the expression.
-   And GDBARCH is the gdbarch to use during parsing.  */
-
-extern void initialize_expout (struct parser_state *ps,
-			       size_t initial_size,
-			       const struct language_defn *lang,
-			       struct gdbarch *gdbarch);
-
-/* Helper function that reallocates the EXPOUT inside PS in order to
-   eliminate any unused space.  It is generally used when the expression
-   has just been parsed and created.  */
-
-extern void reallocate_expout (struct parser_state *ps);
-
 /* Reverse an expression from suffix form (in which it is constructed)
    to prefix form (in which we can conveniently print or execute it).
    Ordinarily this always returns -1.  However, if EXPOUT_LAST_STRUCT
@@ -188,9 +255,7 @@ extern void write_exp_elt_sym (struct parser_state *, struct symbol *);
 
 extern void write_exp_elt_longcst (struct parser_state *, LONGEST);
 
-extern void write_exp_elt_dblcst (struct parser_state *, DOUBLEST);
-
-extern void write_exp_elt_decfloatcst (struct parser_state *, gdb_byte *);
+extern void write_exp_elt_floatcst (struct parser_state *, const gdb_byte *);
 
 extern void write_exp_elt_type (struct parser_state *, struct type *);
 
@@ -246,8 +311,6 @@ extern void type_stack_cleanup (void *arg);
 
 extern void push_typelist (VEC (type_ptr) *typelist);
 
-extern int length_of_subexp (struct expression *, int);
-
 extern int dump_subexp (struct expression *, struct ui_file *, int);
 
 extern int dump_subexp_body_standard (struct expression *, 
@@ -263,17 +326,16 @@ extern int operator_check_standard (struct expression *exp, int pos,
 				      (struct objfile *objfile, void *data),
 				    void *data);
 
-extern char *op_name_standard (enum exp_opcode);
+extern const char *op_name_standard (enum exp_opcode);
 
 extern struct type *follow_types (struct type *);
 
-extern void null_post_parser (struct expression **, int);
+extern type_instance_flags follow_type_instance_flags ();
 
-extern int parse_float (const char *p, int len, DOUBLEST *d,
-			const char **suffix);
+extern void null_post_parser (expression_up *, int);
 
-extern int parse_c_float (struct gdbarch *gdbarch, const char *p, int len,
-			  DOUBLEST *d, struct type **t);
+extern bool parse_float (const char *p, int len,
+			 const struct type *type, gdb_byte *data);
 
 /* During parsing of a C expression, the pointer to the next character
    is in this variable.  */
@@ -313,7 +375,7 @@ enum precedence
 
 struct op_print
   {
-    char *string;
+    const char *string;
     enum exp_opcode opcode;
     /* Precedence of operator.  These values are used only by comparisons.  */
     enum precedence precedence;
@@ -353,7 +415,7 @@ struct exp_descriptor
        The returned value should never be NULL, even if EXP_OPCODE is
        an unknown opcode (a string containing an image of the numeric
        value of the opcode can be returned, for instance).  */
-    char *(*op_name) (enum exp_opcode);
+    const char *(*op_name) (enum exp_opcode);
 
     /* Dump the rest of this (prefix) expression after the operator
        itself has been printed.  See dump_subexp_body_standard in

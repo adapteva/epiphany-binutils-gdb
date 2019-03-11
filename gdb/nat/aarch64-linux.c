@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2016 Free Software Foundation, Inc.
+/* Copyright (C) 2009-2018 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -45,9 +45,9 @@ aarch64_linux_prepare_to_resume (struct lwp_info *lwp)
       || DR_HAS_CHANGED (info->dr_changed_wp))
     {
       ptid_t ptid = ptid_of_lwp (lwp);
-      int tid = ptid_get_lwp (ptid);
+      int tid = ptid.lwp ();
       struct aarch64_debug_reg_state *state
-	= aarch64_get_debug_reg_state (ptid_get_pid (ptid));
+	= aarch64_get_debug_reg_state (ptid.pid ());
 
       if (show_debug_regs)
 	debug_printf ("prepare_to_resume thread %d\n", tid);
@@ -82,6 +82,14 @@ aarch64_linux_new_thread (struct lwp_info *lwp)
   DR_MARK_ALL_CHANGED (info->dr_changed_wp, aarch64_num_wp_regs);
 
   lwp_set_arch_private_info (lwp, info);
+}
+
+/* See nat/aarch64-linux.h.  */
+
+void
+aarch64_linux_delete_thread (struct arch_lwp_info *arch_lwp)
+{
+  xfree (arch_lwp);
 }
 
 /* Convert native siginfo FROM to the siginfo in the layout of the

@@ -1,5 +1,5 @@
 /* Target operations for the remote server for GDB.
-   Copyright (C) 2002-2016 Free Software Foundation, Inc.
+   Copyright (C) 2002-2018 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -28,6 +28,7 @@
 #include "target/waitstatus.h"
 #include "mem-break.h"
 #include "btrace-common.h"
+#include <vector>
 
 struct emit_ops;
 struct buffer;
@@ -67,13 +68,13 @@ struct target_ops
   /* Start a new process.
 
      PROGRAM is a path to the program to execute.
-     ARGS is a standard NULL-terminated array of arguments,
-     to be passed to the inferior as ``argv''.
+     PROGRAM_ARGS is a standard NULL-terminated array of arguments,
+     to be passed to the inferior as ``argv'' (along with PROGRAM).
 
      Returns the new PID on success, -1 on failure.  Registers the new
      process with the process list.  */
-
-  int (*create_inferior) (char *program, char **args);
+  int (*create_inferior) (const char *program,
+			  const std::vector<char *> &program_args);
 
   /* Do additional setup after a new process is created, including
      exec-wrapper completion.  */
@@ -390,9 +391,6 @@ struct target_ops
   /* Return true if target supports debugging agent.  */
   int (*supports_agent) (void);
 
-  /* Check whether the target supports branch tracing.  */
-  int (*supports_btrace) (struct target_ops *, enum btrace_format);
-
   /* Enable branch tracing for PTID based on CONF and allocate a branch trace
      target information struct for reading and for disabling branch trace.  */
   struct btrace_target_info *(*enable_btrace)
@@ -474,14 +472,19 @@ struct target_ops
 
   /* Return tdesc index for IPA.  */
   int (*get_ipa_tdesc_idx) (void);
+
+  /* Thread ID to (numeric) thread handle: Return true on success and
+     false for failure.  Return pointer to thread handle via HANDLE
+     and the handle's length via HANDLE_LEN.  */
+  bool (*thread_handle) (ptid_t ptid, gdb_byte **handle, int *handle_len);
 };
 
 extern struct target_ops *the_target;
 
 void set_target_ops (struct target_ops *);
 
-#define create_inferior(program, args) \
-  (*the_target->create_inferior) (program, args)
+#define create_inferior(program, program_args)	\
+  (*the_target->create_inferior) (program, program_args)
 
 #define target_post_create_inferior()			 \
   do							 \
@@ -517,9 +520,6 @@ int kill_inferior (int);
 #define detach_inferior(pid) \
   (*the_target->detach) (pid)
 
-#define mourn_inferior(PROC) \
-  (*the_target->mourn) (PROC)
-
 #define mythread_alive(pid) \
   (*the_target->thread_alive) (pid)
 
@@ -537,10 +537,6 @@ int kill_inferior (int);
 
 #define target_async(enable) \
   (the_target->async ? (*the_target->async) (enable) : 0)
-
-#define target_supports_multi_process() \
-  (the_target->supports_multi_process ? \
-   (*the_target->supports_multi_process) () : 0)
 
 #define target_process_qsupported(features, count)	\
   do							\
@@ -624,21 +620,44 @@ int kill_inferior (int);
   (the_target->supports_agent ? \
    (*the_target->supports_agent) () : 0)
 
-#define target_supports_btrace(format)			\
-  (the_target->supports_btrace				\
-   ? (*the_target->supports_btrace) (the_target, format) : 0)
+static inline struct btrace_target_info *
+target_enable_btrace (ptid_t ptid, const struct btrace_config *conf)
+{
+  if (the_target->enable_btrace == nullptr)
+    error (_("Target does not support branch tracing."));
 
-#define target_enable_btrace(ptid, conf) \
-  (*the_target->enable_btrace) (ptid, conf)
+  return (*the_target->enable_btrace) (ptid, conf);
+}
 
-#define target_disable_btrace(tinfo) \
-  (*the_target->disable_btrace) (tinfo)
+static inline int
+target_disable_btrace (struct btrace_target_info *tinfo)
+{
+  if (the_target->disable_btrace == nullptr)
+    error (_("Target does not support branch tracing."));
 
-#define target_read_btrace(tinfo, buffer, type)	\
-  (*the_target->read_btrace) (tinfo, buffer, type)
+  return (*the_target->disable_btrace) (tinfo);
+}
 
-#define target_read_btrace_conf(tinfo, buffer)	\
-  (*the_target->read_btrace_conf) (tinfo, buffer)
+static inline int
+target_read_btrace (struct btrace_target_info *tinfo,
+		    struct buffer *buffer,
+		    enum btrace_read_type type)
+{
+  if (the_target->read_btrace == nullptr)
+    error (_("Target does not support branch tracing."));
+
+  return (*the_target->read_btrace) (tinfo, buffer, type);
+}
+
+static inline int
+target_read_btrace_conf (struct btrace_target_info *tinfo,
+			 struct buffer *buffer)
+{
+  if (the_target->read_btrace_conf == nullptr)
+    error (_("Target does not support branch tracing."));
+
+  return (*the_target->read_btrace_conf) (tinfo, buffer);
+}
 
 #define target_supports_range_stepping() \
   (the_target->supports_range_stepping ? \
@@ -699,12 +718,17 @@ void done_accessing_memory (void);
   (the_target->thread_name ? (*the_target->thread_name) (ptid)  \
    : NULL)
 
+#define target_thread_handle(ptid, handle, handle_len) \
+   (the_target->thread_handle ? (*the_target->thread_handle) \
+                                  (ptid, handle, handle_len) \
+   : false)
+
 int read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len);
 
 int write_inferior_memory (CORE_ADDR memaddr, const unsigned char *myaddr,
 			   int len);
 
-int set_desired_thread (int id);
+int set_desired_thread ();
 
 const char *target_pid_to_str (ptid_t);
 

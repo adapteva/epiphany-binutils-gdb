@@ -1,6 +1,6 @@
 /* Print and select stack frames for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2016 Free Software Foundation, Inc.
+   Copyright (C) 1986-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -51,7 +51,8 @@
 #include "safe-ctype.h"
 #include "symfile.h"
 #include "extension.h"
-#include "observer.h"
+#include "observable.h"
+#include "common/def-vector.h"
 
 /* The possible choices of "set print frame-arguments", and the value
    of this setting.  */
@@ -133,7 +134,7 @@ frame_show_address (struct frame_info *frame,
   if (sal.line != 0 && sal.pc == 0 && sal.end == 0)
     {
       if (get_next_frame (frame) == NULL)
-	gdb_assert (inline_skipped_frames (inferior_ptid) > 0);
+	gdb_assert (inline_skipped_frames (inferior_thread ()) > 0);
       else
 	gdb_assert (get_frame_type (get_next_frame (frame)) == INLINE_FRAME);
       return 0;
@@ -149,15 +150,9 @@ print_stack_frame_to_uiout (struct ui_out *uiout, struct frame_info *frame,
 			    int print_level, enum print_what print_what,
 			    int set_current_sal)
 {
-  struct cleanup *old_chain;
-
-  old_chain = make_cleanup_restore_current_uiout ();
-
-  current_uiout = uiout;
+  scoped_restore save_uiout = make_scoped_restore (&current_uiout, uiout);
 
   print_stack_frame (frame, print_level, print_what, set_current_sal);
-
-  do_cleanups (old_chain);
 }
 
 /* Show or print a stack frame FRAME briefly.  The output is formatted
@@ -173,7 +168,7 @@ print_stack_frame (struct frame_info *frame, int print_level,
 {
 
   /* For mi, alway print location and address.  */
-  if (ui_out_is_mi_like_p (current_uiout))
+  if (current_uiout->is_mi_like_p ())
     print_what = LOC_AND_ADDRESS;
 
   TRY
@@ -230,43 +225,39 @@ static void
 print_frame_arg (const struct frame_arg *arg)
 {
   struct ui_out *uiout = current_uiout;
-  struct cleanup *old_chain;
-  struct ui_file *stb;
   const char *error_message = NULL;
 
-  stb = mem_fileopen ();
-  old_chain = make_cleanup_ui_file_delete (stb);
+  string_file stb;
 
   gdb_assert (!arg->val || !arg->error);
   gdb_assert (arg->entry_kind == print_entry_values_no
 	      || arg->entry_kind == print_entry_values_only
-	      || (!ui_out_is_mi_like_p (uiout)
+	      || (!uiout->is_mi_like_p ()
 		  && arg->entry_kind == print_entry_values_compact));
 
-  annotate_arg_begin ();
-
-  make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
-  fprintf_symbol_filtered (stb, SYMBOL_PRINT_NAME (arg->sym),
+  annotate_arg_emitter arg_emitter;
+  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+  fprintf_symbol_filtered (&stb, SYMBOL_PRINT_NAME (arg->sym),
 			   SYMBOL_LANGUAGE (arg->sym), DMGL_PARAMS | DMGL_ANSI);
   if (arg->entry_kind == print_entry_values_compact)
     {
       /* It is OK to provide invalid MI-like stream as with
 	 PRINT_ENTRY_VALUE_COMPACT we never use MI.  */
-      fputs_filtered ("=", stb);
+      stb.puts ("=");
 
-      fprintf_symbol_filtered (stb, SYMBOL_PRINT_NAME (arg->sym),
+      fprintf_symbol_filtered (&stb, SYMBOL_PRINT_NAME (arg->sym),
 			       SYMBOL_LANGUAGE (arg->sym),
 			       DMGL_PARAMS | DMGL_ANSI);
     }
   if (arg->entry_kind == print_entry_values_only
       || arg->entry_kind == print_entry_values_compact)
-    fputs_filtered ("@entry", stb);
-  ui_out_field_stream (uiout, "name", stb);
+    stb.puts ("@entry");
+  uiout->field_stream ("name", stb);
   annotate_arg_name_end ();
-  ui_out_text (uiout, "=");
+  uiout->text ("=");
 
   if (!arg->val && !arg->error)
-    ui_out_text (uiout, "...");
+    uiout->text ("...");
   else
     {
       if (arg->error)
@@ -300,7 +291,7 @@ print_frame_arg (const struct frame_arg *arg)
 	      /* True in "summary" mode, false otherwise.  */
 	      opts.summary = !strcmp (print_frame_arguments, "scalars");
 
-	      common_val_print (arg->val, stb, 2, &opts, language);
+	      common_val_print (arg->val, &stb, 2, &opts, language);
 	    }
 	  CATCH (except, RETURN_MASK_ERROR)
 	    {
@@ -309,16 +300,10 @@ print_frame_arg (const struct frame_arg *arg)
 	  END_CATCH
 	}
       if (error_message != NULL)
-	fprintf_filtered (stb, _("<error reading variable: %s>"),
-			  error_message);
+	stb.printf (_("<error reading variable: %s>"), error_message);
     }
 
-  ui_out_field_stream (uiout, "value", stb);
-
-  /* Also invoke ui_out_tuple_end.  */
-  do_cleanups (old_chain);
-
-  annotate_arg_end ();
+  uiout->field_stream ("value", stb);
 }
 
 /* Read in inferior function local SYM at FRAME into ARGP.  Caller is
@@ -402,7 +387,7 @@ read_frame_arg (struct symbol *sym, struct frame_info *frame,
 	{
 	  /* For MI do not try to use print_entry_values_compact for ARGP.  */
 
-	  if (val && entryval && !ui_out_is_mi_like_p (current_uiout))
+	  if (val && entryval && !current_uiout->is_mi_like_p ())
 	    {
 	      struct type *type = value_type (val);
 
@@ -416,10 +401,9 @@ read_frame_arg (struct symbol *sym, struct frame_info *frame,
 		  /* Initialize it just to avoid a GCC false warning.  */
 		  struct value *val_deref = NULL, *entryval_deref;
 
-		  /* DW_AT_GNU_call_site_value does match with the current
+		  /* DW_AT_call_value does match with the current
 		     value.  If it is a reference still try to verify if
-		     dereferenced DW_AT_GNU_call_site_data_value does not
-		     differ.  */
+		     dereferenced DW_AT_call_data_value does not differ.  */
 
 		  TRY
 		    {
@@ -524,7 +508,7 @@ read_frame_arg (struct symbol *sym, struct frame_info *frame,
 	   || print_entry_values == print_entry_values_default) && val_equal)
     {
       argp->entry_kind = print_entry_values_compact;
-      gdb_assert (!ui_out_is_mi_like_p (current_uiout));
+      gdb_assert (!current_uiout->is_mi_like_p ());
     }
   else
     argp->entry_kind = print_entry_values_no;
@@ -559,13 +543,8 @@ print_frame_args (struct symbol *func, struct frame_info *frame,
   long highest_offset = -1;
   /* Number of ints of arguments that we have printed so far.  */
   int args_printed = 0;
-  struct cleanup *old_chain;
-  struct ui_file *stb;
   /* True if we should print arguments, false otherwise.  */
   int print_args = strcmp (print_frame_arguments, "none");
-
-  stb = mem_fileopen ();
-  old_chain = make_cleanup_ui_file_delete (stb);
 
   if (func)
     {
@@ -637,8 +616,8 @@ print_frame_args (struct symbol *func, struct frame_info *frame,
 	    {
 	      struct symbol *nsym;
 
-	      nsym = lookup_symbol (SYMBOL_LINKAGE_NAME (sym),
-				    b, VAR_DOMAIN, NULL).symbol;
+	      nsym = lookup_symbol_search_name (SYMBOL_SEARCH_NAME (sym),
+						b, VAR_DOMAIN).symbol;
 	      gdb_assert (nsym != NULL);
 	      if (SYMBOL_CLASS (nsym) == LOC_REGISTER
 		  && !SYMBOL_IS_ARGUMENT (nsym))
@@ -686,8 +665,8 @@ print_frame_args (struct symbol *func, struct frame_info *frame,
 
 	  /* Print the current arg.  */
 	  if (!first)
-	    ui_out_text (uiout, ", ");
-	  ui_out_wrap_hint (uiout, "    ");
+	    uiout->text (", ");
+	  uiout->wrap_hint ("    ");
 
 	  if (!print_args)
 	    {
@@ -708,8 +687,8 @@ print_frame_args (struct symbol *func, struct frame_info *frame,
 	    {
 	      if (arg.entry_kind != print_entry_values_only)
 		{
-		  ui_out_text (uiout, ", ");
-		  ui_out_wrap_hint (uiout, "    ");
+		  uiout->text (", ");
+		  uiout->wrap_hint ("    ");
 		}
 
 	      print_frame_arg (&entryarg);
@@ -736,8 +715,6 @@ print_frame_args (struct symbol *func, struct frame_info *frame,
       print_frame_nameless_args (frame, start, num - args_printed,
 				 first, stream);
     }
-
-  do_cleanups (old_chain);
 }
 
 /* Set the current source and line to the location given by frame
@@ -747,11 +724,9 @@ print_frame_args (struct symbol *func, struct frame_info *frame,
 void
 set_current_sal_from_frame (struct frame_info *frame)
 {
-  struct symtab_and_line sal;
-
-  find_frame_sal (frame, &sal);
+  symtab_and_line sal = find_frame_sal (frame);
   if (sal.symtab != NULL)
-    set_current_source_symtab_and_line (&sal);
+    set_current_source_symtab_and_line (sal);
 }
 
 /* If ON, GDB will display disassembly of the next source line when
@@ -783,7 +758,7 @@ do_gdb_disassembly (struct gdbarch *gdbarch,
 
   TRY
     {
-      gdb_disassembly (gdbarch, current_uiout, 0,
+      gdb_disassembly (gdbarch, current_uiout,
 		       DISASSEMBLY_RAW_INSN, how_many,
 		       low, high);
     }
@@ -802,7 +777,7 @@ do_gdb_disassembly (struct gdbarch *gdbarch,
    
    SRC_LINE: Print only source line.
    LOCATION: Print only location.
-   LOC_AND_SRC: Print location and source line.
+   SRC_AND_LOC: Print location and source line.
 
    Used in "where" output, and to emit breakpoint or step
    messages.  */
@@ -813,7 +788,6 @@ print_frame_info (struct frame_info *frame, int print_level,
 		  int set_current_sal)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
-  struct symtab_and_line sal;
   int source_print;
   int location_print;
   struct ui_out *uiout = current_uiout;
@@ -822,8 +796,7 @@ print_frame_info (struct frame_info *frame, int print_level,
       || get_frame_type (frame) == SIGTRAMP_FRAME
       || get_frame_type (frame) == ARCH_FRAME)
     {
-      struct cleanup *uiout_cleanup
-	= make_cleanup_ui_out_tuple_begin_end (uiout, "frame");
+      ui_out_emit_tuple tuple_emitter (uiout, "frame");
 
       annotate_frame_begin (print_level ? frame_relative_level (frame) : 0,
 			    gdbarch, get_frame_pc (frame));
@@ -832,14 +805,14 @@ print_frame_info (struct frame_info *frame, int print_level,
          to list for this frame.  */
       if (print_level)
         {
-          ui_out_text (uiout, "#");
-          ui_out_field_fmt_int (uiout, 2, ui_left, "level",
+          uiout->text ("#");
+          uiout->field_fmt_int (2, ui_left, "level",
 				frame_relative_level (frame));
         }
-      if (ui_out_is_mi_like_p (uiout))
+      if (uiout->is_mi_like_p ())
         {
           annotate_frame_address ();
-          ui_out_field_core_addr (uiout, "addr",
+          uiout->field_core_addr ("addr",
 				  gdbarch, get_frame_pc (frame));
           annotate_frame_address_end ();
         }
@@ -847,18 +820,18 @@ print_frame_info (struct frame_info *frame, int print_level,
       if (get_frame_type (frame) == DUMMY_FRAME)
         {
           annotate_function_call ();
-          ui_out_field_string (uiout, "func", "<function called from gdb>");
+          uiout->field_string ("func", "<function called from gdb>");
 	}
       else if (get_frame_type (frame) == SIGTRAMP_FRAME)
         {
 	  annotate_signal_handler_caller ();
-          ui_out_field_string (uiout, "func", "<signal handler called>");
+          uiout->field_string ("func", "<signal handler called>");
         }
       else if (get_frame_type (frame) == ARCH_FRAME)
         {
-          ui_out_field_string (uiout, "func", "<cross-architecture call>");
+          uiout->field_string ("func", "<cross-architecture call>");
 	}
-      ui_out_text (uiout, "\n");
+      uiout->text ("\n");
       annotate_frame_end ();
 
       /* If disassemble-next-line is set to auto or on output the next
@@ -868,7 +841,6 @@ print_frame_info (struct frame_info *frame, int print_level,
 	do_gdb_disassembly (get_frame_arch (frame), 1,
 			    get_frame_pc (frame), get_frame_pc (frame) + 1);
 
-      do_cleanups (uiout_cleanup);
       return;
     }
 
@@ -878,7 +850,7 @@ print_frame_info (struct frame_info *frame, int print_level,
      the next frame is a SIGTRAMP_FRAME or a DUMMY_FRAME, then the
      next frame was not entered as the result of a call, and we want
      to get the line containing FRAME->pc.  */
-  find_frame_sal (frame, &sal);
+  symtab_and_line sal = find_frame_sal (frame);
 
   location_print = (print_what == LOCATION 
 		    || print_what == LOC_AND_ADDRESS
@@ -927,9 +899,9 @@ print_frame_info (struct frame_info *frame, int print_level,
 		 ability to decide for themselves if it is desired.  */
 	      if (opts.addressprint && mid_statement)
 		{
-		  ui_out_field_core_addr (uiout, "addr",
+		  uiout->field_core_addr ("addr",
 					  gdbarch, get_frame_pc (frame));
-		  ui_out_text (uiout, "\t");
+		  uiout->text ("\t");
 		}
 
 	      print_source_lines (sal.symtab, sal.line, sal.line + 1, 0);
@@ -1043,36 +1015,33 @@ get_last_displayed_line (void)
 
 /* Get the last sal we displayed, if it's valid.  */
 
-void
-get_last_displayed_sal (struct symtab_and_line *sal)
+symtab_and_line
+get_last_displayed_sal ()
 {
+  symtab_and_line sal;
+
   if (last_displayed_sal_valid)
     {
-      sal->pspace = last_displayed_pspace;
-      sal->pc = last_displayed_addr;
-      sal->symtab = last_displayed_symtab;
-      sal->line = last_displayed_line;
+      sal.pspace = last_displayed_pspace;
+      sal.pc = last_displayed_addr;
+      sal.symtab = last_displayed_symtab;
+      sal.line = last_displayed_line;
     }
-  else
-    {
-      sal->pspace = 0;
-      sal->pc = 0;
-      sal->symtab = 0;
-      sal->line = 0;
-    }
+
+  return sal;
 }
 
 
-/* Attempt to obtain the FUNNAME, FUNLANG and optionally FUNCP of the function
-   corresponding to FRAME.  FUNNAME needs to be freed by the caller.  */
+/* Attempt to obtain the name, FUNLANG and optionally FUNCP of the function
+   corresponding to FRAME.  */
 
-void
-find_frame_funname (struct frame_info *frame, char **funname,
-		    enum language *funlang, struct symbol **funcp)
+gdb::unique_xmalloc_ptr<char>
+find_frame_funname (struct frame_info *frame, enum language *funlang,
+		    struct symbol **funcp)
 {
   struct symbol *func;
+  gdb::unique_xmalloc_ptr<char> funname;
 
-  *funname = NULL;
   *funlang = language_unknown;
   if (funcp)
     *funcp = NULL;
@@ -1110,12 +1079,12 @@ find_frame_funname (struct frame_info *frame, char **funname,
 
       if (msymbol.minsym != NULL
 	  && (BMSYMBOL_VALUE_ADDRESS (msymbol)
-	      > BLOCK_START (SYMBOL_BLOCK_VALUE (func))))
+	      > BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (func))))
 	{
 	  /* We also don't know anything about the function besides
 	     its address and name.  */
 	  func = 0;
-	  *funname = xstrdup (MSYMBOL_PRINT_NAME (msymbol.minsym));
+	  funname.reset (xstrdup (MSYMBOL_PRINT_NAME (msymbol.minsym)));
 	  *funlang = MSYMBOL_LANGUAGE (msymbol.minsym);
 	}
       else
@@ -1132,17 +1101,13 @@ find_frame_funname (struct frame_info *frame, char **funname,
 		 stored in the symbol table, but we stored a version
 		 with DMGL_PARAMS turned on, and here we don't want to
 		 display parameters.  So remove the parameters.  */
-	      char *func_only = cp_remove_params (print_name);
-
-	      if (func_only)
-		*funname = func_only;
+	      funname = cp_remove_params (print_name);
 	    }
 
-	  /* If we didn't hit the C++ case above, set *funname here.
-	     This approach is taken to avoid having to install a
-	     cleanup in case cp_remove_params can throw.  */
-	  if (*funname == NULL)
-	    *funname = xstrdup (print_name);
+	  /* If we didn't hit the C++ case above, set *funname
+	     here.  */
+	  if (funname == NULL)
+	    funname.reset (xstrdup (print_name));
 	}
     }
   else
@@ -1151,15 +1116,17 @@ find_frame_funname (struct frame_info *frame, char **funname,
       CORE_ADDR pc;
 
       if (!get_frame_address_in_block_if_available (frame, &pc))
-	return;
+	return funname;
 
       msymbol = lookup_minimal_symbol_by_pc (pc);
       if (msymbol.minsym != NULL)
 	{
-	  *funname = xstrdup (MSYMBOL_PRINT_NAME (msymbol.minsym));
+	  funname.reset (xstrdup (MSYMBOL_PRINT_NAME (msymbol.minsym)));
 	  *funlang = MSYMBOL_LANGUAGE (msymbol.minsym);
 	}
     }
+
+  return funname;
 }
 
 static void
@@ -1169,10 +1136,7 @@ print_frame (struct frame_info *frame, int print_level,
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct ui_out *uiout = current_uiout;
-  char *funname = NULL;
   enum language funlang = language_unknown;
-  struct ui_file *stb;
-  struct cleanup *old_chain, *list_chain;
   struct value_print_options opts;
   struct symbol *func;
   CORE_ADDR pc = 0;
@@ -1180,124 +1144,121 @@ print_frame (struct frame_info *frame, int print_level,
 
   pc_p = get_frame_pc_if_available (frame, &pc);
 
-  stb = mem_fileopen ();
-  old_chain = make_cleanup_ui_file_delete (stb);
-
-  find_frame_funname (frame, &funname, &funlang, &func);
-  make_cleanup (xfree, funname);
+  gdb::unique_xmalloc_ptr<char> funname
+    = find_frame_funname (frame, &funlang, &func);
 
   annotate_frame_begin (print_level ? frame_relative_level (frame) : 0,
 			gdbarch, pc);
 
-  list_chain = make_cleanup_ui_out_tuple_begin_end (uiout, "frame");
+  {
+    ui_out_emit_tuple tuple_emitter (uiout, "frame");
 
-  if (print_level)
-    {
-      ui_out_text (uiout, "#");
-      ui_out_field_fmt_int (uiout, 2, ui_left, "level",
-			    frame_relative_level (frame));
-    }
-  get_user_print_options (&opts);
-  if (opts.addressprint)
-    if (!sal.symtab
-	|| frame_show_address (frame, sal)
-	|| print_what == LOC_AND_ADDRESS)
+    if (print_level)
       {
-	annotate_frame_address ();
-	if (pc_p)
-	  ui_out_field_core_addr (uiout, "addr", gdbarch, pc);
-	else
-	  ui_out_field_string (uiout, "addr", "<unavailable>");
-	annotate_frame_address_end ();
-	ui_out_text (uiout, " in ");
+	uiout->text ("#");
+	uiout->field_fmt_int (2, ui_left, "level",
+			      frame_relative_level (frame));
       }
-  annotate_frame_function_name ();
-  fprintf_symbol_filtered (stb, funname ? funname : "??",
-			   funlang, DMGL_ANSI);
-  ui_out_field_stream (uiout, "func", stb);
-  ui_out_wrap_hint (uiout, "   ");
-  annotate_frame_args ();
-      
-  ui_out_text (uiout, " (");
-  if (print_args)
-    {
-      struct gdbarch *gdbarch = get_frame_arch (frame);
-      int numargs;
-      struct cleanup *args_list_chain;
-
-      if (gdbarch_frame_num_args_p (gdbarch))
+    get_user_print_options (&opts);
+    if (opts.addressprint)
+      if (!sal.symtab
+	  || frame_show_address (frame, sal)
+	  || print_what == LOC_AND_ADDRESS)
 	{
-	  numargs = gdbarch_frame_num_args (gdbarch, frame);
-	  gdb_assert (numargs >= 0);
+	  annotate_frame_address ();
+	  if (pc_p)
+	    uiout->field_core_addr ("addr", gdbarch, pc);
+	  else
+	    uiout->field_string ("addr", "<unavailable>");
+	  annotate_frame_address_end ();
+	  uiout->text (" in ");
 	}
-      else
-	numargs = -1;
+    annotate_frame_function_name ();
+
+    string_file stb;
+    fprintf_symbol_filtered (&stb, funname ? funname.get () : "??",
+			     funlang, DMGL_ANSI);
+    uiout->field_stream ("func", stb);
+    uiout->wrap_hint ("   ");
+    annotate_frame_args ();
+      
+    uiout->text (" (");
+    if (print_args)
+      {
+	struct gdbarch *gdbarch = get_frame_arch (frame);
+	int numargs;
+
+	if (gdbarch_frame_num_args_p (gdbarch))
+	  {
+	    numargs = gdbarch_frame_num_args (gdbarch, frame);
+	    gdb_assert (numargs >= 0);
+	  }
+	else
+	  numargs = -1;
     
-      args_list_chain = make_cleanup_ui_out_list_begin_end (uiout, "args");
-      TRY
 	{
-	  print_frame_args (func, frame, numargs, gdb_stdout);
-	}
-      CATCH (e, RETURN_MASK_ERROR)
-	{
-	}
-      END_CATCH
+	  ui_out_emit_list list_emitter (uiout, "args");
+	  TRY
+	    {
+	      print_frame_args (func, frame, numargs, gdb_stdout);
+	    }
+	  CATCH (e, RETURN_MASK_ERROR)
+	    {
+	    }
+	  END_CATCH
 
-      /* FIXME: ARGS must be a list.  If one argument is a string it
-	  will have " that will not be properly escaped.  */
-      /* Invoke ui_out_tuple_end.  */
-      do_cleanups (args_list_chain);
-      QUIT;
-    }
-  ui_out_text (uiout, ")");
-  if (sal.symtab)
-    {
-      const char *filename_display;
+	    /* FIXME: ARGS must be a list.  If one argument is a string it
+	       will have " that will not be properly escaped.  */
+	    }
+	QUIT;
+      }
+    uiout->text (")");
+    if (sal.symtab)
+      {
+	const char *filename_display;
       
-      filename_display = symtab_to_filename_for_display (sal.symtab);
-      annotate_frame_source_begin ();
-      ui_out_wrap_hint (uiout, "   ");
-      ui_out_text (uiout, " at ");
-      annotate_frame_source_file ();
-      ui_out_field_string (uiout, "file", filename_display);
-      if (ui_out_is_mi_like_p (uiout))
-	{
-	  const char *fullname = symtab_to_fullname (sal.symtab);
+	filename_display = symtab_to_filename_for_display (sal.symtab);
+	annotate_frame_source_begin ();
+	uiout->wrap_hint ("   ");
+	uiout->text (" at ");
+	annotate_frame_source_file ();
+	uiout->field_string ("file", filename_display);
+	if (uiout->is_mi_like_p ())
+	  {
+	    const char *fullname = symtab_to_fullname (sal.symtab);
 
-	  ui_out_field_string (uiout, "fullname", fullname);
-	}
-      annotate_frame_source_file_end ();
-      ui_out_text (uiout, ":");
-      annotate_frame_source_line ();
-      ui_out_field_int (uiout, "line", sal.line);
-      annotate_frame_source_end ();
-    }
+	    uiout->field_string ("fullname", fullname);
+	  }
+	annotate_frame_source_file_end ();
+	uiout->text (":");
+	annotate_frame_source_line ();
+	uiout->field_int ("line", sal.line);
+	annotate_frame_source_end ();
+      }
 
-  if (pc_p && (funname == NULL || sal.symtab == NULL))
-    {
-      char *lib = solib_name_from_address (get_frame_program_space (frame),
-					   get_frame_pc (frame));
+    if (pc_p && (funname == NULL || sal.symtab == NULL))
+      {
+	char *lib = solib_name_from_address (get_frame_program_space (frame),
+					     get_frame_pc (frame));
 
-      if (lib)
-	{
-	  annotate_frame_where ();
-	  ui_out_wrap_hint (uiout, "  ");
-	  ui_out_text (uiout, " from ");
-	  ui_out_field_string (uiout, "from", lib);
-	}
-    }
+	if (lib)
+	  {
+	    annotate_frame_where ();
+	    uiout->wrap_hint ("  ");
+	    uiout->text (" from ");
+	    uiout->field_string ("from", lib);
+	  }
+      }
+  }
 
-  /* do_cleanups will call ui_out_tuple_end() for us.  */
-  do_cleanups (list_chain);
-  ui_out_text (uiout, "\n");
-  do_cleanups (old_chain);
+  uiout->text ("\n");
 }
 
 
 /* Read a frame specification in whatever the appropriate format is from
    FRAME_EXP.  Call error() if the specification is in any way invalid (so
-   this function never returns NULL).  When SEPECTED_P is non-NULL set its
-   target to indicate that the default selected frame was used.  */
+   this function never returns NULL).  When SELECTED_FRAME_P is non-NULL
+   set its target to indicate that the default selected frame was used.  */
 
 static struct frame_info *
 parse_frame_specification (const char *frame_exp, int *selected_frame_p)
@@ -1313,12 +1274,10 @@ parse_frame_specification (const char *frame_exp, int *selected_frame_p)
       numargs = 0;
       while (1)
 	{
-	  char *addr_string;
-	  struct cleanup *cleanup;
 	  const char *p;
 
 	  /* Skip leading white space, bail of EOL.  */
-	  frame_exp = skip_spaces_const (frame_exp);
+	  frame_exp = skip_spaces (frame_exp);
 	  if (!*frame_exp)
 	    break;
 
@@ -1326,9 +1285,8 @@ parse_frame_specification (const char *frame_exp, int *selected_frame_p)
 	  for (p = frame_exp;
 	       *p && !ISSPACE (*p);
 	       p++);
-	  addr_string = savestring (frame_exp, p - frame_exp);
+	  std::string addr_string (frame_exp, p - frame_exp);
 	  frame_exp = p;
-	  cleanup = make_cleanup (xfree, addr_string);
 	  
 	  /* NOTE: Parse and evaluate expression, but do not use
 	     functions such as parse_and_eval_long or
@@ -1338,9 +1296,7 @@ parse_frame_specification (const char *frame_exp, int *selected_frame_p)
 	     side-effects.  */
 	  if (numargs >= ARRAY_SIZE (args))
 	    error (_("Too many args in frame specification"));
-	  args[numargs++] = parse_and_eval (addr_string);
-
-	  do_cleanups (cleanup);
+	  args[numargs++] = parse_and_eval (addr_string.c_str ());
 	}
     }
 
@@ -1424,10 +1380,9 @@ parse_frame_specification (const char *frame_exp, int *selected_frame_p)
    ADDR_EXP.  Absolutely all information in the frame is printed.  */
 
 static void
-frame_info (char *addr_exp, int from_tty)
+info_frame_command (const char *addr_exp, int from_tty)
 {
   struct frame_info *fi;
-  struct symtab_and_line sal;
   struct symbol *func;
   struct symtab *s;
   struct frame_info *calling_frame_info;
@@ -1437,7 +1392,6 @@ frame_info (char *addr_exp, int from_tty)
   const char *pc_regname;
   int selected_frame_p;
   struct gdbarch *gdbarch;
-  struct cleanup *back_to = make_cleanup (null_cleanup, NULL);
   CORE_ADDR frame_pc;
   int frame_pc_p;
   /* Initialize it to avoid "may be used uninitialized" warning.  */
@@ -1462,9 +1416,10 @@ frame_info (char *addr_exp, int from_tty)
     pc_regname = "pc";
 
   frame_pc_p = get_frame_pc_if_available (fi, &frame_pc);
-  find_frame_sal (fi, &sal);
   func = get_frame_function (fi);
+  symtab_and_line sal = find_frame_sal (fi);
   s = sal.symtab;
+  gdb::unique_xmalloc_ptr<char> func_only;
   if (func)
     {
       funname = SYMBOL_PRINT_NAME (func);
@@ -1476,13 +1431,10 @@ frame_info (char *addr_exp, int from_tty)
 	     stored in the symbol table, but we stored a version
 	     with DMGL_PARAMS turned on, and here we don't want to
 	     display parameters.  So remove the parameters.  */
-	  char *func_only = cp_remove_params (funname);
+	  func_only = cp_remove_params (funname);
 
 	  if (func_only)
-	    {
-	      funname = func_only;
-	      make_cleanup (xfree, func_only);
-	    }
+	    funname = func_only.get ();
 	}
     }
   else if (frame_pc_p)
@@ -1648,57 +1600,51 @@ frame_info (char *addr_exp, int from_tty)
   /* Print as much information as possible on the location of all the
      registers.  */
   {
-    enum lval_type lval;
-    int optimized;
-    int unavailable;
-    CORE_ADDR addr;
-    int realnum;
     int count;
     int i;
     int need_nl = 1;
+    int sp_regnum = gdbarch_sp_regnum (gdbarch);
 
     /* The sp is special; what's displayed isn't the save address, but
        the value of the previous frame's sp.  This is a legacy thing,
        at one stage the frame cached the previous frame's SP instead
        of its address, hence it was easiest to just display the cached
        value.  */
-    if (gdbarch_sp_regnum (gdbarch) >= 0)
+    if (sp_regnum >= 0)
       {
-	/* Find out the location of the saved stack pointer with out
-           actually evaluating it.  */
-	frame_register_unwind (fi, gdbarch_sp_regnum (gdbarch),
-			       &optimized, &unavailable, &lval, &addr,
-			       &realnum, NULL);
-	if (!optimized && !unavailable && lval == not_lval)
-	  {
-	    enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-	    int sp_size = register_size (gdbarch, gdbarch_sp_regnum (gdbarch));
-	    gdb_byte value[MAX_REGISTER_SIZE];
-	    CORE_ADDR sp;
+	struct value *value = frame_unwind_register_value (fi, sp_regnum);
+	gdb_assert (value != NULL);
 
-	    frame_register_unwind (fi, gdbarch_sp_regnum (gdbarch),
-				   &optimized, &unavailable, &lval, &addr,
-				   &realnum, value);
-	    /* NOTE: cagney/2003-05-22: This is assuming that the
-               stack pointer was packed as an unsigned integer.  That
-               may or may not be valid.  */
-	    sp = extract_unsigned_integer (value, sp_size, byte_order);
-	    printf_filtered (" Previous frame's sp is ");
-	    fputs_filtered (paddress (gdbarch, sp), gdb_stdout);
-	    printf_filtered ("\n");
-	    need_nl = 0;
-	  }
-	else if (!optimized && !unavailable && lval == lval_memory)
+	if (!value_optimized_out (value) && value_entirely_available (value))
 	  {
-	    printf_filtered (" Previous frame's sp at ");
-	    fputs_filtered (paddress (gdbarch, addr), gdb_stdout);
-	    printf_filtered ("\n");
-	    need_nl = 0;
-	  }
-	else if (!optimized && !unavailable && lval == lval_register)
-	  {
-	    printf_filtered (" Previous frame's sp in %s\n",
-			     gdbarch_register_name (gdbarch, realnum));
+	    if (VALUE_LVAL (value) == not_lval)
+	      {
+		CORE_ADDR sp;
+		enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+		int sp_size = register_size (gdbarch, sp_regnum);
+
+		sp = extract_unsigned_integer (value_contents_all (value),
+					       sp_size, byte_order);
+
+		printf_filtered (" Previous frame's sp is ");
+		fputs_filtered (paddress (gdbarch, sp), gdb_stdout);
+		printf_filtered ("\n");
+	      }
+	    else if (VALUE_LVAL (value) == lval_memory)
+	      {
+		printf_filtered (" Previous frame's sp at ");
+		fputs_filtered (paddress (gdbarch, value_address (value)),
+				gdb_stdout);
+		printf_filtered ("\n");
+	      }
+	    else if (VALUE_LVAL (value) == lval_register)
+	      {
+		printf_filtered (" Previous frame's sp in %s\n",
+				 gdbarch_register_name (gdbarch,
+							VALUE_REGNUM (value)));
+	      }
+
+	    release_value (value);
 	    need_nl = 0;
 	  }
 	/* else keep quiet.  */
@@ -1708,9 +1654,15 @@ frame_info (char *addr_exp, int from_tty)
     numregs = gdbarch_num_regs (gdbarch)
 	      + gdbarch_num_pseudo_regs (gdbarch);
     for (i = 0; i < numregs; i++)
-      if (i != gdbarch_sp_regnum (gdbarch)
+      if (i != sp_regnum
 	  && gdbarch_register_reggroup_p (gdbarch, i, all_reggroup))
 	{
+	  enum lval_type lval;
+	  int optimized;
+	  int unavailable;
+	  CORE_ADDR addr;
+	  int realnum;
+
 	  /* Find out the location of the saved register without
              fetching the corresponding value.  */
 	  frame_register_unwind (fi, i, &optimized, &unavailable,
@@ -1733,67 +1685,34 @@ frame_info (char *addr_exp, int from_tty)
     if (count || need_nl)
       puts_filtered ("\n");
   }
-
-  do_cleanups (back_to);
 }
 
 /* Print briefly all stack frames or just the innermost COUNT_EXP
    frames.  */
 
 static void
-backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
-		     int from_tty)
+backtrace_command_1 (const char *count_exp, frame_filter_flags flags,
+		     int no_filters, int from_tty)
 {
   struct frame_info *fi;
   int count;
-  int i;
-  struct frame_info *trailing;
-  int trailing_level, py_start = 0, py_end = 0;
+  int py_start = 0, py_end = 0;
   enum ext_lang_bt_status result = EXT_LANG_BT_ERROR;
 
   if (!target_has_stack)
     error (_("No stack."));
 
-  /* The following code must do two things.  First, it must set the
-     variable TRAILING to the frame from which we should start
-     printing.  Second, it must set the variable count to the number
-     of frames which we should print, or -1 if all of them.  */
-  trailing = get_current_frame ();
-
-  trailing_level = 0;
   if (count_exp)
     {
       count = parse_and_eval_long (count_exp);
       if (count < 0)
-	{
-	  struct frame_info *current;
-
-	  py_start = count;
-	  count = -count;
-
-	  current = trailing;
-	  while (current && count--)
-	    {
-	      QUIT;
-	      current = get_prev_frame (current);
-	    }
-
-	  /* Will stop when CURRENT reaches the top of the stack.
-	     TRAILING will be COUNT below it.  */
-	  while (current)
-	    {
-	      QUIT;
-	      trailing = get_prev_frame (trailing);
-	      current = get_prev_frame (current);
-	      trailing_level++;
-	    }
-
-	  count = -1;
-	}
+	py_start = count;
       else
 	{
 	  py_start = 0;
-	  py_end = count;
+	  /* The argument to apply_ext_lang_frame_filter is the number
+	     of the final frame to print, and frames start at 0.  */
+	  py_end = count - 1;
 	}
     }
   else
@@ -1802,31 +1721,13 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
       count = -1;
     }
 
-  if (info_verbose)
-    {
-      /* Read in symbols for all of the frames.  Need to do this in a
-         separate pass so that "Reading in symbols for xxx" messages
-         don't screw up the appearance of the backtrace.  Also if
-         people have strong opinions against reading symbols for
-         backtrace this may have to be an option.  */
-      i = count;
-      for (fi = trailing; fi != NULL && i--; fi = get_prev_frame (fi))
-	{
-	  CORE_ADDR pc;
-
-	  QUIT;
-	  pc = get_frame_address_in_block (fi);
-	  expand_symtab_containing_pc (pc, find_pc_mapped_section (pc));
-	}
-    }
-
   if (! no_filters)
     {
-      int flags = PRINT_LEVEL | PRINT_FRAME_INFO | PRINT_ARGS;
       enum ext_lang_frame_args arg_type;
 
-      if (show_locals)
-	flags |= PRINT_LOCALS;
+      flags |= PRINT_LEVEL | PRINT_FRAME_INFO | PRINT_ARGS;
+      if (from_tty)
+	flags |= PRINT_MORE_FRAMES;
 
       if (!strcmp (print_frame_arguments, "scalars"))
 	arg_type = CLI_SCALAR_VALUES;
@@ -1844,7 +1745,40 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
      "no-filters" has been specified from the command.  */
   if (no_filters ||  result == EXT_LANG_BT_NO_FILTERS)
     {
-      for (i = 0, fi = trailing; fi && count--; i++, fi = get_prev_frame (fi))
+      struct frame_info *trailing;
+
+      /* The following code must do two things.  First, it must set the
+	 variable TRAILING to the frame from which we should start
+	 printing.  Second, it must set the variable count to the number
+	 of frames which we should print, or -1 if all of them.  */
+      trailing = get_current_frame ();
+
+      if (count_exp != NULL && count < 0)
+	{
+	  struct frame_info *current;
+
+	  count = -count;
+
+	  current = trailing;
+	  while (current && count--)
+	    {
+	      QUIT;
+	      current = get_prev_frame (current);
+	    }
+
+	  /* Will stop when CURRENT reaches the top of the stack.
+	     TRAILING will be COUNT below it.  */
+	  while (current)
+	    {
+	      QUIT;
+	      trailing = get_prev_frame (trailing);
+	      current = get_prev_frame (current);
+	    }
+
+	  count = -1;
+	}
+
+      for (fi = trailing; fi && count--; fi = get_prev_frame (fi))
 	{
 	  QUIT;
 
@@ -1854,7 +1788,7 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
 	     the frame->prev field gets set to NULL in that case).  */
 
 	  print_frame_info (fi, 1, LOCATION, 1, 0);
-	  if (show_locals)
+	  if ((flags & PRINT_LOCALS) != 0)
 	    {
 	      struct frame_id frame_id = get_frame_id (fi);
 
@@ -1893,67 +1827,42 @@ backtrace_command_1 (char *count_exp, int show_locals, int no_filters,
 }
 
 static void
-backtrace_command (char *arg, int from_tty)
+backtrace_command (const char *arg, int from_tty)
 {
-  struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
-  int fulltrace_arg = -1, arglen = 0, argc = 0, no_filters  = -1;
-  int user_arg = 0;
+  bool filters = true;
+  frame_filter_flags flags = 0;
 
   if (arg)
     {
-      char **argv;
-      int i;
+      bool done = false;
 
-      argv = gdb_buildargv (arg);
-      make_cleanup_freeargv (argv);
-      argc = 0;
-      for (i = 0; argv[i]; i++)
+      while (!done)
 	{
-	  unsigned int j;
+	  const char *save_arg = arg;
+	  std::string this_arg = extract_arg (&arg);
 
-	  for (j = 0; j < strlen (argv[i]); j++)
-	    argv[i][j] = TOLOWER (argv[i][j]);
+	  if (this_arg.empty ())
+	    break;
 
-	  if (no_filters < 0 && subset_compare (argv[i], "no-filters"))
-	    no_filters = argc;
+	  if (subset_compare (this_arg.c_str (), "no-filters"))
+	    filters = false;
+	  else if (subset_compare (this_arg.c_str (), "full"))
+	    flags |= PRINT_LOCALS;
+	  else if (subset_compare (this_arg.c_str (), "hide"))
+	    flags |= PRINT_HIDE;
 	  else
 	    {
-	      if (fulltrace_arg < 0 && subset_compare (argv[i], "full"))
-		fulltrace_arg = argc;
-	      else
-		{
-		  user_arg++;
-		  arglen += strlen (argv[i]);
-		}
+	      /* Not a recognized argument, so stop.  */
+	      arg = save_arg;
+	      done = true;
 	    }
-	  argc++;
 	}
-      arglen += user_arg;
-      if (fulltrace_arg >= 0 || no_filters >= 0)
-	{
-	  if (arglen > 0)
-	    {
-	      arg = (char *) xmalloc (arglen + 1);
-	      make_cleanup (xfree, arg);
-	      arg[0] = 0;
-	      for (i = 0; i < argc; i++)
-		{
-		  if (i != fulltrace_arg && i != no_filters)
-		    {
-		      strcat (arg, argv[i]);
-		      strcat (arg, " ");
-		    }
-		}
-	    }
-	  else
-	    arg = NULL;
-	}
+
+      if (*arg == '\0')
+	arg = NULL;
     }
 
-  backtrace_command_1 (arg, fulltrace_arg >= 0 /* show_locals */,
-		       no_filters >= 0 /* no frame-filters */, from_tty);
-
-  do_cleanups (old_chain);
+  backtrace_command_1 (arg, flags, !filters /* no frame-filters */, from_tty);
 }
 
 /* Iterate over the local variables of a block B, calling CB with
@@ -1975,6 +1884,7 @@ iterate_over_block_locals (const struct block *b,
 	case LOC_REGISTER:
 	case LOC_STATIC:
 	case LOC_COMPUTED:
+	case LOC_OPTIMIZED_OUT:
 	  if (SYMBOL_IS_ARGUMENT (sym))
 	    break;
 	  if (SYMBOL_DOMAIN (sym) == COMMON_BLOCK_DOMAIN)
@@ -2108,7 +2018,6 @@ print_frame_local_vars (struct frame_info *frame, int num_tabs,
   struct print_variable_and_value_data cb_data;
   const struct block *block;
   CORE_ADDR pc;
-  struct gdb_exception except = exception_none;
 
   if (!get_frame_pc_if_available (frame, &pc))
     {
@@ -2132,42 +2041,25 @@ print_frame_local_vars (struct frame_info *frame, int num_tabs,
   /* Temporarily change the selected frame to the given FRAME.
      This allows routines that rely on the selected frame instead
      of being given a frame as parameter to use the correct frame.  */
+  scoped_restore_selected_frame restore_selected_frame;
   select_frame (frame);
 
-  TRY
-    {
-      iterate_over_block_local_vars (block,
-				     do_print_variable_and_value,
-				     &cb_data);
-    }
-  CATCH (ex, RETURN_MASK_ALL)
-    {
-      except = ex;
-    }
-  END_CATCH
-
-  /* Restore the selected frame, and then rethrow if there was a problem.  */
-  select_frame (frame_find_by_id (cb_data.frame_id));
-  if (except.reason < 0)
-    throw_exception (except);
-
-  /* do_print_variable_and_value invalidates FRAME.  */
-  frame = NULL;
+  iterate_over_block_local_vars (block,
+				 do_print_variable_and_value,
+				 &cb_data);
 
   if (!cb_data.values_printed)
     fprintf_filtered (stream, _("No locals.\n"));
 }
 
 void
-locals_info (char *args, int from_tty)
+info_locals_command (const char *args, int from_tty)
 {
   print_frame_local_vars (get_selected_frame (_("No frame selected.")),
 			  0, gdb_stdout);
 }
 
-/* Iterate over all the argument variables in block B.
-
-   Returns 1 if any argument was walked; 0 otherwise.  */
+/* Iterate over all the argument variables in block B.  */
 
 void
 iterate_over_block_arg_vars (const struct block *b,
@@ -2193,8 +2085,8 @@ iterate_over_block_arg_vars (const struct block *b,
 	     float).  There are also LOC_ARG/LOC_REGISTER pairs which
 	     are not combined in symbol-reading.  */
 
-	  sym2 = lookup_symbol (SYMBOL_LINKAGE_NAME (sym),
-				b, VAR_DOMAIN, NULL).symbol;
+	  sym2 = lookup_symbol_search_name (SYMBOL_SEARCH_NAME (sym),
+					    b, VAR_DOMAIN).symbol;
 	  (*cb) (SYMBOL_PRINT_NAME (sym), sym2, cb_data);
 	}
     }
@@ -2227,7 +2119,7 @@ print_frame_arg_vars (struct frame_info *frame, struct ui_file *stream)
 
   cb_data.frame_id = get_frame_id (frame);
   cb_data.num_tabs = 0;
-  cb_data.stream = gdb_stdout;
+  cb_data.stream = stream;
   cb_data.values_printed = 0;
 
   iterate_over_block_arg_vars (SYMBOL_BLOCK_VALUE (func),
@@ -2241,20 +2133,10 @@ print_frame_arg_vars (struct frame_info *frame, struct ui_file *stream)
 }
 
 void
-args_info (char *ignore, int from_tty)
+info_args_command (const char *ignore, int from_tty)
 {
   print_frame_arg_vars (get_selected_frame (_("No frame selected.")),
 			gdb_stdout);
-}
-
-/* Select frame FRAME.  Also print the stack frame and show the source
-   if this is the tui version.  */
-static void
-select_and_print_frame (struct frame_info *frame)
-{
-  select_frame (frame);
-  if (frame)
-    print_stack_frame (frame, 1, SRC_AND_LOC, 1);
 }
 
 /* Return the symbol-block in which the selected frame is executing.
@@ -2319,13 +2201,13 @@ find_relative_frame (struct frame_info *frame, int *level_offset_ptr)
    expressions.  */
 
 void
-select_frame_command (char *level_exp, int from_tty)
+select_frame_command (const char *level_exp, int from_tty)
 {
   struct frame_info *prev_frame = get_selected_frame_if_set ();
 
   select_frame (parse_frame_specification (level_exp, NULL));
   if (get_selected_frame_if_set () != prev_frame)
-    observer_notify_user_selected_context_changed (USER_SELECTED_FRAME);
+    gdb::observers::user_selected_context_changed.notify (USER_SELECTED_FRAME);
 }
 
 /* The "frame" command.  With no argument, print the selected frame
@@ -2333,13 +2215,13 @@ select_frame_command (char *level_exp, int from_tty)
    the selected frame.  */
 
 static void
-frame_command (char *level_exp, int from_tty)
+frame_command (const char *level_exp, int from_tty)
 {
   struct frame_info *prev_frame = get_selected_frame_if_set ();
 
   select_frame (parse_frame_specification (level_exp, NULL));
   if (get_selected_frame_if_set () != prev_frame)
-    observer_notify_user_selected_context_changed (USER_SELECTED_FRAME);
+    gdb::observers::user_selected_context_changed.notify (USER_SELECTED_FRAME);
   else
     print_selected_thread_frame (current_uiout, USER_SELECTED_FRAME);
 }
@@ -2363,16 +2245,16 @@ up_silently_base (const char *count_exp)
 }
 
 static void
-up_silently_command (char *count_exp, int from_tty)
+up_silently_command (const char *count_exp, int from_tty)
 {
   up_silently_base (count_exp);
 }
 
 static void
-up_command (char *count_exp, int from_tty)
+up_command (const char *count_exp, int from_tty)
 {
   up_silently_base (count_exp);
-  observer_notify_user_selected_context_changed (USER_SELECTED_FRAME);
+  gdb::observers::user_selected_context_changed.notify (USER_SELECTED_FRAME);
 }
 
 /* Select the frame down one or COUNT_EXP stack levels from the previously
@@ -2402,20 +2284,20 @@ down_silently_base (const char *count_exp)
 }
 
 static void
-down_silently_command (char *count_exp, int from_tty)
+down_silently_command (const char *count_exp, int from_tty)
 {
   down_silently_base (count_exp);
 }
 
 static void
-down_command (char *count_exp, int from_tty)
+down_command (const char *count_exp, int from_tty)
 {
   down_silently_base (count_exp);
-  observer_notify_user_selected_context_changed (USER_SELECTED_FRAME);
+  gdb::observers::user_selected_context_changed.notify (USER_SELECTED_FRAME);
 }
 
 void
-return_command (char *retval_exp, int from_tty)
+return_command (const char *retval_exp, int from_tty)
 {
   /* Initialize it just to avoid a GCC false warning.  */
   enum return_value_convention rv_conv = RETURN_VALUE_STRUCT_CONVENTION;
@@ -2439,13 +2321,12 @@ return_command (char *retval_exp, int from_tty)
      message.  */
   if (retval_exp)
     {
-      struct expression *retval_expr = parse_expression (retval_exp);
-      struct cleanup *old_chain = make_cleanup (xfree, retval_expr);
+      expression_up retval_expr = parse_expression (retval_exp);
       struct type *return_type = NULL;
 
       /* Compute the return value.  Should the computation fail, this
          call throws an error.  */
-      return_value = evaluate_expression (retval_expr);
+      return_value = evaluate_expression (retval_expr.get ());
 
       /* Cast return value to the return type of the function.  Should
          the cast fail, this call throws an error.  */
@@ -2460,7 +2341,6 @@ return_command (char *retval_exp, int from_tty)
 		     "Please use an explicit cast of the value to return."));
 	  return_type = value_type (return_value);
 	}
-      do_cleanups (old_chain);
       return_type = check_typedef (return_type);
       return_value = value_cast (return_type, return_value);
 
@@ -2523,7 +2403,7 @@ return_command (char *retval_exp, int from_tty)
   if (return_value != NULL)
     {
       struct type *return_type = value_type (return_value);
-      struct gdbarch *gdbarch = get_regcache_arch (get_current_regcache ());
+      struct gdbarch *gdbarch = get_current_regcache ()->arch ();
 
       gdb_assert (rv_conv != RETURN_VALUE_STRUCT_CONVENTION
 		  && rv_conv != RETURN_VALUE_ABI_RETURNS_ADDRESS);
@@ -2543,49 +2423,43 @@ return_command (char *retval_exp, int from_tty)
     print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
 }
 
-/* Sets the scope to input function name, provided that the function
-   is within the current stack frame.  */
+/* Find the most inner frame in the current stack for a function called
+   FUNCTION_NAME.  If no matching frame is found return NULL.  */
 
-struct function_bounds
+static struct frame_info *
+find_frame_for_function (const char *function_name)
 {
-  CORE_ADDR low, high;
-};
-
-static void
-func_command (char *arg, int from_tty)
-{
+  /* Used to hold the lower and upper addresses for each of the
+     SYMTAB_AND_LINEs found for functions matching FUNCTION_NAME.  */
+  struct function_bounds
+  {
+    CORE_ADDR low, high;
+  };
   struct frame_info *frame;
-  int found = 0;
-  struct symtabs_and_lines sals;
-  int i;
+  bool found = false;
   int level = 1;
-  struct function_bounds *func_bounds = NULL;
-  struct cleanup *cleanups;
 
-  if (arg == NULL)
-    return;
+  gdb_assert (function_name != NULL);
 
   frame = get_current_frame ();
-  sals = decode_line_with_current_source (arg, DECODE_LINE_FUNFIRSTLINE);
-  cleanups = make_cleanup (xfree, sals.sals);
-  func_bounds = XNEWVEC (struct function_bounds, sals.nelts);
-  make_cleanup (xfree, func_bounds);
-  for (i = 0; (i < sals.nelts && !found); i++)
+  std::vector<symtab_and_line> sals
+    = decode_line_with_current_source (function_name,
+				       DECODE_LINE_FUNFIRSTLINE);
+  gdb::def_vector<function_bounds> func_bounds (sals.size ());
+  for (size_t i = 0; i < sals.size (); i++)
     {
-      if (sals.sals[i].pspace != current_program_space)
+      if (sals[i].pspace != current_program_space)
 	func_bounds[i].low = func_bounds[i].high = 0;
-      else if (sals.sals[i].pc == 0
-	       || find_pc_partial_function (sals.sals[i].pc, NULL,
+      else if (sals[i].pc == 0
+	       || find_pc_partial_function (sals[i].pc, NULL,
 					    &func_bounds[i].low,
 					    &func_bounds[i].high) == 0)
-	{
-	  func_bounds[i].low = func_bounds[i].high = 0;
-	}
+	func_bounds[i].low = func_bounds[i].high = 0;
     }
 
   do
     {
-      for (i = 0; (i < sals.nelts && !found); i++)
+      for (size_t i = 0; (i < sals.size () && !found); i++)
 	found = (get_frame_pc (frame) >= func_bounds[i].low
 		 && get_frame_pc (frame) < func_bounds[i].high);
       if (!found)
@@ -2596,17 +2470,29 @@ func_command (char *arg, int from_tty)
     }
   while (!found && level == 0);
 
-  do_cleanups (cleanups);
-
   if (!found)
-    printf_filtered (_("'%s' not within current stack frame.\n"), arg);
-  else if (frame != get_selected_frame (NULL))
-    select_and_print_frame (frame);
-}
-
+    frame = NULL;
 
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-void _initialize_stack (void);
+  return frame;
+}
+
+/* Implements the dbx 'func' command.  */
+
+static void
+func_command (const char *arg, int from_tty)
+{
+  if (arg == NULL)
+    return;
+
+  struct frame_info *frame = find_frame_for_function (arg);
+  if (frame == NULL)
+    error (_("'%s' not within current stack frame."), arg);
+  if (frame != get_selected_frame (NULL))
+    {
+      select_frame (frame);
+      print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
+    }
+}
 
 void
 _initialize_stack (void)
@@ -2637,42 +2523,41 @@ This is useful in command scripts."));
 Select and print a stack frame.\nWith no argument, \
 print the selected stack frame.  (See also \"info frame\").\n\
 An argument specifies the frame to select.\n\
-It can be a stack frame number or the address of the frame.\n\
-With argument, nothing is printed if input is coming from\n\
-a command file or a user-defined command."));
+It can be a stack frame number or the address of the frame."));
 
   add_com_alias ("f", "frame", class_stack, 1);
 
   add_com_suppress_notification ("select-frame", class_stack, select_frame_command, _("\
 Select a stack frame without printing anything.\n\
 An argument specifies the frame to select.\n\
-It can be a stack frame number or the address of the frame.\n"),
+It can be a stack frame number or the address of the frame."),
 		 &cli_suppress_notification.user_selected_context);
 
   add_com ("backtrace", class_stack, backtrace_command, _("\
 Print backtrace of all stack frames, or innermost COUNT frames.\n\
-With a negative argument, print outermost -COUNT frames.\nUse of the \
-'full' qualifier also prints the values of the local variables.\n\
+Usage: backtrace [QUALIFIERS]... [COUNT]\n\
+With a negative argument, print outermost -COUNT frames.\n\
+Use of the 'full' qualifier also prints the values of the local variables.\n\
 Use of the 'no-filters' qualifier prohibits frame filters from executing\n\
-on this backtrace.\n"));
+on this backtrace."));
   add_com_alias ("bt", "backtrace", class_stack, 0);
 
   add_com_alias ("where", "backtrace", class_alias, 0);
   add_info ("stack", backtrace_command,
 	    _("Backtrace of the stack, or innermost COUNT frames."));
   add_info_alias ("s", "stack", 1);
-  add_info ("frame", frame_info,
+  add_info ("frame", info_frame_command,
 	    _("All about selected stack frame, or frame at ADDR."));
   add_info_alias ("f", "frame", 1);
-  add_info ("locals", locals_info,
+  add_info ("locals", info_locals_command,
 	    _("Local variables of current stack frame."));
-  add_info ("args", args_info,
+  add_info ("args", info_args_command,
 	    _("Argument variables of current stack frame."));
 
   if (dbx_commands)
     add_com ("func", class_stack, func_command, _("\
-Select the stack frame that contains <func>.\n\
-Usage: func <name>\n"));
+Select the stack frame that contains NAME.\n\
+Usage: func NAME"));
 
   add_setshow_enum_cmd ("frame-arguments", class_stack,
 			print_frame_arguments_choices, &print_frame_arguments,

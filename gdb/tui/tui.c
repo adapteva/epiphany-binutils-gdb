@@ -1,6 +1,6 @@
 /* General functions for the WDB TUI.
 
-   Copyright (C) 1998-2016 Free Software Foundation, Inc.
+   Copyright (C) 1998-2018 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -75,8 +75,10 @@ static const struct tui_char_command tui_commands[] = {
   { 'd', "down" },
   { 'f', "finish" },
   { 'n', "next" },
+  { 'o', "nexti" },
   { 'r', "run" },
   { 's', "step" },
+  { 'i', "stepi" },
   { 'u', "up" },
   { 'v', "info locals" },
   { 'w', "where" },
@@ -413,7 +415,7 @@ tui_enable (void)
 
       /* If the top level interpreter is not the console/tui (e.g.,
 	 MI), enabling curses will certainly lose.  */
-      interp = interp_name (top_level_interpreter ());
+      interp = top_level_interpreter ()->name ();
       if (strcmp (interp, INTERP_TUI) != 0)
 	error (_("Cannot enable the TUI when the interpreter is '%s'"), interp);
 
@@ -427,7 +429,7 @@ tui_enable (void)
       /* The MinGW port of ncurses requires $TERM to be unset in order
 	 to activate the Windows console driver.  */
       if (s == NULL)
-	s = newterm ("unknown", stdout, stdin);
+	s = newterm ((char *) "unknown", stdout, stdin);
 #endif
       if (s == NULL)
 	{
@@ -439,7 +441,7 @@ tui_enable (void)
       /* Check required terminal capabilities.  The MinGW port of
 	 ncurses does have them, but doesn't expose them through "cup".  */
 #ifndef __MINGW32__
-      cap = tigetstr ("cup");
+      cap = tigetstr ((char *) "cup");
       if (cap == NULL || cap == (char *) -1 || *cap == '\0')
 	{
 	  endwin ();
@@ -543,7 +545,7 @@ tui_disable (void)
 /* Command wrapper for enabling tui mode.  */
 
 static void
-tui_enable_command (char *args, int from_tty)
+tui_enable_command (const char *args, int from_tty)
 {
   tui_enable ();
 }
@@ -551,7 +553,7 @@ tui_enable_command (char *args, int from_tty)
 /* Command wrapper for leaving tui mode.  */
 
 static void
-tui_disable_command (char *args, int from_tty)
+tui_disable_command (const char *args, int from_tty)
 {
   tui_disable ();
 }
@@ -668,9 +670,6 @@ tui_get_command_dimension (unsigned int *width,
   *height = TUI_CMD_WIN->generic.height;
   return 1;
 }
-
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_tui;
 
 void
 _initialize_tui (void)

@@ -1,6 +1,6 @@
 /* Common target dependent code for GDB on ARM systems.
 
-   Copyright (C) 1988-2016 Free Software Foundation, Inc.
+   Copyright (C) 1988-2018 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -153,7 +153,8 @@ arm_instruction_changes_pc (uint32_t this_instr)
 	       modify PC.  */
 	    return 0;
 	  }
-	/* Data processing instruction.  Fall through.  */
+	/* Data processing instruction.  */
+	/* Fall through.  */
 
       case 0x1:
 	if (bits (this_instr, 12, 15) == 15)

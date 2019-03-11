@@ -1,5 +1,5 @@
 /* Cell SPU GNU/Linux support -- shared library handling.
-   Copyright (C) 2009-2016 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
 
    Contributed by Ulrich Weigand <uweigand@de.ibm.com>.
 
@@ -30,7 +30,7 @@
 #include "solist.h"
 #include "inferior.h"
 #include "objfiles.h"
-#include "observer.h"
+#include "observable.h"
 #include "breakpoint.h"
 #include "gdbthread.h"
 #include "gdb_bfd.h"
@@ -171,7 +171,7 @@ spu_current_sos (void)
     ;
 
   /* Determine list of SPU ids.  */
-  size = target_read (&current_target, TARGET_OBJECT_SPU, NULL,
+  size = target_read (current_top_target (), TARGET_OBJECT_SPU, NULL,
 		      buf, 0, sizeof buf);
 
   /* Do not add stand-alone SPE executable context as shared library,
@@ -206,7 +206,7 @@ spu_current_sos (void)
 	 already created the SPE context, but not installed the object-id
 	 yet.  Skip such entries; we'll be back for them later.  */
       xsnprintf (annex, sizeof annex, "%d/object-id", fd);
-      len = target_read (&current_target, TARGET_OBJECT_SPU, annex,
+      len = target_read (current_top_target (), TARGET_OBJECT_SPU, annex,
 			 (gdb_byte *) id, 0, sizeof id);
       if (len <= 0 || len >= sizeof id)
 	continue;
@@ -319,36 +319,32 @@ spu_bfd_iovec_stat (bfd *abfd, void *stream, struct stat *sb)
   return 0;
 }
 
-static bfd *
-spu_bfd_fopen (char *name, CORE_ADDR addr)
+static gdb_bfd_ref_ptr
+spu_bfd_fopen (const char *name, CORE_ADDR addr)
 {
-  bfd *nbfd;
   CORE_ADDR *open_closure = XNEW (CORE_ADDR);
 
   *open_closure = addr;
 
-  nbfd = gdb_bfd_openr_iovec (name, "elf32-spu",
-			      spu_bfd_iovec_open, open_closure,
-			      spu_bfd_iovec_pread, spu_bfd_iovec_close,
-			      spu_bfd_iovec_stat);
-  if (!nbfd)
+  gdb_bfd_ref_ptr nbfd (gdb_bfd_openr_iovec (name, "elf32-spu",
+					     spu_bfd_iovec_open, open_closure,
+					     spu_bfd_iovec_pread,
+					     spu_bfd_iovec_close,
+					     spu_bfd_iovec_stat));
+  if (nbfd == NULL)
     return NULL;
 
-  if (!bfd_check_format (nbfd, bfd_object))
-    {
-      gdb_bfd_unref (nbfd);
-      return NULL;
-    }
+  if (!bfd_check_format (nbfd.get (), bfd_object))
+    return NULL;
 
   return nbfd;
 }
 
 /* Open shared library BFD.  */
-static bfd *
-spu_bfd_open (char *pathname)
+static gdb_bfd_ref_ptr
+spu_bfd_open (const char *pathname)
 {
-  char *original_name = strrchr (pathname, '@');
-  bfd *abfd;
+  const char *original_name = strrchr (pathname, '@');
   asection *spu_name;
   unsigned long long addr;
   int fd;
@@ -362,22 +358,23 @@ spu_bfd_open (char *pathname)
     internal_error (__FILE__, __LINE__, "bad object ID");
 
   /* Open BFD representing SPE executable.  */
-  abfd = spu_bfd_fopen (original_name, (CORE_ADDR) addr);
-  if (!abfd)
+  gdb_bfd_ref_ptr abfd (spu_bfd_fopen (original_name, (CORE_ADDR) addr));
+  if (abfd == NULL)
     error (_("Cannot read SPE executable at %s"), original_name);
 
   /* Retrieve SPU name note.  */
-  spu_name = bfd_get_section_by_name (abfd, ".note.spu_name");
+  spu_name = bfd_get_section_by_name (abfd.get (), ".note.spu_name");
   if (spu_name)
     {
-      int sect_size = bfd_section_size (abfd, spu_name);
+      int sect_size = bfd_section_size (abfd.get (), spu_name);
 
       if (sect_size > 20)
 	{
 	  char *buf
 	    = (char *) alloca (sect_size - 20 + strlen (original_name) + 1);
 
-	  bfd_get_section_contents (abfd, spu_name, buf, 20, sect_size - 20);
+	  bfd_get_section_contents (abfd.get (), spu_name, buf, 20,
+				    sect_size - 20);
 	  buf[sect_size - 20] = '\0';
 
 	  strcat (buf, original_name);
@@ -421,7 +418,7 @@ spu_enable_break (struct objfile *objfile)
       CORE_ADDR addr = BMSYMBOL_VALUE_ADDRESS (spe_event_sym);
 
       addr = gdbarch_convert_from_func_ptr_addr (target_gdbarch (), addr,
-                                                 &current_target);
+						 current_top_target ());
       create_solib_event_breakpoint (target_gdbarch (), addr);
       return 1;
     }
@@ -545,13 +542,10 @@ spu_solib_loaded (struct so_list *so)
     }
 }
 
-/* -Wmissing-prototypes */
-extern initialize_file_ftype _initialize_spu_solib;
-
 void
 _initialize_spu_solib (void)
 {
-  observer_attach_solib_loaded (spu_solib_loaded);
+  gdb::observers::solib_loaded.attach (spu_solib_loaded);
   ocl_program_data_key = register_objfile_data ();
 }
 
