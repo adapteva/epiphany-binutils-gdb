@@ -1,3 +1,8 @@
+2019-03-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* gdb.texinfo (Epiphany): Move Epiphany section after ARM to
+	match ToC.
+
 2012-02-09  Jeremy Bennett <jeremy.bennett@embecosm.com>
 
 	* gdb.texinfo (Epiphany): Added description of set/show coreid.
