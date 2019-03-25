@@ -508,8 +508,6 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
   unsigned   insn_size;
 
   pv_t            regs[EPIPHANY_NUM_GPRS];
-  struct pv_area *stack;
-  struct cleanup *stack_cleanup;
 
   epiphany_frame_debug ("%s called\n", __func__);
 
@@ -519,8 +517,7 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
       regs[regnum] = pv_register (regnum, 0);
     }
 
-  stack         = make_pv_area (EPIPHANY_SP_REGNUM, gdbarch_addr_bit (gdbarch));
-  stack_cleanup = make_cleanup_free_pv_area (stack);
+  pv_area stack (EPIPHANY_SP_REGNUM, gdbarch_addr_bit (gdbarch));
 
   /* Work through the prologue looking for instructions that set up the FP,
      adjust the SP and save callee-saved registers. */
@@ -646,7 +643,7 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 
 	  rns = epiphany_register_name (gdbarch, rn);
 
-	  if (pv_area_store_would_trash (stack, regs[rn]))
+	  if (stack.store_would_trash (regs[rn]))
 	    {
 	      epiphany_frame_debug (
 		"  PC %p: insn 0x%08x: str<sz> rD,[%s,#+/-<imm>] ** prologue ends **\n",
@@ -665,34 +662,30 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	    {
 	    case 0:
 	      /* Byte sized store */
-	      pv_area_store (stack, pv_add_constant (regs[rn], imm), 1,
-			     regs[rd]);
+	      stack.store (pv_add_constant (regs[rn], imm), 1, regs[rd]);
 	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strb %s,[%s,#%d]\n",
 				    (void *) current_pc, insn, rds, rns, imm);
 	      break;
 
 	    case 1:
 	      /* Half word sized store */
-	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 2), 2,
-			     regs[rd]);
+	      stack.store (pv_add_constant (regs[rn], imm * 2), 2, regs[rd]);
 	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strh %s,[%s,#%d]\n",
 				    (void *) current_pc, insn, rds, rns, imm);
 	      break;
 
 	    case 2:
 	      /* Word sized store */
-	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 4), 4,
-			     regs[rd]);
+	      stack.store (pv_add_constant (regs[rn], imm * 4), 4, regs[rd]);
 	      epiphany_frame_debug ("  PC %p: insn 0x%08x: str %s,[%s,#%d]\n",
 				    (void *) current_pc, insn, rds, rns, imm);
 	      break;
 
 	    case 3:
 	      /* Double word sized store */
-	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 8), 4,
-			     regs[rd]);
-	      pv_area_store (stack, pv_add_constant (regs[rn], imm * 8 + 4), 4,
-			     regs[rd + 1]);
+	      stack.store (pv_add_constant (regs[rn], imm * 8), 4, regs[rd]);
+	      stack.store (pv_add_constant (regs[rn], imm * 8 + 4), 4,
+			   regs[rd + 1]);
 	      epiphany_frame_debug ("  PC %p: insn 0x%08x: strd %s,[%s,#%d]\n",
 				    (void *) current_pc, insn, rds, rns, imm);
 
@@ -713,9 +706,9 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	  int  rn = BITS (insn, 28, 26) << 3 | BITS (insn, 12, 10);
 	  int  sz, bytes;
 	  int  imm;
-	  char *insn_str[] = { "strb", "strh", "str", "strd" };
+	  const char *insn_str[] = { "strb", "strh", "str", "strd" };
 
-	  if (pv_area_store_would_trash (stack, regs[rn]))
+	  if (stack.store_would_trash (regs[rn]))
 	    {
 	      epiphany_frame_debug (
 	        "  PC %p: insn 0x%08x: str rD,[r%d,#+/-<imm>] ** prologue ends **\n",
@@ -732,10 +725,9 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	  const char *rds = epiphany_register_name (gdbarch, rd);
 	  const char *rns = epiphany_register_name (gdbarch, rn);
 
-	  pv_area_store (stack, regs[rn], min (4, bytes), regs[rd]);
+	  stack.store (regs[rn], std::min (4, bytes), regs[rd]);
 	  if (sz == 3)
-	    pv_area_store (stack, pv_add_constant (regs[rn], 4), 4,
-			   regs[rd + 1]);
+	    stack.store (pv_add_constant (regs[rn], 4), 4, regs[rd + 1]);
 	  regs[rn] = pv_add_constant (regs[rn], imm * bytes);
 	  epiphany_frame_debug ("  PC %p: insn 0x%08x: %s %s,[%s],#%d\n",
 				(void *) current_pc, insn, insn_str[sz], rds,
@@ -787,7 +779,7 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	{
 	  /* We don't know where the frame is so bail */
 	  epiphany_frame_debug ("  can't find any frame.\n");
-	  goto cleanup;
+	  return prologue_end;
 	}
 
       /* Frame cache is based on the SP *at entry*, which will be the SP minus
@@ -816,7 +808,7 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	{
 	  CORE_ADDR offset;
 
-	  if (!pv_area_find_reg (stack, gdbarch, regnum, &offset))
+	  if (!stack.find_reg (gdbarch, regnum, &offset))
 	    continue;
 
 	  trad_frame_set_reg_addr (cache, regnum, prev_sp + offset);
@@ -833,9 +825,6 @@ epiphany_analyze_prologue (struct gdbarch                *gdbarch,
 	    }
 	}
     }
-
-cleanup:
-  do_cleanups (stack_cleanup);
 
   return prologue_end;
 }	/* epiphany_analyze_prologue () */
@@ -884,7 +873,7 @@ epiphany_scan_prologue (struct frame_info *this_frame,
 	  *prologue_end = sal.end;
 	}
 
-      *prologue_end = min (*prologue_end, prev_pc);
+      *prologue_end = std::min (*prologue_end, prev_pc);
     }
   else
     {
@@ -1185,10 +1174,10 @@ epiphany_virtual_frame_pointer (struct gdbarch *gdbarch,
   (since we should never be called).                              */
 /*----------------------------------------------------------------------------*/
 static enum register_status
-epiphany_pseudo_register_read (struct gdbarch  *gdbarch,
-			       struct regcache *regcache,
-			       int              regnum,
-			       gdb_byte        *buf)
+epiphany_pseudo_register_read (struct gdbarch    *gdbarch,
+			       readable_regcache *regcache,
+			       int                regnum,
+			       gdb_byte          *buf)
 {
   return  REG_UNAVAILABLE;
 
@@ -1242,7 +1231,7 @@ static const char *
 epiphany_register_name (struct gdbarch *gdbarch,
 			int             regnum)
 {
-  static char *epiphany_gdb_reg_names[EPIPHANY_TOTAL_NUM_REGS] =
+  static const char *epiphany_gdb_reg_names[EPIPHANY_TOTAL_NUM_REGS] =
     {
       /* general purpose registers */
       "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -1756,7 +1745,6 @@ epiphany_print_registers_info (struct gdbarch    *gdbarch,
 
   for (i = 0; i < numregs; i++)
     {
-      struct type *regtype;
       struct value *val;
       struct value_print_options opts;
 
@@ -1791,11 +1779,9 @@ epiphany_print_registers_info (struct gdbarch    *gdbarch,
       print_spaces_filtered (15 - strlen (gdbarch_register_name
 					  (gdbarch, i)), file);
 
-      regtype = register_type (gdbarch, i);
-      val = allocate_value (regtype);
-
       /* Get the data in raw format.  */
-      if (! deprecated_frame_register_read (frame, i, value_contents_raw (val)))
+      val = get_frame_register_value (frame, i);
+      if (value_optimized_out (val) || !value_entirely_available (val))
 	{
 	  fprintf_filtered (file, "*value not available*\n");
 	  continue;
@@ -1804,18 +1790,16 @@ epiphany_print_registers_info (struct gdbarch    *gdbarch,
       /* Print the register in hex.  */
       get_formatted_print_options (&opts, 'x');
       opts.deref_ref = 1;
-      val_print (regtype,
-		 value_contents_for_printing (val),
-		 value_embedded_offset (val), 0,
+      val_print (register_type (gdbarch, i),
+		 0, 0,
 		 file, 0, val, &opts, current_language);
 
       /* Print the register according to its natural format */
       get_user_print_options (&opts);
       opts.deref_ref = 1;
       fprintf_filtered (file, "\t");
-      val_print (regtype,
-		 value_contents_for_printing (val),
-		 value_embedded_offset (val), 0,
+      val_print (register_type (gdbarch, i),
+		 0, 0,
 		 file, 0, val, &opts, current_language);
 
       /* If it in the float group (i.e. a GPR), then print in FP format as
@@ -1829,8 +1813,7 @@ epiphany_print_registers_info (struct gdbarch    *gdbarch,
 
 	  print_spaces_filtered (4, file);
 	  val_print (float_type,
-		     value_contents_for_printing (val),
-		     value_embedded_offset (val), 0,
+		     0, 0,
 		     file, 0, val, &opts, current_language);
 	}
 
@@ -2133,7 +2116,7 @@ epiphany_skip_prologue (struct gdbarch *gdbarch,
       CORE_ADDR  prologue_end = skip_prologue_using_sal (gdbarch, func_start);
 
       if (prologue_end != 0)
-	return max (pc, prologue_end);
+	return std::max (pc, prologue_end);
     }
 
   /* Can't determine prologue from the symbol table, need to examine
@@ -2265,24 +2248,23 @@ epiphany_frame_align (struct gdbarch *gdbarch,
     vector. These are unconditional branches, so the next instruction will be
     elsewhere in memory.
 
-    @param[in] frame  The frame for which we want to insert single step
-                      breakpoint(s).
+    @param[in] regcache
 
-    @return  Non-zero (TRUE) if we successfully insert single step
-             breakpoints, zero (FALSE) otherwise.                            */
+    @return  List of addresses to insert single step breakpoints for.
+                                                                             */
 /*----------------------------------------------------------------------------*/
-static int
-epiphany_software_single_step (struct frame_info *frame)
+static std::vector<CORE_ADDR>
+epiphany_software_single_step (struct regcache *regcache)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct gdbarch *gdbarch = regcache->arch();
   enum bfd_endian  byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
-  struct address_space *aspace = get_frame_address_space (frame);
   CORE_ADDR pc, next_pc, branch_dest;
   int branch_reg;
   uint32_t instr;
   int is32bit;
+  std::vector<CORE_ADDR> next_pcs;
 
-  pc = get_frame_pc (frame);
+  pc = regcache_read_pc (regcache);
   instr = read_memory_unsigned_integer (pc, 4, byte_order_for_code);
   is32bit = epiphany_is_instr32 (instr);
 
@@ -2292,31 +2274,31 @@ epiphany_software_single_step (struct frame_info *frame)
     {
     case UNCOND_BRANCH:
       branch_dest = pc + epiphany_branch_offset (instr, is32bit);
-      insert_single_step_breakpoint (gdbarch, aspace, branch_dest);
-      return  1;
+      next_pcs.push_back (branch_dest);
+      break;
 
     case COND_BRANCH:
       branch_dest = pc + epiphany_branch_offset (instr, is32bit);
-      insert_single_step_breakpoint (gdbarch, aspace, next_pc);
-      insert_single_step_breakpoint (gdbarch, aspace, branch_dest);
-      return  1;
+      next_pcs.push_back (next_pc);
+      next_pcs.push_back (branch_dest);
+      break;
 
     case JUMP:
       branch_reg = epiphany_jump_register (instr, is32bit);
-      branch_dest = get_frame_register_unsigned (frame, branch_reg);
-      insert_single_step_breakpoint (gdbarch, aspace, branch_dest);
-      return  1;
+      branch_dest = regcache_raw_get_unsigned (regcache, branch_reg);
+      next_pcs.push_back (branch_dest);
+      break;
 
     case OTHER:
-      insert_single_step_breakpoint (gdbarch, aspace, next_pc);
-      return  1;
+      next_pcs.push_back(next_pc);
+      break;
 
     default:
       /* We should never get here. */
       gdb_assert (1);
     }
 
-  return 0;
+  return next_pcs;
 }	/* epiphany_software_single_step () */
 
 
@@ -3076,7 +3058,6 @@ epiphany_gdbarch_init (struct gdbarch_info  info,
   /* No need for addr_bits_remove or smash_text_address. All bits are used. */
   set_gdbarch_software_single_step   (gdbarch, epiphany_software_single_step);
   /* No need for single_step_through_delay with no delayed branches. */
-  set_gdbarch_print_insn             (gdbarch, print_insn_epiphany);
   set_gdbarch_skip_trampoline_code   (gdbarch, epiphany_skip_trampoline_code);
   /* No need for skip_solib_resolver or in_solib_return_trampoline, since no
      shared objects. */
@@ -3198,7 +3179,7 @@ static unsigned  epiphany_coreid;
     Register commands to set and show the coreid.                             */
 /*----------------------------------------------------------------------------*/
 static void
-epiphany_set_coreid (char                    *args,
+epiphany_set_coreid (const char              *args,
 		     int                      from_tty,
 		     struct cmd_list_element *c)
 {

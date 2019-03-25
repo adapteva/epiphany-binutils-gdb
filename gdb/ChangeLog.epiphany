@@ -1,3 +1,23 @@
+2019-03-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-tdep.c (epiphany_analyze_prologue): Adjust to be
+	compatible with C++-ified *pv_area* functions. pv_area is now an
+	class.
+	(epiphany_scan_prologue): Use std::min() over min().
+	(epiphany_pseudo_register_read): Adjust to regcache argument to
+	right type.
+	(epiphany_register_name): Make epiphany_gdb_reg_names const.
+	(epiphany_print_registers_info): Use get_frame_register_value()
+	over deprecated_frame_register_read(). Adjust arguments to
+	val_print().
+	(epiphany_skip_prologue): Use std::max() over max().
+	(epiphany_software_single_step): Adjust return type to
+	std::vector<CORE_ADDR>. Adjust to using regcache over
+	get_frame_arch().
+	(epiphany_gdbarch_init): Don't call set_gdbarch_print_insn(). The
+	default print_insn is sufficient.
+	(epiphany_set_coreid): Make args argument const.
+
 2016-11-12  Pedro Alves  <palves@redhat.com>
 
 	PR gdb/18360
