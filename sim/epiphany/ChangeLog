@@ -1,3 +1,16 @@
+2019-03-25  Ola Jeppsson  <ola@adapteva.com>
+
+	* arch.c: Regenerated.
+	* arch.h: Regenerated.
+	* cpu.c: Regenerated.
+	* cpu.h: Regenerated.
+	* cpuall.h: Regenerated.
+	* decode.c: Regenerated.
+	* decode.h: Regenerated.
+	* model.c: Regenerated.
+	* sem-switch.c: Regenerated.
+	* sem.c: Regenerated.
+
 2019-03-24  Ola Jeppsson  <ola@adapteva.com>
 
 	* sim-if.c (epiphany_user_init): Set LOADER_BSS_CLEARED_FLAG in
