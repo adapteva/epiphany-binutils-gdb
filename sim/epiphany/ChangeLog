@@ -1,3 +1,8 @@
+2019-03-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* sim-if.c (epiphany_user_init): Set LOADER_BSS_CLEARED_FLAG in
+	target binary __loader_flags.
+
 2019-02-10  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.c (epiphanybf_model_insn_after): Remove dead code. Fix

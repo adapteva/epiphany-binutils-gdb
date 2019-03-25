@@ -17,11 +17,17 @@
 /* compiler barrier */
 #define barrier() __asm__ __volatile__ ("":::"memory")
 
+#if 0
+/* Let the simulator deal with loader flags.
+   NB: The simulator must be run in user environment mode for this to work */
+
 /* Flags for newlib crt0.s */
 #define LOADER_BSS_CLEARED_FLAG (1 << 0)
 #define LOADER_CUSTOM_ARGS_FLAG (1 << 1)
+
 /* without this flag crt0.s will clear bss at runtime = race condition. */
 uint32_t __loader_flags = LOADER_BSS_CLEARED_FLAG;
+#endif
 
 void pass();
 void fail();

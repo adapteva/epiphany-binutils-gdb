@@ -1,3 +1,8 @@
+2019-03-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* multicore/e-lib-inl.h: Remove global __loader_flags ABI
+	variable. It's already defined in crt0.o
+
 2016-10-27  Ola Jeppsson  <ola@adapteva.com>
 
 	* mul.cgs: Remove.

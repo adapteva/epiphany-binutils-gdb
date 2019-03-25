@@ -879,8 +879,11 @@ epiphany_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
   SIM_CPU *current_cpu = STATE_CPU (sd, 0);
   bfd *prog_bfd = STATE_PROG_BFD (sd);
   es_cluster_cfg cluster;
-#define LOADER_ARGV_IN_SP_FLAG 4 /* newlib/libgloss/epiphany/crt0.S  */
-  const unsigned_word flags = LOADER_ARGV_IN_SP_FLAG;
+
+/* newlib/libgloss/epiphany/crt0.S  */
+#define LOADER_BSS_CLEARED_FLAG 1
+#define LOADER_ARGV_IN_SP_FLAG 4
+  const unsigned_word flags = LOADER_BSS_CLEARED_FLAG | LOADER_ARGV_IN_SP_FLAG;
   int i;
   bool found = false;
 
