@@ -24,7 +24,7 @@
 #include "sysdep.h"
 #include "bfd.h"
 #include "libiberty.h"
-#include "demangle.h"
+#include "demangle2.h"
 #include "getopt.h"
 #include "safe-ctype.h"
 #include "bucomm.h"

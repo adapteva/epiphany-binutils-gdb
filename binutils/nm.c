@@ -24,7 +24,7 @@
 #include "getopt.h"
 #include "aout/stab_gnu.h"
 #include "aout/ranlib.h"
-#include "demangle.h"
+#include "demangle2.h"
 #include "libiberty.h"
 #include "elf-bfd.h"
 #include "elf/common.h"

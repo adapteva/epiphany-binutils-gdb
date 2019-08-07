@@ -28,7 +28,7 @@
 #include "bfd.h"
 #include "libiberty.h"
 #include "safe-ctype.h"
-#include "demangle.h"
+#include "demangle2.h"
 #include "debug.h"
 #include "budbg.h"
 #include "filenames.h"
