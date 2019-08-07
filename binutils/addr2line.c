@@ -34,7 +34,7 @@
 #include "bfd.h"
 #include "getopt.h"
 #include "libiberty.h"
-#include "demangle.h"
+#include "demangle2.h"
 #include "bucomm.h"
 #include "elf-bfd.h"
 

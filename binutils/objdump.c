@@ -60,7 +60,7 @@
 #include "safe-ctype.h"
 #include "dis-asm.h"
 #include "libiberty.h"
-#include "demangle.h"
+#include "demangle2.h"
 #include "filenames.h"
 #include "debug.h"
 #include "budbg.h"

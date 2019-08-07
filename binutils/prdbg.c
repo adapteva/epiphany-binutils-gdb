@@ -27,7 +27,7 @@
 #include <assert.h>
 #include "bfd.h"
 #include "libiberty.h"
-#include "demangle.h"
+#include "demangle2.h"
 #include "debug.h"
 #include "budbg.h"
 
