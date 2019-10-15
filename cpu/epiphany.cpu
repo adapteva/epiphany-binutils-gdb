@@ -107,17 +107,86 @@
   (name epiphany32) (comment "Adapteva EPIPHANY 32/16") (attrs)
   (mach epiphany32)
 
+  (pipeline p-default "" () ((fetch) (decode) (execute) (memory) (writeback)))
+
   (unit u-exec "Execution Unit" ()
 	1 1 ; issue done
 	() ; state
-	() ; inputs
+	((rn INT -1) (rn6 INT -1) (rn-di INT -1) (rn6-di INT -1)
+	 (rm INT -1) (rm6 INT -1) (rm-di INT -1) (rm6-di INT -1)) ; inputs
+	((rd INT -1) (rd6 INT -1) (rd-di INT -1) (rd6-di INT -1)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-cti "Branch Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1) (rm INT -1) (rm6 INT -1)) ; inputs
+	((pc)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-cond-cti "Conditional IALU Branch Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1) (rm INT -1) (rm6 INT -1)) ; inputs
+	((pc)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-cond-fpu-cti "Conditional FPU Branch Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1) (rm INT -1) (rm6 INT -1)) ; inputs
+	((pc)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-load "Memory Load Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1) (rn-di INT -1) (rn6-di INT -1)
+	 (rm INT -1) (rm6 INT -1) (rm-di INT -1) (rm6-di INT -1)) ; inputs
+	((rd INT -1) (rd6 INT -1) (rd-di INT -1) (rd6-di INT -1)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-store "Memory Store Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1) (rn-di INT -1) (rn6-di INT -1)
+	 (rm INT -1) (rm6 INT -1) (rm-di INT -1) (rm6-di INT -1)
+	 (rd INT -1) (rd6 INT -1) (rd-di INT -1) (rd6-di INT -1)) ; inputs
+	() ; ((st-mem AI)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-ialu "Integer ALU Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1) (rn-di INT -1) (rn6-di INT -1)
+	 (rm INT -1) (rm6 INT -1) (rm-di INT -1) (rm6-di INT -1)) ; inputs
+	((rd INT -1) (rd6 INT -1) (rd-di INT -1) (rd6-di INT -1)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-fpu "Floating-point Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1) (rm INT -1) (rm6 INT -1)
+	 ;; NB: We fake rd as input to help CGEN detect the usage.
+	 (rd INT -1) (rd6 INT -1)) ; outputs faked as inputs
 	() ; outputs
 	() ; profile action (default)
 	)
-  )
-
-
-
+  (unit u-movfs "Read SCR Unit" ()
+	1 1 ; issue done
+	() ; state
+	((sn INT -1) (sn6 INT -1)) ; inputs
+	((rd INT -1) (rd6 INT -1)) ; outputs
+	() ; profile action (default)
+	)
+  (unit u-movts "Write SCR Unit" ()
+	1 1 ; issue done
+	() ; state
+	((rn INT -1) (rn6 INT -1)) ; inputs
+	((sn INT -1) (sn6 INT -1)) ; outputs
+	() ; profile action (default)
+	)
+)
 					; Instruction fields.
 					;
 					; Attributes:
@@ -1003,7 +1072,7 @@
   (name h-core-registers)
   (comment "Special Core Registers")
   (type register USI (17))
-  (attrs VIRTUAL)
+  (attrs PROFILE VIRTUAL)
   (indices extern-keyword cr-names)
   ;; Forward get/set to h-all-registers handlers
   (get (index)
@@ -1206,7 +1275,7 @@
   (name h-coredma-registers)
   (comment "DMA registers in MMR space")
   (type register USI (16))
-  (attrs VIRTUAL)
+  (attrs PROFILE VIRTUAL)
   (indices extern-keyword crdma-names)
   ;; Forward get/set to h-all-registers handlers
   (get (index)
@@ -1223,7 +1292,7 @@
   (name h-coremem-registers)
   (comment "MEM registers in MMR space")
   (type register USI (4))
-  (attrs VIRTUAL) ;; ?? PROFILE ??
+  (attrs PROFILE VIRTUAL)
   (indices extern-keyword crmem-names)
   (get (index)
 	(reg h-all-registers (add USI (enum USI H-REG-GRP-MEM-OFFSET) index))
@@ -1234,12 +1303,12 @@
   )
 )
 
-;; MEM registers in MMR space
+;; MESH registers in MMR space
 (define-hardware
   (name h-coremesh-registers)
   (comment "MESH registers in MMR space")
   (type register USI (4))
-  (attrs VIRTUAL) ;; ?PROFILE?
+  (attrs PROFILE VIRTUAL)
   (indices extern-keyword crmesh-names)
   (get (index)
 	(reg h-all-registers (add USI (enum USI H-REG-GRP-MESH-OFFSET) index))
@@ -1425,7 +1494,7 @@
 ;; B<COND> SIMM8
 ;; B<COND> SIMM24
 
-(define-pmacro (br-insn name cond g-op)
+(define-pmacro (br-insn name cond xunit g-op)
   (begin
 					; the 16-bit versions of branch
     (dni (%sym "b" name "16")
@@ -1436,7 +1505,7 @@
 	 (if (g-op)
 	     (set pc simm8)
 	     )
-	 ()
+	 ((epiphany32 (unit xunit)))
 	 )
 
     (dnmi (%sym "b" name "16r") "relaxable conditional branch"
@@ -1453,7 +1522,7 @@
 	 (if (g-op)
 	     (set pc simm24)
 	     )
-	 ()
+	 ((epiphany32 (unit xunit)))
 	 )
 
     (dnmi (%sym "b" name "32r") "relaxable conditional branch"
@@ -1466,30 +1535,30 @@
 
 
 					; basic conditional branches for integer arithmetic
-(br-insn "eq"	 EQ	(%pmacro () (eq zbit #x1)))
-(br-insn "ne"	 NE	(%pmacro () (eq zbit #x0)))
-(br-insn "gtu"   GTU	(%pmacro () (and BI cbit (not BI zbit))))
-(br-insn "gteu"  GTEU	(%pmacro () (eq cbit #x1)))
-(br-insn "lteu"  LTEU	(%pmacro () (or BI (not BI cbit) zbit)))
-(br-insn "ltu"   LTU	(%pmacro () (eq cbit #x0)))
-(br-insn "gt"	 GT	(%pmacro () (and BI (not BI zbit) (eq vbit nbit))))
-(br-insn "gte"   GTE	(%pmacro () (eq vbit nbit)))
-(br-insn "lt"	 LT	(%pmacro () (xor BI vbit nbit)))
-(br-insn "lte"   LTE	(%pmacro () (or BI zbit (xor vbit nbit))))
+(br-insn "eq"	 EQ	u-cond-cti (%pmacro () (eq zbit #x1)))
+(br-insn "ne"	 NE	u-cond-cti (%pmacro () (eq zbit #x0)))
+(br-insn "gtu"   GTU	u-cond-cti (%pmacro () (and BI cbit (not BI zbit))))
+(br-insn "gteu"  GTEU	u-cond-cti (%pmacro () (eq cbit #x1)))
+(br-insn "lteu"  LTEU	u-cond-cti (%pmacro () (or BI (not BI cbit) zbit)))
+(br-insn "ltu"   LTU	u-cond-cti (%pmacro () (eq cbit #x0)))
+(br-insn "gt"	 GT	u-cond-cti (%pmacro () (and BI (not BI zbit) (eq vbit nbit))))
+(br-insn "gte"   GTE	u-cond-cti (%pmacro () (eq vbit nbit)))
+(br-insn "lt"	 LT	u-cond-cti (%pmacro () (xor BI vbit nbit)))
+(br-insn "lte"   LTE	u-cond-cti (%pmacro () (or BI zbit (xor vbit nbit))))
 
 
 					; floating point condition codes (floating point instructions)
-(br-insn "beq"   BEQ    (%pmacro () (or BI bzbit bzbit)))
-(br-insn "bne"   BNE    (%pmacro () (not BI bzbit)))
-(br-insn "blt"   BLT    (%pmacro () (and BI bnbit (not bzbit))))
-(br-insn "blte"  BLTE   (%pmacro () (or BI bnbit bzbit)))
+(br-insn "beq"   BEQ    u-cond-fpu-cti (%pmacro () (or BI bzbit bzbit)))
+(br-insn "bne"   BNE    u-cond-fpu-cti (%pmacro () (not BI bzbit)))
+(br-insn "blt"   BLT    u-cond-fpu-cti (%pmacro () (and BI bnbit (not bzbit))))
+(br-insn "blte"  BLTE   u-cond-fpu-cti (%pmacro () (or BI bnbit bzbit)))
 
 					; unconditional branches
 (dni b16 "short unconditional branch" (UNCOND-CTI SHORT-INSN)
      "b.s $simm8"
      (+ OP4_BRANCH16 OPC_B simm8)
      (set pc simm8)
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 (dnmi b16r "relaxable b16"
@@ -1502,7 +1571,7 @@
      "b.l $simm24"
      (+ OP4_BRANCH OPC_B simm24)
      (set pc simm24)
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 (dnmi b32r "relaxable b"
@@ -1519,7 +1588,7 @@
      (sequence ()
 	       (set (reg h-registers 14) (add pc (const 2)))
 	       (set pc simm8))
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 (dnmi bl16r "bl16 relaxable"
@@ -1534,7 +1603,7 @@
      (sequence ()
 	       (set (reg h-registers 14) (add pc (const 4)))
 	       (set pc simm24))
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 (dnmi blr "bl relaxable"
@@ -1548,7 +1617,7 @@
      ("jr $rn")
      (+ OP4_FLOW16 (f-opc-8-5 #x14) (f-dc-15-3 #x0) (f-dc-9-1 #x0) rn)
      (set pc rn)
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 ;; RTS / JR
@@ -1570,7 +1639,7 @@
 	(f-dc-31-3 #x0)
 	)
      (set pc (reg h-registers 14))
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 (dni jr "unconditional jump"
@@ -1583,7 +1652,7 @@
 	(f-dc-31-3 #x0)
 	)
      (set pc rn6)
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 
@@ -1596,7 +1665,7 @@
 	       (set (reg h-registers 14) (add pc (const 2)))
 	       (set pc rn)
 	       )
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 (dni jalr "jump and link register"
@@ -1615,7 +1684,7 @@
      (sequence ()
 	       (set (reg h-registers 14) (add pc (const 4)))
 	       (set pc rn6))
-     ()
+     ((epiphany32 (unit u-cti)))
      )
 
 
@@ -1721,7 +1790,7 @@
          (sem-op rd-op (add DI rn-di rm-di) mode sel)
          (sem-op rd-op (add SI rn rm) mode sel)
        )
-       ()
+       ((epiphany32 (unit u-load)))
        )
 
   (dni (%sym name "x.l")
@@ -1739,7 +1808,7 @@
              (sem-op rd6-op (add SI rn6 rm6) mode sel)
          )
        )
-       ()
+       ((epiphany32 (unit u-load)))
        )
 
   (dnmi (%sym name "x")
@@ -1766,7 +1835,7 @@
            (set rn (add SI rn rm-save))
          )
        )
-       ()
+       ((epiphany32 (unit u-load)))
        )
 
   (dni (%sym name "p.l")
@@ -1792,7 +1861,7 @@
            )
          )
        )
-       ()
+       ((epiphany32 (unit u-load)))
        )
 
   (dnmi (%sym name "p")
@@ -1820,7 +1889,7 @@
            (sem-op rd-op effa mode sel)
          )
        )
-       ()
+       ((epiphany32 (unit u-load)))
        )
 
   (dni (%sym name "d.l")
@@ -1846,7 +1915,7 @@
            (sem-op rd6-op effa mode sel)
          )
        )
-       ()
+       ((epiphany32 (unit u-load)))
        )
 
   (dnmi (%sym name "d")
@@ -1879,7 +1948,7 @@
            )
          )
        )
-       ()
+       ((epiphany32 (unit u-load))) ;; (unit u-ialu (cycles 0))
        )
 
   (dnmi (%sym name "dpm")
@@ -2116,7 +2185,7 @@
          (sem-op (add DI rn-di rm-di) rd-op mode sel)
          (sem-op (add SI rn rm) rd-op mode sel)
        )
-       ()
+       ((epiphany32 (unit u-store)))
        )
 
   (dni (%sym name "x")
@@ -2134,7 +2203,7 @@
            (sem-op (add SI rn6 rm6) rd6-op mode sel)
          )
        )
-       ()
+       ((epiphany32 (unit u-store)))
        )
 
   (dnmi (%sym name "x.l")
@@ -2161,7 +2230,7 @@
            (set rn (add SI rn rm-save))
          )
        )
-       ()
+       ((epiphany32 (unit u-store)))
        )
 
   (dni (%sym name "p")
@@ -2187,7 +2256,7 @@
            )
          )
        )
-       ()
+       ((epiphany32 (unit u-store)))
        )
   (dnmi (%sym name "p.l")
         (%str "store " mode " postmodify")
@@ -2213,7 +2282,7 @@
            (sem-op effa rd-op mode sel)
          )
        )
-       ()
+       ((epiphany32 (unit u-store)))
        )
 
   (dni (%sym name "d")
@@ -2239,7 +2308,7 @@
            (sem-op effa rd6-op mode sel)
          )
        )
-       ()
+       ((epiphany32 (unit u-store)))
        )
 
   (dnmi (%sym name "d.l")
@@ -2272,7 +2341,7 @@
            )
          )
        )
-       ()
+       ((epiphany32 (unit u-store)))
        )
   (dnmi (%sym name "dpm.l")
         (%str "store " mode " displacement post-modify")
@@ -2377,7 +2446,7 @@
 	     "movts $sn,$rd"
 	     (+ OP4_FLOW16 (f-opc-8-5 #x10) (f-dc-9-1 #x0) rd sn) ;; rd is source for movts
 	     (set sn rd)
-	     ()
+	     ((epiphany32 (unit u-movts)))
 	     )
 
 (define-pmacro (op-mmr-movts name sdreg code)
@@ -2440,7 +2509,7 @@
 	     "movfs $rd,$sn"
 	     (+ OP4_FLOW16 (f-opc-8-5 #x11) (f-dc-9-1 #x0) rd sn)
 	     (set rd sn)
-	     ()
+	     ((epiphany32 (unit u-movfs)))
 	     )
 
 
@@ -2580,7 +2649,7 @@
 	;(set caibit 1)
 	;(set pc (hcr-iret))
   )
-  ()
+  ((epiphany32 (unit u-cti)))
 )
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WAND is a wired flag that runs around the chip
@@ -2695,7 +2764,7 @@
 			   (set zbit (zflag mode rd))
 			   (set nbit (nflag mode rd))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
 
     (dni (%sym name)
@@ -2709,7 +2778,7 @@
 			   (set zbit (zflag mode rd6))
 			   (set nbit (nflag mode rd6))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
 
     (dnmi (%sym name ".l")
@@ -2762,7 +2831,7 @@
 			   (set zbit (zflag mode rd))
 			   (set nbit (nflag mode rd))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
 
 
@@ -2777,7 +2846,7 @@
 			   (set zbit (zflag mode rd6))
 			   (set nbit (nflag mode rd6))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
 
     ;;    (dnmi (%sym name "ri") "relaxed arithmetic immediate" (RELAXED)
@@ -2834,7 +2903,7 @@
 			   (set zbit (zflag mode rd))
 			   (set nbit (nflag mode rd))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
 
     (dni (%sym name)
@@ -2848,7 +2917,7 @@
 			   (set zbit (zflag mode rd6))
 			   (set nbit (nflag mode rd6))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
 
     (dnmi (%sym name ".l")
@@ -2877,7 +2946,7 @@
 			   (set zbit (zflag mode rd))
 			   (set nbit (nflag mode rd))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
     (dni (%sym name "i32")
 		 (%str name)
@@ -2890,7 +2959,7 @@
 			   (set zbit (zflag mode rd6))
 			   (set nbit (nflag mode rd6))
 			   )
-		 ()
+		 ((epiphany32 (unit u-ialu)))
 		 )
 
     (dnmi (%sym name "i32.l")
@@ -2899,8 +2968,6 @@
 	  (%str name ".l $rd6,$rn6,$shift")
 	  (emit (%sym name "i32") rd6  rn6 shift)
 	  )
-
-
     )
   )
 
@@ -2926,7 +2993,7 @@
           (set nbit (nflag mode rd6-di))
         )
       )
-      ()
+      ((epiphany32 (unit u-ialu)))
     )
 
     (dnmi
@@ -2962,7 +3029,7 @@
           (set nbit (nflag mode rd6-di))
         )
       )
-      ()
+      ((epiphany32 (unit u-ialu)))
     )
     (dnmi
       (%sym name "64.l")
@@ -3010,7 +3077,7 @@
 		       (set cbit 0)
 		       (set vbit 0)
 		       )
-	     ()
+	     ((epiphany32 (unit u-ialu)))
 	     )
 
 (dni bitr "bit reverse"
@@ -3024,7 +3091,7 @@
 		       (set cbit 0)
 		       (set vbit 0)
 		       )
-	     ()
+	     ((epiphany32 (unit u-ialu)))
 	     )
 (dnmi bitrl "bit reverse l"
       (NO-DIS)
@@ -3102,7 +3169,7 @@
     (set sdtmp
       (sem-fpu-apply
         (c-call xtype (%str "epiphany_f" xname xsfx))
-        xregs xrd xargs
+        xregs (regno xrd) (%map (%pmacro (x) (regno x)) xargs)
       )
     )
 
@@ -3119,7 +3186,7 @@
       (set sdtmp2
         (sem-fpu-apply
           (c-call xtype (%str "epiphany_f" xname xsfx))
-          xregs (add xrd 1) (%map (%pmacro (idx) (add idx 1)) xargs)
+          xregs (add (regno xrd) 1) (%map (%pmacro (x) (add (regno x) 1)) xargs)
         )
       )
 
@@ -3138,7 +3205,7 @@
 
       (set rd6-di (join DI SI sdtmp2 sdtmp))
     )
-    (set (reg xregs xrd) sdtmp)
+    (set (reg xregs (regno xrd)) sdtmp)
 )
     ;; Set sticky bits
     (set bvsbit (or bvsbit bvbit))
@@ -3153,6 +3220,16 @@
 )
 
 (define-pmacro (sem-fpu SF_P DF_P SI_P PLACEHOLDER xname xrd xargs xflags-sem)
+  ;; HACK: Fake register use for profiling.
+  ;; All references will be as inputs, even RD.
+  ;; CGEN doesn't detect usage when we don't use the operand directly.
+  ;; We don't use the operand directly since depending on arith mode
+  ;; we use different register operands. To make this work we use the
+  ;; offset rather than the operand, which confuses CGEN.
+  (sequence ((SI fakeref))
+  (set fakeref xrd)
+  (%if (%gt (%length xargs) 0) (set fakeref (%ref xargs 0)) (set fakeref fakeref))
+  (%if (%gt (%length xargs) 1) (set fakeref (%ref xargs 1)) (set fakeref fakeref))
   (cond VOID
 (%if SF_P
     ((eq arithmode ARITHMODE-SF)
@@ -3162,7 +3239,7 @@
 )
 (%if SF_P
     ((eq arithmode ARITHMODE-SF-SIMD)
-      (sem-dword-regs-or-exc (%splice xrd (%unsplice xargs))
+      (sem-dword-regs-or-exc (%map (%pmacro (x) (regno x)) (%splice xrd (%unsplice xargs)))
         (sem-fpu-float #t SI xname "" h-registers xrd xargs xflags-sem)
       )
     )
@@ -3170,7 +3247,7 @@
 )
 (%if DF_P
     ((eq arithmode ARITHMODE-DF)
-      (sem-dword-regs-or-exc (%splice xrd (%unsplice xargs))
+      (sem-dword-regs-or-exc (%map (%pmacro (x) (regno x)) (%splice xrd (%unsplice xargs)))
         (sem-fpu-float #f DI xname "64" h-registers-di xrd xargs xflags-sem)
       )
     )
@@ -3182,13 +3259,13 @@
         (set sdtmp
           (sem-fpu-apply
             (c-call SI (%str "epiphany_i" xname))
-            h-registers xrd xargs
+            h-registers (regno xrd) (%map (%pmacro (x) (regno x)) xargs)
           )
         )
         ;; carry is not connected inb the design (set bcbit bcbit)
         (set bzbit (zflag SI sdtmp))
         (set bnbit (nflag SI sdtmp))
-        (set (reg h-registers xrd) sdtmp)
+        (set xrd sdtmp)
       )
     )
     ((eq 1 0) (error "unreachable"))
@@ -3197,9 +3274,8 @@
     (else
       (schedule-exception (enum USI H-SCR-STATUS-EXCAUSE-ILLEGAL))
     )
-  )
+  ))
 )
-
 
 ;; FLOATING POINT OPERATIONS
 ;; TWO operands
@@ -3210,8 +3286,8 @@
          (SHORT-INSN)
          (%str "f" name " $rd,$rn,$rm")
          (+ OP4_DSP16 code rd rn rm)
-         (sem-fpu #t #t #t #t name f-rd (f-rn f-rm) ())
-         ()
+         (sem-fpu #t #t #t #t name rd (rn rm) ())
+         ((epiphany32 (unit u-fpu)))
          )
     (dnmi (%sym "i_" name "f16")
           (%str "i_" name)
@@ -3231,8 +3307,8 @@
          ()
          (%str "f" name " $rd6,$rn6,$rm6")
          (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rm6)
-         (sem-fpu #t #t #t #t name f-rd6 (f-rn6 f-rm6) ())
-         ()
+         (sem-fpu #t #t #t #t name rd6 (rn6 rm6) ())
+         ((epiphany32 (unit u-fpu)))
          )
     (dnmi (%sym "f_" name "f32.l")
           (%str "f_" name)
@@ -3282,16 +3358,16 @@
          (SHORT-INSN)
          (%str "f" name " rd,rn")
          (+ OP4_DSP16 code rd rn rn)
-         (sem-fpu #t #t #f #f name f-rd (f-rn) ())
-         ()
+         (sem-fpu #t #t #f #f name rd (rn) ())
+         ((epiphany32 (unit u-fpu)))
          )
     (dni (%sym "f_" name "f32")
          (%str "f_" name)
          ()
          (%str "f" name " $rd6,$rn6")
          (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
-         (sem-fpu #t #t #f #f name f-rd6 (f-rn6) ())
-         ()
+         (sem-fpu #t #t #f #f name rd6 (rn6) ())
+         ((epiphany32 (unit u-fpu)))
          )
     (dnmi (%sym "f_" name "f32.l")
           (%str "f_" name)
@@ -3310,16 +3386,16 @@
          (SHORT-INSN)
          (%str "f" name " $rd,$rn")
          (+ OP4_DSP16 code rd rn rn)
-         (sem-fpu #t #f #f #f name f-rd (f-rn) ())
-         ()
+         (sem-fpu #t #f #f #f name rd (rn) ())
+         ((epiphany32 (unit u-fpu)))
          )
     (dni (%sym "f_" name "f32")
          (%str "f_" name)
          ()
          (%str "f" name " $rd6,$rn6")
          (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
-         (sem-fpu #t #f #f #f name f-rd6 (f-rn6) ())
-         ()
+         (sem-fpu #t #f #f #f name rd6 (rn6) ())
+         ((epiphany32 (unit u-fpu)))
          )
     (dnmi (%sym "f_" name "f32.l")
           (%str "f_" name)
@@ -3348,16 +3424,16 @@
          (SHORT-INSN)
          (%str "f" name " $rd,$rn")
          (+ OP4_DSP16 code rd rn rn)
-         (sem-fpu #t #f #f #f name f-rd (f-rn) sem-float2fix-flags)
-         ()
+         (sem-fpu #t #f #f #f name rd (rn) sem-float2fix-flags)
+         ((epiphany32 (unit u-fpu)))
          )
     (dni (%sym "f_" name "f32")
          (%str "f_" name)
          ()
          (%str "f" name " $rd6,$rn6")
          (+ OP4_MISC code (f-opc-19-4 #x7) (f-dc-22-3 #x0) rd6 rn6 rn6)
-         (sem-fpu #t #f #f #f name f-rd6 (f-rn6) sem-float2fix-flags)
-         ()
+         (sem-fpu #t #f #f #f name rd6 (rn6) sem-float2fix-flags)
+         ((epiphany32 (unit u-fpu)))
          )
     (dnmi (%sym "f_" name "f32.l")
           (%str "f_" name)
@@ -3376,8 +3452,8 @@
   () ;; TODO: Epiphany-5 attrib
   ("fmax $rd6,$rn6,$rm6")
   (+ OP4_MISC OPF_FMAX (f-opc-21-6 #x17) (f-dc-22-1 #x0) rd6 rn6 rm6)
-  (sem-fpu #t #t #f #f max f-rd6 (f-rn6 f-rm6) ())
-  ()
+  (sem-fpu #t #t #f #f max rd6 (rn6 rm6) ())
+  ((epiphany32 (unit u-fpu)))
 )
 (%for-each (%pmacro (name sfx) (%exec
     (dnmi

@@ -1,3 +1,9 @@
+2019-10-14  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
+	* epiphany.cpu (define-model epiphany32): Add profile units.
+	(define-hardware h-core-registers): Add PROFILE attribute.
+	(dni *MOST INSNS*): Set suitable profile unit.
+
 2016-10-27  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany.cpu (insn-iopmul): Remove enum.
