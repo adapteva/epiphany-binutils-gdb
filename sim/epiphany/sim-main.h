@@ -58,6 +58,7 @@ extern void epiphany_sim_close (SIM_DESC sd, int quitting);
 #include "epiphany-sim.h"
 #include "opcode/cgen.h"
 #include "epiphany-fp.h"
+#include "profile.h"
 /*#include "cpu.h"*/
 
 
@@ -121,8 +122,8 @@ struct _sim_cpu {
 #define CPU_WAND_LOCK(cpu) pthread_mutex_lock (&(cpu)->wand_lock)
 #define CPU_WAND_RELEASE(cpu) pthread_mutex_unlock (&(cpu)->wand_lock)
 
-  EPIPHANY_MISC_PROFILE epiphany_misc_profile;
-#define CPU_EPIPHANY_MISC_PROFILE(cpu) (& (cpu)->epiphany_misc_profile)
+  EPIPHANY_PROFILE_DATA epiphany_profile_data;
+#define CPU_EPIPHANY_PROFILE(cpu) (& (cpu)->epiphany_profile_data)
 
   /* CPU specific parts go here.
      Note that in files that don't need to access these pieces WANT_CPU_FOO

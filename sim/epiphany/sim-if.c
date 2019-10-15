@@ -111,7 +111,6 @@ static struct emesh_params emesh_params = {
 };
 
 static void free_state (SIM_DESC);
-static void print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose);
 static SIM_RC epiphany_mem_size_option_handler (SIM_DESC, sim_cpu *, int,
 						char *, int);
 static SIM_RC epiphany_option_handler (SIM_DESC, sim_cpu *, int, char *, int);
@@ -723,11 +722,11 @@ sim_open (SIM_OPEN_KIND kind,
   for (c = 0; c < MAX_NR_PROCESSORS; ++c)
     {
       /* Only needed for profiling, but the structure member is small.  */
-      memset (CPU_EPIPHANY_MISC_PROFILE (STATE_CPU (sd, i)), 0,
-	      sizeof (* CPU_EPIPHANY_MISC_PROFILE (STATE_CPU (sd, i))));
+      memset (CPU_EPIPHANY_PROFILE (STATE_CPU (sd, i)), 0,
+	      sizeof (* CPU_EPIPHANY_PROFILE (STATE_CPU (sd, i))));
       /* Hook in callback for reporting these stats */
       PROFILE_INFO_CPU_CALLBACK (CPU_PROFILE_DATA (STATE_CPU (sd, i)))
-	= print_epiphany_misc_cpu;
+	= epiphany_profile_info;
     }
 
   /* Store in a global so things like sparc32_dump_regs can be invoked
@@ -1098,22 +1097,4 @@ sim_create_inferior (SIM_DESC sd,
 #endif
 
   return SIM_RC_OK;
-}
-
-/* PROFILE_CPU_CALLBACK */
-
-static void
-print_epiphany_misc_cpu (SIM_CPU *cpu, int verbose)
-{
-  SIM_DESC sd = CPU_STATE (cpu);
-  char buf[20];
-
-  if (CPU_PROFILE_FLAGS (cpu) [PROFILE_INSN_IDX])
-    {
-      sim_io_printf (sd, "Miscellaneous Statistics\n\n");
-      sim_io_printf (sd, "  %-*s %s\n\n",
-		     PROFILE_LABEL_WIDTH, "Fill nops:",
-		     sim_add_commas (buf, sizeof (buf),
-				     CPU_EPIPHANY_MISC_PROFILE (cpu)->fillnop_count));
-    }
 }

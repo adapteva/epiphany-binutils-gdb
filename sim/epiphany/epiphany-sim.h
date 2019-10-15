@@ -69,85 +69,14 @@ extern bool epiphany_timer_active_p (struct hw *me);
 
 void epiphanybf_cpu_reset(SIM_CPU *current_cpu);
 void epiphanybf_wand(SIM_CPU *current_cpu);
-
-/* Misc. profile data.  */
 
-typedef struct
-{
-  /* nop insn slot filler count.  */
-  unsigned int fillnop_count;
-  /* Number of parallel insns.  */
-  unsigned int parallel_count;
-
-  /* FIXME: generalize this to handle all insn lengths, move to common.  */
-  /* Number of short insns, not including parallel ones.  */
-  unsigned int short_count;
-  /* Number of long insns.  */
-  unsigned int long_count;
-
-  /* Working area for computing cycle counts.  */
-  unsigned long insn_cycles; /* FIXME: delete */
-  unsigned long cti_stall;
-  unsigned long load_stall;
-  unsigned long biggest_cycles;
-
-  /* Bitmask of registers loaded by previous insn.  */
-  unsigned int load_regs;
-  /* Bitmask of registers loaded by current insn.  */
-  unsigned int load_regs_pending;
-} EPIPHANY_MISC_PROFILE;
-
-/* Initialize the working area.  */
-extern void epiphany_init_insn_cycles (SIM_CPU *, int);
-/* Update the totals for the insn.  */
-extern void epiphany_record_insn_cycles (SIM_CPU *, int);
-
-/* This is invoked by the nop pattern in the .cpu file.  */
-#define PROFILE_COUNT_FILLNOPS(cpu, addr) \
-do { \
-  if (PROFILE_INSN_P (cpu) \
-      && (addr & 3) != 0) \
-    ++ CPU_EPIPHANY_MISC_PROFILE (cpu)->fillnop_count; \
-} while (0)
-
-/* This is invoked by the execute section of mloop{,x}.in.  */
-
-/* This is invoked by the execute section of mloop{,x}.in.  */
-#define PROFILE_COUNT_SHORTINSNS(cpu) \
-do { \
-  if (PROFILE_INSN_P (cpu)) \
-    ++ CPU_EPIPHANY_MISC_PROFILE (cpu)->short_count; \
-} while (0)
-
-/* This is invoked by the execute section of mloop{,x}.in.  */
-#define PROFILE_COUNT_LONGINSNS(cpu) \
-do { \
-  if (PROFILE_INSN_P (cpu)) \
-    ++ CPU_EPIPHANY_MISC_PROFILE (cpu)->long_count; \
-} while (0)
 
 #define GETTWI GETTSI
 #define SETTWI SETTSI
-
-/* Additional execution support.  */
 
 
 /* Hardware/device support.
    ??? Will eventually want to move device stuff to config files.  */
-
-/* Exception, Interrupt, and Trap addresses.  */
-#define EIT_RESET_ADDR		0x40
-#define EIT_SW_EXCEPTION_ADDR	0x44
-#define EIT_INTERRUPT_HIGH_ADDR	0x48
-#define EIT_INTERRUPT_LOW_ADDR	0x4C
-
-
-/* Special purpose traps.  */
-#define TRAP_SYSCALL	0
-#define TRAP_BREAKPOINT	1
-
-#define EPIPHANY_DEVICE_ADDR  0x0
-#define EPIPHANY_DEVICE_LEN   0x2040
 
 /* Handle the trap insn.  */
 extern USI epiphany_trap (SIM_CPU *, PCADDR, int);

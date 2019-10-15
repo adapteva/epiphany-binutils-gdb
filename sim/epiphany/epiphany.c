@@ -609,49 +609,6 @@ void epiphany_atomic_store (SIM_CPU *current_cpu, INSN_ATOMIC_CTRLMODE ctrlmode,
 		     sim_core_unmapped_signal);
 }
 
-
-void
-epiphanybf_model_insn_before (SIM_CPU * cpu ATTRIBUTE_UNUSED,
-			      int first_p ATTRIBUTE_UNUSED)
-{
-
-#ifdef DEBUG
-  printf ("epiphanybf_model_insn_before %x\n", epiphanybf_h_pc_get (cpu));
-#endif
-}
-
-void
-epiphanybf_model_insn_after (SIM_CPU * cpu ATTRIBUTE_UNUSED,
-			     int last_p ATTRIBUTE_UNUSED, int cycles)
-{
-#ifdef DEBUG
-  fprintf (stderr,
-	   "--$$$$$$$$-----------epiphanybf_model_epiphany32_d_u_exec\n");
-#endif
-}
-
-
-int
-epiphanybf_model_epiphany32_d_u_exec (SIM_CPU * cpu, const IDESC * idesc,
-				      int unit_num, int referenced,
-				      int sr, int sr2, int dr)
-{
-#ifdef DEBUG
-  fprintf (stderr, "-------------epiphanybf_model_epiphany32_d_u_exec\n");
-#endif
-  return idesc->timing->units[unit_num].done;
-}
-
-int
-epiphanybf_model_epiphany32_u_exec (SIM_CPU * cpu, const IDESC * idesc,
-				    int unit_dum, int referenced)
-{
-#ifdef DEBUG
-  fprintf (stderr, "-------------epiphanybf_model_epiphany32_u_exec\n");
-#endif
-  return 1;
-}
-
 void
 epiphanybf_cpu_reset(SIM_CPU *current_cpu)
 {

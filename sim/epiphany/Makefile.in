@@ -21,7 +21,7 @@
 build_alias = @build_alias@
 
 EPIPHANY_OBJS = epiphany.o cpu.o decode.o sem.o model.o mloop.o epiphany-fp.o \
-                oob-events.o
+                oob-events.o profile.o
 
 SIM_EXTRA_LIBS = -lm @epiphany_extra_libs@
 

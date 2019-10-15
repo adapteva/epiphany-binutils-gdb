@@ -1,3 +1,31 @@
+2019-10-14  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
+	* Makefile.in (EPIPHANY_OBJS): Add profile.o
+	* epiphany-sim.h (epiphany_init_insn_cycles): Remove.
+	(epiphany_record_insn_cycles): Remove.
+	(PROFILE_COUNT_FILLNOPS): Remove.
+	(PROFILE_COUNT_SHORTINSNS): Remove.
+	(PROFILE_COUNT_LONGINSNS): Remove.
+	(EIT_RESET_ADDR): Remove.
+	(EIT_SW_EXCEPTION_ADDR): Remove.
+	(EIT_INTERRUPT_HIGH_ADDR): Remove.
+	(EIT_INTERRUPT_LOW_ADDR): Remove.
+	(TRAP_SYSCALL): Remove.
+	(TRAP_BREAKPOINT): Remove.
+	(EPIPHANY_DEVICE_ADDR): Remove.
+	(EPIPHANY_DEVICE_LEN): Remove.
+	* epiphany.c (epiphanybf_model_insn_before): Rewrite and move to
+	profile.c.
+	(epiphanybf_model_insn_after): Likewise.
+	(epiphanybf_model_epiphany32_d_u_exec): Likewise
+	(epiphanybf_model_epiphany32_u_exec): Likewise.
+	* profile.c: New file.
+	* profile.h: New file.
+	* sim-if.c (print_epiphany_misc_cpu): Rewrite and move to profile.c.
+	(sim_open): Adjust CPU_EPIPHANY_MISC_PROFILE to CPU_EPIPHANY_PROFILE.
+	* sim-main.h (CPU_EPIPHANY_MISC_PROFILE): Rename to ...
+	(CPU_EPIPHANY_PROFILE): ... this.
+
 2019-03-25  Ola Jeppsson  <ola@adapteva.com>
 
 	* arch.c: Regenerated.
