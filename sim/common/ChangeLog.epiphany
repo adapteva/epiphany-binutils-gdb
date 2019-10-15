@@ -1,3 +1,18 @@
+2019-10-14  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
+	* sim-profile.c (profile_printf): Rename to ...
+	(sim_profile_printf): ... this, and make global.
+	(profile_print_pc): Change profile_printf to sim_profile_printf.
+	(profile_print_insn): Likewise.
+	(profile_print_memory): Likewise.
+	(profile_print_core): Likewise.
+	(profile_print_model): Likewise.
+	(sim_profile_print_bar): Likewise.
+	(profile_print_speed): Likewise.
+	(profile_print_addr_ranges): Likewise.
+	(profile_info): Likewise.
+	* sim-profile.h (sim_profile_printf): Declare.
+
 2016-03-13  Ola Jeppsson  <ola@adapteva.com>
 
 	* sim-arange.h (SIM_ARANGE_INLINE): Change to static inline

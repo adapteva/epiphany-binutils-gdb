@@ -301,6 +301,7 @@ do { \
 
 /* Misc. utilities.  */
 
+extern void sim_profile_printf (SIM_DESC, sim_cpu *, const char *, ...);
 extern void sim_profile_print_bar (SIM_DESC, sim_cpu *, unsigned int, unsigned int, unsigned int);
 
 #endif /* SIM_PROFILE_H */
