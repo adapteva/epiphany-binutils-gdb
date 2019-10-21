@@ -1,3 +1,8 @@
+2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
+	* epiphany-elf-sim.py.in (DUMMY_PROGRAM): Add script directory as
+	fall-back path for 'epiphany-elf-sim-dummy'.
+
 2019-10-14  Ola Jeppsson  <ola.jeppsson@gmail.com>
 
 	* Makefile.in (EPIPHANY_OBJS): Add profile.o

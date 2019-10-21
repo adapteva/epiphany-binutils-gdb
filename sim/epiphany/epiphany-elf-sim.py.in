@@ -35,11 +35,13 @@ from subprocess import call
 
 TARGET_PREFIX='@TARGET_PREFIX@'
 EXEC_DIR = os.path.dirname(os.path.realpath(__file__))
-DUMMY_PROGRAM = os.path.join(TARGET_PREFIX, 'libexec', 'epiphany-elf-sim-dummy')
 EPIPHANY_ELF_RUN='epiphany-elf-run'
 
+DUMMY_PROGRAM = os.path.join(TARGET_PREFIX, 'libexec', 'epiphany-elf-sim-dummy')
 if not os.path.isfile(DUMMY_PROGRAM):
     DUMMY_PROGRAM = os.path.join(EXEC_DIR, '..', 'epiphany-elf', 'libexec', 'epiphany-elf-sim-dummy')
+if not os.path.isfile(DUMMY_PROGRAM):
+    DUMMY_PROGRAM = os.path.join(EXEC_DIR, '.', 'epiphany-elf-sim-dummy')
 
 SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) \
     for n in dir(signal) if n.startswith('SIG') and '_' not in n)
