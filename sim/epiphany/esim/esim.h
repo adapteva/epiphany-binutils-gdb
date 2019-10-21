@@ -102,5 +102,8 @@ void es_get_cluster_cfg(const es_state *esim, es_cluster_cfg *cfg);
 
 void es_dump_config(const es_state *esim);
 
+/* Profiling */
+unsigned es_profile_load_stall(es_state *esim, address_word addr);
+unsigned es_profile_store_stall(es_state *esim, address_word addr);
 
 #endif /* __emesh_h__ */

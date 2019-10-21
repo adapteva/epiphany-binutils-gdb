@@ -1,5 +1,14 @@
 2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
 
+	* esim/esim.c (manhattan_distance): New function.
+	(bound_coreid_to_cluster): New function.
+	(es_profile_load_stall): New function.
+	(es_profile_store_stall): New function.
+	* esim/esim.h (es_profile_load_stall): Declare.
+	(es_profile_store_stall): Declare.
+
+2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
 	* epiphany-elf-sim.py.in (DUMMY_PROGRAM): Add script directory as
 	fall-back path for 'epiphany-elf-sim-dummy'.
 

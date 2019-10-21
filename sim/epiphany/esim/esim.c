@@ -2105,3 +2105,116 @@ es_get_coreid(const es_state *esim)
 {
   return esim->coreid;
 }
+
+
+/* Profiling */
+
+static uint64_t
+manhattan_distance(unsigned a, unsigned b)
+{
+  unsigned rowa = ES_CORE_ROW(a);
+  unsigned rowb = ES_CORE_ROW(b);
+  unsigned cola = ES_CORE_COL(a);
+  unsigned colb = ES_CORE_COL(b);
+
+  unsigned row_distance = max(rowa, rowb) - min(rowa, rowb);
+  unsigned col_distance = max(cola, colb) - min(cola, colb);
+
+  return row_distance + col_distance;
+}
+
+static unsigned
+bound_coreid_to_cluster(es_state *esim, unsigned coreid)
+{
+  unsigned row = ES_CORE_ROW(coreid);
+  unsigned col = ES_CORE_COL(coreid);
+
+  /* Do we need to route in N/S direction? */
+  bool outside_cluster_we =
+    col < ES_CLUSTER_CFG.col_base ||
+    col >= ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols;
+
+  col = max(col, ES_CLUSTER_CFG.col_base);
+  col = min(col, ES_CLUSTER_CFG.col_base + ES_CLUSTER_CFG.cols - 1);
+
+  if (outside_cluster_we)
+    row = ES_CORE_ROW(esim->coreid);
+  else
+    {
+      row = max(row, ES_CLUSTER_CFG.row_base);
+      row = min(row, ES_CLUSTER_CFG.row_base + ES_CLUSTER_CFG.rows - 1);
+    }
+
+  return ES_COREID(row, col);
+}
+
+/*! Model a load delay
+ *
+ * This can be used to model both fetch and load.
+ * The function only models the NoC delay, not register stalls etc.
+ *
+ * @param[in] esim     ESIM handle
+ * @param[in] addr     target address
+ */
+unsigned
+es_profile_load_stall(es_state *esim, address_word addr)
+{
+  unsigned tgt_coreid;
+  unsigned distance, delay;
+
+  /* TODO: We don't model bank conflicts */
+  if (!ES_ADDR_IS_GLOBAL(addr))
+    return ES_ADDR_IS_MMR(addr) ? 4 : 0;
+
+
+  tgt_coreid = ES_ADDR_TO_CORE(addr);
+  tgt_coreid = bound_coreid_to_cluster(esim, tgt_coreid);
+
+  distance = manhattan_distance(esim->coreid, tgt_coreid);
+
+  /* TODO: We don't model network push-back / congestion */
+
+  /* This 'formula' adapted from epiphany-examples.git/emesh/emesh-read-latency
+   * (distance * 3) can be written as (1.5 * rMesh + 1.5 * cMesh).
+   * The full formula might be (I'm guessing here):
+   * (2) routerA->network + (rMesh delay (1.5 * distance)) +
+   * (2) routerB->memB + (2) memB->routerB +
+   * (2) routerB->network + (cMesh delay (1.5 * distance)) +
+   * (2) network->routerA + (2) routerA->coreA regfile.
+   *
+   * NB: Since this function is used for modeling both instruction fetch and
+   * load operations, the caller must add the necessary delays for e.g,
+   * register stalls.  */
+  delay = (distance * 3);
+
+  if (ES_ADDR_IS_MMR(addr))
+    delay += 4;
+
+  if (ES_ADDR_IS_EXT_RAM(addr)) {
+    /* Rough estimate from testing on Parallella,
+     * but it should definately be in the ballpark. */
+    delay += 390;
+  }
+
+  return delay;
+}
+
+/*! Model a store delay
+ *
+ * @param[in] esim     ESIM handle
+ * @param[in] addr     target address
+ */
+unsigned
+es_profile_store_stall(es_state *esim, address_word addr)
+{
+  /* TODO: We don't model bank conflicts */
+  if (!ES_ADDR_IS_GLOBAL(addr))
+    return ES_ADDR_IS_MMR(addr) ? 4 : 0;
+
+  /* We're not modeling push-back yet but since off-chip is an order of
+   * magnitude slower, add some delay so at least it will show up */
+  if (ES_ADDR_IS_EXT_RAM(addr))
+    return 2;
+
+  return 0;
+}
