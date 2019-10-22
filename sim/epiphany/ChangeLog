@@ -1,5 +1,15 @@
 2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
 
+	* dv-epiphany_timer.c: (might_tick_p): Return true unless both timers
+	are set to EVENT_OFF.
+	(should_tick_p): Return true if cfg is not set to EVENT_OFF.
+	(dual_issue_p): New predicate function.
+	(model_ctimer): New function. Support most event types.
+	(epiphany_timer_hw_event_callback): Support cycle level profiling.
+	Use model_ctimer().
+
+2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
 	* profile.c (SET_UNIT): Define helper macro.
 	(pending_reg_hazards): Use unsigned long type for reg_hazards bitmask.
 	(check_reg_hazards): Likewise.

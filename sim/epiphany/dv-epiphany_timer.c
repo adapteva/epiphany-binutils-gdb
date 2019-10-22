@@ -129,19 +129,10 @@ chained_p (struct epiphany_timer *timer)
 static bool
 might_tick_p (struct epiphany_timer *timer)
 {
-  switch (timer->timer0_cfg)
-  {
-  case EVENT_CLK:
-  case EVENT_IDLE:
+  if (timer->timer0_cfg == EVENT_OFF && timer->timer1_cfg == EVENT_OFF)
+    return false;
+  else
     return true;
-  }
-  switch (timer->timer1_cfg)
-  {
-  case EVENT_CLK:
-  case EVENT_IDLE:
-    return true;
-  }
-  return false;
 }
 
 static void epiphany_timer_hw_event_callback (struct hw *me, void *data);
@@ -183,17 +174,113 @@ emit_interrupt (struct hw *me, unsigned timer)
 static bool
 should_tick_p (unsigned cfg, SIM_CPU *current_cpu)
 {
-  switch (cfg)
+  return  (cfg != EVENT_OFF);
+}
+
+static bool
+dual_issue_p(EPIPHANY_PROFILE_DATA *mp)
+{
+  bool this_ialu = false, prev_ialu = false;
+
+  switch (mp->insn_unit)
     {
-    case EVENT_IDLE:
-      return !epiphany_cpu_is_active (current_cpu);
-    case EVENT_CLK:
-      /* ???: What about low powered state? */
-      return true;
-    default:
-      return false;
+      case UNIT_EPIPHANY32_U_IALU:
+      case UNIT_EPIPHANY32_U_EXEC:
+      case UNIT_EPIPHANY32_U_LOAD:
+      case UNIT_EPIPHANY32_U_STORE:
+	this_ialu = true;
     }
-  return false;
+  switch (mp->prev_insn_unit)
+    {
+      case UNIT_EPIPHANY32_U_IALU:
+      case UNIT_EPIPHANY32_U_EXEC:
+      case UNIT_EPIPHANY32_U_LOAD:
+      case UNIT_EPIPHANY32_U_STORE:
+	prev_ialu = true;
+    }
+  /* This is overly simplified */
+  return ((mp->insn_unit      == UNIT_EPIPHANY32_U_FPU && prev_ialu) ||
+	  (mp->prev_insn_unit == UNIT_EPIPHANY32_U_FPU && this_ialu)) &&
+	 !mp->need_fetch &&
+	 !mp->cti_stall &&
+	 mp->reg_stall != 1; /* HACK: Could be from a previous insn too */
+}
+
+static unsigned long
+model_ctimer (SIM_CPU *current_cpu, unsigned config)
+{
+  PROFILE_DATA *p = CPU_PROFILE_DATA (current_cpu);
+  EPIPHANY_PROFILE_DATA *mp = CPU_EPIPHANY_PROFILE (current_cpu);
+  unsigned long cycles = 0;
+
+  if (!PROFILE_MODEL_P (current_cpu))
+    {
+      switch (config)
+	{
+	  case EVENT_CLK:
+	  case EVENT_CHAINED: /* Seems CHAINED is same as CLK for CTIMER0 */
+	    return 1;
+	  case EVENT_IDLE:
+	    if (!epiphany_cpu_is_active (current_cpu))
+	      return 1;
+	    else
+	      return 0;
+	  default:
+	    return 0;
+	}
+    }
+
+  switch (config)
+    {
+      case EVENT_CLK:
+      case EVENT_CHAINED: /* Seems CHAINED is same as CLK for CTIMER0 */
+	if (!epiphany_cpu_is_active (current_cpu))
+	  cycles = 1;
+	else
+	  cycles = PROFILE_MODEL_CUR_INSN_CYCLES (p);
+	break;
+      case EVENT_IALU_VALID:
+	if (mp->insn_unit != UNIT_EPIPHANY32_U_FPU)
+	  cycles = 1;
+	break;
+      case EVENT_FPU_VALID:
+	if (mp->insn_unit == UNIT_EPIPHANY32_U_FPU)
+	  cycles = 1;
+	break;
+      case EVENT_E1_STALLS:
+	/* ???: Should fetch_stall be included in E1 & RA stalls ??? */
+	cycles = mp->fetch_stall + mp->reg_stall + mp->load_stall +
+	  mp->ialu_flags_stall + mp->fpu_flags_stall;
+	break;
+      case EVENT_RA_STALLS:
+	cycles = mp->ext_store_stall + mp->fetch_stall + mp->ext_load_stall +
+	  mp->reg_stall + mp->cti_stall + mp->load_stall + mp->ialu_flags_stall
+	  + mp->fpu_flags_stall + mp->fetch_reg_stall; break;
+      case EVENT_LOC_FETCH_STALL:
+	cycles = mp->fetch_stall;
+	break;
+      case EVENT_LOC_LOAD_STALL:
+	cycles = mp->load_stall;
+	break;
+      case EVENT_EXT_FETCH_STALL:
+	cycles = mp->ext_fetch_stall;
+	break;
+      case EVENT_EXT_LOAD_STALL:
+	cycles = mp->ext_load_stall;
+	break;
+      case EVENT_IDLE:
+	if (!epiphany_cpu_is_active (current_cpu))
+	  cycles = 1;
+	break;
+      case EVENT_DUAL_ISSUE:
+	cycles = dual_issue_p(mp) ? 1 : 0;
+	break;
+      case EVENT_OFF:
+      case EVENT_MESH_TRAFFIC0:
+      case EVENT_MESH_TRAFFIC1:
+	cycles = 0;
+    }
+  return cycles;
 }
 
 static void
@@ -202,6 +289,13 @@ epiphany_timer_hw_event_callback (struct hw *me, void *data)
   struct epiphany_timer *timer = (struct epiphany_timer *) data;
   union epiphany_timer_regs *regs = get_regs (me);
   SIM_CPU *current_cpu = STATE_CPU (hw_system (me), 0);
+  PROFILE_DATA *p = CPU_PROFILE_DATA (current_cpu);
+  EPIPHANY_PROFILE_DATA *mp = CPU_EPIPHANY_PROFILE (current_cpu);
+
+  unsigned long event0_cycles, event1_cycles;
+
+  event0_cycles = model_ctimer (current_cpu, timer->timer0_cfg);
+  event1_cycles = model_ctimer (current_cpu, timer->timer1_cfg);
 
   timer->handler = NULL;
 
@@ -209,25 +303,37 @@ epiphany_timer_hw_event_callback (struct hw *me, void *data)
     {
       if (chained_p (timer))
 	{
-	  regs->chained -= (regs->chained || timer->timerwrap) ? 1 : 0;
-	  HW_TRACE ((me, "ctimer01=%#llx (chained)", regs->chainedul));
-	  if (regs->chained == 0)
+	  bool do_interrupt = regs->chained && regs->chained <= event0_cycles;
+	  if (timer->timerwrap)
+	    regs->chained -= event0_cycles;
+	  else
+	    regs->chained -= min (regs->chained, event0_cycles);
+	  HW_TRACE ((me, "ctimer01=%#lx (chained)", regs->chainedul));
+	  if (do_interrupt)
 	    emit_interrupt(me, 0);
 	}
       else
 	{
-	  regs->timer0 -= (regs->timer0 || timer->timerwrap) ? 1 : 0;
+	  bool do_interrupt = regs->timer0 && regs->timer0 <= event0_cycles;
+	  if (timer->timerwrap)
+	    regs->timer0 -= event0_cycles;
+	  else
+	    regs->timer0 -= min (regs->timer0, event0_cycles);
 	  HW_TRACE ((me, "ctimer0=%#x", regs->timer0));
-	  if (regs->timer0 == 0)
+	  if (do_interrupt)
 	    emit_interrupt (me, 0);
 	}
     }
 
   if (should_tick_p (timer->timer1_cfg, current_cpu))
     {
-      regs->timer1 -= (regs->timer1 || timer->timerwrap) ? 1 : 0;
+      bool do_interrupt = regs->timer1 && regs->timer1 <= event1_cycles;
+      if (timer->timerwrap)
+	regs->timer1 -= event1_cycles;
+      else
+	regs->timer1 -= min (regs->timer1, event1_cycles);
       HW_TRACE ((me, "ctimer1=%#x", regs->timer1));
-      if (regs->timer1 == 0)
+      if (do_interrupt)
 	emit_interrupt(me, 1);
     }
 
