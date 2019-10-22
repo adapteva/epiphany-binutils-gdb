@@ -18,6 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#define WANT_CPU epiphanybf
+#define WANT_CPU_EPIPHANYBF
 #include "sim-main.h"
 #include "sim-options.h"
 
@@ -52,13 +54,7 @@
 
 #include "ert-workgroup.h"
 
-/* Records simulator descriptor so utilities like epiphany_dump_regs can be
-   called from gdb.  */
-SIM_DESC current_state=0;
-int is_sim_opened=0;
-
-/* Cover function of sim_state_free to free the cpu buffers as well.  */
-
+/* Epiphany specific options */
 typedef enum {
   E_OPTION_XML_HDF = OPTION_START, /* Epiphany XML hardware description file */
   E_OPTION_EXT_RAM,
@@ -718,28 +714,18 @@ sim_open (SIM_OPEN_KIND kind,
   /* Initialize various cgen things not done by common framework.
      Must be done after epiphany_cgen_cpu_open.  */
   cgen_init (sd);
-
-  for (c = 0; c < MAX_NR_PROCESSORS; ++c)
+  for (i = 0; i < MAX_NR_PROCESSORS; ++i)
     {
-      /* Only needed for profiling, but the structure member is small.  */
-      memset (CPU_EPIPHANY_PROFILE (STATE_CPU (sd, i)), 0,
-	      sizeof (* CPU_EPIPHANY_PROFILE (STATE_CPU (sd, i))));
-      /* Hook in callback for reporting these stats */
-      PROFILE_INFO_CPU_CALLBACK (CPU_PROFILE_DATA (STATE_CPU (sd, i)))
-	= epiphany_profile_info;
+      SIM_CPU *current_cpu;
+      current_cpu = STATE_CPU (sd, i);
+      cgen_init_accurate_fpu (STATE_CPU (sd, i),
+			      CGEN_CPU_FPU (STATE_CPU (sd, i)),
+			      epiphany_fpu_error);
     }
 
-  /* Store in a global so things like sparc32_dump_regs can be invoked
-     from the gdb command line.  */
-  current_state = sd;
-  is_sim_opened = 1; /* To distinguish between HW and simulator target.  */
+  for (i = 0; i < MAX_NR_PROCESSORS; ++i)
+    epiphany_profile_init (STATE_CPU (sd, i));
 
-  {
-    SIM_CPU *current_cpu;
-    current_cpu = STATE_CPU (sd, 0);
-    cgen_init_accurate_fpu (STATE_CPU (sd, 0), CGEN_CPU_FPU (current_cpu),
-			    epiphany_fpu_error);
-  }
 
   return sd;
 }

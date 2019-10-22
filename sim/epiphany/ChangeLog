@@ -1,5 +1,47 @@
 2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
 
+	* profile.c (SET_UNIT): Define helper macro.
+	(pending_reg_hazards): Use unsigned long type for reg_hazards bitmask.
+	(check_reg_hazards): Likewise.
+	(model_load_stall): Improve accuracy. Set mp->prev_memaddr.
+	(model_store_stall): Likewise.
+	(model_fetch_stall): Improve accuray. Determine if fetch is needed.
+	Track mp->prev_pc. Detect load/store bank conflict.
+	(epiphanybf_model_insn_before): Initialize all added state.
+	(epiphanybf_model_insn_after): Adjust external fetch stall for stalls
+	from previous instructions (fetch is issued in parallel). Track
+	more statistics.
+	(epiphanybf_model_epiphany32_u_common): Use SET_UNIT to track
+	function unit in profile working area.
+	(epiphanybf_model_epiphany32_u_exec): Pass unit_num to
+	epiphany_bf_model_epiphany32_u_common.
+	(epiphanybf_model_epiphany32_u_load): Likewise.
+	(epiphanybf_model_epiphany32_u_ialu): Likewise.
+	(epiphanybf_model_epiphany32_u_movfs): Call model_fetch_stall().
+	Increase cti_stall. Call SET_UNIT.
+	(epiphanybf_model_epiphany32_u_movts): Likewise.
+	(epiphanybf_model_epiphany32_u_fpu): Call model_fetch_stall().
+	Check register hazards for rd. Call SET_UNIT.
+	(epiphanybf_model_epiphany32_u_store): Call model_fetch_stall().
+	Call model_store_stall().
+	(epiphanybf_model_epiphany32_u_cti): Invalidate mp->prev_pc on branch.
+	(epiphany_profile_init): New function. Broken out from
+	sim-if:sim_open().
+	(print_num): New function.
+	(epiphany_profile_info): Use PRINT_NUM helper macro. Print more
+	statistics.
+	(PRINT_NUM): Define new helper macro.
+	* profile.h (epiphany_profile_init): Declare new function.
+	(EPIPHANY_PROFILE_DATA): Track more stalls. Add more statistics.
+	* sim-if.c (WANT_CPU): Set to epiphany.
+	(WANT_CPU_EPIPHANYBF): Define.
+	(current_state): Remove.
+	(sim_opened): Remove.
+	(sim_open): Rearrange. Move profile data initialization to
+	profile.c:epiphany_profile_init().
+
+2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
 	* esim/esim.c (manhattan_distance): New function.
 	(bound_coreid_to_cluster): New function.
 	(es_profile_load_stall): New function.
