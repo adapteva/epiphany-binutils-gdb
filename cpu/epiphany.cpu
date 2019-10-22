@@ -2458,7 +2458,7 @@
 		 (%str "movts $" sdreg ",$rd6")
 		 (+ OP4_MISC (f-dc-7-4 #x0) (f-opc-8-1 #x1) (f-dc-9-1 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) (f-dc-21-2 code) sdreg rd6);; rd is source for movts
 		 (set sdreg rd6)
-		 ()
+		 ((epiphany32 (unit u-movts)))
 		 )
 
     (dnmi (%sym "movts.l" name)
@@ -2523,7 +2523,7 @@
 		 (%str "movfs $rd6,$" snreg)
 		 (+ OP4_MISC (f-dc-7-4 #x1) (f-opc-8-1 #x1) (f-dc-9-1 #x0) (f-opc-19-4 #x2) (f-dc-25-4 #x0) (f-dc-21-2 code) rd6 snreg)
 		 (set rd6 snreg)
-		 ()
+		 ((epiphany32 (unit u-movfs)))
 		 )
 
     (dnmi (%sym "movfs.l" name)
