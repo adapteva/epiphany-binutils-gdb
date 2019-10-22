@@ -177,22 +177,36 @@ static const char *reg_name(struct hw *me, int regno)
 static void epiphany_dma_hw_event_callback (struct hw *me, void *data);
 
 static void
-epiphany_dma_reschedule (struct hw *me, unsigned delay)
+epiphany_dma_reschedule (struct hw *me, unsigned cycles)
 {
+  unsigned delay;
   struct epiphany_dma *dma = hw_data (me);
+  SIM_CPU *current_cpu = STATE_CPU (hw_system (me), 0);
+  PROFILE_DATA *p = CPU_PROFILE_DATA (current_cpu);
+  EPIPHANY_PROFILE_DATA *mp = CPU_EPIPHANY_PROFILE (current_cpu);
   if (dma->handler)
     {
       hw_event_queue_deschedule (me, dma->handler);
       dma->handler = NULL;
     }
-  if (!delay)
+  if (!cycles)
     return;
 
-  HW_TRACE ((me, "scheduling event in %u", delay));
+  if (!PROFILE_MODEL_P (current_cpu) || !epiphany_cpu_is_active (current_cpu))
+    delay = cycles;
+  else
+    {
+      mp->dma_used_cycles += cycles;
+      if (PROFILE_MODEL_CUR_INSN_CYCLES (p) > mp->dma_used_cycles)
+	delay = 0;
+      else
+	delay = 1;
+    }
+
+  HW_TRACE ((me, "scheduling event in %u (%u cycles)", delay, cycles));
   dma->handler = hw_event_queue_schedule (me, delay,
 					  epiphany_dma_hw_event_callback, dma);
 }
-
 
 static struct epiphany_dma_regs *get_regs (struct hw *me);
 

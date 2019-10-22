@@ -1,5 +1,13 @@
 2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
 
+	* dv-epiphany_dma.c (epiphany_dma_reschedule): Convert delay from
+	cycles to instructions.
+	* profile.h (EPIPHANY_PROFILE_DATA): Add dma_used_cycles member.
+	* profile.c (epiphanybf_model_insn_before): Set mp->dma_used_cycles to
+	0.
+
+2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
 	* dv-epiphany_timer.c: (might_tick_p): Return true unless both timers
 	are set to EVENT_OFF.
 	(should_tick_p): Return true if cfg is not set to EVENT_OFF.

@@ -212,6 +212,7 @@ epiphanybf_model_insn_before (SIM_CPU *cpu, int first_p)
   mp->ialu_flags_pending_hazard = false;
   mp->prev_insn_unit = mp->insn_unit;
   mp->insn_unit = UNIT_NONE;
+  mp->dma_used_cycles = 0;
 }
 
 void

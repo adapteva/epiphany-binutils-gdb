@@ -32,6 +32,9 @@ typedef struct
   unsigned long fpu_flags_stall;
   bool ialu_flags_pending_hazard;
 
+  /* DMA engine book-keeping */
+  unsigned dma_used_cycles;
+
   /* For CTIMERS */
   UNIT_TYPE insn_unit;
   bool need_fetch;
