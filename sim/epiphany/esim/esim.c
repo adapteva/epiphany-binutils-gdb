@@ -1213,6 +1213,7 @@ es_open_shm_file(es_state *esim, char *name, struct flock *flock)
 
 out:
   strncpy(esim->shm_name, name, sizeof(esim->shm_name)-1);
+  esim->shm_name[sizeof(esim->shm_name)-1] = '\0';
   esim->fd = fd;
   esim->creator = creator;
 
