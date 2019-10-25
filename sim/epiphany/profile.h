@@ -17,6 +17,7 @@ typedef struct
   unsigned long total_store_stall_cycles;
   unsigned long total_e1_stall_cycles;
   unsigned long total_ra_stall_cycles;
+  unsigned long total_dma_stall_cycles;
 
 
   /* Working area for computing cycle counts.  */

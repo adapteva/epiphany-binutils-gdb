@@ -1,3 +1,13 @@
+2019-10-24  Ola Jeppsson  <ola.jeppsson@gmail.com>
+
+	* dv-epiphany_dma.c (get_regs): Call get_regs_1.
+	(get_regs_1): New function.
+	(model_dma_stall): New function.
+	(epiphany_dma_reschedule): Call model_dma_stall.
+	* profile.c (epiphany_profile_info): Print DMA stall cycles.
+	* profile.h (EPIPHANY_PROFILE_DATA): New member total_dma_stall
+	cycles.
+
 2019-10-21  Ola Jeppsson  <ola.jeppsson@gmail.com>
 
 	* dv-epiphany_dma.c (epiphany_dma_reschedule): Convert delay from

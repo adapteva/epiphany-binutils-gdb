@@ -173,14 +173,59 @@ static const char *reg_name(struct hw *me, int regno)
   return epiphany_dma_regnames[regno + 8 * dma->channel];
 }
 
-
 static void epiphany_dma_hw_event_callback (struct hw *me, void *data);
+static struct epiphany_dma_regs *get_regs (struct hw *);
+static struct epiphany_dma_regs *get_regs_1 (struct hw *, int);
+
+/* This function models local bank contention stalls for the DMA engines.  */
+static unsigned long
+model_dma_stall (struct hw *me)
+{
+  struct epiphany_dma *dma = hw_data (me);
+  struct epiphany_dma_regs *regs = get_regs (me);
+  SIM_CPU *current_cpu = STATE_CPU (hw_system (me), 0);
+  PROFILE_DATA *p = CPU_PROFILE_DATA (current_cpu);
+  EPIPHANY_PROFILE_DATA *mp = CPU_EPIPHANY_PROFILE (current_cpu);
+  unsigned long stalls = 0;
+
+  /* Load / Store */
+  if (mp->prev_memaddr < 0x100000)
+    {
+      if ((mp->prev_memaddr >> 13) == (regs->src_addr >> 13))
+	stalls += 1;
+      if ((mp->prev_memaddr >> 13) == (regs->dst_addr >> 13))
+	stalls += 1;
+    }
+  /* Fetch */
+  if (mp->prev_pc < 0x100000)
+    {
+      if ((mp->prev_pc >> 13) == (regs->src_addr >> 13))
+	stalls += 1;
+      if ((mp->prev_pc >> 13) == (regs->dst_addr >> 13))
+	stalls += 1;
+    }
+  /* DMA0 */
+  if (dma->channel == 1)
+    {
+      struct epiphany_dma_regs *dma0_regs = get_regs_1 (me, 0);
+      if (regs->src_addr < 0x100000 &&
+	  (dma0_regs->src_addr >> 13) == (regs->src_addr >> 13))
+	stalls += 1;
+      if (regs->dst_addr < 0x100000 &&
+          (dma0_regs->dst_addr >> 13) == (regs->dst_addr >> 13))
+	stalls += 1;
+    }
+
+  return stalls;
+}
 
 static void
 epiphany_dma_reschedule (struct hw *me, unsigned cycles)
 {
   unsigned delay;
+  unsigned stall;
   struct epiphany_dma *dma = hw_data (me);
+  struct epiphany_dma_regs *regs = get_regs (me);
   SIM_CPU *current_cpu = STATE_CPU (hw_system (me), 0);
   PROFILE_DATA *p = CPU_PROFILE_DATA (current_cpu);
   EPIPHANY_PROFILE_DATA *mp = CPU_EPIPHANY_PROFILE (current_cpu);
@@ -196,7 +241,11 @@ epiphany_dma_reschedule (struct hw *me, unsigned cycles)
     delay = cycles;
   else
     {
+      stall = model_dma_stall (me);
+      mp->total_dma_stall_cycles += stall;
+      cycles += stall;
       mp->dma_used_cycles += cycles;
+
       if (PROFILE_MODEL_CUR_INSN_CYCLES (p) > mp->dma_used_cycles)
 	delay = 0;
       else
@@ -207,9 +256,6 @@ epiphany_dma_reschedule (struct hw *me, unsigned cycles)
   dma->handler = hw_event_queue_schedule (me, delay,
 					  epiphany_dma_hw_event_callback, dma);
 }
-
-static struct epiphany_dma_regs *get_regs (struct hw *me);
-
 
 static bool
 epiphany_dma_load_desc(struct hw *me, struct epiphany_dma_regs *regs)
@@ -462,18 +508,16 @@ const struct hw_descriptor dv_epiphany_dma_descriptor[] = {
 };
 
 static struct epiphany_dma_regs *
-get_regs (struct hw *me)
+get_regs_1 (struct hw *me, int channel)
 {
   uint32_t *ptr;
-  struct epiphany_dma *dma = hw_data (me);
   SIM_CPU *current_cpu = STATE_CPU (hw_system (me), 0);
 
   assert (current_cpu);
-  assert (dma);
 
-  if (dma->channel == 0)
+  if (channel == 0)
     ptr = &(CPU (h_all_registers[H_REG_DMA0_CONFIG]));
-  else if (dma->channel == 1)
+  else if (channel == 1)
     ptr = &(CPU (h_all_registers[H_REG_DMA1_CONFIG]));
   else
     hw_abort (me,
@@ -481,6 +525,15 @@ get_regs (struct hw *me)
 	      hw_path (me));
 
   return (struct epiphany_dma_regs *) ptr;
+}
+
+static struct epiphany_dma_regs *
+get_regs (struct hw *me)
+{
+  struct epiphany_dma *dma = hw_data (me);
+
+  assert (dma);
+  return get_regs_1 (me, dma->channel);
 }
 
 void

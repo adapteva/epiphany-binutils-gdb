@@ -647,5 +647,6 @@ epiphany_profile_info (SIM_CPU *cpu, int verbose)
       PRINT_NUM ("Total FPU instructions",	  mp->total_fpu_instructions);
       PRINT_NUM ("E1 Stall Cycles",		  mp->total_e1_stall_cycles);
       PRINT_NUM ("RA Stall Cycles",		  mp->total_ra_stall_cycles);
+      PRINT_NUM ("DMA Stall Cycles",		  mp->total_dma_stall_cycles);
     }
 }
